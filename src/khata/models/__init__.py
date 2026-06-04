@@ -1,1 +1,2 @@
-# Models are registered on Base.metadata as they are added.
+# Importing models here registers them on Base.metadata.
+from .user import User  # noqa: F401
