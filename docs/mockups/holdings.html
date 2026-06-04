@@ -185,15 +185,19 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
 .legend{display:flex;gap:16px;font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
-.lc{width:100%;height:auto;display:block}
+.lc{width:100%;height:auto;display:block;overflow:visible}
 .lc .gl{fill:none;stroke:var(--line-2);stroke-width:1}
-.lc .axislbl{font-family:"JetBrains Mono";font-size:9px;fill:var(--ink-faint)}
-.lc .ln{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.lc .gl.base{stroke:var(--line)}
+.lc .axislbl{font-family:"JetBrains Mono";font-size:11px;fill:var(--ink-faint)}
+.lc .ln{fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .lc .ln.gold{stroke:var(--primary)}
 .lc .ln.intr{stroke:var(--neg)}
-.lc .area{opacity:.10}
-.cross{fill:var(--accent)}
-.crosslbl{font-family:"JetBrains Mono";font-size:9px;font-weight:700;fill:var(--accent)}
+.lc .adv{fill:color-mix(in srgb,var(--pos) 15%,transparent)}
+.lc .enddot{stroke:var(--card);stroke-width:1.5}
+.lc .xline{stroke:var(--ink-faint);stroke-width:1;stroke-dasharray:3 4;opacity:.55}
+.lc .crossdot{fill:var(--card);stroke:var(--ink);stroke-width:2.5}
+.lc .callout{fill:var(--ink)}
+.lc .callotxt{font-family:"JetBrains Mono";font-size:10.5px;font-weight:700;fill:var(--paper);letter-spacing:.06em}
 
 .verdict{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 22px;border-top:1px solid var(--line);background:var(--ink);color:var(--paper);flex-wrap:wrap}
 .verdict .vt{font-size:12.5px;color:color-mix(in srgb,var(--paper) 62%,transparent);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
@@ -375,26 +379,32 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
               <span><i style="background:var(--neg)"></i> Interest cost</span>
             </div>
           </div>
-          <svg class="lc" viewBox="0 0 620 200" preserveAspectRatio="none" role="img" aria-label="Crossover line chart: gold appreciation overtakes interest cost around month 12">
-            <line class="gl" x1="40" y1="20" x2="600" y2="20"/>
-            <line class="gl" x1="40" y1="70" x2="600" y2="70"/>
-            <line class="gl" x1="40" y1="120" x2="600" y2="120"/>
-            <line class="gl" x1="40" y1="170" x2="600" y2="170"/>
-            <line class="gl" x1="40" y1="20" x2="40" y2="170"/>
-            <text class="axislbl" x="40" y="188">0</text>
-            <text class="axislbl" x="180" y="188">6</text>
-            <text class="axislbl" x="320" y="188">12</text>
-            <text class="axislbl" x="458" y="188">18</text>
-            <text class="axislbl" x="585" y="188">mo</text>
-            <!-- interest line: linear, ends below gold -->
-            <path class="area intr" fill="var(--neg)" d="M40,170 L180,144 L320,118 L460,92 L600,80 L600,170 Z"/>
-            <path id="lnIntr" class="ln intr" d="M40,170 L180,144 L320,118 L460,92 L600,80"/>
-            <!-- gold line: accelerating, crosses above interest near month 12 -->
-            <path class="area gold" fill="var(--primary)" d="M40,170 L180,150 L320,116 L460,68 L600,38 L600,170 Z"/>
-            <path id="lnGold" class="ln gold" d="M40,170 L180,150 L320,116 L460,68 L600,38"/>
-            <!-- crossover marker (~month 12) -->
-            <circle class="cross" cx="320" cy="117" r="4.5"/>
-            <text class="crosslbl" x="330" y="110">crossover · mo 12</text>
+          <svg class="lc" viewBox="0 0 660 230" role="img" aria-label="Cumulative gold appreciation overtakes interest cost at month 12, then pulls ahead">
+            <!-- gridlines -->
+            <line class="gl" x1="54" y1="55" x2="612" y2="55"/>
+            <line class="gl" x1="54" y1="100" x2="612" y2="100"/>
+            <line class="gl" x1="54" y1="145" x2="612" y2="145"/>
+            <line class="gl base" x1="54" y1="190" x2="612" y2="190"/>
+            <!-- advantage wedge: where gold sits above interest, after the crossover -->
+            <path class="adv" d="M330,140 L468,86 L600,52 L600,110 L468,120 Z"/>
+            <!-- interest cost -->
+            <path id="lnIntr" class="ln intr" d="M54,190 L192,164 L330,140 L468,120 L600,110"/>
+            <!-- gold gain: accelerates past interest at month 12 -->
+            <path id="lnGold" class="ln gold" d="M54,190 L192,174 L330,140 L468,86 L600,52"/>
+            <!-- endpoint dots -->
+            <circle class="enddot" cx="600" cy="110" r="3.8" fill="var(--neg)"/>
+            <circle class="enddot" cx="600" cy="52" r="3.8" fill="var(--primary)"/>
+            <!-- crossover marker + callout (kept off the curves) -->
+            <line class="xline" x1="330" y1="38" x2="330" y2="190"/>
+            <circle class="crossdot" cx="330" cy="140" r="5"/>
+            <rect class="callout" x="266" y="16" width="128" height="22" rx="6"/>
+            <text class="callotxt" x="330" y="31" text-anchor="middle">CROSSOVER · MO 12</text>
+            <!-- x axis -->
+            <text class="axislbl" x="54" y="214" text-anchor="middle">0</text>
+            <text class="axislbl" x="192" y="214" text-anchor="middle">6</text>
+            <text class="axislbl" x="330" y="214" text-anchor="middle">12</text>
+            <text class="axislbl" x="468" y="214" text-anchor="middle">18</text>
+            <text class="axislbl" x="600" y="214" text-anchor="middle">mo</text>
           </svg>
         </div>
 
