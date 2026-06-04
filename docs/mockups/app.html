@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F7F1E6;--paper-2:#F1E8D7;--ink:#241B16;--ink-soft:#4A4035;--ink-faint:#8C8068;
+  --line:#DBCDB0;--line-2:#E7DCC6;--primary:#C05E1B;--primary-deep:#9C4711;
+  --pos:#1F6B53;--pos-soft:#2E8C6E;--neg:#A6321F;--accent:#9E3B6E;--card:#FFFDF8;
+  --glow:color-mix(in srgb,var(--primary) 12%,transparent);
+  --shadow:0 1px 0 rgba(28,24,19,.04),0 16px 36px -24px rgba(28,24,19,.45);
+  --r:16px;--ease:cubic-bezier(.22,.68,0,1);
+}
+html[data-cur="usd"]{
+  --paper:#E9EFE8;--paper-2:#DDE7DB;--ink:#16241B;--ink-soft:#36473B;--ink-faint:#74866F;
+  --line:#C2D4C0;--line-2:#D2E0D0;--primary:#1C7A45;--primary-deep:#115C32;
+  --pos:#1C7A45;--pos-soft:#2E9457;--neg:#A6471F;--accent:#A9852F;--card:#FBFEFA;
+  --glow:color-mix(in srgb,var(--primary) 14%,transparent);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased;transition:background .6s var(--ease),color .6s}
+.mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+a{color:inherit;text-decoration:none}
+
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+@media(max-width:880px){.app{grid-template-columns:1fr}.side{display:none}}
+
+/* sidebar */
+.side{border-right:1px solid var(--line);background:var(--paper-2);padding:22px 16px;position:sticky;top:0;height:100vh;transition:.6s}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:21px;padding:6px 8px 22px}
+.glyph{width:28px;height:28px;border-radius:8px;flex:none;background:linear-gradient(145deg,var(--primary),var(--primary-deep));position:relative;box-shadow:0 6px 14px -6px var(--primary)}
+.glyph::before,.glyph::after{content:"";position:absolute;left:6px;right:6px;height:2px;background:var(--paper);border-radius:2px;opacity:.85}
+.glyph::before{top:10px}.glyph::after{top:16px;right:11px}
+.navsec{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:16px 10px 8px}
+.nav-i{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:.2s;font-size:14.5px}
+.nav-i svg{width:18px;height:18px;flex:none}
+.nav-i:hover{background:var(--line-2);color:var(--ink)}
+.nav-i.on{background:var(--ink);color:var(--paper)}
+.nav-i .ct{margin-left:auto;font-size:11px;font-family:"JetBrains Mono";opacity:.7}
+
+/* topbar */
+.main{min-width:0}
+.top{display:flex;align-items:center;justify-content:space-between;padding:18px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(8px);z-index:20;transition:.6s}
+.top h1{font-family:"Fraunces",serif;font-weight:600;font-size:23px;letter-spacing:-.01em}
+.top .sub{font-size:12.5px;color:var(--ink-faint)}
+.top-right{display:flex;align-items:center;gap:14px}
+.curtog{display:inline-flex;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:3px;position:relative}
+.curtog button{font-family:"JetBrains Mono";font-weight:700;font-size:12.5px;border:none;background:transparent;color:var(--ink-faint);width:44px;height:28px;border-radius:100px;cursor:pointer;z-index:1;transition:color .3s}
+.curtog button.on{color:#fff}
+.curtog .slide{position:absolute;top:3px;left:3px;width:44px;height:28px;border-radius:100px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));transition:transform .4s var(--ease),background .6s}
+html[data-cur="usd"] .curtog .slide{transform:translateX(44px)}
+.addbtn{font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;display:flex;align-items:center;gap:7px;transition:transform .2s}
+.addbtn:hover{transform:translateY(-2px)}
+.avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(145deg,var(--accent),var(--primary-deep));color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+
+.content{padding:28px 30px 60px;max-width:1200px}
+
+/* stat cards */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:900px){.stats{grid-template-columns:1fr 1fr}}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:.6s}
+.stat .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;display:flex;align-items:center;gap:7px}
+.stat .v{font-family:"Fraunces",serif;font-weight:600;font-size:30px;letter-spacing:-.02em;margin-top:8px;line-height:1}
+.stat .v .cur{font-size:17px;color:var(--ink-faint);vertical-align:super}
+.stat .d{font-size:12px;margin-top:7px;font-family:"JetBrains Mono"}
+.stat .d.up{color:var(--pos)}.stat .d.dn{color:var(--neg)}
+.stat.hero-stat{background:var(--ink);color:var(--paper)}
+.stat.hero-stat .k{color:color-mix(in srgb,var(--paper) 60%,transparent)}
+.stat.hero-stat .v .cur{color:var(--accent)}
+.stat.hero-stat::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0,color-mix(in srgb,var(--primary) 34%,transparent),transparent 60%)}
+
+.grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:22px;margin-top:24px}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:.6s}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.ph .t{font-family:"Fraunces",serif;font-weight:600;font-size:18px;display:flex;align-items:center;gap:10px}
+.ph .meta{font-size:12.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px}
+.tag.asset{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary-deep)}
+.tag.chit{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+
+/* progress header for plan */
+.planhead{padding:22px}
+.planhead .bigbar{height:12px;border-radius:8px;background:var(--paper-2);overflow:hidden;position:relative;margin:14px 0 8px}
+.planhead .bigbar i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:linear-gradient(90deg,var(--primary),var(--primary-deep));width:0;transition:width 1.2s var(--ease)}
+.planhead .row{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.planhead .amts{display:flex;gap:26px;margin-top:4px}
+.planhead .amts div .n{font-family:"Fraunces",serif;font-weight:600;font-size:22px}
+.planhead .amts div .l{font-size:11.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+
+/* installment schedule */
+.sched{padding:6px 0}
+.sched .srow{display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:center;padding:12px 22px;border-top:1px solid var(--line-2)}
+.sched .dot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;font-family:"JetBrains Mono"}
+.dot.paid{background:var(--pos);color:#fff}
+.dot.part{background:color-mix(in srgb,var(--primary) 22%,transparent);color:var(--primary-deep);border:1.5px solid var(--primary)}
+.dot.due{background:var(--paper-2);color:var(--ink-faint);border:1.5px solid var(--line)}
+.srow .si .nm{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px}
+.srow .si .mt{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:2px}
+.srow .sv{text-align:right;font-family:"JetBrains Mono"}
+.srow .sv .pa{font-weight:700;font-size:14px}
+.srow .sv .pl{font-size:11.5px;color:var(--ink-faint)}
+.rollbadge{font-size:10px;font-weight:700;color:var(--primary-deep);background:color-mix(in srgb,var(--primary) 13%,transparent);padding:2px 7px;border-radius:20px;letter-spacing:.03em}
+
+/* ledger inside */
+.ledger .lrow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:13px 22px;border-top:1px solid var(--line-2)}
+.ledger .l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
+.ledger .amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right}
+.ledger .amt.in{color:var(--pos)} .ledger .amt.out{color:var(--ink)}
+.ledger .l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.ledger .l2r{font-size:11px;color:var(--ink-faint);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);text-transform:capitalize}
+.proof{font-size:10px;color:var(--primary-deep);font-weight:600;display:inline-flex;gap:3px;align-items:center}
+
+/* chit panel */
+.chit-body{padding:20px 22px}
+.posbox{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:16px;border-bottom:1px solid var(--line-2)}
+.posbox .pl{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600}
+.posbox .pv{font-family:"Fraunces",serif;font-weight:600;font-size:30px;color:var(--pos);line-height:1;margin-top:6px}
+.posbox .side2{text-align:right;font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.rounds{display:flex;gap:6px;margin:16px 0 8px}
+.rd{flex:1;height:42px;border-radius:8px;background:var(--paper-2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-family:"JetBrains Mono";color:var(--ink-faint);position:relative;border:1px solid var(--line-2)}
+.rd.done{background:color-mix(in srgb,var(--pos) 14%,transparent);color:var(--pos);border-color:transparent}
+.rd.mine{background:var(--ink);color:var(--paper);border-color:transparent}
+.rd .r{font-weight:700}
+.chit-foot{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);padding-top:12px;font-family:"JetBrains Mono"}
+.chit-foot b{color:var(--ink)}
+
+.liab{margin-top:22px}
+.liab .lrow2{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:1px solid var(--line-2)}
+.liab .nm{font-weight:600;font-size:14px}
+.liab .mt{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.miniprog{width:90px;height:7px;border-radius:5px;background:var(--paper-2);overflow:hidden;position:relative;margin-top:6px}
+.miniprog i{position:absolute;inset:0 auto 0 0;border-radius:5px;background:var(--neg);width:0;transition:width 1.1s var(--ease)}
+.liab .rt{text-align:right;font-family:"JetBrains Mono"}
+.liab .rt .a{font-weight:700;font-size:14px;color:var(--neg)}
+.liab .rt .l{font-size:11px;color:var(--ink-faint)}
+
+.fade{opacity:0;transform:translateY(16px);animation:rise .7s var(--ease) forwards}
+.fade.d1{animation-delay:.06s}.fade.d2{animation-delay:.13s}.fade.d3{animation-delay:.2s}.fade.d4{animation-delay:.27s}
+@keyframes rise{to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- sidebar -->
+  <aside class="side">
+    <a class="brand" href="index.html"><span class="glyph"></span> Khata</a>
+    <div class="navsec">Overview</div>
+    <div class="nav-i on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</div>
+    <div class="navsec">Money plans</div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct">2</span></div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct">3</span></div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Liabilities <span class="ct">2</span></div>
+    <div class="navsec">Records</div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Proofs</div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</div>
+  </aside>
+
+  <!-- main -->
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>Dashboard</h1>
+        <div class="sub">Good evening, Arjun · 7 active plans</div>
+      </div>
+      <div class="top-right">
+        <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="inr" class="on">₹ INR</button><button data-set="usd">$ USD</button></div>
+        <button class="addbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Log payment</button>
+        <div class="avatar">A</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- stat row -->
+      <div class="stats">
+        <div class="stat hero-stat fade"><div class="k">Net position</div><div class="v"><span class="cur symword">₹</span><span class="cv" data-inr="1840000"></span></div><div class="d up" style="color:var(--accent)">across all plans</div></div>
+        <div class="stat fade d1"><div class="k">Paid to date</div><div class="v"><span class="cur symword">₹</span><span class="cv" data-inr="1430000"></span></div><div class="d up">▲ <span class="cv" data-inr="240000"></span> this month</div></div>
+        <div class="stat fade d2"><div class="k">I owe</div><div class="v"><span class="cur symword">₹</span><span class="cv" data-inr="1010000"></span></div><div class="d dn">asset + 2 liabilities</div></div>
+        <div class="stat fade d3"><div class="k">Owed to me</div><div class="v"><span class="cur symword">₹</span><span class="cv" data-inr="932400"></span></div><div class="d up">loan given + chit dividends</div></div>
+      </div>
+
+      <div class="grid2">
+        <!-- left: active asset plan -->
+        <div>
+          <div class="panel fade d2">
+            <div class="ph"><div class="t"><span class="tag asset">Asset</span> Devanahalli plot</div><div class="meta">created 02 Apr · INR</div></div>
+            <div class="planhead">
+              <div class="amts">
+                <div><div class="n"><span class="symword">₹</span><span class="cv" data-inr="1240000" data-style="lakh"></span></div><div class="l">Paid</div></div>
+                <div><div class="n"><span class="symword">₹</span><span class="cv" data-inr="760000" data-style="lakh"></span></div><div class="l">Remaining</div></div>
+                <div><div class="n"><span class="symword">₹</span><span class="cv" data-inr="2000000" data-style="lakh"></span></div><div class="l">Total</div></div>
+              </div>
+              <div class="bigbar"><i data-w="62"></i></div>
+              <div class="row"><span>62% paid · 4 of 8 installments</span><span>projected finish · Nov 2026</span></div>
+            </div>
+            <div class="ph" style="border-top:1px solid var(--line)"><div class="t" style="font-size:15px">Installment schedule</div><div class="meta">planned vs paid · roll-forward</div></div>
+            <div class="sched">
+              <div class="srow"><span class="dot paid">✓</span><div class="si"><div class="nm">Installment #1</div><div class="mt">12 Apr · paid in full</div></div><div class="sv"><div class="pa"><span class="symword">₹</span><span class="cv" data-inr="300000" data-style="lakh"></span></div><div class="pl">planned <span class="symword">₹</span><span class="cv" data-inr="300000" data-style="lakh"></span></div></div></div>
+              <div class="srow"><span class="dot paid">✓</span><div class="si"><div class="nm">Installment #2</div><div class="mt">29 Apr · paid in full</div></div><div class="sv"><div class="pa"><span class="symword">₹</span><span class="cv" data-inr="300000" data-style="lakh"></span></div><div class="pl">planned <span class="symword">₹</span><span class="cv" data-inr="300000" data-style="lakh"></span></div></div></div>
+              <div class="srow"><span class="dot part">~</span><div class="si"><div class="nm">Installment #3 <span class="rollbadge">−₹60k rolled fwd</span></div><div class="mt">12 May · part cash</div></div><div class="sv"><div class="pa"><span class="symword">₹</span><span class="cv" data-inr="90000" data-style="lakh"></span></div><div class="pl">planned <span class="symword">₹</span><span class="cv" data-inr="150000" data-style="lakh"></span></div></div></div>
+              <div class="srow"><span class="dot paid">✓</span><div class="si"><div class="nm">Installment #4</div><div class="mt">04 Jun · transfer</div></div><div class="sv"><div class="pa"><span class="symword">₹</span><span class="cv" data-inr="150000" data-style="lakh"></span></div><div class="pl">planned <span class="symword">₹</span><span class="cv" data-inr="150000" data-style="lakh"></span></div></div></div>
+              <div class="srow"><span class="dot due">5</span><div class="si"><div class="nm">Installment #5 <span class="rollbadge">+₹60k carried in</span></div><div class="mt">due 18 Jun</div></div><div class="sv"><div class="pa" style="color:var(--ink-faint)"><span class="symword">₹</span><span class="cv" data-inr="210000" data-style="lakh"></span></div><div class="pl">base <span class="symword">₹</span><span class="cv" data-inr="150000" data-style="lakh"></span></div></div></div>
+            </div>
+          </div>
+
+          <!-- ledger -->
+          <div class="panel fade d3" style="margin-top:22px">
+            <div class="ph"><div class="t" style="font-size:16px">Ledger</div><div class="meta">balance <span class="symword">₹</span><span class="cv" data-inr="760000" data-style="lakh"></span></div></div>
+            <div class="ledger">
+              <div class="lrow"><div class="l1">Installment #4</div><div class="amt out">−<span class="cv" data-inr="150000"></span></div><div class="l2">04 Jun · 11:24 IST</div><div class="l2r"><span class="pill">transfer</span><span class="pill">savings</span><span class="proof">▣ proof</span></div></div>
+              <div class="lrow"><div class="l1">From chit payout</div><div class="amt in">+<span class="cv" data-inr="200000"></span></div><div class="l2">28 May · 18:02 IST</div><div class="l2r"><span class="pill">chit · r4</span><span class="proof">▣ proof</span></div></div>
+              <div class="lrow"><div class="l1">Installment #3 · short</div><div class="amt out">−<span class="cv" data-inr="90000"></span></div><div class="l2">12 May · 09:40 IST</div><div class="l2r"><span class="pill">cash</span><span class="proof">▣ proof</span></div></div>
+              <div class="lrow"><div class="l1">Borrowed — R. Kumar</div><div class="amt in">+<span class="cv" data-inr="500000"></span></div><div class="l2">02 May · 14:15 IST</div><div class="l2r"><span class="pill">liability</span><span class="proof">▣ proof</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- right column -->
+        <div>
+          <div class="panel fade d3">
+            <div class="ph"><div class="t"><span class="tag chit">Chit</span> 12-member auction</div><div class="meta">organizer+member</div></div>
+            <div class="chit-body">
+              <div class="posbox">
+                <div><div class="pl">My net position</div><div class="pv">+<span class="symword">₹</span><span class="cv" data-inr="18400"></span></div></div>
+                <div class="side2">pot <span class="symword">₹</span><span class="cv" data-inr="200000" data-style="lakh"></span><br>contrib <span class="symword">₹</span><span class="cv" data-inr="16667"></span>/mo</div>
+              </div>
+              <div class="rounds">
+                <div class="rd done"><span class="r">1</span>took</div>
+                <div class="rd done"><span class="r">2</span></div>
+                <div class="rd done"><span class="r">3</span></div>
+                <div class="rd done"><span class="r">4</span></div>
+                <div class="rd" style="background:var(--paper);border-color:var(--primary);color:var(--primary-deep)"><span class="r">5</span>now</div>
+                <div class="rd"><span class="r">6</span></div>
+                <div class="rd"><span class="r">7</span></div>
+                <div class="rd"><span class="r">8</span></div>
+                <div class="rd mine"><span class="r">9</span>mine</div>
+                <div class="rd"><span class="r">·</span></div>
+              </div>
+              <div class="chit-foot"><span>dividends earned · <b><span class="symword">₹</span><span class="cv" data-inr="18400"></span></b></span><span>my turn · round 9</span></div>
+            </div>
+          </div>
+
+          <!-- liabilities -->
+          <div class="panel liab fade d4">
+            <div class="ph"><div class="t" style="font-size:16px">Liabilities</div><div class="meta">owed by me</div></div>
+            <div class="lrow2">
+              <div><div class="nm">Borrowed — R. Kumar</div><div class="mt">no interest · informal</div><div class="miniprog"><i data-w="62"></i></div></div>
+              <div class="rt"><div class="a"><span class="symword">₹</span><span class="cv" data-inr="310000" data-style="lakh"></span></div><div class="l">of <span class="symword">₹</span><span class="cv" data-inr="500000" data-style="lakh"></span></div></div>
+            </div>
+            <div class="lrow2">
+              <div><div class="nm">Gold loan — HDFC</div><div class="mt">8.5% · monthly</div><div class="miniprog"><i data-w="34"></i></div></div>
+              <div class="rt"><div class="a"><span class="symword">₹</span><span class="cv" data-inr="396000" data-style="lakh"></span></div><div class="l">of <span class="symword">₹</span><span class="cv" data-inr="600000" data-style="lakh"></span></div></div>
+            </div>
+          </div>
+
+          <!-- loan given out / receivable -->
+          <div class="panel fade d4" style="margin-top:22px">
+            <div class="ph"><div class="t" style="font-size:16px"><span class="tag" style="background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)">Lent</span> S. Mehta</div><div class="meta">given · 2%/mo · reducing</div></div>
+            <div style="padding:18px 22px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--line-2);padding-bottom:14px">
+                <div><div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600">Principal outstanding</div><div style="font-family:Fraunces,serif;font-weight:600;font-size:28px;color:var(--pos);line-height:1;margin-top:5px"><span class="symword">₹</span><span class="cv" data-inr="700000" data-style="lakh"></span></div></div>
+                <div style="text-align:right"><div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600">Interest due</div><div class="mono" style="font-weight:700;font-size:17px;color:var(--primary-deep);margin-top:5px"><span class="symword">₹</span><span class="cv" data-inr="14000"></span></div></div>
+              </div>
+              <div style="margin-top:14px;display:grid;gap:9px">
+                <div style="display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink-soft)"><span>▸ Initial principal · 02 Apr</span><span class="mono" style="font-weight:600"><span class="symword">₹</span><span class="cv" data-inr="500000" data-style="lakh"></span></span></div>
+                <div style="display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink-soft)"><span>▸ Top-up · 14 May <span class="rollbadge">+ tranche</span></span><span class="mono" style="font-weight:600">+<span class="symword">₹</span><span class="cv" data-inr="200000" data-style="lakh"></span></span></div>
+              </div>
+              <div class="chit-foot" style="border-top:1px solid var(--line-2);margin-top:13px;padding-top:12px"><span>interest received · <b><span class="symword">₹</span><span class="cv" data-inr="28000"></span></b></span><span>next due · 02 Jul</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const RATE=83; let CUR=(location.hash==='#usd')?'usd':'inr';
+function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
+function usGroup(n){return Math.round(n).toLocaleString('en-US');}
+function abbr(v){if(CUR==='inr'){if(v>=1e7)return (v/1e7).toFixed(2).replace(/\.?0+$/,'')+'Cr';return (v/1e5).toFixed(v%1e5?2:0).replace(/\.?0+$/,'')+'L';}return (v/1e3).toFixed(v%1e3?1:0)+'k';}
+function sym(){return CUR==='inr'?'₹':'$';}
+function val(inr){return CUR==='inr'?inr:inr/RATE;}
+function renderCV(el){const inr=+el.dataset.inr,base=val(inr);el.textContent = el.dataset.style==='lakh'?abbr(base):(CUR==='inr'?indGroup(base):usGroup(base));}
+function apply(){
+  document.documentElement.dataset.cur=CUR;
+  document.querySelectorAll('.symword').forEach(s=>s.textContent=sym());
+  document.querySelectorAll('.cv').forEach(renderCV);
+  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on',b.dataset.set===CUR));
+}
+document.getElementById('curtog').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;CUR=b.dataset.set;apply();});
+apply();
+addEventListener('load',()=>setTimeout(()=>document.querySelectorAll('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%'),350));
+</script>
+</body>
+</html>

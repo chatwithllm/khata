@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — new plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F7F1E6;--paper-2:#F1E8D7;--ink:#241B16;--ink-soft:#4A4035;--ink-faint:#8C8068;
+  --line:#DBCDB0;--line-2:#E7DCC6;--primary:#C05E1B;--primary-deep:#9C4711;
+  --pos:#1F6B53;--pos-soft:#2E8C6E;--neg:#A6321F;--accent:#9E3B6E;--gold:#B8902E;--blue:#4F86A8;--card:#FFFDF8;
+  --shadow:0 40px 90px -30px rgba(28,24,19,.65);--ease:cubic-bezier(.22,.68,0,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:15px;color:var(--ink);-webkit-font-smoothing:antialiased;background:var(--paper)}
+.mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+
+.backdrop{position:fixed;inset:0;background:var(--paper);overflow:hidden}
+.backdrop::after{content:"";position:absolute;inset:0;background:rgba(28,22,16,.52);backdrop-filter:blur(3px)}
+.gtop{height:70px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 30px;opacity:.8}
+.gbrand{font-family:"Fraunces",serif;font-weight:600;font-size:21px;display:flex;gap:10px;align-items:center;color:var(--ink-faint)}
+.gg{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));opacity:.6}
+.ggrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:26px 30px}
+.gc{height:90px;border:1px solid var(--line);border-radius:14px;background:var(--card);opacity:.5}
+
+/* wizard */
+.wiz{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(740px,94vw);max-height:92vh;background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:pop .5s var(--ease)}
+@keyframes pop{from{opacity:0;transform:translate(-50%,-46%) scale(.98)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.wh{padding:22px 26px 0;display:flex;align-items:flex-start;justify-content:space-between}
+.wh h2{font-family:"Fraunces",serif;font-weight:600;font-size:23px;letter-spacing:-.01em}
+.wh .x{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--paper);display:grid;place-items:center;cursor:pointer;color:var(--ink-soft)}
+/* steps */
+.steps{display:flex;gap:8px;padding:18px 26px 16px;border-bottom:1px solid var(--line)}
+.st{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:600;color:var(--ink-faint)}
+.st .b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-family:"JetBrains Mono";background:var(--paper-2);border:1px solid var(--line);color:var(--ink-faint)}
+.st.done .b{background:var(--pos);color:#fff;border-color:transparent}
+.st.on{color:var(--ink)}.st.on .b{background:var(--ink);color:var(--paper);border-color:transparent}
+.st .ln{width:24px;height:1.5px;background:var(--line)}
+
+.wbody{padding:22px 26px;overflow-y:auto}
+.lab{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:11px;display:block}
+
+/* type grid */
+.types{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}
+@media(max-width:640px){.types{grid-template-columns:repeat(3,1fr)}}
+.ty{border:1.5px solid var(--line);border-radius:13px;padding:14px 10px;text-align:center;cursor:pointer;transition:.2s;background:var(--paper)}
+.ty:hover{border-color:var(--ink-faint)}
+.ty.on{border-color:var(--pos);background:color-mix(in srgb,var(--pos) 8%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--pos) 12%,transparent)}
+.ty .ic{width:38px;height:38px;border-radius:10px;margin:0 auto 9px;display:grid;place-items:center;color:#fff}
+.ty .ic svg{width:20px;height:20px}
+.ty.asset .ic{background:linear-gradient(145deg,var(--primary),var(--primary-deep))}
+.ty.chit .ic{background:linear-gradient(145deg,var(--pos-soft),var(--pos))}
+.ty.loan .ic{background:linear-gradient(145deg,var(--neg),#7e2417)}
+.ty.ret .ic{background:linear-gradient(145deg,var(--accent),#6e2850)}
+.ty.hold .ic{background:linear-gradient(145deg,var(--gold),#8a6b1f)}
+.ty .nm{font-weight:600;font-size:12.5px}
+.ty .tk{font-size:10.5px;color:var(--ink-faint);margin-top:2px}
+
+/* form */
+.fg{margin-bottom:18px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.inp{width:100%;border:1px solid var(--line);border-radius:11px;background:var(--paper);padding:12px 14px;font-family:inherit;font-size:15px;font-weight:500;color:var(--ink);outline:none}
+.inp.mono{font-family:"JetBrains Mono";font-weight:700}
+.inp:focus{border-color:var(--ink-faint)}
+.amount{display:flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--paper)}
+.amount .cs{display:flex;align-items:center;gap:5px;padding:0 12px;background:var(--paper-2);border-right:1px solid var(--line);font-family:"JetBrains Mono";font-weight:700;font-size:14px;color:var(--ink-soft)}
+.amount input{flex:1;border:none;background:transparent;font-family:"JetBrains Mono";font-weight:700;font-size:16px;color:var(--ink);padding:12px 14px;outline:none}
+.seg{display:flex;gap:6px;background:var(--paper-2);padding:5px;border-radius:12px;border:1px solid var(--line)}
+.seg button{flex:1;font-family:inherit;font-weight:600;font-size:13px;border:none;background:transparent;color:var(--ink-soft);padding:9px 6px;border-radius:8px;cursor:pointer;transition:.2s}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 2px 8px -3px rgba(0,0,0,.2)}
+.computed{font-size:12px;color:var(--ink-faint);margin-top:7px;font-family:"JetBrains Mono"}
+.computed b{color:var(--pos)}
+
+.summary{background:color-mix(in srgb,var(--pos) 7%,transparent);border:1px solid color-mix(in srgb,var(--pos) 25%,transparent);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:center;margin-top:4px}
+.summary svg{width:20px;height:20px;color:var(--pos);flex:none}
+.summary .s{font-size:13px;color:var(--ink-soft)}
+.summary .s b{color:var(--ink);font-family:"JetBrains Mono"}
+
+.wfoot{padding:16px 26px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;background:var(--paper-2)}
+.wfoot .hint{font-size:12px;color:var(--ink-faint)}
+.fbtns{display:flex;gap:10px}
+.btn{font-family:inherit;font-weight:600;font-size:14.5px;padding:11px 20px;border-radius:11px;cursor:pointer;border:1px solid var(--line);transition:transform .2s}
+.btn.ghost{background:var(--paper);color:var(--ink-soft)}
+.btn.next{background:var(--ink);color:var(--paper);border-color:var(--ink);display:flex;align-items:center;gap:8px}
+.btn:hover{transform:translateY(-2px)}
+.tag{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:5px;background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+</style>
+</head>
+<body>
+<div class="backdrop">
+  <div class="gtop"><div class="gbrand"><span class="gg"></span> Khata</div></div>
+  <div class="ggrid"><div class="gc"></div><div class="gc"></div><div class="gc"></div><div class="gc"></div></div>
+</div>
+
+<div class="wiz">
+  <div class="wh">
+    <div><h2>New money plan</h2></div>
+    <div class="x"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+  </div>
+  <div class="steps">
+    <div class="st done"><span class="b">✓</span> Type</div><span class="ln"></span>
+    <div class="st on"><span class="b">2</span> Details</div><span class="ln"></span>
+    <div class="st"><span class="b">3</span> Schedule</div><span class="ln"></span>
+    <div class="st"><span class="b">4</span> Review</div>
+  </div>
+
+  <div class="wbody">
+    <span class="lab">Plan type</span>
+    <div class="types">
+      <div class="ty asset"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg></div><div class="nm">Asset</div><div class="tk">installments</div></div>
+      <div class="ty chit on"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="nm">Chit fund</div><div class="tk">chitti</div></div>
+      <div class="ty loan"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg></div><div class="nm">Loan</div><div class="tk">given/taken</div></div>
+      <div class="ty ret"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 2v6"/></svg></div><div class="nm">401(k)</div><div class="tk">retirement</div></div>
+      <div class="ty hold"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l3 4 5 1-3.5 4 .8 5L12 19l-5.3 2 .8-5L4 12l5-1z"/></svg></div><div class="nm">Holding</div><div class="tk">gold/stock</div></div>
+    </div>
+
+    <span class="lab">Chit fund details</span>
+    <div class="fg"><input class="inp" value="Sri Lakshmi" placeholder="Name this chit" /></div>
+
+    <div class="two">
+      <div class="fg">
+        <span class="lab">Variant</span>
+        <div class="seg"><button class="on">Auction</button><button>Pure rotating</button></div>
+      </div>
+      <div class="fg">
+        <span class="lab">My role</span>
+        <div class="seg"><button>Member</button><button class="on">Org + me</button></div>
+      </div>
+    </div>
+
+    <div class="three">
+      <div class="fg"><span class="lab">Members</span><input class="inp mono" value="12" /></div>
+      <div class="fg"><span class="lab">Pot value</span><div class="amount"><span class="cs symword">₹</span><input value="2,00,000" /></div></div>
+      <div class="fg"><span class="lab">Commission</span><input class="inp mono" value="5%" /></div>
+    </div>
+
+    <div class="two">
+      <div class="fg"><span class="lab">My slot / planned take</span><input class="inp mono" value="slot 5 · take r9" /></div>
+      <div class="fg"><span class="lab">Start month</span><input class="inp" value="Apr 2026" /></div>
+    </div>
+    <div class="computed">Monthly contribution auto = pot ÷ members = <b><span class="symword">₹</span><span class="cv" data-inr="16667"></span>/mo</b> · 12 rounds · ends Mar 2027</div>
+
+    <div class="summary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+      <div class="s">12 members · <b><span class="symword">₹</span><span class="cv" data-inr="200000" data-style="lakh"></span></b> pot · auction · you organize &amp; play, taking round 9. Next: set the round schedule.</div>
+    </div>
+  </div>
+
+  <div class="wfoot">
+    <span class="hint">Step 2 of 4 · details adapt to plan type</span>
+    <div class="fbtns">
+      <button class="btn ghost">Back</button>
+      <button class="btn next">Continue to schedule
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<script>
+let CUR='inr';const RATE=83;
+function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return s;}
+function abbr(v){if(v>=1e7)return (v/1e7).toFixed(2).replace(/\.?0+$/,'')+'Cr';return (v/1e5).toFixed(v%1e5?2:0).replace(/\.?0+$/,'')+'L';}
+document.querySelectorAll('.cv').forEach(el=>{const i=+el.dataset.inr;el.textContent=el.dataset.style==='lakh'?abbr(i):indGroup(i);});
+document.querySelectorAll('.symword').forEach(s=>s.textContent='₹');
+// type switch visual
+document.querySelectorAll('.ty').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.ty').forEach(x=>x.classList.remove('on'));t.classList.add('on');}));
+</script>
+</body>
+</html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — Holdings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F7F1E6;--paper-2:#F1E8D7;--ink:#241B16;--ink-soft:#4A4035;--ink-faint:#8C8068;
+  --line:#DBCDB0;--line-2:#E7DCC6;--primary:#C05E1B;--primary-deep:#9C4711;
+  --pos:#1F6B53;--pos-soft:#2E8C6E;--neg:#A6321F;--accent:#9E3B6E;--gold:#B8902E;--blue:#4F86A8;--card:#FFFDF8;
+  --shadow:0 1px 0 rgba(28,24,19,.04),0 16px 36px -24px rgba(28,24,19,.45);--r:16px;--ease:cubic-bezier(.22,.68,0,1);
+}
+html[data-cur="usd"]{--paper:#E9EFE8;--paper-2:#DDE7DB;--ink:#16241B;--ink-soft:#36473B;--ink-faint:#74866F;--line:#C2D4C0;--line-2:#D2E0D0;--primary:#1C7A45;--primary-deep:#115C32;--pos:#1C7A45;--pos-soft:#2E9457;--accent:#A9852F;--gold:#A9852F;--blue:#3E7E8C;--card:#FBFEFA;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased;transition:.6s var(--ease)}
+.mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+a{color:inherit;text-decoration:none}
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+@media(max-width:880px){.app{grid-template-columns:1fr}.side{display:none}}
+.side{border-right:1px solid var(--line);background:var(--paper-2);padding:22px 16px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:21px;padding:6px 8px 22px}
+.glyph{width:28px;height:28px;border-radius:8px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));position:relative;box-shadow:0 6px 14px -6px var(--primary)}
+.glyph::before,.glyph::after{content:"";position:absolute;left:6px;right:6px;height:2px;background:var(--paper);border-radius:2px;opacity:.85}
+.glyph::before{top:10px}.glyph::after{top:16px;right:11px}
+.navsec{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:16px 10px 8px}
+.nav-i{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;font-weight:500;color:var(--ink-soft);cursor:pointer;font-size:14.5px}
+.nav-i svg{width:18px;height:18px}.nav-i:hover{background:var(--line-2);color:var(--ink)}
+.nav-i.on{background:var(--ink);color:var(--paper)}
+.nav-i .ct{margin-left:auto;font-size:11px;font-family:"JetBrains Mono";opacity:.7}
+
+.top{display:flex;align-items:center;justify-content:space-between;padding:16px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(8px);z-index:20}
+.crumb{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink-faint)}
+.top-right{display:flex;align-items:center;gap:14px}
+.curtog{display:inline-flex;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:3px;position:relative}
+.curtog button{font-family:"JetBrains Mono";font-weight:700;font-size:12.5px;border:none;background:transparent;color:var(--ink-faint);width:44px;height:28px;border-radius:100px;cursor:pointer;z-index:1}
+.curtog button.on{color:#fff}
+.curtog .slide{position:absolute;top:3px;left:3px;width:44px;height:28px;border-radius:100px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));transition:transform .4s var(--ease),background .6s}
+html[data-cur="usd"] .curtog .slide{transform:translateX(44px)}
+.addbtn{font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;display:flex;align-items:center;gap:7px}
+
+.content{padding:24px 30px 60px;max-width:1240px}
+.tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px}
+.up{color:var(--pos)}.dn{color:var(--neg)}
+
+/* price ticker */
+.ticker{display:flex;gap:0;border:1px solid var(--line);border-radius:13px;overflow:hidden;background:var(--card);margin-bottom:22px}
+.tk{flex:1;padding:12px 16px;border-right:1px solid var(--line-2)}
+.tk:last-child{border-right:none}
+.tk .n{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+.tk .p{font-family:"JetBrains Mono";font-weight:700;font-size:15px;margin-top:3px}
+.tk .c{font-size:11px;font-family:"JetBrains Mono";font-weight:600;margin-top:1px}
+.ticknote{font-size:11px;color:var(--ink-faint);text-align:right;margin:-14px 4px 20px;font-family:"JetBrains Mono"}
+.live{display:inline-flex;align-items:center;gap:5px}
+.live .d{width:6px;height:6px;border-radius:50%;background:var(--pos);animation:bl 1.8s infinite}
+@keyframes bl{50%{opacity:.3}}
+
+.head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:18px;margin-bottom:22px}
+.head h1{font-family:"Fraunces",serif;font-weight:600;font-size:30px;letter-spacing:-.02em}
+.head .meta{font-size:13px;color:var(--ink-faint);margin-top:5px}
+.kpis{display:flex;gap:26px}
+.kpi .n{font-family:"Fraunces",serif;font-weight:600;font-size:25px;letter-spacing:-.02em}
+.kpi .n.pos{color:var(--pos)}
+.kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:600}
+
+.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:22px}
+@media(max-width:1040px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+.ph .t{font-family:"Fraunces",serif;font-weight:600;font-size:17px}
+.ph .meta{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+
+/* holdings rows */
+.hrow{display:grid;grid-template-columns:42px 1fr auto auto;gap:14px;align-items:center;padding:15px 20px;border-top:1px solid var(--line-2)}
+.hic{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;color:#fff;flex:none}
+.hic svg{width:22px;height:22px}
+.hic.gold{background:linear-gradient(145deg,var(--gold),#8a6b1f)}
+.hic.silver{background:linear-gradient(145deg,#9AA0A6,#6B7177)}
+.hic.cash{background:linear-gradient(145deg,var(--pos-soft),var(--pos))}
+.hic.stock{background:linear-gradient(145deg,var(--blue),#36617a)}
+.hn .nm{font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px}
+.hn .q{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:2px}
+.pledged{font-size:9.5px;font-weight:700;color:var(--gold);background:color-mix(in srgb,var(--gold) 18%,transparent);padding:2px 6px;border-radius:5px;letter-spacing:.03em}
+.hv{text-align:right}
+.hv .val{font-family:"JetBrains Mono";font-weight:700;font-size:15px}
+.hv .price{font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:2px}
+.hg{text-align:right;font-family:"JetBrains Mono";min-width:92px}
+.hg .g{font-weight:700;font-size:14px}
+.hg .pc{font-size:11px;margin-top:2px}
+
+/* networth */
+.nw{padding:8px 20px 16px}
+.nw .r{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line-2);font-size:14px}
+.nw .r.tot{border-bottom:none;border-top:2px solid var(--line);margin-top:4px;padding-top:13px}
+.nw .k{color:var(--ink-soft)}.nw .v{font-family:"JetBrains Mono";font-weight:700}
+.nw .v.pos{color:var(--pos)}.nw .v.neg{color:var(--neg)}
+.nw .tot .k{font-weight:700;color:var(--ink)}.nw .tot .v{font-family:"Fraunces",serif;font-size:20px}
+
+/* decision card */
+.dec{border:1.5px solid var(--gold);box-shadow:0 0 0 4px color-mix(in srgb,var(--gold) 10%,transparent)}
+.dec .ph{background:color-mix(in srgb,var(--gold) 9%,transparent)}
+.dvs{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-2)}
+.dcol{background:var(--card);padding:16px 18px}
+.dcol.kept{background:color-mix(in srgb,var(--pos) 5%,transparent)}
+.dcol .h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;color:var(--ink-faint);margin-bottom:11px;display:flex;align-items:center;gap:7px}
+.dcol .h .b{width:8px;height:8px;border-radius:2px}
+.dline{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;font-family:"JetBrains Mono"}
+.dline .k{color:var(--ink-soft);font-family:"Hanken Grotesk"}
+.dline .v{font-weight:700}
+.dnet{border-top:1px solid var(--line-2);margin-top:6px;padding-top:8px!important;font-size:13.5px!important}
+.verdict{padding:15px 20px;display:flex;align-items:center;gap:12px;border-top:1px solid var(--line-2)}
+.vchip{font-size:11px;font-weight:800;padding:6px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;background:var(--pos);color:#fff;flex:none}
+.verdict .vt{font-size:13px;color:var(--ink-soft)}
+.verdict .vt b{color:var(--ink)}
+/* crossover chart */
+.chartwrap{padding:16px 20px}
+.chartwrap svg{width:100%;height:128px;overflow:visible}
+.clabels{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:6px}
+.cleg{display:flex;gap:18px;margin-top:10px;font-size:12px;color:var(--ink-soft)}
+.cleg span{display:flex;align-items:center;gap:7px}.cleg i{width:14px;height:3px;border-radius:2px}
+
+.fade{opacity:0;transform:translateY(16px);animation:rise .7s var(--ease) forwards}
+.fade.d1{animation-delay:.07s}.fade.d2{animation-delay:.14s}.fade.d3{animation-delay:.21s}.fade.d4{animation-delay:.28s}
+@keyframes rise{to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="app.html"><span class="glyph"></span> Khata</a>
+    <div class="navsec">Overview</div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</div>
+    <div class="nav-i on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l3 4 5 1-3.5 4 .8 5L12 19l-5.3 2 .8-5L4 12l5-1z"/></svg> Holdings <span class="ct">4</span></div>
+    <div class="navsec">Money plans</div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct">2</span></div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct">3</span></div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct">3</span></div>
+    <div class="navsec">Records</div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</div>
+  </aside>
+
+  <main>
+    <div class="top">
+      <div class="crumb"><b style="color:var(--ink)">Holdings &amp; net worth</b></div>
+      <div class="top-right">
+        <div class="curtog" id="curtog"><span class="slide"></span><button data-set="inr" class="on">₹ INR</button><button data-set="usd">$ USD</button></div>
+        <button class="addbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Add holding</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- live price ticker -->
+      <div class="ticker fade">
+        <div class="tk"><div class="n">Gold 24K /g</div><div class="p"><span class="symword">₹</span><span class="cv" data-inr="6760"></span></div><div class="c up">▲ 0.4%</div></div>
+        <div class="tk"><div class="n">Gold 22K /g</div><div class="p"><span class="symword">₹</span><span class="cv" data-inr="6200"></span></div><div class="c up">▲ 0.4%</div></div>
+        <div class="tk"><div class="n">Silver /g</div><div class="p"><span class="symword">₹</span><span class="cv" data-inr="78"></span></div><div class="c up">▲ 1.1%</div></div>
+        <div class="tk"><div class="n">NIFTY 50</div><div class="p mono">23,410</div><div class="c dn">▼ 0.2%</div></div>
+        <div class="tk"><div class="n">Reliance</div><div class="p"><span class="symword">₹</span><span class="cv" data-inr="2920"></span></div><div class="c up">▲ 1.3%</div></div>
+        <div class="tk"><div class="n">USD / INR</div><div class="p mono">83.10</div><div class="c up">▲ 0.1%</div></div>
+      </div>
+      <div class="ticknote"><span class="live"><span class="d"></span> live · auto-fetched · market data only · updated 2m ago · tap any to set manually</span></div>
+
+      <div class="head fade d1">
+        <div><h1>Holdings &amp; net worth</h1><div class="meta">what you own, valued live · 4 holdings</div></div>
+        <div class="kpis">
+          <div class="kpi"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="1406000" data-style="lakh"></span></div><div class="l">Holdings value</div></div>
+          <div class="kpi"><div class="n pos">+<span class="symword">₹</span><span class="cv" data-inr="124000" data-style="lakh"></span></div><div class="l">Unrealized gain</div></div>
+          <div class="kpi"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="872000" data-style="lakh"></span></div><div class="l">Net worth</div></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <!-- holdings list -->
+        <div>
+          <div class="panel fade d2">
+            <div class="ph"><div class="t">Holdings</div><div class="meta">qty × live price</div></div>
+            <div class="hrow">
+              <div class="hic gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l3 4 5 1-3.5 4 .8 5L12 19l-5.3 2 .8-5L4 12l5-1z"/></svg></div>
+              <div class="hn"><div class="nm">Gold <span class="pledged">⬢ pledged</span></div><div class="q">120 g · 22K · avg ₹5,400/g</div></div>
+              <div class="hv"><div class="val"><span class="symword">₹</span><span class="cv" data-inr="744000" data-style="lakh"></span></div><div class="price">@ <span class="symword">₹</span><span class="cv" data-inr="6200"></span>/g</div></div>
+              <div class="hg"><div class="g up">+<span class="symword">₹</span><span class="cv" data-inr="96000" data-style="lakh"></span></div><div class="pc up">+14.8%</div></div>
+            </div>
+            <div class="hrow">
+              <div class="hic silver"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/></svg></div>
+              <div class="hn"><div class="nm">Silver</div><div class="q">2,000 g · avg ₹72/g</div></div>
+              <div class="hv"><div class="val"><span class="symword">₹</span><span class="cv" data-inr="156000" data-style="lakh"></span></div><div class="price">@ <span class="symword">₹</span><span class="cv" data-inr="78"></span>/g</div></div>
+              <div class="hg"><div class="g up">+<span class="symword">₹</span><span class="cv" data-inr="12000"></span></div><div class="pc up">+8.3%</div></div>
+            </div>
+            <div class="hrow">
+              <div class="hic stock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18l5-6 4 4 6-8"/><path d="M4 20h16"/></svg></div>
+              <div class="hn"><div class="nm">Equity · 4 stocks</div><div class="q">Reliance, TCS, Infosys, HDFC</div></div>
+              <div class="hv"><div class="val"><span class="symword">₹</span><span class="cv" data-inr="296000" data-style="lakh"></span></div><div class="price">cost <span class="symword">₹</span><span class="cv" data-inr="280000" data-style="lakh"></span></div></div>
+              <div class="hg"><div class="g up">+<span class="symword">₹</span><span class="cv" data-inr="16000"></span></div><div class="pc up">+5.7%</div></div>
+            </div>
+            <div class="hrow">
+              <div class="hic cash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg></div>
+              <div class="hn"><div class="nm">Cash</div><div class="q">₹2.1L savings · $1,500</div></div>
+              <div class="hv"><div class="val"><span class="symword">₹</span><span class="cv" data-inr="210000" data-style="lakh"></span></div><div class="price">+ <span class="symword">$</span>1,500 fx</div></div>
+              <div class="hg"><div class="g" style="color:var(--ink-faint)">—</div><div class="pc" style="color:var(--ink-faint)">stable</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- right: net worth + decision -->
+        <div>
+          <div class="panel fade d2">
+            <div class="ph"><div class="t">Net worth</div><div class="meta">own − owe</div></div>
+            <div class="nw">
+              <div class="r"><span class="k">Holdings value</span><span class="v pos">+<span class="symword">₹</span><span class="cv" data-inr="1406000" data-style="lakh"></span></span></div>
+              <div class="r"><span class="k">Owed to me (loans given)</span><span class="v pos">+<span class="symword">₹</span><span class="cv" data-inr="710000" data-style="lakh"></span></span></div>
+              <div class="r"><span class="k">Loans I owe</span><span class="v neg">−<span class="symword">₹</span><span class="cv" data-inr="706000" data-style="lakh"></span></span></div>
+              <div class="r"><span class="k">Asset commitments left</span><span class="v neg">−<span class="symword">₹</span><span class="cv" data-inr="760000" data-style="lakh"></span></span></div>
+              <div class="r"><span class="k">Chit net (in progress)</span><span class="v pos">+<span class="symword">₹</span><span class="cv" data-inr="222000" data-style="lakh"></span></span></div>
+              <div class="r tot"><span class="k">Net worth</span><span class="v"><span class="symword">₹</span><span class="cv" data-inr="872000" data-style="lakh"></span></span></div>
+            </div>
+          </div>
+
+          <div class="panel dec fade d3">
+            <div class="ph"><div class="t">Gold loan vs selling</div><div class="meta">was borrowing the right call?</div></div>
+            <div class="dvs">
+              <div class="dcol kept">
+                <div class="h"><span class="b" style="background:var(--pos)"></span>Held &amp; borrowed</div>
+                <div class="dline"><span class="k">Gold now</span><span class="v"><span class="symword">₹</span><span class="cv" data-inr="744000" data-style="lakh"></span></span></div>
+                <div class="dline"><span class="k">Appreciation</span><span class="v up">+<span class="symword">₹</span><span class="cv" data-inr="24000"></span></span></div>
+                <div class="dline"><span class="k">Interest paid</span><span class="v dn">−<span class="symword">₹</span><span class="cv" data-inr="22440"></span></span></div>
+                <div class="dline dnet"><span class="k">Net edge</span><span class="v up">+<span class="symword">₹</span><span class="cv" data-inr="1560"></span></span></div>
+              </div>
+              <div class="dcol">
+                <div class="h"><span class="b" style="background:var(--ink-faint)"></span>Sold instead</div>
+                <div class="dline"><span class="k">Cash got</span><span class="v"><span class="symword">₹</span><span class="cv" data-inr="720000" data-style="lakh"></span></span></div>
+                <div class="dline"><span class="k">Interest</span><span class="v">—</span></div>
+                <div class="dline"><span class="k">Missed gain</span><span class="v dn">−<span class="symword">₹</span><span class="cv" data-inr="24000"></span></span></div>
+                <div class="dline dnet"><span class="k">Gold owned</span><span class="v dn">none</span></div>
+              </div>
+            </div>
+            <div class="chartwrap">
+              <svg viewBox="0 0 300 110" preserveAspectRatio="none">
+                <polyline fill="none" stroke="var(--gold)" stroke-width="2.4" stroke-linejoin="round" points="14,104 86,86 158,62 230,40 286,27"/>
+                <polyline fill="none" stroke="var(--neg)" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="5 4" points="14,104 86,92 158,74 230,52 286,33"/>
+                <circle cx="286" cy="27" r="4" fill="var(--gold)"/>
+                <circle cx="286" cy="33" r="3.5" fill="var(--neg)"/>
+              </svg>
+              <div class="clabels"><span>Mar pledge</span><span>now</span></div>
+              <div class="cleg"><span><i style="background:var(--gold)"></i> gold appreciation</span><span><i style="background:var(--neg)"></i> interest paid</span></div>
+            </div>
+            <div class="verdict">
+              <span class="vchip">Ahead +<span class="symword">₹</span><span class="cv" data-inr="1560"></span></span>
+              <span class="vt"><b>Holding still wins</b> — and you keep the gold. But the lines are converging; if interest outpaces gold, selling would've been better.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const RATE=83; let CUR=(location.hash==='#usd')?'usd':'inr';
+function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
+function usGroup(n){return Math.round(n).toLocaleString('en-US');}
+function abbr(v){if(CUR==='inr'){if(v>=1e7)return (v/1e7).toFixed(2).replace(/\.?0+$/,'')+'Cr';return (v/1e5).toFixed(v%1e5?2:0).replace(/\.?0+$/,'')+'L';}return (v/1e3).toFixed(v%1e3?1:0)+'k';}
+function sym(){return CUR==='inr'?'₹':'$';}
+function val(i){return CUR==='inr'?i:i/RATE;}
+function renderCV(el){const b=val(+el.dataset.inr);el.textContent=el.dataset.style==='lakh'?abbr(b):(CUR==='inr'?indGroup(b):usGroup(b));}
+function apply(){document.documentElement.dataset.cur=CUR;document.querySelectorAll('.symword').forEach(s=>s.textContent=sym());document.querySelectorAll('.cv').forEach(renderCV);document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on',b.dataset.set===CUR));}
+document.getElementById('curtog').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;CUR=b.dataset.set;apply();});
+apply();
+</script>
+</body>
+</html>

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — money the way you actually pay it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* INR — Indian rupee note palette */
+  --paper:#F7F1E6;      /* aged note cream */
+  --paper-2:#F1E8D7;
+  --ink:#241B16;
+  --ink-soft:#4A4035;
+  --ink-faint:#8C8068;
+  --line:#DBCDB0;
+  --primary:#C05E1B;     /* ₹200 saffron */
+  --primary-deep:#9C4711;
+  --pos:#1F6B53;         /* ₹ green */
+  --pos-soft:#2E8C6E;
+  --accent:#9E3B6E;      /* ₹2000 magenta */
+  --card:#FFFDF8;
+  --glow: color-mix(in srgb,var(--primary) 12%,transparent);
+  --shadow: 0 1px 0 rgba(28,24,19,.04), 0 18px 40px -22px rgba(28,24,19,.4);
+  --r:18px; --ease:cubic-bezier(.22,.68,0,1);
+}
+html[data-cur="usd"]{
+  /* USD — greenback palette */
+  --paper:#E9EFE8;      /* pale bill green */
+  --paper-2:#DCE6DA;
+  --ink:#16241B;        /* bill ink */
+  --ink-soft:#36473B;
+  --ink-faint:#74866F;
+  --line:#C2D4C0;
+  --primary:#1C7A45;     /* dollar green */
+  --primary-deep:#115C32;
+  --pos:#1C7A45;
+  --pos-soft:#2E9457;
+  --accent:#A9852F;      /* treasury seal gold */
+  --card:#FBFEFA;
+  --glow: color-mix(in srgb,var(--primary) 14%,transparent);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:17px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;position:relative;
+  transition:background .6s var(--ease),color .6s var(--ease);
+}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");}
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 32px}
+a{color:inherit;text-decoration:none}
+.mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);
+  background:color-mix(in srgb,var(--paper) 78%,transparent);
+  border-bottom:1px solid transparent;transition:border-color .4s,background .6s}
+nav.scrolled{border-color:var(--line)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:72px;max-width:1180px;margin:0 auto;padding:0 32px}
+.brand{display:flex;align-items:center;gap:11px;font-family:"Fraunces",serif;font-weight:600;font-size:22px;letter-spacing:-.01em}
+.glyph{width:30px;height:30px;border-radius:8px;flex:none;background:linear-gradient(145deg,var(--primary),var(--primary-deep));position:relative;box-shadow:0 6px 14px -6px var(--primary);transition:background .6s}
+.glyph::before,.glyph::after{content:"";position:absolute;left:6px;right:6px;height:2px;background:var(--paper);border-radius:2px;opacity:.85}
+.glyph::before{top:11px}.glyph::after{top:17px;right:12px}
+.brand small{font-family:"Hanken Grotesk";font-weight:500;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+.nav-right{display:flex;align-items:center;gap:18px}
+.nav-links{display:none;align-items:center;gap:28px;font-size:15px;font-weight:500;color:var(--ink-soft)}
+.nav-links a:hover{color:var(--ink)}
+@media(min-width:820px){.nav-links{display:flex}}
+
+/* currency toggle */
+.curtog{display:inline-flex;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:3px;position:relative}
+.curtog button{font-family:"JetBrains Mono";font-weight:700;font-size:13px;border:none;background:transparent;color:var(--ink-faint);width:46px;height:30px;border-radius:100px;cursor:pointer;z-index:1;transition:color .3s;display:flex;align-items:center;justify-content:center;gap:4px}
+.curtog button.on{color:#fff}
+.curtog .slide{position:absolute;top:3px;left:3px;width:46px;height:30px;border-radius:100px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));transition:transform .4s var(--ease),background .6s;box-shadow:0 4px 12px -4px var(--primary)}
+html[data-cur="usd"] .curtog .slide{transform:translateX(46px)}
+
+.btn{font-family:"Hanken Grotesk";font-weight:600;font-size:15px;padding:11px 20px;border-radius:11px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;transition:transform .25s var(--ease),box-shadow .25s,background .6s,color .6s;display:inline-flex;align-items:center;gap:9px}
+.btn:hover{transform:translateY(-2px);box-shadow:0 12px 24px -12px rgba(20,20,20,.55)}
+.btn.alt{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.alt:hover{border-color:var(--ink);box-shadow:none}
+.btn.sm{padding:9px 16px;font-size:14px}
+
+header{padding:80px 0 56px}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:12.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--paper-2);border:1px solid var(--line);padding:7px 14px;border-radius:100px;margin-bottom:26px;transition:.6s}
+.eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--pos-soft);animation:pulse 2.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--pos-soft) 60%,transparent)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+h1{font-family:"Fraunces",serif;font-weight:500;font-size:clamp(40px,6.2vw,76px);line-height:1.02;letter-spacing:-.025em;max-width:15ch;margin-bottom:24px}
+h1 em{font-style:italic;color:var(--primary-deep)}
+.lede{font-size:clamp(17px,2vw,20px);color:var(--ink-soft);max-width:46ch;margin-bottom:34px}
+.cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.cta-note{font-size:13.5px;color:var(--ink-faint);display:flex;align-items:center;gap:8px;margin-top:18px}
+.cta-note b{color:var(--pos);font-weight:700}
+.hero-grid{display:grid;grid-template-columns:1fr;gap:50px;align-items:center}
+@media(min-width:940px){.hero-grid{grid-template-columns:1.05fr .95fr}}
+
+/* denomination color band — the "currency" motif */
+.denoms{display:flex;gap:5px;margin-top:30px;align-items:center}
+.denoms .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;margin-right:6px}
+.denoms i{width:30px;height:9px;border-radius:3px;display:block;transition:.5s}
+
+.dash{background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:26px;position:relative;overflow:hidden;transition:background .6s,border-color .6s}
+.dash::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 90% -10%,var(--glow),transparent 60%);pointer-events:none;transition:.6s}
+.dash-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+.dash-top .lbl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+.netnum{font-family:"Fraunces",serif;font-weight:600;font-size:44px;letter-spacing:-.02em;line-height:1;margin-top:6px}
+.netnum .cur{font-size:24px;color:var(--ink-faint);vertical-align:super;font-weight:500}
+.chip{font-size:12px;font-weight:700;padding:6px 11px;border-radius:8px;background:color-mix(in srgb,var(--pos) 13%,transparent);color:var(--pos);font-family:"JetBrains Mono"}
+.plan-row{padding:15px 0;border-top:1px solid var(--line);display:grid;gap:8px}
+.plan-head{display:flex;justify-content:space-between;align-items:baseline;font-size:14.5px}
+.plan-head .name{font-weight:600;display:flex;align-items:center;gap:9px}
+.tag{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px}
+.tag.asset{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary-deep)}
+.tag.chit{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.plan-head .amt{font-family:"JetBrains Mono";font-size:13px;color:var(--ink-soft)}
+.bar{height:8px;border-radius:6px;background:var(--paper-2);overflow:hidden;position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;width:0;transition:width 1.3s var(--ease),background .6s}
+.bar i.s{background:linear-gradient(90deg,var(--primary),var(--primary-deep))}
+.bar i.e{background:linear-gradient(90deg,var(--pos-soft),var(--pos))}
+.plan-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+
+.strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper-2);transition:.6s}
+.strip-inner{display:flex;flex-wrap:wrap;gap:14px 40px;justify-content:center;padding:20px 32px;max-width:1180px;margin:0 auto}
+.strip span{font-size:14px;font-weight:500;color:var(--ink-soft);display:flex;align-items:center;gap:10px}
+.strip svg{width:17px;height:17px;color:var(--primary-deep)}
+
+section{padding:94px 0}
+.sec-eyebrow{font-size:12.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--primary-deep);margin-bottom:16px}
+h2{font-family:"Fraunces",serif;font-weight:500;font-size:clamp(30px,4.2vw,48px);letter-spacing:-.02em;line-height:1.06;max-width:18ch}
+h2 em{font-style:italic;color:var(--primary-deep)}
+.sec-lede{font-size:18px;color:var(--ink-soft);max-width:54ch;margin-top:20px}
+
+.problem{background:var(--ink);color:var(--paper);position:relative;overflow:hidden;transition:.6s}
+.problem::before{content:"";position:absolute;inset:0;opacity:.06;background-image:repeating-linear-gradient(transparent,transparent 31px,#fff 32px)}
+.problem .sec-eyebrow,.problem h2 em{color:var(--accent)}
+html[data-cur="usd"] .problem .sec-eyebrow,html[data-cur="usd"] .problem h2 em{color:var(--accent)}
+.problem .sec-lede{color:color-mix(in srgb,var(--paper) 72%,transparent)}
+.problem .quote{font-family:"Fraunces",serif;font-style:italic;font-weight:400;font-size:clamp(22px,3vw,32px);line-height:1.35;max-width:24ch;color:var(--paper)}
+
+.cards{display:grid;grid-template-columns:1fr;gap:24px;margin-top:54px}
+@media(min-width:820px){.cards{grid-template-columns:1fr 1fr}}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:34px;position:relative;overflow:hidden;transition:transform .4s var(--ease),box-shadow .4s,border-color .4s,background .6s}
+.pcard:hover{transform:translateY(-5px);box-shadow:var(--shadow);border-color:var(--ink-faint)}
+.pcard .ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;margin-bottom:22px;color:#fff;transition:.6s}
+.pcard.a .ic{background:linear-gradient(145deg,var(--primary),var(--primary-deep))}
+.pcard.c .ic{background:linear-gradient(145deg,var(--pos-soft),var(--pos))}
+.pcard .ic svg{width:24px;height:24px}
+.pcard h3{font-family:"Fraunces",serif;font-weight:600;font-size:25px;letter-spacing:-.01em;margin-bottom:6px}
+.pcard .kicker{font-size:13px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:14px}
+.pcard p{color:var(--ink-soft);font-size:15.5px}
+.feats{list-style:none;margin-top:22px;display:grid;gap:11px}
+.feats li{display:flex;gap:11px;font-size:14.5px;color:var(--ink-soft);align-items:flex-start}
+.feats li::before{content:"";width:7px;height:7px;border-radius:2px;margin-top:7px;flex:none;background:var(--primary)}
+.pcard.c .feats li::before{background:var(--pos)}
+.feats b{color:var(--ink);font-weight:700}
+
+.truth{background:var(--paper-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);transition:.6s}
+.truth-grid{display:grid;grid-template-columns:1fr;gap:50px;align-items:center}
+@media(min-width:900px){.truth-grid{grid-template-columns:.9fr 1.1fr}}
+.ledger{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;transition:.6s}
+.ledger .lh{display:flex;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+.lrow{display:grid;grid-template-columns:1fr auto;gap:4px;padding:15px 20px;border-bottom:1px solid var(--line);transition:background .3s}
+.lrow:last-child{border-bottom:none}
+.lrow:hover{background:var(--paper)}
+.lrow .l1{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+.lrow .amt{font-family:"JetBrains Mono";font-weight:700;font-size:15px;text-align:right}
+.lrow .amt.in{color:var(--pos)}
+.lrow .l2{font-size:12.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.lrow .l2r{font-size:12px;color:var(--ink-faint);text-align:right;display:flex;gap:7px;justify-content:flex-end;align-items:center}
+.pill{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);text-transform:capitalize}
+.proof{font-size:10.5px;color:var(--primary-deep);display:inline-flex;align-items:center;gap:4px;font-weight:600}
+
+.steps{display:grid;grid-template-columns:1fr;gap:22px;margin-top:56px;counter-reset:s}
+@media(min-width:760px){.steps{grid-template-columns:repeat(3,1fr)}}
+.step{position:relative;padding:30px;border:1px solid var(--line);border-radius:var(--r);background:var(--card);counter-increment:s;transition:transform .4s var(--ease),box-shadow .4s,background .6s}
+.step:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.step::before{content:"0" counter(s);font-family:"Fraunces",serif;font-weight:600;font-size:42px;color:var(--primary);opacity:.32;display:block;margin-bottom:12px;letter-spacing:-.02em}
+.step h4{font-size:19px;font-family:"Fraunces",serif;font-weight:600;margin-bottom:8px}
+.step p{font-size:14.5px;color:var(--ink-soft)}
+
+.finale{text-align:center;background:var(--ink);color:var(--paper);position:relative;overflow:hidden;transition:.6s}
+.finale::before{content:"";position:absolute;inset:0;opacity:.5;background:radial-gradient(60% 60% at 50% 0%,color-mix(in srgb,var(--primary) 30%,transparent),transparent 70%);transition:.6s}
+.finale .wrap{position:relative}
+.finale .sec-eyebrow{color:var(--accent)}
+.bignum{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(54px,11vw,124px);letter-spacing:-.03em;line-height:.95;margin:20px 0 6px}
+.bignum .cur{font-size:.45em;color:var(--accent);vertical-align:super}
+.finale .sub{color:color-mix(in srgb,var(--paper) 72%,transparent);max-width:42ch;margin:0 auto 36px;font-size:18px}
+.finale h2{margin:0 auto;color:var(--paper)}
+.finale h2 em{color:var(--accent)}
+.finale .cta-row{justify-content:center}
+.finale .btn{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.finale .btn.alt{background:transparent;color:var(--paper);border-color:color-mix(in srgb,var(--paper) 30%,transparent)}
+.finale .small{margin-top:26px;font-size:13px;color:var(--ink-faint);letter-spacing:.04em}
+
+footer{padding:38px 0;border-top:1px solid var(--line)}
+.foot{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:center;font-size:13.5px;color:var(--ink-faint)}
+.foot .brand{font-size:18px}.foot .brand small{display:none}
+
+[data-rise]{opacity:0;transform:translateY(26px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+[data-rise].in{opacity:1;transform:none}
+[data-rise][data-d="1"]{transition-delay:.08s}[data-rise][data-d="2"]{transition-delay:.16s}
+[data-rise][data-d="3"]{transition-delay:.24s}[data-rise][data-d="4"]{transition-delay:.32s}
+@media(prefers-reduced-motion:reduce){[data-rise]{opacity:1;transform:none}.bar i{transition:background .6s}}
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#top"><span class="glyph"></span> Khata <small>money&nbsp;plans</small></a>
+    <div class="nav-right">
+      <div class="nav-links">
+        <a href="#problem">Why</a><a href="#plans">What it tracks</a><a href="#how">How</a>
+      </div>
+      <div class="curtog" id="curtog" title="Primary currency">
+        <span class="slide"></span>
+        <button data-set="inr" class="on">₹ INR</button>
+        <button data-set="usd">$ USD</button>
+      </div>
+      <a href="#start" class="btn sm">Sign in</a>
+    </div>
+  </div>
+</nav>
+
+<header id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow" data-rise><span class="dot"></span> Self-hosted · multi-currency</span>
+      <h1 data-rise data-d="1">Money the way <em>you actually</em> pay it.</h1>
+      <p class="lede" data-rise data-d="2">Buying an asset in pieces as funds arrive? Running or joining a chit fund? Track every <span class="unitword">rupee</span> — paid, owed, and owed to you — with proof, on your own hardware.</p>
+      <div class="cta-row" data-rise data-d="3">
+        <a href="#start" class="btn">Sign in
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a href="#how" class="btn alt">See how it works</a>
+      </div>
+      <p class="cta-note" data-rise data-d="4"><b>✓</b> Google sign-in or a local password. Nothing leaves your machine.</p>
+      <div class="denoms" data-rise data-d="4" id="denoms">
+        <span class="lbl">Primary <span class="symword">₹</span></span>
+      </div>
+    </div>
+
+    <div class="dash" data-rise data-d="3">
+      <div class="dash-top">
+        <div>
+          <div class="lbl">Net position · all plans</div>
+          <div class="netnum"><span class="cur symword">₹</span><span class="cv count" data-inr="1840000">0</span></div>
+        </div>
+        <span class="chip">▲ on track</span>
+      </div>
+      <div class="plan-row">
+        <div class="plan-head"><span class="name"><span class="tag asset">Asset</span> Devanahalli plot</span>
+          <span class="amt"><span class="cv" data-inr="1240000" data-style="lakh"></span> / <span class="cv" data-inr="2000000" data-style="lakh"></span></span></div>
+        <div class="bar"><i class="s" data-w="62"></i></div>
+        <div class="plan-meta"><span>62% paid</span><span>next <span class="cv" data-inr="150000"></span> · Jun 18</span></div>
+      </div>
+      <div class="plan-row">
+        <div class="plan-head"><span class="name"><span class="tag chit">Chit</span> 12-member auction</span><span class="amt">round 5 / 12</span></div>
+        <div class="bar"><i class="e" data-w="42"></i></div>
+        <div class="plan-meta"><span>+<span class="cv" data-inr="18400"></span> dividends</span><span>my turn · round 9</span></div>
+      </div>
+      <div class="plan-row">
+        <div class="plan-head"><span class="name"><span class="tag asset">Loan</span> Borrowed — R. Kumar</span><span class="amt"><span class="cv" data-inr="310000" data-style="lakh"></span> left</span></div>
+        <div class="bar"><i class="s" data-w="38"></i></div>
+        <div class="plan-meta"><span>repaid <span class="cv" data-inr="190000"></span></span><span>of <span class="cv" data-inr="500000"></span></span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="strip">
+  <div class="strip-inner">
+    <span data-rise><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 4v5c0 4-3 7-7 9-4-2-7-5-7-9V7z"/></svg> Privacy-first — your data stays yours</span>
+    <span data-rise data-d="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 10h16"/></svg> One ledger, single source of truth</span>
+    <span data-rise data-d="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M6 7h9a3 3 0 010 6H6m0 4h10"/></svg> Multi-currency · <span class="symword">₹</span> &amp; $ · installments &amp; chits</span>
+  </div>
+</div>
+
+<section id="problem" class="problem">
+  <div class="wrap">
+    <div class="sec-eyebrow" data-rise>The gap</div>
+    <h2 data-rise data-d="1">Budgeting apps assume you pay <em>in full, on time, to a bank.</em></h2>
+    <p class="sec-lede" data-rise data-d="2" style="margin-bottom:40px">Real life here isn't that. You pay an asset in irregular chunks — cash, a transfer, a loan, a sold asset, a chit payout. You sit in chit funds where the math of pots, bids, dividends and commission never fits a spreadsheet.</p>
+    <p class="quote" data-rise data-d="3">“So it all lives in your head — until it doesn't.”</p>
+  </div>
+</section>
+
+<section id="plans">
+  <div class="wrap">
+    <div class="sec-eyebrow" data-rise>What it tracks</div>
+    <h2 data-rise data-d="1">Two kinds of money plans, <em>one honest ledger.</em></h2>
+    <p class="sec-lede" data-rise data-d="2">Every balance is computed from what you actually recorded — never a stale number you have to trust.</p>
+    <div class="cards">
+      <div class="pcard a" data-rise data-d="1">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></svg></div>
+        <div class="kicker">Asset purchase</div><h3>Pay it in pieces.</h3>
+        <p>Set the price, sketch a plan, pay when funds arrive. The plan adapts to reality.</p>
+        <ul class="feats">
+          <li>Installment schedule with <b>roll-forward</b> — a short payment carries to the next, original plan kept.</li>
+          <li>Each payment tagged: cash / transfer, and its funding source.</li>
+          <li>Borrowed to pay? The debt becomes a tracked liability with its own repayment ledger.</li>
+          <li>Attach the receipt, screenshot, or chat — timestamped proof.</li>
+        </ul>
+      </div>
+      <div class="pcard c" data-rise data-d="2">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 010 18M12 7v5l3 2"/></svg></div>
+        <div class="kicker">Chit fund · chitti</div><h3>Know your real position.</h3>
+        <p>Member or organizer. Pure rotating or auction. The chit math, done for you.</p>
+        <ul class="feats">
+          <li>Pick your role — <b>member, organizer, or both</b> — per chit.</li>
+          <li>Track contributions, who took the pot, bids &amp; dividends, commission.</li>
+          <li>See your true profit or loss, round by round, not a vague feeling.</li>
+          <li>A chit payout can fund an asset payment — plans connect.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="truth">
+  <div class="wrap truth-grid">
+    <div>
+      <div class="sec-eyebrow" data-rise>Single source of truth</div>
+      <h2 data-rise data-d="1">Every <span class="unitword">rupee</span>, <em>traceable.</em></h2>
+      <p class="sec-lede" data-rise data-d="2">Method, source, exact timestamp, and proof — on every transaction. Attach the screenshot or the chat where the deal was struck. Balances recompute themselves.</p>
+    </div>
+    <div class="ledger" data-rise data-d="2">
+      <div class="lh"><span>Ledger · Devanahalli plot</span><span>balance <span class="cv" data-inr="760000" data-style="lakh"></span></span></div>
+      <div class="lrow"><div class="l1">Installment #4</div><div class="amt out">−<span class="cv" data-inr="150000"></span></div><div class="l2">04 Jun · 11:24 IST</div><div class="l2r"><span class="pill">transfer</span><span class="proof">▣ proof</span></div></div>
+      <div class="lrow"><div class="l1">From chit payout</div><div class="amt in">+<span class="cv" data-inr="200000"></span></div><div class="l2">28 May · 18:02 IST</div><div class="l2r"><span class="pill">chit · round 4</span><span class="proof">▣ proof</span></div></div>
+      <div class="lrow"><div class="l1">Installment #3 <span style="font-size:11px;color:var(--primary-deep);font-weight:600">· short, rolled fwd</span></div><div class="amt out">−<span class="cv" data-inr="90000"></span></div><div class="l2">12 May · 09:40 IST</div><div class="l2r"><span class="pill">cash</span><span class="proof">▣ proof</span></div></div>
+      <div class="lrow"><div class="l1">Borrowed — R. Kumar</div><div class="amt in">+<span class="cv" data-inr="500000"></span></div><div class="l2">02 May · 14:15 IST</div><div class="l2r"><span class="pill">liability</span><span class="proof">▣ proof</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow" data-rise>How it works</div>
+    <h2 data-rise data-d="1">Three steps. <em>Then it just adds up.</em></h2>
+    <div class="steps">
+      <div class="step" data-rise data-d="1"><h4>Create a plan</h4><p>An asset to buy, or a chit you've joined or run. Set the terms and currency once.</p></div>
+      <div class="step" data-rise data-d="2"><h4>Log money as it moves</h4><p>Amount, method, source, timestamp — and a screenshot for proof. Seconds.</p></div>
+      <div class="step" data-rise data-d="3"><h4>Open the dashboard</h4><p>Paid, remaining, owed, and your net — across every plan, always live.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="start" class="finale">
+  <div class="wrap">
+    <div class="sec-eyebrow" data-rise>Your true position</div>
+    <div class="bignum" data-rise data-d="1"><span class="cur symword">₹</span><span class="cv count" data-inr="1840000">0</span></div>
+    <p class="sub" data-rise data-d="2">One number that's hard to get right by hand — across every asset and every chit, what you owe, what you're owed, where you net out.</p>
+    <h2 data-rise data-d="2" style="font-size:clamp(28px,4vw,42px)">Take control of how <em>you actually pay.</em></h2>
+    <div class="cta-row" data-rise data-d="3" style="margin-top:32px">
+      <a href="app.html" class="btn">Continue with Google
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.35 11.1H12v3.8h5.35c-.25 1.5-1.8 4.4-5.35 4.4-3.2 0-5.85-2.65-5.85-5.9S8.8 7.5 12 7.5c1.85 0 3.05.8 3.75 1.45l2.55-2.45C16.7 4.9 14.55 4 12 4 6.95 4 2.9 8.05 2.9 13.1S6.95 22.2 12 22.2c5.4 0 9-3.8 9-9.15 0-.6-.05-1.05-.15-1.55z"/></svg></a>
+      <a href="app.html" class="btn alt">Use a local password</a>
+    </div>
+    <p class="small" data-rise data-d="4">SELF-HOSTED · PRIVACY-FIRST · MULTI-CURRENCY</p>
+  </div>
+</section>
+
+<footer><div class="wrap foot">
+  <a class="brand" href="#top"><span class="glyph"></span> Khata</a>
+  <span>Working name · a private money-plans ledger</span>
+  <span>Installments &amp; chits · <span class="symword">₹</span> / $</span>
+</div></footer>
+
+<script>
+const RATE=83; // 1 USD = 83 INR (demo)
+let CUR=(location.hash==='#usd')?'usd':'inr';
+
+const denomINR=[['₹10','#8A5A3B'],['₹20','#B7B24A'],['₹50','#3F7CA6'],['₹100','#9C7BB5'],['₹200','#E2922E'],['₹500','#8C8A6B'],['₹2000','#B0568E']];
+const denomUSD=[['$1','#3C6B47'],['$5','#7A5A8C'],['$10','#C57B3C'],['$20','#2E8C55'],['$50','#B0494E'],['$100','#3E7E8C']];
+
+function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
+function usGroup(n){return Math.round(n).toLocaleString('en-US');}
+function abbr(valBase){ // valBase in display currency units
+  if(CUR==='inr'){ if(valBase>=1e7) return (valBase/1e7).toFixed(2).replace(/\.00$/,'')+'Cr'; return (valBase/1e5).toFixed(valBase%1e5?2:0).replace(/\.00$/,'')+'L'; }
+  return (valBase/1e3).toFixed(valBase%1e3?1:0)+'k';
+}
+function sym(){return CUR==='inr'?'₹':'$';}
+function val(inr){return CUR==='inr'?inr:inr/RATE;}
+
+function renderCV(el,animate){
+  const inr=+el.dataset.inr, base=val(inr), style=el.dataset.style;
+  const out = style==='lakh' ? abbr(base) : (CUR==='inr'?indGroup(base):usGroup(base));
+  const symPrefix = el.dataset.style==='lakh' ? sym() : '';
+  if(animate && el.classList.contains('count')){
+    const t0=performance.now(),dur=1400;
+    (function tick(t){const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3),v=base*e;
+      el.textContent=(CUR==='inr'?indGroup(v):usGroup(v));
+      if(p<1)requestAnimationFrame(tick); })(performance.now());
+  } else {
+    el.textContent = symPrefix + out;
+  }
+}
+function applyCurrency(animateCounts){
+  document.documentElement.dataset.cur=CUR;
+  document.querySelectorAll('.symword').forEach(s=>s.textContent=sym());
+  document.querySelectorAll('.unitword').forEach(s=>s.textContent=CUR==='inr'?'rupee':'dollar');
+  document.querySelectorAll('.cv').forEach(el=>renderCV(el,animateCounts));
+  // denomination band
+  const d=document.getElementById('denoms'); if(d){
+    d.querySelectorAll('i').forEach(i=>i.remove());
+    (CUR==='inr'?denomINR:denomUSD).forEach(([t,c])=>{const i=document.createElement('i');i.style.background=c;i.title=t;d.appendChild(i);});
+  }
+  // currency toggle button state
+  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on',b.dataset.set===CUR));
+}
+
+// toggle handler
+document.getElementById('curtog').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  CUR=b.dataset.set; applyCurrency(false);
+});
+
+// nav scroll
+addEventListener('scroll',()=>document.getElementById('nav').classList.toggle('scrolled',scrollY>12));
+
+// reveal + fire bars/counts
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){
+  e.target.classList.add('in');
+  e.target.querySelectorAll?.('.bar i[data-w]').forEach(b=>b.style.width=b.dataset.w+'%');
+  e.target.querySelectorAll?.('.cv.count').forEach(el=>renderCV(el,true));
+  io.unobserve(e.target);}});},{threshold:.18});
+document.querySelectorAll('[data-rise]').forEach(el=>io.observe(el));
+
+// init
+applyCurrency(false);
+addEventListener('load',()=>setTimeout(()=>{
+  document.querySelectorAll('.dash .bar i[data-w]').forEach(b=>b.style.width=b.dataset.w+'%');
+  document.querySelectorAll('.dash .cv.count').forEach(el=>renderCV(el,true));
+},450));
+</script>
+</body>
+</html>

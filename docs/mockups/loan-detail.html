@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — Gold loan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F7F1E6;--paper-2:#F1E8D7;--ink:#241B16;--ink-soft:#4A4035;--ink-faint:#8C8068;
+  --line:#DBCDB0;--line-2:#E7DCC6;--primary:#C05E1B;--primary-deep:#9C4711;
+  --pos:#1F6B53;--pos-soft:#2E8C6E;--neg:#A6321F;--accent:#9E3B6E;--gold:#B8902E;--card:#FFFDF8;
+  --shadow:0 1px 0 rgba(28,24,19,.04),0 16px 36px -24px rgba(28,24,19,.45);--r:16px;--ease:cubic-bezier(.22,.68,0,1);
+}
+html[data-cur="usd"]{--paper:#E9EFE8;--paper-2:#DDE7DB;--ink:#16241B;--ink-soft:#36473B;--ink-faint:#74866F;--line:#C2D4C0;--line-2:#D2E0D0;--primary:#1C7A45;--primary-deep:#115C32;--pos:#1C7A45;--pos-soft:#2E9457;--accent:#A9852F;--gold:#A9852F;--card:#FBFEFA;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased;transition:.6s var(--ease)}
+.mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+a{color:inherit;text-decoration:none}
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+@media(max-width:880px){.app{grid-template-columns:1fr}.side{display:none}}
+.side{border-right:1px solid var(--line);background:var(--paper-2);padding:22px 16px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:21px;padding:6px 8px 22px}
+.glyph{width:28px;height:28px;border-radius:8px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));position:relative;box-shadow:0 6px 14px -6px var(--primary)}
+.glyph::before,.glyph::after{content:"";position:absolute;left:6px;right:6px;height:2px;background:var(--paper);border-radius:2px;opacity:.85}
+.glyph::before{top:10px}.glyph::after{top:16px;right:11px}
+.navsec{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:16px 10px 8px}
+.nav-i{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;font-weight:500;color:var(--ink-soft);cursor:pointer;font-size:14.5px}
+.nav-i svg{width:18px;height:18px}.nav-i:hover{background:var(--line-2);color:var(--ink)}
+.nav-i.on{background:var(--ink);color:var(--paper)}
+.nav-i .ct{margin-left:auto;font-size:11px;font-family:"JetBrains Mono";opacity:.7}
+
+.top{display:flex;align-items:center;justify-content:space-between;padding:16px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(8px);z-index:20}
+.crumb{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink-faint)}
+.crumb a:hover{color:var(--ink)}
+.top-right{display:flex;align-items:center;gap:14px}
+.curtog{display:inline-flex;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:3px;position:relative}
+.curtog button{font-family:"JetBrains Mono";font-weight:700;font-size:12.5px;border:none;background:transparent;color:var(--ink-faint);width:44px;height:28px;border-radius:100px;cursor:pointer;z-index:1}
+.curtog button.on{color:#fff}
+.curtog .slide{position:absolute;top:3px;left:3px;width:44px;height:28px;border-radius:100px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));transition:transform .4s var(--ease),background .6s}
+html[data-cur="usd"] .curtog .slide{transform:translateX(44px)}
+.addbtn{font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;display:flex;align-items:center;gap:7px}
+
+.content{padding:26px 30px 60px;max-width:1200px}
+.tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px}
+.tag.loan{background:color-mix(in srgb,var(--neg) 14%,transparent);color:var(--neg)}
+.tag.sec{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold)}
+
+.head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:20px}
+.head h1{font-family:"Fraunces",serif;font-weight:600;font-size:31px;letter-spacing:-.02em;display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.head .meta{font-size:13px;color:var(--ink-faint);margin-top:6px;font-family:"JetBrains Mono"}
+.kpis{display:flex;gap:24px}
+.kpi .n{font-family:"Fraunces",serif;font-weight:600;font-size:24px;letter-spacing:-.02em}
+.kpi .n.neg{color:var(--neg)}
+.kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:600}
+
+.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:22px;margin-top:26px}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+.ph .t{font-family:"Fraunces",serif;font-weight:600;font-size:17px}
+.ph .meta{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+
+/* structure segmented (read-only display) */
+.struct{display:flex;gap:6px;padding:14px 20px;border-bottom:1px solid var(--line-2)}
+.struct .s{flex:1;text-align:center;padding:10px;border-radius:10px;border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-faint);background:var(--paper)}
+.struct .s.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.struct .s small{display:block;font-weight:500;font-size:10.5px;opacity:.7;margin-top:2px;text-transform:none;letter-spacing:0}
+
+/* ledger */
+.lrow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:13px 20px;border-top:1px solid var(--line-2)}
+.l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
+.amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right}
+.amt.intr{color:var(--primary-deep)}.amt.prin{color:var(--ink)}
+.l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.l2r{font-size:11px;color:var(--ink-faint);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);text-transform:capitalize}
+.pill.i{background:color-mix(in srgb,var(--primary) 12%,transparent);border-color:transparent;color:var(--primary-deep)}
+.pill.p{background:color-mix(in srgb,var(--ink) 8%,transparent);border-color:transparent;color:var(--ink)}
+
+/* collateral card */
+.col-hero{display:flex;gap:16px;align-items:center;padding:20px;border-bottom:1px solid var(--line-2)}
+.col-ic{width:54px;height:54px;border-radius:14px;flex:none;display:grid;place-items:center;background:linear-gradient(145deg,var(--gold),#8a6b1f);color:#fff;box-shadow:0 8px 20px -8px var(--gold)}
+.col-ic svg{width:28px;height:28px}
+.col-hero .big{font-family:"Fraunces",serif;font-weight:600;font-size:22px;line-height:1}
+.col-hero .small{font-size:12.5px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:4px}
+.col-spec{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-2)}
+.col-spec div{background:var(--card);padding:13px 20px}
+.col-spec .k{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:600}
+.col-spec .v{font-family:"JetBrains Mono";font-weight:700;font-size:14.5px;margin-top:3px}
+/* ltv gauge */
+.ltv{padding:18px 20px;border-top:1px solid var(--line-2)}
+.ltv .lab{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);margin-bottom:9px}
+.ltv .lab b{font-family:"JetBrains Mono"}
+.ltvbar{height:12px;border-radius:8px;background:var(--paper-2);overflow:hidden;position:relative;border:1px solid var(--line-2)}
+.ltvbar i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:linear-gradient(90deg,var(--pos),var(--pos-soft));width:0;transition:width 1.1s var(--ease)}
+.ltvbar .cap{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--neg);opacity:.6}
+.ltv .hint{font-size:11.5px;color:var(--ink-faint);margin-top:8px;font-family:"JetBrains Mono"}
+.pledge{display:flex;align-items:center;justify-content:space-between;padding:13px 20px;border-top:1px solid var(--line-2);font-size:13px}
+.pledge .st{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;background:color-mix(in srgb,var(--gold) 18%,transparent);color:var(--gold)}
+.linkrow{padding:12px 20px;border-top:1px solid var(--line-2);font-size:12.5px;color:var(--ink-faint)}
+.linkrow b{color:var(--primary-deep)}
+
+/* terms */
+.terms{padding:6px 20px 14px}
+.terms .r{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line-2);font-size:13.5px}
+.terms .r:last-child{border-bottom:none}
+.terms .k{color:var(--ink-soft)}.terms .v{font-family:"JetBrains Mono";font-weight:700}
+
+.fade{opacity:0;transform:translateY(16px);animation:rise .7s var(--ease) forwards}
+.fade.d1{animation-delay:.07s}.fade.d2{animation-delay:.14s}.fade.d3{animation-delay:.21s}.fade.d4{animation-delay:.28s}
+@keyframes rise{to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="app.html"><span class="glyph"></span> Khata</a>
+    <div class="navsec">Overview</div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</div>
+    <div class="navsec">Money plans</div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct">2</span></div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct">3</span></div>
+    <div class="nav-i on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct">3</span></div>
+    <div class="navsec">Records</div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</div>
+    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Proofs</div>
+  </aside>
+
+  <main>
+    <div class="top">
+      <div class="crumb"><a href="app.html">Loans</a> <span>›</span> <b style="color:var(--ink)">Gold loan — HDFC</b></div>
+      <div class="top-right">
+        <div class="curtog" id="curtog"><span class="slide"></span><button data-set="inr" class="on">₹ INR</button><button data-set="usd">$ USD</button></div>
+        <button class="addbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Record repayment</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="head fade">
+        <div>
+          <h1><span class="tag loan">Loan · taken</span> Gold loan — HDFC <span class="tag sec">secured</span></h1>
+          <div class="meta">opened 02 Mar 2026 · 8.5%/yr · reducing balance · bullet (interest-only) · matures Mar 2027</div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="n neg"><span class="symword">₹</span><span class="cv" data-inr="396000" data-style="lakh"></span></div><div class="l">Principal owed</div></div>
+          <div class="kpi"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="22440"></span></div><div class="l">Interest paid</div></div>
+          <div class="kpi"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="2805"></span></div><div class="l">Next interest</div></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <!-- left: structure + repayment ledger -->
+        <div>
+          <div class="panel fade d2">
+            <div class="ph"><div class="t">Repayment structure</div><div class="meta">interest split from principal</div></div>
+            <div class="struct">
+              <div class="s on">Bullet · interest-only<small>pay interest monthly · principal at maturity</small></div>
+              <div class="s">EMI<small>fixed monthly principal + interest</small></div>
+            </div>
+            <div class="ph" style="border-top:none"><div class="t" style="font-size:15px">Ledger</div><div class="meta">interest + principal prepayments</div></div>
+            <div class="lrow"><div class="l1">Interest · Jun</div><div class="amt intr">−<span class="cv" data-inr="2805"></span></div><div class="l2">02 Jun · auto-accrued, paid</div><div class="l2r"><span class="pill i">interest</span><span class="pill">UPI</span></div></div>
+            <div class="lrow"><div class="l1">Principal prepayment</div><div class="amt prin">−<span class="cv" data-inr="104000"></span></div><div class="l2">20 May · reduced outstanding</div><div class="l2r"><span class="pill p">principal</span><span class="pill">transfer</span></div></div>
+            <div class="lrow"><div class="l1">Interest · May</div><div class="amt intr">−<span class="cv" data-inr="3542"></span></div><div class="l2">02 May · on ₹5,00,000</div><div class="l2r"><span class="pill i">interest</span><span class="pill">UPI</span></div></div>
+            <div class="lrow"><div class="l1">Principal prepayment</div><div class="amt prin">−<span class="cv" data-inr="100000"></span></div><div class="l2">28 Apr · reduced outstanding</div><div class="l2r"><span class="pill p">principal</span><span class="pill">cash</span></div></div>
+            <div class="lrow"><div class="l1">Interest · Apr</div><div class="amt intr">−<span class="cv" data-inr="4250"></span></div><div class="l2">02 Apr · on ₹6,00,000</div><div class="l2r"><span class="pill i">interest</span><span class="pill">UPI</span></div></div>
+            <div class="lrow"><div class="l1">Disbursed (principal in)</div><div class="amt" style="color:var(--pos)">+<span class="cv" data-inr="600000"></span></div><div class="l2">02 Mar · against gold pledge</div><div class="l2r"><span class="pill">disbursement</span><span class="pill">bank</span></div></div>
+          </div>
+        </div>
+
+        <!-- right: collateral + terms -->
+        <div>
+          <div class="panel fade d2">
+            <div class="ph"><div class="t">Collateral</div><div class="meta">pledged security</div></div>
+            <div class="col-hero">
+              <div class="col-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l3 4 5 1-3.5 4 .8 5L12 19l-5.3 2 .8-5L4 12l5-1z"/></svg></div>
+              <div><div class="big">Gold jewellery</div><div class="small">120 g · 22K · 5 items</div></div>
+            </div>
+            <div class="col-spec">
+              <div><div class="k">Rate / gram</div><div class="v"><span class="symword">₹</span><span class="cv" data-inr="6200"></span></div></div>
+              <div><div class="k">Valuation</div><div class="v"><span class="symword">₹</span><span class="cv" data-inr="744000" data-style="lakh"></span></div></div>
+            </div>
+            <div class="ltv">
+              <div class="lab"><span>Loan-to-value (current)</span><b>53%</b></div>
+              <div class="ltvbar"><i data-w="53"></i><span class="cap" style="left:75%"></span></div>
+              <div class="hint">owed <span class="symword">₹</span><span class="cv" data-inr="396000" data-style="lakh"></span> of <span class="symword">₹</span><span class="cv" data-inr="744000" data-style="lakh"></span> value · red line = 75% lender cap</div>
+            </div>
+            <div class="pledge"><span>Held at · HDFC Bank, Indiranagar</span><span class="st">⬢ Pledged</span></div>
+            <div class="linkrow">Standalone record · <b>+ link to a tracked asset</b> if you add this gold to Assets</div>
+          </div>
+
+          <div class="panel fade d3">
+            <div class="ph"><div class="t">Loan terms</div></div>
+            <div class="terms">
+              <div class="r"><span class="k">Original principal</span><span class="v"><span class="symword">₹</span><span class="cv" data-inr="600000" data-style="lakh"></span></span></div>
+              <div class="r"><span class="k">Interest rate</span><span class="v">8.5% / yr</span></div>
+              <div class="r"><span class="k">Basis</span><span class="v">Reducing balance</span></div>
+              <div class="r"><span class="k">Unpaid interest</span><span class="v">Arrears (no compound)</span></div>
+              <div class="r"><span class="k">Structure</span><span class="v">Bullet · interest-only</span></div>
+              <div class="r"><span class="k">Principal repaid</span><span class="v"><span class="symword">₹</span><span class="cv" data-inr="204000" data-style="lakh"></span></span></div>
+              <div class="r"><span class="k">Maturity</span><span class="v">Mar 2027</span></div>
+            </div>
+          </div>
+
+          <div class="panel fade d4">
+            <div class="ph"><div class="t">Release tracker</div><div class="meta">collateral returns at ₹0</div></div>
+            <div class="ltv" style="border-top:none">
+              <div class="lab"><span>Principal cleared</span><b>34%</b></div>
+              <div class="ltvbar"><i data-w="34" style="background:linear-gradient(90deg,var(--gold),#8a6b1f)"></i></div>
+              <div class="hint">clear <span class="symword">₹</span><span class="cv" data-inr="396000" data-style="lakh"></span> more to release the gold</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const RATE=83; let CUR=(location.hash==='#usd')?'usd':'inr';
+function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
+function usGroup(n){return Math.round(n).toLocaleString('en-US');}
+function abbr(v){if(CUR==='inr'){if(v>=1e7)return (v/1e7).toFixed(2).replace(/\.?0+$/,'')+'Cr';return (v/1e5).toFixed(v%1e5?2:0).replace(/\.?0+$/,'')+'L';}return (v/1e3).toFixed(v%1e3?1:0)+'k';}
+function sym(){return CUR==='inr'?'₹':'$';}
+function val(i){return CUR==='inr'?i:i/RATE;}
+function renderCV(el){const b=val(+el.dataset.inr);el.textContent=el.dataset.style==='lakh'?abbr(b):(CUR==='inr'?indGroup(b):usGroup(b));}
+function apply(){document.documentElement.dataset.cur=CUR;document.querySelectorAll('.symword').forEach(s=>s.textContent=sym());document.querySelectorAll('.cv').forEach(renderCV);document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on',b.dataset.set===CUR));}
+document.getElementById('curtog').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;CUR=b.dataset.set;apply();});
+apply();
+addEventListener('load',()=>setTimeout(()=>document.querySelectorAll('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%'),350));
+</script>
+</body>
+</html>
