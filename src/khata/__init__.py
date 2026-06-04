@@ -34,4 +34,7 @@ def create_app(config: Config | None = None) -> Flask:
     from .api.auth import bp as auth_bp
     app.register_blueprint(auth_bp)
 
+    from .web import bp as web_bp
+    app.register_blueprint(web_bp)
+
     return app
