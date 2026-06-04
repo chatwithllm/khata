@@ -1,24 +1,12 @@
 from datetime import date
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models import Plan, PlanMembership
-from . import loans
-
-
-def _user_plans(session: Session, user_id: int):
-    owned = list(session.scalars(select(Plan).where(Plan.owner_user_id == user_id)))
-    member_ids = list(session.scalars(
-        select(PlanMembership.plan_id).where(PlanMembership.user_id == user_id)))
-    owned_ids = {p.id for p in owned}
-    member = [p for p in (session.get(Plan, pid) for pid in member_ids)
-              if p is not None and p.id not in owned_ids]
-    return owned, member
+from . import loans, sharing
 
 
 def net_position(session: Session, user_id: int) -> dict:
-    owned, member = _user_plans(session, user_id)
+    owned, member = sharing.user_plans(session, user_id)
     i_owe = 0
     owed_to_me = 0
     paid = 0

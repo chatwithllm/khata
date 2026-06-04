@@ -1,9 +1,8 @@
 from datetime import date, datetime, timezone
 
 from flask import Blueprint, g, jsonify, request
-from sqlalchemy import select
 
-from ..models import Plan, PlanMembership, User
+from ..models import Plan, User
 from ..money import format_minor, pct_to_bps, to_minor
 from ..services import assets, loans, sharing
 from ..services.assets import PlanError
@@ -113,12 +112,7 @@ def index():
     user = current_user()
     if user is None:
         return jsonify(error="unauthenticated"), 401
-    owned = assets.list_plans(g.db, user.id)
-    owned_ids = {p.id for p in owned}
-    member_ids = list(g.db.scalars(
-        select(PlanMembership.plan_id).where(PlanMembership.user_id == user.id)))
-    member = [p for p in (g.db.get(Plan, pid) for pid in member_ids)
-              if p is not None and p.id not in owned_ids]
+    owned, member = sharing.user_plans(g.db, user.id)
     return jsonify(plans=[_summary(p) for p in owned + member]), 200
 
 

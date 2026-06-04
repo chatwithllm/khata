@@ -176,8 +176,9 @@ def test_dashboard_rollup(client):
     client.post(f"/api/plans/{pid2}/payments",
                 json={"amount": "1,00,000", "method": "upi", "funding_source": "savings"})
 
-    assert client.get("/api/dashboard").status_code == 200 or True  # set after auth check below
-    d = client.get("/api/dashboard").get_json()
+    resp = client.get("/api/dashboard")
+    assert resp.status_code == 200
+    d = resp.get_json()
     assert d["i_owe_minor"] == 10000000
     assert d["paid_to_date_minor"] == 10000000
     assert d["owed_to_me_minor"] == 0

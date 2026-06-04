@@ -22,6 +22,22 @@ def accessible(session: Session, *, plan: Plan, user_id: int) -> bool:
     return any(m.user_id == user_id for m in plan.memberships)
 
 
+def user_plans(session: Session, user_id: int) -> tuple[list[Plan], list[Plan]]:
+    """Return (owned, member) plans for a user; member excludes any owned (dedup).
+
+    Owned plans are newest-first; the member list drops plans already owned so a
+    plan is never counted twice.
+    """
+    owned = list(session.scalars(
+        select(Plan).where(Plan.owner_user_id == user_id).order_by(Plan.created_at.desc())))
+    owned_ids = {p.id for p in owned}
+    member_ids = list(session.scalars(
+        select(PlanMembership.plan_id).where(PlanMembership.user_id == user_id)))
+    member = [p for p in (session.get(Plan, pid) for pid in member_ids)
+              if p is not None and p.id not in owned_ids]
+    return owned, member
+
+
 def add_member(session: Session, *, plan: Plan, email: str) -> PlanMembership:
     email = (email or "").strip().lower()
     user = session.scalar(select(User).where(User.email == email))
