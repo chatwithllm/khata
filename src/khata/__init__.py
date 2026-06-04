@@ -37,4 +37,7 @@ def create_app(config: Config | None = None) -> Flask:
     from .web import bp as web_bp
     app.register_blueprint(web_bp)
 
+    from .api.plans import bp as plans_bp
+    app.register_blueprint(plans_bp)
+
     return app
