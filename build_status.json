@@ -1,11 +1,11 @@
 {
   "project": "khata",
   "phase": 1,
-  "plan": "1-foundation-auth",
-  "tasks_total": 10,
-  "tasks_done": 10,
+  "plan": "2-plan-ledger-asset",
+  "tasks_total": 7,
+  "tasks_done": 7,
   "last_updated": "2026-06-04",
-  "tests": "11 passed",
+  "tests": "34 passed",
   "python": "3.12",
-  "notes": "Plan 1 complete: Flask app factory, SQLAlchemy/SQLite+WAL, Alembic, User model, password hashing, auth service + /api/auth API with sessions, static shell + features tab, learning loop, dev entrypoint. Next: Plan 2 (plan + ledger core, asset roll-forward)."
+  "notes": "Plan 2 complete: plan/ledger spine + Asset purchase — installment schedule, money ledger (integer minor units), derived greedy roll-forward + funding breakdown, owner-scoped /api/plans (create/list/detail/installments/payments). Smoke-tested end-to-end. Next: Plan 3 (Loan type)."
 }
