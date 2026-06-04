@@ -1,10 +1,11 @@
 from datetime import date, datetime, timezone
 
 from flask import Blueprint, g, jsonify, request
+from sqlalchemy import select
 
-from ..models import Plan
+from ..models import Plan, PlanMembership, User
 from ..money import format_minor, pct_to_bps, to_minor
-from ..services import assets, loans
+from ..services import assets, loans, sharing
 from ..services.assets import PlanError
 from ..services.loans import LoanError
 from .auth import current_user
@@ -66,6 +67,15 @@ def _owned_plan(user, plan_id):
     return plan, None
 
 
+def _accessible_plan(user, plan_id):
+    plan = g.db.get(Plan, plan_id)
+    if plan is None:
+        return None, (jsonify(error="not_found"), 404)
+    if not sharing.accessible(g.db, plan=plan, user_id=user.id):
+        return None, (jsonify(error="forbidden"), 403)
+    return plan, None
+
+
 @bp.post("")
 def create():
     user = current_user()
@@ -103,7 +113,13 @@ def index():
     user = current_user()
     if user is None:
         return jsonify(error="unauthenticated"), 401
-    return jsonify(plans=[_summary(p) for p in assets.list_plans(g.db, user.id)]), 200
+    owned = assets.list_plans(g.db, user.id)
+    owned_ids = {p.id for p in owned}
+    member_ids = list(g.db.scalars(
+        select(PlanMembership.plan_id).where(PlanMembership.user_id == user.id)))
+    member = [p for p in (g.db.get(Plan, pid) for pid in member_ids)
+              if p is not None and p.id not in owned_ids]
+    return jsonify(plans=[_summary(p) for p in owned + member]), 200
 
 
 @bp.get("/<int:plan_id>")
@@ -111,7 +127,7 @@ def detail(plan_id):
     user = current_user()
     if user is None:
         return jsonify(error="unauthenticated"), 401
-    plan, err = _owned_plan(user, plan_id)
+    plan, err = _accessible_plan(user, plan_id)
     if err:
         return err
     return jsonify(_detail(plan)), 200
@@ -141,7 +157,7 @@ def payment(plan_id):
     user = current_user()
     if user is None:
         return jsonify(error="unauthenticated"), 401
-    plan, err = _owned_plan(user, plan_id)
+    plan, err = _accessible_plan(user, plan_id)
     if err:
         return err
     data = request.get_json(silent=True) or {}
@@ -185,6 +201,60 @@ def loan_disbursement(plan_id):
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(entry=_entry_json(entry, plan),
                    state=loans.loan_state(g.db, plan.loan, as_of=date.today())), 201
+
+
+@bp.post("/<int:plan_id>/members")
+def add_member(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner-only
+    if err:
+        return err
+    data = request.get_json(silent=True) or {}
+    try:
+        m = sharing.add_member(g.db, plan=plan, email=data.get("email", ""))
+        g.db.commit()
+    except sharing.UserNotFound:
+        g.db.rollback()
+        return jsonify(error="user_not_found"), 404
+    except sharing.AlreadyMember:
+        g.db.rollback()
+        return jsonify(error="already_member"), 409
+    except sharing.MemberError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    u = g.db.get(User, m.user_id)
+    return jsonify(member={"user_id": u.id, "email": u.email,
+                           "display_name": u.display_name, "role": m.role}), 201
+
+
+@bp.get("/<int:plan_id>/members")
+def get_members(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _accessible_plan(user, plan_id)
+    if err:
+        return err
+    return jsonify(members=sharing.list_members(g.db, plan)), 200
+
+
+@bp.delete("/<int:plan_id>/members/<int:member_user_id>")
+def delete_member(plan_id, member_user_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner-only
+    if err:
+        return err
+    try:
+        sharing.remove_member(g.db, plan=plan, user_id=member_user_id)
+        g.db.commit()
+    except sharing.MemberError:
+        g.db.rollback()
+        return jsonify(error="not_a_member"), 404
+    return jsonify(ok=True), 200
 
 
 @bp.post("/<int:plan_id>/loan/entries")
