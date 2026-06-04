@@ -40,3 +40,21 @@ def test_to_minor_zero_and_negative():
 def test_format_minor_rejects_unknown_currency():
     with pytest.raises(ValueError):
         format_minor(0, "EUR")
+
+
+def test_pct_to_bps_and_format():
+    from khata.money import pct_to_bps, format_bps
+    assert pct_to_bps("8.5") == 850
+    assert pct_to_bps("2") == 200
+    assert pct_to_bps("8.5%") == 850
+    assert format_bps(850) == "8.5"
+    assert format_bps(200) == "2"
+    assert format_bps(0) == "0"
+
+
+def test_pct_to_bps_rejects_float_and_empty():
+    from khata.money import pct_to_bps
+    with pytest.raises(TypeError):
+        pct_to_bps(8.5)
+    with pytest.raises(ValueError):
+        pct_to_bps("")

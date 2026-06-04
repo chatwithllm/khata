@@ -24,6 +24,8 @@ class Plan(Base):
 
     asset: Mapped["AssetPurchase | None"] = relationship(
         back_populates="plan", uselist=False, cascade="all, delete-orphan")
+    loan: Mapped["Loan | None"] = relationship(
+        back_populates="plan", uselist=False, cascade="all, delete-orphan")
     installments: Mapped[list["Installment"]] = relationship(
         back_populates="plan", cascade="all, delete-orphan", order_by="Installment.seq")
     ledger_entries: Mapped[list["LedgerEntry"]] = relationship(
