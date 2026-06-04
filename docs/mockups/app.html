@@ -85,6 +85,10 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
 .stat.hero-stat::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0,color-mix(in srgb,var(--primary) 34%,transparent),transparent 60%)}
 
 .grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:22px;margin-top:24px}
+/* === layout standard: 2-col sections fill to a shared bottom (no blank space) === */
+.fillcol{display:flex;flex-direction:column;gap:22px}
+.fillcol>.fill{flex:1 1 auto;display:flex;flex-direction:column}
+.fill>.fillrows{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-between}
 @media(max-width:1000px){.grid2{grid-template-columns:1fr}}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:.6s}
 .ph{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
@@ -141,7 +145,7 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
 .chit-foot{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);padding-top:12px;font-family:"JetBrains Mono"}
 .chit-foot b{color:var(--ink)}
 
-.liab{margin-top:22px}
+.liab{}
 .liab .lrow2{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:1px solid var(--line-2)}
 .liab .nm{font-weight:600;font-size:14px}
 .liab .mt{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
@@ -236,7 +240,7 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
         </div>
 
         <!-- right column -->
-        <div>
+        <div class="fillcol">
           <div class="panel fade d3">
             <div class="ph"><div class="t"><span class="tag chit">Chit</span> 12-member auction</div><div class="meta">organizer+member</div></div>
             <div class="chit-body">
@@ -274,9 +278,9 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
           </div>
 
           <!-- loan given out / receivable -->
-          <div class="panel fade d4" style="margin-top:22px">
+          <div class="panel fade d4 fill">
             <div class="ph"><div class="t" style="font-size:16px"><span class="tag" style="background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)">Lent</span> S. Mehta</div><div class="meta">given · 2%/mo · reducing</div></div>
-            <div style="padding:18px 22px">
+            <div class="fillrows" style="padding:18px 22px">
               <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--line-2);padding-bottom:14px">
                 <div><div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600">Principal outstanding</div><div style="font-family:Fraunces,serif;font-weight:600;font-size:28px;color:var(--pos);line-height:1;margin-top:5px"><span class="symword">₹</span><span class="cv" data-inr="700000"></span></div></div>
                 <div style="text-align:right"><div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600">Interest due</div><div class="mono" style="font-weight:700;font-size:17px;color:var(--primary-deep);margin-top:5px"><span class="symword">₹</span><span class="cv" data-inr="14000"></span></div></div>

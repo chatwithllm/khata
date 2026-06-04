@@ -119,9 +119,16 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
 .kpi.hero-stat::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0,color-mix(in srgb,var(--pos) 30%,transparent),transparent 60%);pointer-events:none}
 
 /* ===== main / aside layout ===== */
-.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:22px;margin-top:24px;align-items:start}
+.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:22px;margin-top:24px}
 @media(max-width:1000px){.grid{grid-template-columns:1fr}}
 .stack{display:grid;gap:22px}
+/* === layout standard: 2-col sections fill to a shared bottom (no blank space) ===
+   columns get .fillcol; the slack-absorbing card gets .fill; its body gets
+   .fillrows (lists → space rows) or .fillmid (charts → center). */
+.fillcol{display:flex;flex-direction:column;gap:22px}
+.fillcol>.fill{flex:1 1 auto;display:flex;flex-direction:column}
+.fill>.fillrows{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-between}
+.fill>.fillmid{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center}
 
 /* ===== rounds table ===== */
 .rtbl{width:100%;border-collapse:collapse;font-size:13px}
@@ -291,7 +298,7 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
 
       <div class="grid">
         <!-- MAIN COLUMN -->
-        <div class="stack">
+        <div class="stack fillcol">
 
           <!-- ROUNDS TABLE -->
           <div class="panel fade d2" data-rise>
@@ -332,9 +339,9 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
           </div>
 
           <!-- LINE CHART -->
-          <div class="panel fade d3" data-rise>
+          <div class="panel fade d3 fill" data-rise>
             <div class="ph"><div class="t">Net position over rounds</div><div class="meta">pay-in · take at r9 · settle</div></div>
-            <div class="chartwrap">
+            <div class="chartwrap fillmid">
               <svg class="chart" id="netchart" viewBox="0 0 640 240" role="img" aria-label="Net position over 12 rounds, dipping while paying in then jumping up when taking the pot at round 9">
                 <defs>
                   <linearGradient id="netfill" x1="0" y1="0" x2="0" y2="1">
@@ -377,7 +384,7 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
         </div>
 
         <!-- ASIDE COLUMN -->
-        <div class="stack">
+        <div class="stack fillcol">
 
           <!-- BREAKDOWN -->
           <div class="panel fade d2" data-rise>

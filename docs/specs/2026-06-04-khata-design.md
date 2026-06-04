@@ -104,6 +104,13 @@ Example limitations to surface candidly:
 - Proof + precise timestamps on transactions.
 - Privacy-first: my financial data stays under my control by default.
 
+## UI layout conventions (mockups)
+These are **standard across every screen**; new screens must follow them. Full CSS in `docs/mockups/_SHARED_KIT.md`.
+- **No blank space (hard rule):** every two-column section fills to a shared bottom. Columns are forced equal height (grid `align-items:stretch`, never `start`); the shorter column's slack-absorbing card gets `.fill` and its body `.fillrows` (lists → rows breathe) or `.fillmid` (charts → centered). See _SHARED_KIT §8 for the per-screen absorber (asset→Ledger, chit→chart, dashboard→Lent, loan→Loan-terms, 401k→Steps).
+- **No purple anywhere:** data/light accents use petrol `--accent`; dark-surface emphasis (hero cards, finale, dark headers) uses honey-gold `--accent-dk`; bright-mint `--pos-dk` for green-on-dark. The currency toggle re-themes all of it.
+- **Complete amounts where space allows:** show full grouped values (₹12,40,000 / $14,900) on cards, KPIs, tables, ledgers; abbreviate (₹12.4L) only in genuinely tight cards (e.g. the landing dashboard-preview).
+- **Topbar:** greeting heading + mono date subtitle · refined ₹/$ toggle (serif glyphs) · saffron "Log payment" · green squircle avatar (click to upload a photo, persisted via localStorage) · "New plan" lives in the sidebar.
+
 ## Conceptual domain model (stack-neutral)
 - MoneyPlan (abstract) → AssetPurchase | ChitFund | Loan | Retirement401k. Each carries a native currency.
 - Retirement401k — annual limit, YTD, pay schedule, salary, employer match formula, true-up flag, optional 401(k) loan; produces per-paycheck contribution guidance + match-at-risk.

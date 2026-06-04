@@ -214,3 +214,37 @@ focus rings, consistent radii/spacing, grain + ledger-ruling lines. Charts = inl
 (line/donut/gauge/ring/sparkline) that animate on reveal (stroke-dashoffset / width). Realistic
 Indian-context data. ₹/$ toggle MUST re-theme colors AND reformat every figure. Fully responsive.
 Self-contained: inline `<style>` + inline `<script>`, Google Fonts only, vanilla JS.
+
+## 8. Layout standard — columns fill to a shared bottom (NO blank space)
+
+Every two-column section (main + rail) must end flush at the bottom — no column
+leaves dead space under its last card. This is a **hard rule across all app screens**.
+
+How it works (utility classes, present in every detail file's `<style>`):
+
+```css
+.fillcol{display:flex;flex-direction:column;gap:22px}          /* the column wrapper */
+.fill{flex:1 1 auto;display:flex;flex-direction:column}        /* card that absorbs slack */
+.fillrows{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-between} /* lists → space rows */
+.fillmid{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center}         /* charts → center */
+```
+
+To apply on a page:
+1. The two-column grid keeps default `align-items:stretch` (never `align-items:start`)
+   so both columns are forced to equal height.
+2. Add `.fillcol` to the **shorter** column's wrapper (or both — harmless).
+3. On that column, add `.fill` to the card chosen to absorb the slack — usually the
+   longest **list** (ledger / schedule / loan-terms) or a **chart** card.
+4. On that card's body add `.fillrows` (a row list → rows breathe via `space-between`)
+   or `.fillmid` (a chart → centered with even padding).
+
+Pick the slack-absorber per page so the result reads intentionally:
+- **asset-detail** → Ledger (`.fill` + `.fillrows`)
+- **chit-detail** → "Net position" chart (`.fill` + `.fillmid`); grid must NOT use `align-items:start`
+- **dashboard (app.html)** → "Lent · S. Mehta" card (`.fill` + `.fillrows`)
+- **loan-detail** → Loan terms card grows + rows distribute (same behavior, `.r-stack` column)
+- **retirement-401k** → planner's numbered Steps absorb the slack (same behavior)
+- **holdings** → already balanced (full-width sections), no fill needed
+
+Rule of thumb: a row-list distributes (`.fillrows`), a chart centers (`.fillmid`),
+and you never leave a column ending high with paper showing beneath it.

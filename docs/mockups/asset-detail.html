@@ -95,6 +95,13 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
 .grid2{display:grid;grid-template-columns:1.55fr 1fr;gap:22px;margin-top:24px;align-items:start}
 @media(max-width:1000px){.grid2{grid-template-columns:1fr}}
 .stack{display:grid;gap:22px}
+/* === layout standard: 2-col sections fill to a shared bottom (no blank space) ===
+   columns get .fillcol; the slack-absorbing card gets .fill; its body gets
+   .fillrows (lists → space rows) or .fillmid (charts → center). */
+.fillcol{display:flex;flex-direction:column;gap:22px}
+.fillcol>.fill{flex:1 1 auto;display:flex;flex-direction:column}
+.fill>.fillrows{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-between}
+.fill>.fillmid{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center}
 
 /* header KPIs + progress */
 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid var(--line);background:var(--paper-2)}
@@ -256,7 +263,7 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
     <div class="content">
       <div class="grid2">
         <!-- LEFT MAIN -->
-        <div class="stack">
+        <div class="stack fillcol">
           <!-- header KPIs + progress -->
           <div class="panel fade">
             <div class="ph"><div class="t"><span class="tag asset">Asset</span> Devanahalli plot</div><div class="meta">8 installments · joint</div></div>
@@ -293,9 +300,9 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
           </div>
 
           <!-- ledger -->
-          <div class="panel" data-rise>
+          <div class="panel fill" data-rise>
             <div class="ph"><div class="t" style="font-size:16px">Ledger</div><div class="meta">balance <span class="symword">₹</span><span class="cv" data-inr="760000"></span></div></div>
-            <div class="ledger">
+            <div class="ledger fillrows">
               <div class="lrow" tabindex="0"><div class="l1"><span class="who you">YOU</span> Installment #4</div><div class="amt out">−<span class="cv" data-inr="150000"></span></div><div class="l2">04 Jun · 11:24 IST</div><div class="l2r"><span class="pill m">transfer</span><span class="pill f">savings</span><span class="proof">▣ proof</span></div></div>
               <div class="lrow" tabindex="0"><div class="l1"><span class="who priya">PRIYA</span> From chit payout</div><div class="amt in">+<span class="cv" data-inr="200000"></span></div><div class="l2">28 May · 18:02 IST</div><div class="l2r"><span class="pill m">UPI</span><span class="pill f">chit-payout</span><span class="proof">▣ proof</span></div></div>
               <div class="lrow" tabindex="0"><div class="l1"><span class="who you">YOU</span> Installment #3 · short</div><div class="amt out">−<span class="cv" data-inr="90000"></span></div><div class="l2">12 May · 09:40 IST</div><div class="l2r"><span class="pill m">cash</span><span class="pill f">savings</span><span class="proof">▣ proof</span></div></div>
@@ -308,7 +315,7 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
         </div>
 
         <!-- RIGHT RAIL -->
-        <div class="stack">
+        <div class="stack fillcol">
           <!-- funding mix -->
           <div class="panel fade d2">
             <div class="ph"><div class="t" style="font-size:16px">Funding sources</div><div class="meta">paid to date</div></div>
