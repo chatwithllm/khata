@@ -1,11 +1,11 @@
 {
   "project": "khata",
   "phase": 1,
-  "plan": "4-sharing-contributors",
-  "tasks_total": 7,
-  "tasks_done": 7,
+  "plan": "5-google-auth-features",
+  "tasks_total": 8,
+  "tasks_done": 8,
   "last_updated": "2026-06-04",
-  "tests": "64 passed",
+  "tests": "79 passed",
   "python": "3.12",
-  "notes": "Plan 4 complete: PlanMembership sharing (owner-or-member access; member adds own asset payments; owner-only setup/membership), derived contributors (ownership share) in asset_state, net-position dashboard rollup (GET /api/dashboard). Next: Plan 5 (Google OAuth + polished Features page)."
+  "notes": "Plan 5 complete: Google sign-in (GIS ID-token, server-verified via google-auth, injected verifier; auto-link by verified email with link-conflict guard, find-by-sub/link/create), GET /api/auth/config + POST /api/auth/google, users.google_sub. Frontend: shared ledger.css, editorial Features & Limitations page, landing login section with conditional Google button. Next: Phase 2 candidates — secured loans/collateral, holdings/net-worth, chit funds, or letting Google users set a password."
 }
