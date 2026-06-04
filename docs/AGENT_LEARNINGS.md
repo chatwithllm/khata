@@ -32,3 +32,16 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
 - Funding-breakdown pcts are rounded independently and may not sum to exactly 100 (display only).
 - A reviewer flagged a `single_parent=True` SAWarning on the 1:1 delete-orphan relationship;
   verified it does NOT occur in SQLAlchemy 2.0.36 (`pytest -W error::SAWarning` passes) → not applied.
+- Final review caught: the float guard means `to_minor` raises `TypeError`, so the API must catch
+  `TypeError` too (a JSON number must yield 400, not 500); fixed. Also added service-level currency
+  validation (don't rely on the API's `to_minor`) and tz-normalize naive `occurred_at` to UTC.
+
+### Deferred follow-ups (do when touched / in Plan 3)
+- `_detail`/state is asset-specific (`asset_state` reads `plan.asset`, treats `out` as purchase
+  payments). Plan 3 (Loan) needs a `plan.type` dispatch → `loan_state` (disbursement is `in`,
+  repayments `out`). Consider a generic `create_plan` service factory too.
+- Add a DB `CHECK (type IN (...))` on `plans.type` and a `UniqueConstraint(plan_id, seq)` on
+  `installments` when a new migration is next written (API already enforces replace semantics).
+- DRY: `_utcnow` is duplicated in `user.py`/`plan.py`/`ledger.py` — extract when convenient.
+- `_summary` returns `total_price_minor=None` for an asset-less plan while `asset_state` returns 0 —
+  reconcile once non-asset plan types exist.
