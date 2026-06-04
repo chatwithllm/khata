@@ -73,3 +73,17 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
 - `list_plans` isn't type-filtered (reused for asset+loan); add a `type` filter in Plan 4.
 - The loans migration `downgrade` restores `method`/`funding_source` to NOT NULL — would fail on
   Postgres if loan entries (method=NULL) exist; one-way in practice, flag before prod downgrades.
+
+## 2026-06-04 — Plan 4 (Sharing & contributors)
+- `PlanMembership` (contributors only); owner stays `plans.owner_user_id`. API access split:
+  `_accessible_plan` (owner-or-member) for reads + asset payments; `_owned_plan` (owner-only) for
+  installments / loan endpoints / membership management. Members' payments self-attribute via
+  `logged_by_user_id=user.id`.
+- Ownership share is derived: `asset_state` groups `out` entries by `logged_by_user_id` →
+  `contributors[{user_id, display_name, paid_minor, pct}]` (resolves the unused-`session` note for
+  asset_state). `loan_state` still takes an unused session — reconcile both later.
+- `dashboard.net_position` rolls up only the user's OWNED loans for i_owe/owed_to_me, and asset
+  `out`-payments the user logged for paid_to_date (so shared-asset contributions count per-user).
+- Review-driven cleanup: `api.plans.index` and `dashboard.net_position` had duplicated owned+member
+  resolution; extracted `sharing.user_plans(session, user_id) -> (owned, member)` (newest-first,
+  deduped) used by both. Dropped an always-true `assert ... or True` scaffold line in a dashboard test.

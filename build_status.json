@@ -1,11 +1,11 @@
 {
   "project": "khata",
   "phase": 1,
-  "plan": "3-loan",
+  "plan": "4-sharing-contributors",
   "tasks_total": 7,
   "tasks_done": 7,
   "last_updated": "2026-06-04",
-  "tests": "53 passed",
+  "tests": "64 passed",
   "python": "3.12",
-  "notes": "Plan 3 complete: Loan type (given/taken, unsecured) — tranches, reducing-balance simple interest (rates as basis points, Decimal math), bullet/interest-only, principal-vs-interest ledger via `kind`, derived loan_state + monthly schedule, /api/plans type dispatch + loan endpoints. Smoke-tested end-to-end. Next: Plan 4 (sharing & contributors)."
+  "notes": "Plan 4 complete: PlanMembership sharing (owner-or-member access; member adds own asset payments; owner-only setup/membership), derived contributors (ownership share) in asset_state, net-position dashboard rollup (GET /api/dashboard). Next: Plan 5 (Google OAuth + polished Features page)."
 }

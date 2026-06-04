@@ -31,6 +31,8 @@ class Plan(Base):
     ledger_entries: Mapped[list["LedgerEntry"]] = relationship(
         back_populates="plan", cascade="all, delete-orphan",
         order_by="LedgerEntry.occurred_at")
+    memberships: Mapped[list["PlanMembership"]] = relationship(
+        back_populates="plan", cascade="all, delete-orphan")
 
 
 class AssetPurchase(Base):

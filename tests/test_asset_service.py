@@ -166,3 +166,23 @@ def test_state_excludes_in_direction_entries(ctx):
     st = asset_state(s, plan)
     assert st["paid_to_date_minor"] == 30000
     assert [d["source"] for d in st["funding_breakdown"]] == ["savings"]
+
+
+def test_state_contributors_breakdown(ctx):
+    s, u = ctx
+    from khata.models import User
+    priya = User(email="priya@b.com", display_name="Priya", password_hash="x")
+    s.add(priya)
+    s.flush()
+    plan = _plan_with_schedule(s, u, 100000, [100000])
+    # u pays 58k, priya pays 42k
+    log_payment(s, plan=plan, user_id=u.id, amount_minor=58000, occurred_at=_now(),
+                method="transfer", funding_source="savings")
+    log_payment(s, plan=plan, user_id=priya.id, amount_minor=42000, occurred_at=_now(),
+                method="upi", funding_source="savings")
+    st = asset_state(s, plan)
+    cons = st["contributors"]
+    by = {c["display_name"]: c for c in cons}
+    assert by[u.display_name]["paid_minor"] == 58000 and by[u.display_name]["pct"] == 58
+    assert by["Priya"]["paid_minor"] == 42000 and by["Priya"]["pct"] == 42
+    assert cons[0]["display_name"] == u.display_name  # biggest first
