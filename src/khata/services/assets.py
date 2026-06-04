@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import Plan, AssetPurchase, Installment, LedgerEntry
+from ..money import SUPPORTED_CURRENCIES
 
 METHODS = {"cash", "upi", "transfer", "cheque"}
 SOURCES = {"savings", "loan", "borrowed", "sold_asset", "chit_payout", "other"}
@@ -16,6 +17,8 @@ class ValidationError(PlanError):
 
 
 def create_asset_plan(session: Session, *, owner_id, name, currency, total_price_minor) -> Plan:
+    if currency.upper() not in SUPPORTED_CURRENCIES:
+        raise ValidationError(f"unsupported currency: {currency!r}")
     if total_price_minor <= 0:
         raise ValidationError("total_price must be > 0")
     plan = Plan(owner_user_id=owner_id, type="asset",

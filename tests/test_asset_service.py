@@ -150,6 +150,12 @@ def test_state_funding_breakdown(ctx):
     assert st["funding_breakdown"][0]["source"] == "savings"  # biggest first
 
 
+def test_create_plan_rejects_unknown_currency(ctx):
+    s, u = ctx
+    with pytest.raises(ValidationError):
+        create_asset_plan(s, owner_id=u.id, name="X", currency="XYZ", total_price_minor=100000)
+
+
 def test_state_excludes_in_direction_entries(ctx):
     s, u = ctx
     plan = _plan_with_schedule(s, u, 100000, [100000])

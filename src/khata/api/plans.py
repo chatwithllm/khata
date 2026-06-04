@@ -58,7 +58,7 @@ def create():
         if items:
             assets.set_installments(g.db, plan=plan, items=_parse_items(items, currency))
         g.db.commit()
-    except (PlanError, ValueError) as e:
+    except (PlanError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(_detail(plan)), 201
@@ -96,7 +96,7 @@ def installments(plan_id):
         assets.set_installments(g.db, plan=plan,
                                 items=_parse_items(data.get("installments") or [], plan.currency))
         g.db.commit()
-    except (PlanError, ValueError) as e:
+    except (PlanError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(_detail(plan)), 200
@@ -115,12 +115,14 @@ def payment(plan_id):
         amount = to_minor(data.get("amount", ""), plan.currency)
         occurred = (datetime.fromisoformat(data["occurred_at"])
                     if data.get("occurred_at") else datetime.now(timezone.utc))
+        if occurred.tzinfo is None:
+            occurred = occurred.replace(tzinfo=timezone.utc)
         entry = assets.log_payment(
             g.db, plan=plan, user_id=user.id, amount_minor=amount, occurred_at=occurred,
             method=data.get("method", ""), funding_source=data.get("funding_source", ""),
             proof_ref=data.get("proof_ref"), note=data.get("note"))
         g.db.commit()
-    except (PlanError, ValueError) as e:
+    except (PlanError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(

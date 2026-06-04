@@ -74,3 +74,9 @@ def test_validation_error_returns_400(client):
     _register(client)
     r = client.post("/api/plans", json={"name": "P", "currency": "INR", "total_price": "0"})
     assert r.status_code == 400
+
+
+def test_float_amount_returns_400_not_500(client):
+    _register(client)
+    r = client.post("/api/plans", json={"name": "P", "currency": "INR", "total_price": 1000.50})
+    assert r.status_code == 400
