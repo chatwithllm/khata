@@ -14,3 +14,21 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   thread pool / multiple threads, switch to `StaticPool` or a temp-file DB.
 - `alembic/env.py` self-adds `src/` to `sys.path` and reads `KHATA_DATABASE_URL`,
   so migrations run without exporting PYTHONPATH. → keep env.py self-contained.
+
+## 2026-06-04 — Plan 2 (plan/ledger spine + Asset purchase)
+- Roll-forward modeled as **greedy cumulative application** of total paid across the ordered
+  schedule (money is fungible), not payment→installment tagging. Fully derived from the ledger;
+  matches the single-source-of-truth rule and is simpler. Only `direction="out"` entries count.
+- **Bug the plan's draft missed (subagent caught it):** `set_installments` must validate amounts
+  BEFORE deleting old rows, and must `session.expire(plan, ["installments"])` + append to the
+  relationship collection (not bare `session.add`) so the schedule reads back in the same
+  `autoflush=False` session. → when "replacing" a child collection, drive it through the
+  relationship + expire, and validate before mutating.
+- `money.to_minor` now rejects `float` (TypeError) and non-finite values — enforces rule #2
+  ("money is never float") at the input boundary, not just by convention.
+- Security guards (401 unauth on every endpoint; 403 non-owner on every plan-scoped endpoint)
+  have explicit tests, so a future refactor that drops a guard fails CI. → never ship a
+  plan-scoped endpoint without an ownership test.
+- Funding-breakdown pcts are rounded independently and may not sum to exactly 100 (display only).
+- A reviewer flagged a `single_parent=True` SAWarning on the 1:1 delete-orphan relationship;
+  verified it does NOT occur in SQLAlchemy 2.0.36 (`pytest -W error::SAWarning` passes) → not applied.
