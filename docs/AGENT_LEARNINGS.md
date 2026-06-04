@@ -45,3 +45,19 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
 - DRY: `_utcnow` is duplicated in `user.py`/`plan.py`/`ledger.py` — extract when convenient.
 - `_summary` returns `total_price_minor=None` for an asset-less plan while `asset_state` returns 0 —
   reconcile once non-asset plan types exist.
+
+## 2026-06-04 — Plan 3 (Loan)
+- Loan movements reuse `ledger_entries` via a `kind` column (disbursement / interest_payment /
+  principal_repayment); `method`/`funding_source` made nullable. SQLite can't drop NOT NULL in
+  place → `render_as_batch=True` in `alembic/env.py` so the migration recreates the table; alembic
+  autogenerate then emitted the batch `alter_column` calls itself.
+- Interest is derived (reducing-balance, simple, whole-month) with `Decimal` over integer minor
+  units; rates stored as integer basis points (`pct_to_bps`) — no float anywhere. Verified
+  end-to-end: 8.5%/yr on ₹6L for 4 complete months = ₹17,000 accrued.
+- `direction` (in/out) is set from (loan.direction, kind) for cashflow display; loan math uses
+  `kind`+amount magnitudes only.
+- Review caught: `principal_outstanding` must gate by `as_of` like the schedule does (else a
+  future-dated disbursement inflates the as-of balance). Fixed. Added an end-of-month start_date
+  test to lock the `_month_add` day-clamping (Jan-31 → Feb-28 period starts).
+- The Plan-2 `_detail`/`create` now dispatch on `plan.type` (asset|loan) — the follow-up flagged
+  in Plan 2 is done. `_parse_dt` (tz-normalize) is now shared by the asset payment + loan endpoints.

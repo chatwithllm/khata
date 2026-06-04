@@ -1,11 +1,11 @@
 {
   "project": "khata",
   "phase": 1,
-  "plan": "2-plan-ledger-asset",
+  "plan": "3-loan",
   "tasks_total": 7,
   "tasks_done": 7,
   "last_updated": "2026-06-04",
-  "tests": "34 passed",
+  "tests": "53 passed",
   "python": "3.12",
-  "notes": "Plan 2 complete: plan/ledger spine + Asset purchase — installment schedule, money ledger (integer minor units), derived greedy roll-forward + funding breakdown, owner-scoped /api/plans (create/list/detail/installments/payments). Smoke-tested end-to-end. Next: Plan 3 (Loan type)."
+  "notes": "Plan 3 complete: Loan type (given/taken, unsecured) — tranches, reducing-balance simple interest (rates as basis points, Decimal math), bullet/interest-only, principal-vs-interest ledger via `kind`, derived loan_state + monthly schedule, /api/plans type dispatch + loan endpoints. Smoke-tested end-to-end. Next: Plan 4 (sharing & contributors)."
 }
