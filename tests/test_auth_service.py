@@ -92,3 +92,21 @@ def test_google_name_fallback_to_email(session):
     session.commit()
     assert created is True
     assert user.display_name == "e@b.com"
+
+
+def test_google_link_conflict_when_email_user_already_linked(session):
+    from khata.services.auth import login_with_google, GoogleAuthError
+    # existing user already linked to one Google identity
+    first = login_with_google(session, claims={
+        "sub": "sub-A", "email": "x@b.com", "email_verified": True, "name": "X"})[0]
+    session.commit()
+    # a DIFFERENT google sub arrives bearing the same verified email
+    with pytest.raises(GoogleAuthError):
+        login_with_google(session, claims={
+            "sub": "sub-B", "email": "x@b.com", "email_verified": True, "name": "X2"})
+    session.rollback()
+    # original identity is intact
+    from khata.models import User
+    from sqlalchemy import select
+    u = session.scalar(select(User).where(User.email == "x@b.com"))
+    assert u.google_sub == "sub-A"

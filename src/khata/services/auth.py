@@ -86,6 +86,8 @@ def login_with_google(session: Session, *, claims: dict) -> tuple[User, bool]:
 
     existing = session.scalar(select(User).where(User.email == email))
     if existing is not None:
+        if existing.google_sub is not None and existing.google_sub != sub:
+            raise GoogleAuthError("account_link_conflict")
         existing.google_sub = sub
         session.flush()
         return existing, False
