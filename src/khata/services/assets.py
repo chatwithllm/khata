@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models import Plan, AssetPurchase, Installment, LedgerEntry
+from ..models import Plan, AssetPurchase, Installment, LedgerEntry, User
 from ..money import SUPPORTED_CURRENCIES
 
 METHODS = {"cash", "upi", "transfer", "cheque"}
@@ -103,6 +103,17 @@ def asset_state(session: Session, plan: Plan) -> dict:
         for src, amt in sorted(by_source.items(), key=lambda kv: kv[1], reverse=True)
     ]
 
+    by_user: dict[int, int] = {}
+    for e in outs:
+        by_user[e.logged_by_user_id] = by_user.get(e.logged_by_user_id, 0) + e.amount_minor
+    contributors = []
+    for uid, amt in sorted(by_user.items(), key=lambda kv: kv[1], reverse=True):
+        user = session.get(User, uid)
+        contributors.append({"user_id": uid,
+                             "display_name": user.display_name if user else None,
+                             "paid_minor": amt,
+                             "pct": round(amt * 100 / paid) if paid else 0})
+
     return {
         "total_price_minor": total,
         "paid_to_date_minor": paid,
@@ -111,4 +122,5 @@ def asset_state(session: Session, plan: Plan) -> dict:
         "next_due_seq": next_due_seq,
         "installments": rows,
         "funding_breakdown": funding_breakdown,
+        "contributors": contributors,
     }
