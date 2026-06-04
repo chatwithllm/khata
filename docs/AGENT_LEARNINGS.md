@@ -61,3 +61,15 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   test to lock the `_month_add` day-clamping (Jan-31 → Feb-28 period starts).
 - The Plan-2 `_detail`/`create` now dispatch on `plan.type` (asset|loan) — the follow-up flagged
   in Plan 2 is done. `_parse_dt` (tz-normalize) is now shared by the asset payment + loan endpoints.
+
+### Deferred follow-ups (Plan 3 final review — non-blocking)
+- Both `asset_state` and `loan_state` take a `session` arg they don't use (they read via loaded
+  relationships). Kept for symmetry; reconcile both at once later (drop the arg, or query fresh).
+- `loan_state` `as_of` is hardcoded to `date.today()` in the API; the service supports any `as_of` —
+  expose it when an "as-of" report/audit view is needed.
+- Index `ledger_entries (plan_id, kind)` if/when state functions move to explicit SELECTs (currently
+  O(n) Python filter over the relationship — fine at personal-finance scale).
+- A long loan's `schedule` is unbounded (360 rows for 30y); page/cap it when a dashboard needs it.
+- `list_plans` isn't type-filtered (reused for asset+loan); add a `type` filter in Plan 4.
+- The loans migration `downgrade` restores `method`/`funding_source` to NOT NULL — would fail on
+  Postgres if loan entries (method=NULL) exist; one-way in practice, flag before prod downgrades.
