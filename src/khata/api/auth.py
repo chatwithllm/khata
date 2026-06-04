@@ -1,10 +1,13 @@
-from flask import Blueprint, g, jsonify, request, session
+from flask import Blueprint, current_app, g, jsonify, request, session
 
 from ..services.auth import (
     register_user,
     authenticate_user,
+    login_with_google,
     EmailTakenError,
     InvalidCredentialsError,
+    GoogleAuthError,
+    EmailUnverifiedError,
     AuthError,
 )
 from ..models import User
@@ -67,3 +70,30 @@ def me():
     if user is None:
         return jsonify(error="unauthenticated"), 401
     return jsonify(user=_user_json(user)), 200
+
+
+@bp.get("/config")
+def auth_config():
+    cfg = current_app.config["KHATA"]
+    return jsonify(google_client_id=cfg.google_client_id), 200
+
+
+@bp.post("/google")
+def google_login():
+    cfg = current_app.config["KHATA"]
+    if not cfg.google_client_id:
+        return jsonify(error="google_not_configured"), 503
+    data = request.get_json(silent=True) or {}
+    verifier = current_app.config["GOOGLE_VERIFIER"]
+    try:
+        claims = verifier(data.get("credential", ""), cfg.google_client_id)
+        user, created = login_with_google(g.db, claims=claims)
+        g.db.commit()
+    except EmailUnverifiedError:
+        g.db.rollback()
+        return jsonify(error="email_unverified"), 403
+    except (GoogleAuthError, ValueError):
+        g.db.rollback()
+        return jsonify(error="invalid_token"), 401
+    session["user_id"] = user.id
+    return jsonify(user=_user_json(user), created=created), 200
