@@ -44,24 +44,32 @@ Pure functions over integer minor units — no float, no Flask, no DB:
 - minor-unit exponent per currency (INR/USD = 2). Used by services and API.
 
 ## Derived roll-forward (`src/khata/services/assets.py:asset_state`)
-Pure function `asset_state(session, plan) -> dict`. Reads the installments and the plan's
-`'out'` ledger entries (sorted by `occurred_at`), then:
-1. `paid_to_date` = Σ out-entry `amount_minor`.
-2. Walk installments in `seq` order, consuming the paid pool: each installment absorbs up to its
-   `planned_amount_minor`; a shortfall leaves it `partial`/`due` and the deficit is **carried in**
-   to the next; a surplus on the pool **rolls forward** to later installments.
-3. Emit per-installment `{seq, planned, applied, carried_in, rolled_fwd, status}` where status ∈
-   `paid | partial | due | upcoming`, plus top-level `{total_price, paid_to_date, remaining,
-   installments[], next_due, funding_breakdown}`.
-   `funding_breakdown` = paid amount grouped by `funding_source` (the mockup's funding-sources
-   donut), each `{source, amount_minor, pct}`.
+Pure function `asset_state(session, plan) -> dict`. Money toward the asset is **fungible**, so the
+derived model is a **greedy cumulative application** of total paid across the ordered schedule
+(this is the honest single-source-of-truth view — surplus rolls forward, shortfalls delay later
+installments; no payment→installment tagging is stored):
+1. `paid_to_date` = Σ `'out'` ledger-entry `amount_minor`.
+2. Walk installments in `seq` order with a running `pool = paid_to_date`: each installment's
+   `applied = min(pool, planned)`, then `pool -= applied`. `status` = `paid` (applied == planned) ·
+   `partial` (0 < applied < planned) · `due` (applied == 0).
+3. Emit per-installment `{seq, planned_amount_minor, applied_minor, status}`, plus top-level
+   `{total_price_minor, paid_to_date_minor, remaining_minor (= max(0, total − paid)),
+   overpaid_minor (= max(0, paid − total)), next_due_seq (first non-`paid` installment, or null),
+   funding_breakdown}`.
+   `funding_breakdown` = paid grouped by `funding_source` (the mockup's funding donut),
+   each `{source, amount_minor, pct}` (pct of paid_to_date, integer rounded).
+
+Roll-forward is inherent in greedy application: a surplus naturally flows into later installments,
+and an underpaid installment's shortfall is simply not-yet-applied (covered by future payments).
+The frontend's "rolled-fwd / carried-in" badges are presentation derivations of `applied` vs
+`planned`; the API exposes the primitives.
 
 Only **`'out'`** entries (payments toward the asset, each tagged with a `funding_source`) count
 toward `paid_to_date`, roll-forward, and the funding breakdown. The `'in'` direction exists for
 generality but is **reserved for later cross-plan funding links** (e.g. a loan disbursement that
 funds an asset payment) and does not affect asset roll-forward in this plan.
 
-No carried/applied values are stored — recomputed each read from the immutable schedule + ledger.
+No applied/remaining values are stored — recomputed each read from the immutable schedule + ledger.
 
 ## Services (pure, session-injected, no Flask)
 `src/khata/services/assets.py`:
