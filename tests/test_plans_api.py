@@ -53,6 +53,8 @@ def test_auth_required(client):
     assert client.get("/api/plans/1").status_code == 401
     assert client.post("/api/plans/1/installments", json={}).status_code == 401
     assert client.post("/api/plans/1/payments", json={}).status_code == 401
+    assert client.post("/api/plans/1/loan/disbursements", json={}).status_code == 401
+    assert client.post("/api/plans/1/loan/entries", json={}).status_code == 401
 
 
 def test_ownership_enforced(client):
@@ -80,3 +82,52 @@ def test_float_amount_returns_400_not_500(client):
     _register(client)
     r = client.post("/api/plans", json={"name": "P", "currency": "INR", "total_price": 1000.50})
     assert r.status_code == 400
+
+
+def test_create_loan_disbursement_payment_and_state(client):
+    _register(client)
+    r = client.post("/api/plans", json={
+        "type": "loan", "name": "Gold loan", "currency": "INR", "direction": "taken",
+        "interest_type": "yearly", "rate": "8.5", "start_date": "2026-01-14"})
+    assert r.status_code == 201
+    body = r.get_json()
+    pid = body["plan"]["id"]
+    assert body["plan"]["direction"] == "taken" and body["plan"]["rate_bps"] == 850
+
+    r = client.post(f"/api/plans/{pid}/loan/disbursements",
+                    json={"amount": "6,00,000", "occurred_at": "2026-01-14T11:40:00"})
+    assert r.status_code == 201
+    assert r.get_json()["entry"]["kind"] == "disbursement"
+    assert r.get_json()["entry"]["direction"] == "in"
+    assert r.get_json()["state"]["principal_outstanding_minor"] == 60000000
+
+    r = client.post(f"/api/plans/{pid}/loan/entries",
+                    json={"kind": "interest_payment", "amount": "2,805"})
+    assert r.status_code == 201
+
+    r = client.get(f"/api/plans/{pid}")
+    assert r.status_code == 200 and r.get_json()["state"]["direction"] == "taken"
+
+
+def test_asset_create_still_works(client):
+    _register(client)
+    r = client.post("/api/plans", json={"name": "Plot", "currency": "INR",
+                                        "total_price": "10,00,000"})
+    assert r.status_code == 201
+    assert r.get_json()["plan"]["total_price_minor"] == 100000000
+    assert r.get_json()["state"]["remaining_minor"] == 100000000
+
+
+def test_loan_endpoints_auth_and_ownership(client):
+    _register(client, "a@b.com")
+    pid = client.post("/api/plans", json={
+        "type": "loan", "name": "L", "currency": "INR", "direction": "given",
+        "interest_type": "none", "start_date": "2026-01-01"}).get_json()["plan"]["id"]
+    client.post("/api/auth/logout")
+    assert client.post(f"/api/plans/{pid}/loan/disbursements",
+                       json={"amount": "100"}).status_code == 401
+    _register(client, "b@b.com")
+    assert client.post(f"/api/plans/{pid}/loan/disbursements",
+                       json={"amount": "100"}).status_code == 403
+    assert client.post(f"/api/plans/{pid}/loan/entries",
+                       json={"kind": "interest_payment", "amount": "100"}).status_code == 403
