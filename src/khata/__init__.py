@@ -1,6 +1,7 @@
-from flask import Flask, jsonify
+from flask import Flask, g, jsonify
 
 from .config import Config
+from .db import make_engine, make_session_factory
 
 
 def create_app(config: Config | None = None) -> Flask:
@@ -8,6 +9,23 @@ def create_app(config: Config | None = None) -> Flask:
     cfg = config or Config()
     app.config["SECRET_KEY"] = cfg.secret_key
     app.config["KHATA"] = cfg
+
+    engine = make_engine(cfg.database_url)
+    SessionLocal = make_session_factory(engine)
+    app.config["ENGINE"] = engine
+    app.config["SESSION_FACTORY"] = SessionLocal
+
+    @app.before_request
+    def _open_session():
+        g.db = SessionLocal()
+
+    @app.teardown_request
+    def _close_session(exc):
+        db = g.pop("db", None)
+        if db is not None:
+            if exc is not None:
+                db.rollback()
+            db.close()
 
     @app.get("/api/health")
     def health():
