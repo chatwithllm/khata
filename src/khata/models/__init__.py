@@ -2,3 +2,4 @@
 from .user import User  # noqa: F401
 from .plan import Plan, AssetPurchase, Installment  # noqa: F401
 from .ledger import LedgerEntry  # noqa: F401
+from .loan import Loan  # noqa: F401
