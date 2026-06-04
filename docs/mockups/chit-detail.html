@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Khata — 12-member chit</title>
+<title>Khata — chit detail</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -11,220 +11,417 @@
 :root{
   --paper:#F7F1E6;--paper-2:#F1E8D7;--ink:#241B16;--ink-soft:#4A4035;--ink-faint:#8C8068;
   --line:#DBCDB0;--line-2:#E7DCC6;--primary:#C05E1B;--primary-deep:#9C4711;
-  --pos:#1F6B53;--pos-soft:#2E8C6E;--neg:#A6321F;--accent:#9E3B6E;--blue:#4F86A8;--card:#FFFDF8;
-  --shadow:0 1px 0 rgba(28,24,19,.04),0 16px 36px -24px rgba(28,24,19,.45);--r:16px;--ease:cubic-bezier(.22,.68,0,1);
+  --pos:#1F6B53;--pos-soft:#2E8C6E;--neg:#A6321F;--accent:#1F6F86;--accent-dk:#E4A85A;--pos-dk:#5FC79E;--card:#FFFDF8;
+  --glow:color-mix(in srgb,var(--primary) 12%,transparent);
+  --shadow:0 1px 0 rgba(28,24,19,.04),0 16px 36px -24px rgba(28,24,19,.45);
+  --r:16px;--ease:cubic-bezier(.22,.68,0,1);
 }
-html[data-cur="usd"]{--paper:#E9EFE8;--paper-2:#DDE7DB;--ink:#16241B;--ink-soft:#36473B;--ink-faint:#74866F;--line:#C2D4C0;--line-2:#D2E0D0;--primary:#1C7A45;--primary-deep:#115C32;--pos:#1C7A45;--pos-soft:#2E9457;--accent:#A9852F;--blue:#3E7E8C;--card:#FBFEFA;}
+html[data-cur="usd"]{
+  --paper:#E9EFE8;--paper-2:#DDE7DB;--ink:#16241B;--ink-soft:#36473B;--ink-faint:#74866F;
+  --line:#C2D4C0;--line-2:#D2E0D0;--primary:#1C7A45;--primary-deep:#115C32;
+  --pos:#1C7A45;--pos-soft:#2E9457;--neg:#A6471F;--accent:#A9852F;--accent-dk:#D8BE78;--pos-dk:#5FC98C;--card:#FBFEFA;
+  --glow:color-mix(in srgb,var(--primary) 14%,transparent);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--paper);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased;transition:.6s var(--ease)}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;
+  font-size:15px;-webkit-font-smoothing:antialiased;position:relative;
+  transition:background .6s var(--ease),color .6s var(--ease)}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");}
 .mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
 a{color:inherit;text-decoration:none}
-.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;position:relative;z-index:1}
 @media(max-width:880px){.app{grid-template-columns:1fr}.side{display:none}}
-.side{border-right:1px solid var(--line);background:var(--paper-2);padding:22px 16px;position:sticky;top:0;height:100vh}
-.brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:21px;padding:6px 8px 22px}
-.glyph{width:28px;height:28px;border-radius:8px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));position:relative;box-shadow:0 6px 14px -6px var(--primary)}
+.side{border-right:1px solid var(--line);background:var(--paper-2);padding:22px 16px;position:sticky;top:0;height:100vh;transition:.6s}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:21px;padding:6px 8px 12px}
+.newplan{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 2px 14px;padding:10px;border-radius:11px;border:1px solid var(--line);color:var(--ink);font-weight:600;font-size:14px;cursor:pointer;transition:transform .2s,border-color .2s,background .2s}
+.newplan:hover{border-color:var(--ink);background:var(--card);transform:translateY(-1px)}
+.newplan svg{width:16px;height:16px}
+.glyph{width:28px;height:28px;border-radius:8px;flex:none;background:linear-gradient(145deg,var(--primary),var(--primary-deep));position:relative;box-shadow:0 6px 14px -6px var(--primary)}
 .glyph::before,.glyph::after{content:"";position:absolute;left:6px;right:6px;height:2px;background:var(--paper);border-radius:2px;opacity:.85}
 .glyph::before{top:10px}.glyph::after{top:16px;right:11px}
 .navsec{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:16px 10px 8px}
-.nav-i{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;font-weight:500;color:var(--ink-soft);cursor:pointer;font-size:14.5px}
-.nav-i svg{width:18px;height:18px}.nav-i:hover{background:var(--line-2);color:var(--ink)}
+.nav-i{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:.2s;font-size:14.5px}
+.nav-i svg{width:18px;height:18px;flex:none}
+.nav-i:hover{background:var(--line-2);color:var(--ink)}
 .nav-i.on{background:var(--ink);color:var(--paper)}
+.nav-i:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .nav-i .ct{margin-left:auto;font-size:11px;font-family:"JetBrains Mono";opacity:.7}
-
-.top{display:flex;align-items:center;justify-content:space-between;padding:16px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(8px);z-index:20}
-.crumb{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink-faint)}
-.crumb a:hover{color:var(--ink)}
+.main{min-width:0}
+.top{display:flex;align-items:center;justify-content:space-between;padding:18px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(8px);z-index:20;transition:.6s}
+.top h1{font-family:"Fraunces",serif;font-weight:600;font-size:23px;letter-spacing:-.01em}
+.top .sub{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-faint)}
 .top-right{display:flex;align-items:center;gap:14px}
-.curtog{display:inline-flex;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:3px;position:relative}
-.curtog button{font-family:"JetBrains Mono";font-weight:700;font-size:12.5px;border:none;background:transparent;color:var(--ink-faint);width:44px;height:28px;border-radius:100px;cursor:pointer;z-index:1}
-.curtog button.on{color:#fff}
-.curtog .slide{position:absolute;top:3px;left:3px;width:44px;height:28px;border-radius:100px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));transition:transform .4s var(--ease),background .6s}
-html[data-cur="usd"] .curtog .slide{transform:translateX(44px)}
-.addbtn{font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;display:flex;align-items:center;gap:7px}
-
-.content{padding:26px 30px 60px;max-width:1240px}
+.curtog{display:inline-flex;align-items:center;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:4px;position:relative;box-shadow:inset 0 1px 2px rgba(28,24,19,.06);transition:background .6s,border-color .6s}
+.curtog button{font-family:"Hanken Grotesk";font-weight:700;font-size:12.5px;letter-spacing:.04em;border:none;background:transparent;color:var(--ink-faint);width:62px;height:34px;border-radius:100px;cursor:pointer;z-index:1;transition:color .35s var(--ease);display:flex;align-items:center;justify-content:center;gap:5px}
+.curtog button .cs{font-family:"Fraunces",serif;font-weight:600;font-size:17px;line-height:1;margin-top:-1px}
+.curtog button:not(.on):hover{color:var(--ink)}
+.curtog button.on{color:var(--paper)}
+.curtog button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.curtog .slide{position:absolute;top:4px;left:4px;width:62px;height:34px;border-radius:100px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));transition:transform .42s var(--ease),background .6s;box-shadow:0 6px 16px -6px var(--primary)}
+html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
+.addbtn{font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;display:flex;align-items:center;gap:7px;transition:transform .2s,background .6s;box-shadow:0 8px 18px -10px var(--primary)}
+.addbtn:hover{transform:translateY(-2px)}
+.addbtn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.avatar{position:relative;width:36px;height:36px;border-radius:11px;background:linear-gradient(150deg,var(--pos-soft),var(--pos));background-size:cover;background-position:center;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;cursor:pointer;overflow:hidden;transition:background .6s}
+.avatar input{display:none}
+.avatar .ava-ov{position:absolute;inset:0;display:grid;place-items:center;background:rgba(20,16,12,.48);opacity:0;transition:opacity .2s}
+.avatar:hover .ava-ov{opacity:1}
+.avatar .ava-ov svg{width:15px;height:15px;color:#fff}
+.avatar.has-img .ava-init{opacity:0}
+.content{padding:28px 30px 60px;max-width:1200px;position:relative;z-index:1}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:.6s}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.ph .t{font-family:"Fraunces",serif;font-weight:600;font-size:18px;display:flex;align-items:center;gap:10px}
+.ph .meta{font-size:12.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
 .tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px}
+.tag.asset{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary-deep)}
 .tag.chit{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
-.tag.role{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
+.tag.loan{background:color-mix(in srgb,var(--neg) 15%,transparent);color:var(--neg)}
+.tag.role{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);text-transform:capitalize}
+.proof{font-size:10px;color:var(--primary-deep);font-weight:600;display:inline-flex;gap:3px;align-items:center}
 
-.head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:20px}
-.head h1{font-family:"Fraunces",serif;font-weight:600;font-size:31px;letter-spacing:-.02em;display:flex;align-items:center;gap:11px;flex-wrap:wrap}
-.head .meta{font-size:13px;color:var(--ink-faint);margin-top:6px;font-family:"JetBrains Mono"}
-.kpis{display:flex;gap:26px}
-.kpi .n{font-family:"Fraunces",serif;font-weight:600;font-size:25px;letter-spacing:-.02em}
-.kpi .n.pos{color:var(--pos)}
-.kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:600}
+/* ===== hero header ===== */
+.hero{background:var(--ink);color:var(--paper);border-radius:var(--r);padding:26px 28px;position:relative;overflow:hidden;transition:.6s}
+.hero::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0,color-mix(in srgb,var(--primary) 34%,transparent),transparent 60%);pointer-events:none}
+.hero .hrow{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;position:relative;z-index:1;flex-wrap:wrap}
+.hero h2{font-family:"Fraunces",serif;font-weight:600;font-size:30px;letter-spacing:-.02em;line-height:1.05}
+.hero h2 em{font-style:italic;color:var(--accent-dk)}
+/* legible on dark: warm-gold role, bright-mint variant, lifted outline pills */
+.hero .tag.chit{background:color-mix(in srgb,var(--pos-dk) 20%,transparent);color:var(--pos-dk)}
+.hero .tag.role{background:color-mix(in srgb,var(--accent-dk) 20%,transparent);color:var(--accent-dk)}
+.hero .pill{border-color:color-mix(in srgb,var(--paper) 28%,transparent);color:color-mix(in srgb,var(--paper) 74%,transparent)}
+.hero .tags{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.hero .progmini{display:flex;align-items:center;gap:14px;margin-top:18px}
+.hero .progmini .bar{flex:1;max-width:340px;height:8px;border-radius:6px;background:color-mix(in srgb,var(--paper) 18%,transparent);overflow:hidden;position:relative}
+.hero .progmini .bar i{position:absolute;inset:0 auto 0 0;border-radius:6px;background:linear-gradient(90deg,var(--primary),var(--accent-dk));width:0;transition:width 1.2s var(--ease)}
+.hero .progmini .rl{font-family:"JetBrains Mono";font-size:12.5px;color:color-mix(in srgb,var(--paper) 72%,transparent)}
+.hero .hmeta{display:grid;grid-template-columns:repeat(3,auto);gap:14px 30px;text-align:right}
+.hero .hmeta .l{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:color-mix(in srgb,var(--paper) 58%,transparent);font-weight:600}
+.hero .hmeta .n{font-family:"JetBrains Mono";font-weight:700;font-size:17px;margin-top:3px}
 
-.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:22px;margin-top:26px}
-@media(max-width:1040px){.grid{grid-template-columns:1fr}}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
-.ph{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
-.ph .t{font-family:"Fraunces",serif;font-weight:600;font-size:17px}
-.ph .meta{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+/* ===== kpi cards ===== */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:20px}
+@media(max-width:900px){.kpis{grid-template-columns:1fr 1fr}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:.6s}
+.kpi .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+.kpi .v{font-family:"Fraunces",serif;font-weight:600;font-size:29px;letter-spacing:-.02em;margin-top:8px;line-height:1}
+.kpi .v .cur{font-size:16px;color:var(--ink-faint);vertical-align:super}
+.kpi .d{font-size:12px;margin-top:7px;font-family:"JetBrains Mono";color:var(--ink-faint)}
+.kpi .d.up{color:var(--pos)}.kpi .d.dn{color:var(--neg)}
+.kpi.hero-stat{background:var(--ink);color:var(--paper)}
+.kpi.hero-stat .k{color:color-mix(in srgb,var(--paper) 60%,transparent)}
+.kpi.hero-stat .v{color:var(--pos-dk)}
+.kpi.hero-stat .v .cur{color:var(--accent-dk)}
+.kpi.hero-stat::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0,color-mix(in srgb,var(--pos) 30%,transparent),transparent 60%);pointer-events:none}
 
-/* rounds table */
-table{width:100%;border-collapse:collapse}
-thead th{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;text-align:right;padding:11px 14px;border-bottom:1px solid var(--line)}
-thead th:first-child,thead th:nth-child(2){text-align:left}
-tbody td{padding:11px 14px;border-top:1px solid var(--line-2);font-size:13.5px;text-align:right;font-family:"JetBrains Mono"}
-tbody td:first-child,tbody td:nth-child(2){text-align:left}
-tbody tr.done .rn{color:var(--pos)}
-tbody tr.now{background:color-mix(in srgb,var(--primary) 7%,transparent)}
-tbody tr.mine{background:var(--ink);color:var(--paper)}
-tbody tr.mine td{border-color:transparent}
-tbody tr.up{opacity:.6}
-.rn{display:inline-flex;align-items:center;gap:8px;font-weight:700}
-.rdot{width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;font-size:9px;background:var(--pos);color:#fff}
-tr.now .rdot{background:var(--primary)}
-tr.mine .rdot{background:var(--paper);color:var(--ink)}
-tr.up .rdot{background:var(--paper-2);color:var(--ink-faint);border:1px solid var(--line)}
-.taker{font-family:"Hanken Grotesk";font-weight:600}
-.you{color:var(--accent);font-weight:700}
-tr.mine .you{color:var(--paper)}
-.divv{color:var(--pos)}
-tr.mine .divv{color:#fff}
-.statetag{font-family:"Hanken Grotesk";font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em}
+/* ===== main / aside layout ===== */
+.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:22px;margin-top:24px;align-items:start}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}}
+.stack{display:grid;gap:22px}
 
-/* position chart */
-.chartwrap{padding:18px 20px}
-.chartwrap svg{width:100%;height:150px;overflow:visible}
-.clabels{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:8px}
-.cnote{display:flex;gap:18px;margin-top:12px;font-size:12px;color:var(--ink-soft)}
-.cnote span{display:flex;align-items:center;gap:7px}
-.cnote i{width:14px;height:3px;border-radius:2px;display:block}
+/* ===== rounds table ===== */
+.rtbl{width:100%;border-collapse:collapse;font-size:13px}
+.rtbl thead th{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;text-align:right;padding:11px 14px;border-bottom:1px solid var(--line);background:var(--paper-2)}
+.rtbl thead th:first-child,.rtbl thead th.lf{text-align:left}
+.rtbl tbody td{padding:11px 14px;border-bottom:1px solid var(--line-2);text-align:right;font-family:"JetBrains Mono";font-variant-numeric:tabular-nums;white-space:nowrap}
+.rtbl tbody td.lf{text-align:left;font-family:"Hanken Grotesk"}
+.rtbl tbody tr{transition:background .18s}
+.rtbl tbody tr:hover{background:var(--line-2)}
+.rtbl tbody tr:last-child td{border-bottom:none}
+.rtbl .rn{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;background:var(--paper-2);color:var(--ink-faint);margin-right:9px;font-family:"JetBrains Mono"}
+.rtbl tr.done .rn{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.rtbl tr.now{background:color-mix(in srgb,var(--primary) 9%,transparent)}
+.rtbl tr.now:hover{background:color-mix(in srgb,var(--primary) 14%,transparent)}
+.rtbl tr.now .rn{background:var(--primary);color:#fff}
+.rtbl tr.now td.lf .who{color:var(--primary-deep);font-weight:700}
+.rtbl tr.mine{background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.rtbl tr.mine:hover{background:color-mix(in srgb,var(--ink) 11%,transparent)}
+.rtbl tr.mine .rn{background:var(--ink);color:var(--paper)}
+.rtbl tr.future td{color:var(--ink-faint)}
+.rtbl .who{font-weight:600;font-size:13.5px}
+.rtbl .youtag{font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:2px 6px;border-radius:5px;margin-left:7px}
+.rtbl .nowtag{font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:var(--primary);color:#fff;padding:2px 6px;border-radius:5px;margin-left:7px}
+.rtbl td.pay.in{color:var(--pos);font-weight:700}
+.rtbl .legend{display:flex;gap:16px;flex-wrap:wrap;padding:12px 22px;font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";border-top:1px solid var(--line-2)}
+.rtbl-legend{display:flex;gap:16px;flex-wrap:wrap;padding:12px 22px;font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";border-top:1px solid var(--line-2)}
+.rtbl-legend span{display:inline-flex;align-items:center;gap:6px}
+.dotk{width:10px;height:10px;border-radius:50%;display:inline-block}
+.tbl-wrap{overflow-x:auto}
 
-/* summary list */
-.sum{padding:6px 20px 14px}
-.sum .r{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line-2);font-size:14px}
-.sum .r:last-child{border-bottom:none}
-.sum .k{color:var(--ink-soft)}
-.sum .v{font-family:"JetBrains Mono";font-weight:700}
-.sum .v.pos{color:var(--pos)}.sum .v.neg{color:var(--neg)}
+/* ===== line chart ===== */
+.chartwrap{padding:18px 22px 6px}
+.chart{width:100%;height:auto;display:block;overflow:visible}
+.chart .grid-l{stroke:var(--line-2);stroke-width:1}
+.chart .zero{stroke:var(--ink-faint);stroke-width:1;stroke-dasharray:3 4;opacity:.7}
+.chart .area{fill:url(#netfill);opacity:0;transition:opacity .9s var(--ease) .5s}
+.chart.in .area{opacity:.9}
+.chart .ln{fill:none;stroke:var(--primary);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
+.chart .ln.draw{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);transition:stroke-dashoffset 1.6s var(--ease)}
+.chart.in .ln.draw{stroke-dashoffset:0}
+.chart .jump{stroke:var(--accent);stroke-width:1.4;stroke-dasharray:2 3}
+.chart .dot9{fill:var(--accent);opacity:0;transition:opacity .5s ease 1.5s}
+.chart.in .dot9{opacity:1}
+.chart .lbl{font-family:"JetBrains Mono";font-size:9px;fill:var(--ink-faint)}
+.chart .lbl.acc{fill:var(--accent);font-weight:700}
+.chart .axe{font-family:"JetBrains Mono";font-size:8.5px;fill:var(--ink-faint)}
+@media(prefers-reduced-motion:reduce){.chart .ln.draw{transition:none;stroke-dashoffset:0}.chart .area,.chart .dot9{transition:none;opacity:.9}}
+.chartcap{display:flex;gap:18px;flex-wrap:wrap;padding:4px 22px 16px;font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.chartcap span{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:14px;height:3px;border-radius:2px;display:inline-block}
 
-/* roster */
-.roster{padding:8px 12px 14px}
-.mrow{display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:10px}
-.mrow.me{background:var(--paper-2)}
-.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;flex:none;background:linear-gradient(145deg,var(--ink-faint),var(--ink-soft))}
-.mrow.me .av{background:linear-gradient(145deg,var(--accent),var(--primary-deep))}
-.mrow .mn{font-weight:600;font-size:13.5px}
-.mrow .ms{font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"}
-.mstate{margin-left:auto;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em}
-.mstate.took{background:color-mix(in srgb,var(--pos) 14%,transparent);color:var(--pos)}
-.mstate.paid{background:var(--paper-2);color:var(--ink-soft);border:1px solid var(--line)}
-.mstate.pend{background:color-mix(in srgb,var(--neg) 12%,transparent);color:var(--neg)}
-.mstate.mine{background:var(--ink);color:var(--paper)}
+/* ===== breakdown panel ===== */
+.bd{padding:20px 22px}
+.bd .brow{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line-2)}
+.bd .brow:first-child{padding-top:4px}
+.bd .blab{font-size:13.5px;color:var(--ink-soft);display:flex;align-items:center;gap:9px}
+.bd .blab .ic{width:8px;height:8px;border-radius:2px;flex:none}
+.bd .bamt{font-family:"JetBrains Mono";font-weight:700;font-size:14.5px}
+.bd .bamt.out{color:var(--neg)}.bd .bamt.in{color:var(--pos)}
+.bd .net{display:flex;align-items:flex-end;justify-content:space-between;padding-top:16px;margin-top:4px}
+.bd .net .l{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600}
+.bd .net .v{font-family:"Fraunces",serif;font-weight:600;font-size:32px;color:var(--pos);line-height:1;margin-top:5px}
+.bd .sub2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:4px}
+.bd .stackbar{display:flex;height:12px;border-radius:7px;overflow:hidden;margin:14px 0 4px;background:var(--paper-2)}
+.bd .stackbar i{height:100%;width:0;transition:width 1.1s var(--ease)}
+.bd .stackbar .pot{background:var(--pos)}
+.bd .stackbar .div{background:var(--pos-soft)}
+
+/* ===== roster ===== */
+.roster .mrow{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 22px;border-top:1px solid var(--line-2);transition:background .18s}
+.roster .mrow:hover{background:var(--line-2)}
+.roster .mrow.you{background:color-mix(in srgb,var(--ink) 7%,transparent)}
+.roster .mrow.you:hover{background:color-mix(in srgb,var(--ink) 10%,transparent)}
+.roster .mav{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;color:#fff;background:linear-gradient(145deg,var(--ink-faint),var(--ink-soft));font-family:"Hanken Grotesk"}
+.roster .mrow.you .mav{background:linear-gradient(145deg,var(--accent),var(--primary-deep))}
+.roster .nm{font-weight:600;font-size:14px;display:flex;align-items:center;gap:7px}
+.roster .mt{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:1px}
+.roster .stt{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.stt.took{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.stt.paid{background:var(--paper-2);color:var(--ink-soft);border:1px solid var(--line)}
+.stt.pend{background:color-mix(in srgb,var(--neg) 14%,transparent);color:var(--neg)}
+.stt.plan{background:var(--ink);color:var(--paper)}
+.youtag2{font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:var(--ink);color:var(--paper);padding:2px 6px;border-radius:5px}
+
+/* terms strip */
+.terms{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line-2)}
+@media(max-width:560px){.terms{grid-template-columns:1fr 1fr}}
+.terms .tcell{padding:14px 18px;border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2)}
+.terms .tcell:nth-child(4n){border-right:none}
+.terms .tl{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:600}
+.terms .tn{font-family:"JetBrains Mono";font-weight:700;font-size:15px;margin-top:4px}
 
 .fade{opacity:0;transform:translateY(16px);animation:rise .7s var(--ease) forwards}
-.fade.d1{animation-delay:.07s}.fade.d2{animation-delay:.14s}.fade.d3{animation-delay:.21s}.fade.d4{animation-delay:.28s}
+.fade.d1{animation-delay:.06s}.fade.d2{animation-delay:.13s}.fade.d3{animation-delay:.2s}.fade.d4{animation-delay:.27s}.fade.d5{animation-delay:.34s}
 @keyframes rise{to{opacity:1;transform:none}}
+[data-rise]{opacity:0;transform:translateY(22px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+[data-rise].in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.fade{animation:none;opacity:1;transform:none}[data-rise]{opacity:1;transform:none}.hero .progmini .bar i,.bd .stackbar i{transition:none}}
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="side">
-    <a class="brand" href="app.html"><span class="glyph"></span> Khata</a>
+    <a class="brand" href="index.html"><span class="glyph"></span> Khata</a>
+    <a class="newplan" href="create-plan.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
     <div class="navsec">Overview</div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</div>
+    <a class="nav-i" href="app.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
+    <a class="nav-i" href="holdings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
     <div class="navsec">Money plans</div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct">2</span></div>
-    <div class="nav-i on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct">3</span></div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct">3</span></div>
+    <a class="nav-i" href="asset-detail.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct">2</span></a>
+    <a class="nav-i on" href="chit-detail.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct">3</span></a>
+    <a class="nav-i" href="loan-detail.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct">2</span></a>
+    <a class="nav-i" href="retirement-401k.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k)</a>
     <div class="navsec">Records</div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Proofs</div>
+    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</a>
+    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
   </aside>
-
-  <main>
+  <main class="main">
     <div class="top">
-      <div class="crumb"><a href="app.html">Chit funds</a> <span>›</span> <b style="color:var(--ink)">Sri Lakshmi · 12-member</b></div>
+      <div>
+        <h1>12-member auction chit</h1>
+        <div class="sub">Chit funds · Shanthi Chits group · started Feb 2026</div>
+      </div>
       <div class="top-right">
-        <div class="curtog" id="curtog"><span class="slide"></span><button data-set="inr" class="on">₹ INR</button><button data-set="usd">$ USD</button></div>
-        <button class="addbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Record round</button>
+        <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="inr" class="on"><span class="cs">₹</span> INR</button><button data-set="usd"><span class="cs">$</span> USD</button></div>
+        <a class="addbtn" href="log-payment.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Log payment</a>
+        <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init">A</span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
       </div>
     </div>
 
     <div class="content">
-      <div class="head fade">
-        <div>
-          <h1><span class="tag chit">Chit</span> Sri Lakshmi <span class="tag role">organizer + member</span></h1>
-          <div class="meta">auction · 12 members · pot <span class="symword">₹</span><span class="cv" data-inr="200000" data-style="lakh"></span> · base <span class="symword">₹</span><span class="cv" data-inr="16667"></span>/mo · 5% commission · round 5 of 12</div>
-        </div>
-        <div class="kpis">
-          <div class="kpi"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="83335"></span></div><div class="l">Contributed</div></div>
-          <div class="kpi"><div class="n pos">+<span class="symword">₹</span><span class="cv" data-inr="18400"></span></div><div class="l">Dividends</div></div>
-          <div class="kpi"><div class="n pos">+<span class="symword">₹</span><span class="cv" data-inr="18400"></span></div><div class="l">My net</div></div>
+
+      <!-- HERO HEADER -->
+      <div class="hero fade">
+        <div class="hrow">
+          <div>
+            <h2>12-member <em>auction</em> chit</h2>
+            <div class="tags">
+              <span class="tag chit">Auction</span>
+              <span class="tag role">Organizer + member</span>
+              <span class="pill">5% commission</span>
+              <span class="pill">monthly</span>
+            </div>
+            <div class="progmini">
+              <div class="bar"><i data-w="42"></i></div>
+              <div class="rl">round <b>5</b> of 12 · 42% complete</div>
+            </div>
+          </div>
+          <div class="hmeta">
+            <div><div class="l">Pot value</div><div class="n"><span class="symword">₹</span><span class="cv" data-inr="200000"></span></div></div>
+            <div><div class="l">Base / mo</div><div class="n"><span class="symword">₹</span><span class="cv" data-inr="16667"></span></div></div>
+            <div><div class="l">Commission</div><div class="n">5%</div></div>
+            <div><div class="l">Members</div><div class="n">12</div></div>
+            <div><div class="l">My take</div><div class="n">round 9</div></div>
+            <div><div class="l">Dividends</div><div class="n"><span class="symword">₹</span><span class="cv" data-inr="18400"></span></div></div>
+          </div>
         </div>
       </div>
 
+      <!-- KPI CARDS -->
+      <div class="kpis">
+        <div class="kpi hero-stat fade"><div class="k">My net position</div><div class="v">+<span class="cur symword">₹</span><span class="cv count" data-inr="18400"></span></div><div class="d" style="color:color-mix(in srgb,var(--paper) 70%,transparent)">paid-in vs received</div></div>
+        <div class="kpi fade d1"><div class="k">Total paid in</div><div class="v"><span class="cur symword">₹</span><span class="cv count" data-inr="80268"></span></div><div class="d">5 rounds · contributed</div></div>
+        <div class="kpi fade d2"><div class="k">Dividends earned</div><div class="v"><span class="cur symword">₹</span><span class="cv count" data-inr="18400"></span></div><div class="d up">▲ across 5 rounds</div></div>
+        <div class="kpi fade d3"><div class="k">Contribution / mo</div><div class="v"><span class="cur symword">₹</span><span class="cv count" data-inr="16667"></span></div><div class="d">base before dividend</div></div>
+      </div>
+
       <div class="grid">
-        <!-- left -->
-        <div>
-          <div class="panel fade d2">
-            <div class="ph"><div class="t">Rounds</div><div class="meta">taker · winning bid · dividend</div></div>
-            <table>
-              <thead><tr><th>Round</th><th>Taker</th><th>Bid (disc.)</th><th>Commission</th><th>Div / member</th><th>Your pay</th></tr></thead>
+        <!-- MAIN COLUMN -->
+        <div class="stack">
+
+          <!-- ROUNDS TABLE -->
+          <div class="panel fade d2" data-rise>
+            <div class="ph"><div class="t">Auction rounds</div><div class="meta">12 rounds · bid · dividend</div></div>
+            <div class="tbl-wrap">
+            <table class="rtbl">
+              <thead>
+                <tr>
+                  <th class="lf">Round / taker</th>
+                  <th>Bid %</th>
+                  <th>Commission</th>
+                  <th>Dividend / member</th>
+                  <th>Your pay</th>
+                </tr>
+              </thead>
               <tbody>
-                <tr class="done"><td><span class="rn"><span class="rdot">✓</span>1 · Apr</span></td><td class="taker">R. Kumar</td><td>20% · <span class="cv" data-inr="40000"></span></td><td><span class="cv" data-inr="10000"></span></td><td class="divv">+<span class="cv" data-inr="2500"></span></td><td><span class="cv" data-inr="14167"></span></td></tr>
-                <tr class="done"><td><span class="rn"><span class="rdot">✓</span>2 · May</span></td><td class="taker">S. Mehta</td><td>16% · <span class="cv" data-inr="32000"></span></td><td><span class="cv" data-inr="10000"></span></td><td class="divv">+<span class="cv" data-inr="1833"></span></td><td><span class="cv" data-inr="14834"></span></td></tr>
-                <tr class="done"><td><span class="rn"><span class="rdot">✓</span>3 · Jun</span></td><td class="taker">P. Rao</td><td>12% · <span class="cv" data-inr="24000"></span></td><td><span class="cv" data-inr="10000"></span></td><td class="divv">+<span class="cv" data-inr="1167"></span></td><td><span class="cv" data-inr="15500"></span></td></tr>
-                <tr class="done"><td><span class="rn"><span class="rdot">✓</span>4 · Jul</span></td><td class="taker">A. Iyer</td><td>9% · <span class="cv" data-inr="18000"></span></td><td><span class="cv" data-inr="10000"></span></td><td class="divv">+<span class="cv" data-inr="667"></span></td><td><span class="cv" data-inr="16000"></span></td></tr>
-                <tr class="now"><td><span class="rn"><span class="rdot">5</span>5 · Aug</span></td><td class="taker" style="color:var(--primary-deep)">bidding open</td><td>—</td><td><span class="cv" data-inr="10000"></span></td><td class="divv">tbd</td><td>tbd</td></tr>
-                <tr class="up"><td><span class="rn"><span class="rdot">6</span>6 · Sep</span></td><td class="taker">upcoming</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-                <tr class="up"><td><span class="rn"><span class="rdot">7</span>7 · Oct</span></td><td class="taker">upcoming</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-                <tr class="up"><td><span class="rn"><span class="rdot">8</span>8 · Nov</span></td><td class="taker">upcoming</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
-                <tr class="mine"><td><span class="rn"><span class="rdot">9</span>9 · Dec</span></td><td class="taker you">You (Arjun) · planned</td><td>4% · <span class="cv" data-inr="8000"></span></td><td><span class="cv" data-inr="10000"></span></td><td class="divv">payout</td><td><span class="cv" data-inr="192000"></span> in</td></tr>
+                <tr class="done"><td class="lf"><span class="rn">1</span><span class="who">Ramesh Iyer</span></td><td>28%</td><td><span class="symword">₹</span><span class="cv" data-inr="10000"></span></td><td><span class="symword">₹</span><span class="cv" data-inr="4133"></span></td><td class="pay"><span class="symword">₹</span><span class="cv" data-inr="12534"></span></td></tr>
+                <tr class="done"><td class="lf"><span class="rn">2</span><span class="who">Lakshmi Nair</span></td><td>24%</td><td><span class="symword">₹</span><span class="cv" data-inr="10000"></span></td><td><span class="symword">₹</span><span class="cv" data-inr="3800"></span></td><td class="pay"><span class="symword">₹</span><span class="cv" data-inr="12867"></span></td></tr>
+                <tr class="done"><td class="lf"><span class="rn">3</span><span class="who">Vikram Reddy</span></td><td>20%</td><td><span class="symword">₹</span><span class="cv" data-inr="10000"></span></td><td><span class="symword">₹</span><span class="cv" data-inr="3467"></span></td><td class="pay"><span class="symword">₹</span><span class="cv" data-inr="13200"></span></td></tr>
+                <tr class="done"><td class="lf"><span class="rn">4</span><span class="who">Sunita Desai</span></td><td>18%</td><td><span class="symword">₹</span><span class="cv" data-inr="10000"></span></td><td><span class="symword">₹</span><span class="cv" data-inr="3300"></span></td><td class="pay"><span class="symword">₹</span><span class="cv" data-inr="13367"></span></td></tr>
+                <tr class="now"><td class="lf"><span class="rn">5</span><span class="who">Anil Joshi</span><span class="nowtag">now</span></td><td>16%</td><td><span class="symword">₹</span><span class="cv" data-inr="10000"></span></td><td><span class="symword">₹</span><span class="cv" data-inr="3133"></span></td><td class="pay"><span class="symword">₹</span><span class="cv" data-inr="13534"></span></td></tr>
+                <tr class="future"><td class="lf"><span class="rn">6</span><span class="who">open auction</span></td><td>~15%</td><td><span class="symword">₹</span><span class="cv" data-inr="10000"></span></td><td>~<span class="symword">₹</span><span class="cv" data-inr="3050"></span></td><td class="pay">~<span class="symword">₹</span><span class="cv" data-inr="13617"></span></td></tr>
+                <tr class="future"><td class="lf"><span class="rn">7</span><span class="who">open auction</span></td><td>~13%</td><td><span class="symword">₹</span><span class="cv" data-inr="10000"></span></td><td>~<span class="symword">₹</span><span class="cv" data-inr="2883"></span></td><td class="pay">~<span class="symword">₹</span><span class="cv" data-inr="13784"></span></td></tr>
+                <tr class="future"><td class="lf"><span class="rn">8</span><span class="who">open auction</span></td><td>~11%</td><td><span class="symword">₹</span><span class="cv" data-inr="10000"></span></td><td>~<span class="symword">₹</span><span class="cv" data-inr="2717"></span></td><td class="pay">~<span class="symword">₹</span><span class="cv" data-inr="13950"></span></td></tr>
+                <tr class="mine"><td class="lf"><span class="rn">9</span><span class="who">Arjun</span><span class="youtag">your take</span></td><td>10%</td><td><span class="symword">₹</span><span class="cv" data-inr="10000"></span></td><td><span class="symword">₹</span><span class="cv" data-inr="2550"></span></td><td class="pay in">+<span class="symword">₹</span><span class="cv" data-inr="180000"></span></td></tr>
+                <tr class="future"><td class="lf"><span class="rn">10</span><span class="who">open auction</span></td><td>~8%</td><td><span class="symword">₹</span><span class="cv" data-inr="10000"></span></td><td>~<span class="symword">₹</span><span class="cv" data-inr="2383"></span></td><td class="pay">~<span class="symword">₹</span><span class="cv" data-inr="14284"></span></td></tr>
+                <tr class="future"><td class="lf"><span class="rn">11</span><span class="who">open auction</span></td><td>~6%</td><td><span class="symword">₹</span><span class="cv" data-inr="10000"></span></td><td>~<span class="symword">₹</span><span class="cv" data-inr="2217"></span></td><td class="pay">~<span class="symword">₹</span><span class="cv" data-inr="14450"></span></td></tr>
+                <tr class="future"><td class="lf"><span class="rn">12</span><span class="who">last member</span></td><td>5%</td><td><span class="symword">₹</span><span class="cv" data-inr="10000"></span></td><td>~<span class="symword">₹</span><span class="cv" data-inr="2133"></span></td><td class="pay">~<span class="symword">₹</span><span class="cv" data-inr="14534"></span></td></tr>
               </tbody>
             </table>
+            </div>
+            <div class="rtbl-legend">
+              <span><i class="dotk" style="background:var(--pos)"></i> done (1–4)</span>
+              <span><i class="dotk" style="background:var(--primary)"></i> current (round 5)</span>
+              <span><i class="dotk" style="background:var(--ink)"></i> your planned take (round 9)</span>
+              <span>~ future · estimated bids</span>
+            </div>
           </div>
 
-          <div class="panel fade d3">
-            <div class="ph"><div class="t">My net position over rounds</div><div class="meta">pay in → take pot at #9 → settle</div></div>
+          <!-- LINE CHART -->
+          <div class="panel fade d3" data-rise>
+            <div class="ph"><div class="t">Net position over rounds</div><div class="meta">pay-in · take at r9 · settle</div></div>
             <div class="chartwrap">
-              <svg viewBox="0 0 300 130" preserveAspectRatio="none">
-                <line x1="0" y1="70" x2="300" y2="70" stroke="var(--line)" stroke-width="1" stroke-dasharray="3 4"/>
-                <polyline fill="none" stroke="var(--primary)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"
-                  points="10,76 35,83 60,90 86,97 111,104 136,111 162,119 187,126 212,45 238,52 263,59 288,62"/>
-                <circle cx="187" cy="126" r="3.5" fill="var(--neg)"/>
-                <circle cx="212" cy="45" r="4.5" fill="var(--pos)"/>
-                <circle cx="288" cy="62" r="3.5" fill="var(--ink)"/>
+              <svg class="chart" id="netchart" viewBox="0 0 640 240" role="img" aria-label="Net position over 12 rounds, dipping while paying in then jumping up when taking the pot at round 9">
+                <defs>
+                  <linearGradient id="netfill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="var(--primary)" stop-opacity="0.22"/>
+                    <stop offset="1" stop-color="var(--primary)" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <!-- horizontal gridlines -->
+                <line class="grid-l" x1="44" y1="30" x2="624" y2="30"/>
+                <line class="grid-l" x1="44" y1="78" x2="624" y2="78"/>
+                <line class="grid-l" x1="44" y1="174" x2="624" y2="174"/>
+                <line class="grid-l" x1="44" y1="210" x2="624" y2="210"/>
+                <!-- zero baseline -->
+                <line class="zero" x1="44" y1="126" x2="624" y2="126"/>
+                <text class="axe" x="38" y="129" text-anchor="end">0</text>
+                <text class="axe" x="38" y="81" text-anchor="end">+1L</text>
+                <text class="axe" x="38" y="177" text-anchor="end">−40k</text>
+                <!-- round-9 jump marker -->
+                <line class="jump" x1="424" y1="24" x2="424" y2="216"/>
+                <text class="lbl acc" x="424" y="20" text-anchor="middle">take pot · r9</text>
+                <!-- area + line: pay in (dip each month), jump up at r9, settle -->
+                <path class="area" id="netarea" d="M44,138 L96,146 L148,153 L200,160 L252,167 L304,174 L356,182 L408,189 L424,189 L424,46 L460,52 L512,62 L564,72 L616,82 L616,222 L44,222 Z"/>
+                <polyline class="ln draw" id="netline" points="44,138 96,146 148,153 200,160 252,167 304,174 356,182 408,189 424,189 424,46 460,52 512,62 564,72 616,82"/>
+                <!-- markers -->
+                <circle class="dot9" cx="424" cy="189" r="3.4"/>
+                <circle class="dot9" cx="424" cy="46" r="4.6"/>
+                <!-- x axis labels -->
+                <text class="axe" x="44" y="232" text-anchor="middle">r1</text>
+                <text class="axe" x="252" y="232" text-anchor="middle">r5</text>
+                <text class="axe" x="424" y="232" text-anchor="middle">r9</text>
+                <text class="axe" x="616" y="232" text-anchor="middle">r12</text>
               </svg>
-              <div class="clabels"><span>R1</span><span>R5 now</span><span>R9 you take</span><span>R12</span></div>
-              <div class="cnote"><span><i style="background:var(--neg)"></i> deepest out <b class="mono">&nbsp;−<span class="symword">₹</span><span class="cv" data-inr="124000"></span></b></span><span><i style="background:var(--pos)"></i> payout R9 <b class="mono">&nbsp;+<span class="symword">₹</span><span class="cv" data-inr="192000"></span></b></span><span><i style="background:var(--ink)"></i> final net <b class="mono">&nbsp;+<span class="symword">₹</span><span class="cv" data-inr="18400"></span></b></span></div>
+            </div>
+            <div class="chartcap">
+              <span><i class="swatch" style="background:var(--primary)"></i> net position (paid − received)</span>
+              <span><i class="swatch" style="background:var(--ink-faint)"></i> zero baseline</span>
+              <span><i class="swatch" style="background:var(--accent)"></i> round 9 — you take the pot</span>
             </div>
           </div>
         </div>
 
-        <!-- right -->
-        <div>
-          <div class="panel fade d2">
-            <div class="ph"><div class="t">My position</div><div class="meta">member view</div></div>
-            <div class="sum">
-              <div class="r"><span class="k">Contributions paid (4 rounds)</span><span class="v neg">−<span class="symword">₹</span><span class="cv" data-inr="60501"></span></span></div>
-              <div class="r"><span class="k">Dividends earned</span><span class="v pos">+<span class="symword">₹</span><span class="cv" data-inr="18400"></span></span></div>
-              <div class="r"><span class="k">Pot payout (round 9)</span><span class="v pos">+<span class="symword">₹</span><span class="cv" data-inr="192000"></span></span></div>
-              <div class="r"><span class="k">Remaining contributions</span><span class="v neg">−<span class="symword">₹</span><span class="cv" data-inr="131499"></span></span></div>
-              <div class="r"><span class="k">Projected net by close</span><span class="v pos">+<span class="symword">₹</span><span class="cv" data-inr="18400"></span></span></div>
+        <!-- ASIDE COLUMN -->
+        <div class="stack">
+
+          <!-- BREAKDOWN -->
+          <div class="panel fade d2" data-rise>
+            <div class="ph"><div class="t">My position</div><div class="meta">paid vs received</div></div>
+            <div class="bd">
+              <div class="brow"><div class="blab"><span class="ic" style="background:var(--neg)"></span> Paid in · 5 rounds</div><div class="bamt out">−<span class="symword">₹</span><span class="cv" data-inr="80268"></span></div></div>
+              <div class="brow"><div class="blab"><span class="ic" style="background:var(--pos)"></span> Pot received · round 9</div><div class="bamt in">+<span class="symword">₹</span><span class="cv" data-inr="180000"></span></div></div>
+              <div class="brow"><div class="blab"><span class="ic" style="background:var(--pos-soft)"></span> Dividends earned</div><div class="bamt in">+<span class="symword">₹</span><span class="cv" data-inr="18400"></span></div></div>
+              <div class="stackbar"><i class="pot" data-w="71"></i><i class="div" data-w="7"></i></div>
+              <div class="sub2">received <span class="symword">₹</span><span class="cv" data-inr="198400"></span> projected · pot at r9 + dividends</div>
+              <div class="net"><div><div class="l">Net position (today)</div><div class="v">+<span class="symword">₹</span><span class="cv count" data-inr="18400"></span></div></div><div style="text-align:right" class="sub2">after r9 take<br>+<span class="symword">₹</span><span class="cv" data-inr="118132"></span></div></div>
             </div>
           </div>
 
-          <div class="panel fade d3">
-            <div class="ph"><div class="t">Members</div><div class="meta">round 5 collection</div></div>
-            <div class="roster">
-              <div class="mrow"><div class="av">RK</div><div><div class="mn">R. Kumar</div><div class="ms">slot 1</div></div><span class="mstate took">took r1</span></div>
-              <div class="mrow"><div class="av">SM</div><div><div class="mn">S. Mehta</div><div class="ms">slot 2</div></div><span class="mstate took">took r2</span></div>
-              <div class="mrow"><div class="av">PR</div><div><div class="mn">P. Rao</div><div class="ms">slot 3</div></div><span class="mstate took">took r3</span></div>
-              <div class="mrow"><div class="av">AI</div><div><div class="mn">A. Iyer</div><div class="ms">slot 4</div></div><span class="mstate took">took r4</span></div>
-              <div class="mrow me"><div class="av">AR</div><div><div class="mn">You (Arjun)</div><div class="ms">slot 5 · paid r5</div></div><span class="mstate mine">take r9</span></div>
-              <div class="mrow"><div class="av">NS</div><div><div class="mn">N. Shah</div><div class="ms">slot 6 · paid r5</div></div><span class="mstate paid">paid</span></div>
-              <div class="mrow"><div class="av">KR</div><div><div class="mn">K. Reddy</div><div class="ms">slot 7</div></div><span class="mstate pend">pending</span></div>
-              <div class="mrow"><div class="av">MB</div><div><div class="mn">M. Bose</div><div class="ms">slot 8 · paid r5</div></div><span class="mstate paid">paid</span></div>
-              <div class="mrow"><div class="av">VN</div><div><div class="mn">V. Nair</div><div class="ms">slot 9</div></div><span class="mstate pend">pending</span></div>
-              <div class="mrow"><div class="av">DG</div><div><div class="mn">D. Gupta</div><div class="ms">slot 10 · paid r5</div></div><span class="mstate paid">paid</span></div>
-              <div class="mrow"><div class="av">LM</div><div><div class="mn">L. Menon</div><div class="ms">slot 11 · paid r5</div></div><span class="mstate paid">paid</span></div>
-              <div class="mrow"><div class="av">TS</div><div><div class="mn">T. Singh</div><div class="ms">slot 12 · paid r5</div></div><span class="mstate paid">paid</span></div>
+          <!-- TERMS -->
+          <div class="panel fade d3" data-rise>
+            <div class="ph"><div class="t" style="font-size:16px">Chit terms</div><div class="meta">organizer view</div></div>
+            <div class="terms">
+              <div class="tcell"><div class="tl">Pot</div><div class="tn"><span class="symword">₹</span><span class="cv" data-inr="200000"></span></div></div>
+              <div class="tcell"><div class="tl">Base / mo</div><div class="tn"><span class="symword">₹</span><span class="cv" data-inr="16667"></span></div></div>
+              <div class="tcell"><div class="tl">Commission</div><div class="tn">5%</div></div>
+              <div class="tcell"><div class="tl">Foreman cut</div><div class="tn"><span class="symword">₹</span><span class="cv" data-inr="10000"></span></div></div>
+              <div class="tcell"><div class="tl">Members</div><div class="tn">12</div></div>
+              <div class="tcell"><div class="tl">Duration</div><div class="tn">12 mo</div></div>
+              <div class="tcell"><div class="tl">My take</div><div class="tn">round 9</div></div>
+              <div class="tcell"><div class="tl">Next auction</div><div class="tn">18 Jun</div></div>
             </div>
+          </div>
+
+          <!-- ROSTER -->
+          <div class="panel roster fade d4" data-rise>
+            <div class="ph"><div class="t" style="font-size:16px">Member roster</div><div class="meta">12 members</div></div>
+            <div class="mrow"><div class="mav">RI</div><div><div class="nm">Ramesh Iyer</div><div class="mt">took · round 1 · 28% bid</div></div><span class="stt took">took</span></div>
+            <div class="mrow"><div class="mav">LN</div><div><div class="nm">Lakshmi Nair</div><div class="mt">took · round 2 · 24% bid</div></div><span class="stt took">took</span></div>
+            <div class="mrow"><div class="mav">VR</div><div><div class="nm">Vikram Reddy</div><div class="mt">took · round 3 · 20% bid</div></div><span class="stt took">took</span></div>
+            <div class="mrow"><div class="mav">SD</div><div><div class="nm">Sunita Desai</div><div class="mt">took · round 4 · 18% bid</div></div><span class="stt took">took</span></div>
+            <div class="mrow"><div class="mav">AJ</div><div><div class="nm">Anil Joshi</div><div class="mt">taking · round 5 · 16% bid</div></div><span class="stt plan">now</span></div>
+            <div class="mrow you"><div class="mav">A</div><div><div class="nm">Arjun <span class="youtag2">you</span></div><div class="mt">planned take · round 9 · organizer</div></div><span class="stt plan">round 9</span></div>
+            <div class="mrow"><div class="mav">PM</div><div><div class="nm">Priya Menon</div><div class="mt">paid up · awaiting turn</div></div><span class="stt paid">paid</span></div>
+            <div class="mrow"><div class="mav">KS</div><div><div class="nm">Kavita Sharma</div><div class="mt">paid up · awaiting turn</div></div><span class="stt paid">paid</span></div>
+            <div class="mrow"><div class="mav">RB</div><div><div class="nm">Rohan Bhat</div><div class="mt">paid up · awaiting turn</div></div><span class="stt paid">paid</span></div>
+            <div class="mrow"><div class="mav">MG</div><div><div class="nm">Meera Gupta</div><div class="mt">round 5 due · pending</div></div><span class="stt pend">pending</span></div>
+            <div class="mrow"><div class="mav">SK</div><div><div class="nm">Suresh Kulkarni</div><div class="mt">round 5 due · pending</div></div><span class="stt pend">pending</span></div>
+            <div class="mrow"><div class="mav">DV</div><div><div class="nm">Deepa Varma</div><div class="mt">paid up · awaiting turn</div></div><span class="stt paid">paid</span></div>
           </div>
         </div>
       </div>
@@ -236,13 +433,46 @@ tr.mine .divv{color:#fff}
 const RATE=83; let CUR=(location.hash==='#usd')?'usd':'inr';
 function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
 function usGroup(n){return Math.round(n).toLocaleString('en-US');}
-function abbr(v){if(CUR==='inr'){if(v>=1e7)return (v/1e7).toFixed(2).replace(/\.?0+$/,'')+'Cr';return (v/1e5).toFixed(v%1e5?2:0).replace(/\.?0+$/,'')+'L';}return (v/1e3).toFixed(v%1e3?1:0)+'k';}
+function abbr(v){if(CUR==='inr'){if(Math.abs(v)>=1e7)return (v/1e7).toFixed(2).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')+'Cr';return (v/1e5).toFixed(Math.abs(v)%1e5?2:0).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')+'L';}if(Math.abs(v)>=1e6)return (v/1e6).toFixed(2).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')+'M';return (v/1e3).toFixed(Math.abs(v)%1e3?1:0)+'k';}
 function sym(){return CUR==='inr'?'₹':'$';}
-function val(i){return CUR==='inr'?i:i/RATE;}
-function renderCV(el){const b=val(+el.dataset.inr);el.textContent=el.dataset.style==='lakh'?abbr(b):(CUR==='inr'?indGroup(b):usGroup(b));}
-function apply(){document.documentElement.dataset.cur=CUR;document.querySelectorAll('.symword').forEach(s=>s.textContent=sym());document.querySelectorAll('.cv').forEach(renderCV);document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on',b.dataset.set===CUR));}
-document.getElementById('curtog').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;CUR=b.dataset.set;apply();});
-apply();
+function val(inr){return CUR==='inr'?inr:inr/RATE;}
+function renderCV(el,animate){
+  const inr=+el.dataset.inr, base=val(inr), lakh=el.dataset.style==='lakh';
+  const out = lakh?abbr(base):(CUR==='inr'?indGroup(base):usGroup(base));
+  if(animate && el.classList.contains('count')){
+    const t0=performance.now(),dur=1300;
+    (function tick(t){const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3),v=base*e;
+      el.textContent=lakh?abbr(v):(CUR==='inr'?indGroup(v):usGroup(v));
+      if(p<1)requestAnimationFrame(tick);})(performance.now());
+  } else { el.textContent = out; }
+}
+function applyCurrency(animate){
+  document.documentElement.dataset.cur=CUR;
+  document.querySelectorAll('.symword').forEach(s=>s.textContent=sym());
+  document.querySelectorAll('.unitword').forEach(s=>s.textContent=CUR==='inr'?'rupee':'dollar');
+  document.querySelectorAll('.cv').forEach(el=>renderCV(el,animate));
+  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on',b.dataset.set===CUR));
+}
+const tog=document.getElementById('curtog');
+if(tog)tog.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;CUR=b.dataset.set;applyCurrency(false);});
+// prime line-chart stroke length for the draw animation
+const _ln=document.getElementById('netline');
+if(_ln){const L=_ln.getTotalLength();_ln.style.setProperty('--len',L);}
+// scroll reveals + fire bars/counts/chart when in view
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');
+  e.target.querySelectorAll?.('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%');
+  e.target.querySelectorAll?.('.cv.count').forEach(el=>renderCV(el,true));
+  const chart=e.target.querySelector?.('.chart');if(chart)chart.classList.add('in');
+  io.unobserve(e.target);}});},{threshold:.16});
+document.querySelectorAll('[data-rise]').forEach(el=>io.observe(el));
+applyCurrency(false);
+addEventListener('load',()=>setTimeout(()=>{
+  document.querySelectorAll('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%');
+  document.querySelectorAll('.cv.count').forEach(el=>renderCV(el,true));
+},350));
+
+// profile photo upload (persists across screens via localStorage)
+(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
 </script>
 </body>
 </html>

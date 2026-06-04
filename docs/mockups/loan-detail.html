@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Khata — Gold loan</title>
+<title>Khata — HDFC gold loan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -11,207 +11,450 @@
 :root{
   --paper:#F7F1E6;--paper-2:#F1E8D7;--ink:#241B16;--ink-soft:#4A4035;--ink-faint:#8C8068;
   --line:#DBCDB0;--line-2:#E7DCC6;--primary:#C05E1B;--primary-deep:#9C4711;
-  --pos:#1F6B53;--pos-soft:#2E8C6E;--neg:#A6321F;--accent:#9E3B6E;--gold:#B8902E;--card:#FFFDF8;
-  --shadow:0 1px 0 rgba(28,24,19,.04),0 16px 36px -24px rgba(28,24,19,.45);--r:16px;--ease:cubic-bezier(.22,.68,0,1);
+  --pos:#1F6B53;--pos-soft:#2E8C6E;--neg:#A6321F;--accent:#1F6F86;--accent-dk:#E4A85A;--pos-dk:#5FC79E;--card:#FFFDF8;
+  --glow:color-mix(in srgb,var(--primary) 12%,transparent);
+  --shadow:0 1px 0 rgba(28,24,19,.04),0 16px 36px -24px rgba(28,24,19,.45);
+  --r:16px;--ease:cubic-bezier(.22,.68,0,1);
 }
-html[data-cur="usd"]{--paper:#E9EFE8;--paper-2:#DDE7DB;--ink:#16241B;--ink-soft:#36473B;--ink-faint:#74866F;--line:#C2D4C0;--line-2:#D2E0D0;--primary:#1C7A45;--primary-deep:#115C32;--pos:#1C7A45;--pos-soft:#2E9457;--accent:#A9852F;--gold:#A9852F;--card:#FBFEFA;}
+html[data-cur="usd"]{
+  --paper:#E9EFE8;--paper-2:#DDE7DB;--ink:#16241B;--ink-soft:#36473B;--ink-faint:#74866F;
+  --line:#C2D4C0;--line-2:#D2E0D0;--primary:#1C7A45;--primary-deep:#115C32;
+  --pos:#1C7A45;--pos-soft:#2E9457;--neg:#A6471F;--accent:#A9852F;--accent-dk:#D8BE78;--pos-dk:#5FC98C;--card:#FBFEFA;
+  --glow:color-mix(in srgb,var(--primary) 14%,transparent);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--paper);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased;transition:.6s var(--ease)}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;
+  font-size:15px;-webkit-font-smoothing:antialiased;position:relative;
+  transition:background .6s var(--ease),color .6s var(--ease)}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");}
 .mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
 a{color:inherit;text-decoration:none}
-.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;position:relative;z-index:1}
 @media(max-width:880px){.app{grid-template-columns:1fr}.side{display:none}}
-.side{border-right:1px solid var(--line);background:var(--paper-2);padding:22px 16px;position:sticky;top:0;height:100vh}
-.brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:21px;padding:6px 8px 22px}
-.glyph{width:28px;height:28px;border-radius:8px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));position:relative;box-shadow:0 6px 14px -6px var(--primary)}
+.side{border-right:1px solid var(--line);background:var(--paper-2);padding:22px 16px;position:sticky;top:0;height:100vh;transition:.6s}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:21px;padding:6px 8px 12px}
+.newplan{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 2px 14px;padding:10px;border-radius:11px;border:1px solid var(--line);color:var(--ink);font-weight:600;font-size:14px;cursor:pointer;transition:transform .2s,border-color .2s,background .2s}
+.newplan:hover{border-color:var(--ink);background:var(--card);transform:translateY(-1px)}
+.newplan svg{width:16px;height:16px}
+.glyph{width:28px;height:28px;border-radius:8px;flex:none;background:linear-gradient(145deg,var(--primary),var(--primary-deep));position:relative;box-shadow:0 6px 14px -6px var(--primary)}
 .glyph::before,.glyph::after{content:"";position:absolute;left:6px;right:6px;height:2px;background:var(--paper);border-radius:2px;opacity:.85}
 .glyph::before{top:10px}.glyph::after{top:16px;right:11px}
 .navsec{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:16px 10px 8px}
-.nav-i{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;font-weight:500;color:var(--ink-soft);cursor:pointer;font-size:14.5px}
-.nav-i svg{width:18px;height:18px}.nav-i:hover{background:var(--line-2);color:var(--ink)}
+.nav-i{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:.2s;font-size:14.5px}
+.nav-i svg{width:18px;height:18px;flex:none}
+.nav-i:hover{background:var(--line-2);color:var(--ink)}
 .nav-i.on{background:var(--ink);color:var(--paper)}
 .nav-i .ct{margin-left:auto;font-size:11px;font-family:"JetBrains Mono";opacity:.7}
-
-.top{display:flex;align-items:center;justify-content:space-between;padding:16px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(8px);z-index:20}
-.crumb{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink-faint)}
-.crumb a:hover{color:var(--ink)}
+.main{min-width:0}
+.top{display:flex;align-items:center;justify-content:space-between;padding:18px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(8px);z-index:20;transition:.6s}
+.top h1{font-family:"Fraunces",serif;font-weight:600;font-size:23px;letter-spacing:-.01em}
+.top .sub{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-faint)}
 .top-right{display:flex;align-items:center;gap:14px}
-.curtog{display:inline-flex;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:3px;position:relative}
-.curtog button{font-family:"JetBrains Mono";font-weight:700;font-size:12.5px;border:none;background:transparent;color:var(--ink-faint);width:44px;height:28px;border-radius:100px;cursor:pointer;z-index:1}
-.curtog button.on{color:#fff}
-.curtog .slide{position:absolute;top:3px;left:3px;width:44px;height:28px;border-radius:100px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));transition:transform .4s var(--ease),background .6s}
-html[data-cur="usd"] .curtog .slide{transform:translateX(44px)}
-.addbtn{font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;display:flex;align-items:center;gap:7px}
-
-.content{padding:26px 30px 60px;max-width:1200px}
+.curtog{display:inline-flex;align-items:center;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:4px;position:relative;box-shadow:inset 0 1px 2px rgba(28,24,19,.06);transition:background .6s,border-color .6s}
+.curtog button{font-family:"Hanken Grotesk";font-weight:700;font-size:12.5px;letter-spacing:.04em;border:none;background:transparent;color:var(--ink-faint);width:62px;height:34px;border-radius:100px;cursor:pointer;z-index:1;transition:color .35s var(--ease);display:flex;align-items:center;justify-content:center;gap:5px}
+.curtog button .cs{font-family:"Fraunces",serif;font-weight:600;font-size:17px;line-height:1;margin-top:-1px}
+.curtog button:not(.on):hover{color:var(--ink)}
+.curtog button.on{color:var(--paper)}
+.curtog .slide{position:absolute;top:4px;left:4px;width:62px;height:34px;border-radius:100px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));transition:transform .42s var(--ease),background .6s;box-shadow:0 6px 16px -6px var(--primary)}
+html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
+.addbtn{font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;display:flex;align-items:center;gap:7px;transition:transform .2s,background .6s;box-shadow:0 8px 18px -10px var(--primary)}
+.addbtn:hover{transform:translateY(-2px)}
+.addbtn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.avatar{position:relative;width:36px;height:36px;border-radius:11px;background:linear-gradient(150deg,var(--pos-soft),var(--pos));background-size:cover;background-position:center;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;cursor:pointer;overflow:hidden;transition:background .6s}
+.avatar input{display:none}
+.avatar .ava-ov{position:absolute;inset:0;display:grid;place-items:center;background:rgba(20,16,12,.48);opacity:0;transition:opacity .2s}
+.avatar:hover .ava-ov{opacity:1}
+.avatar .ava-ov svg{width:15px;height:15px;color:#fff}
+.avatar.has-img .ava-init{opacity:0}
+.content{padding:28px 30px 60px;max-width:1200px;position:relative;z-index:1}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:.6s}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.ph .t{font-family:"Fraunces",serif;font-weight:600;font-size:18px;display:flex;align-items:center;gap:10px}
+.ph .meta{font-size:12.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
 .tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px}
-.tag.loan{background:color-mix(in srgb,var(--neg) 14%,transparent);color:var(--neg)}
-.tag.sec{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--gold)}
-
-.head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:20px}
-.head h1{font-family:"Fraunces",serif;font-weight:600;font-size:31px;letter-spacing:-.02em;display:flex;align-items:center;gap:11px;flex-wrap:wrap}
-.head .meta{font-size:13px;color:var(--ink-faint);margin-top:6px;font-family:"JetBrains Mono"}
-.kpis{display:flex;gap:24px}
-.kpi .n{font-family:"Fraunces",serif;font-weight:600;font-size:24px;letter-spacing:-.02em}
-.kpi .n.neg{color:var(--neg)}
-.kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:600}
-
-.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:22px;margin-top:26px}
-@media(max-width:1000px){.grid{grid-template-columns:1fr}}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
-.ph{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
-.ph .t{font-family:"Fraunces",serif;font-weight:600;font-size:17px}
-.ph .meta{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono"}
-
-/* structure segmented (read-only display) */
-.struct{display:flex;gap:6px;padding:14px 20px;border-bottom:1px solid var(--line-2)}
-.struct .s{flex:1;text-align:center;padding:10px;border-radius:10px;border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-faint);background:var(--paper)}
-.struct .s.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.struct .s small{display:block;font-weight:500;font-size:10.5px;opacity:.7;margin-top:2px;text-transform:none;letter-spacing:0}
-
-/* ledger */
-.lrow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:13px 20px;border-top:1px solid var(--line-2)}
-.l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
-.amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right}
-.amt.intr{color:var(--primary-deep)}.amt.prin{color:var(--ink)}
-.l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
-.l2r{font-size:11px;color:var(--ink-faint);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.tag.asset{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary-deep)}
+.tag.chit{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.tag.loan{background:color-mix(in srgb,var(--neg) 15%,transparent);color:var(--neg)}
 .pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);text-transform:capitalize}
-.pill.i{background:color-mix(in srgb,var(--primary) 12%,transparent);border-color:transparent;color:var(--primary-deep)}
-.pill.p{background:color-mix(in srgb,var(--ink) 8%,transparent);border-color:transparent;color:var(--ink)}
+.proof{font-size:10px;color:var(--primary-deep);font-weight:600;display:inline-flex;gap:3px;align-items:center;cursor:pointer}
+.proof:hover{text-decoration:underline}
 
-/* collateral card */
-.col-hero{display:flex;gap:16px;align-items:center;padding:20px;border-bottom:1px solid var(--line-2)}
-.col-ic{width:54px;height:54px;border-radius:14px;flex:none;display:grid;place-items:center;background:linear-gradient(145deg,var(--gold),#8a6b1f);color:#fff;box-shadow:0 8px 20px -8px var(--gold)}
-.col-ic svg{width:28px;height:28px}
-.col-hero .big{font-family:"Fraunces",serif;font-weight:600;font-size:22px;line-height:1}
-.col-hero .small{font-size:12.5px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:4px}
-.col-spec{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-2)}
-.col-spec div{background:var(--card);padding:13px 20px}
-.col-spec .k{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:600}
-.col-spec .v{font-family:"JetBrains Mono";font-weight:700;font-size:14.5px;margin-top:3px}
-/* ltv gauge */
-.ltv{padding:18px 20px;border-top:1px solid var(--line-2)}
-.ltv .lab{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);margin-bottom:9px}
-.ltv .lab b{font-family:"JetBrains Mono"}
-.ltvbar{height:12px;border-radius:8px;background:var(--paper-2);overflow:hidden;position:relative;border:1px solid var(--line-2)}
-.ltvbar i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:linear-gradient(90deg,var(--pos),var(--pos-soft));width:0;transition:width 1.1s var(--ease)}
-.ltvbar .cap{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--neg);opacity:.6}
-.ltv .hint{font-size:11.5px;color:var(--ink-faint);margin-top:8px;font-family:"JetBrains Mono"}
-.pledge{display:flex;align-items:center;justify-content:space-between;padding:13px 20px;border-top:1px solid var(--line-2);font-size:13px}
-.pledge .st{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;background:color-mix(in srgb,var(--gold) 18%,transparent);color:var(--gold)}
-.linkrow{padding:12px 20px;border-top:1px solid var(--line-2);font-size:12.5px;color:var(--ink-faint)}
-.linkrow b{color:var(--primary-deep)}
-
-/* terms */
-.terms{padding:6px 20px 14px}
-.terms .r{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line-2);font-size:13.5px}
-.terms .r:last-child{border-bottom:none}
-.terms .k{color:var(--ink-soft)}.terms .v{font-family:"JetBrains Mono";font-weight:700}
-
+/* on-load stagger + scroll reveal */
 .fade{opacity:0;transform:translateY(16px);animation:rise .7s var(--ease) forwards}
-.fade.d1{animation-delay:.07s}.fade.d2{animation-delay:.14s}.fade.d3{animation-delay:.21s}.fade.d4{animation-delay:.28s}
+.fade.d1{animation-delay:.06s}.fade.d2{animation-delay:.13s}.fade.d3{animation-delay:.2s}.fade.d4{animation-delay:.27s}.fade.d5{animation-delay:.34s}
 @keyframes rise{to{opacity:1;transform:none}}
+[data-rise]{opacity:0;transform:translateY(22px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+[data-rise].in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.fade{animation:none;opacity:1;transform:none}[data-rise]{opacity:1;transform:none}
+  *{transition-duration:.001s!important}}
+
+/* ---- loan header ---- */
+.lhead{display:grid;grid-template-columns:1.7fr 1fr;gap:22px;align-items:stretch}
+@media(max-width:1000px){.lhead{grid-template-columns:1fr}}
+.lhero{background:var(--ink);color:var(--paper);border:1px solid var(--ink);border-radius:var(--r);padding:24px 26px;position:relative;overflow:hidden}
+.lhero::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 90% at 100% 0,color-mix(in srgb,var(--neg) 40%,transparent),transparent 58%)}
+.lhero .top-tags{display:flex;gap:8px;align-items:center;position:relative;z-index:1;flex-wrap:wrap}
+.lhero .tag.loan{background:color-mix(in srgb,var(--neg) 30%,transparent);color:#F4C9BF}
+.lhero .chiptag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:5px;background:color-mix(in srgb,var(--paper) 16%,transparent);color:color-mix(in srgb,var(--paper) 82%,transparent)}
+.lhero h2{font-family:"Fraunces",serif;font-weight:600;font-size:27px;letter-spacing:-.01em;margin:14px 0 4px;position:relative;z-index:1}
+.lhero .sub{font-size:13px;color:color-mix(in srgb,var(--paper) 64%,transparent);font-family:"JetBrains Mono";position:relative;z-index:1}
+.lhero .kpis{display:flex;gap:30px;margin-top:22px;position:relative;z-index:1;flex-wrap:wrap}
+.lhero .kpi .l{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:color-mix(in srgb,var(--paper) 56%,transparent);font-weight:600}
+.lhero .kpi .v{font-family:"Fraunces",serif;font-weight:600;font-size:25px;margin-top:5px;line-height:1}
+.lhero .kpi .v .cur{font-size:15px;color:color-mix(in srgb,var(--paper) 66%,transparent);vertical-align:super}
+.lhero .kpi .x{font-size:11.5px;color:color-mix(in srgb,var(--paper) 58%,transparent);font-family:"JetBrains Mono";margin-top:4px}
+.lhero .kpi .v.due{color:#F4C9BF}
+
+.factcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;display:flex;flex-direction:column;justify-content:center}
+.factcard .ftitle{font-family:"Fraunces",serif;font-weight:600;font-size:16px;margin-bottom:12px}
+.frow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--line-2);font-size:13.5px}
+.frow:first-of-type{border-top:none}
+.frow .fk{color:var(--ink-faint)}
+.frow .fv{font-family:"JetBrains Mono";font-weight:600}
+
+/* ---- segmented control ---- */
+.seg-wrap{margin-top:24px}
+.segbar{display:inline-flex;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:3px;position:relative}
+.segbar button{font-family:"Hanken Grotesk";font-weight:600;font-size:13px;border:none;background:transparent;color:var(--ink-faint);padding:0 18px;height:32px;border-radius:100px;cursor:pointer;z-index:1;transition:color .3s;display:flex;align-items:center;gap:6px}
+.segbar button.on{color:#fff}
+.segbar button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.segbar .sslide{position:absolute;top:3px;left:3px;height:32px;border-radius:100px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));transition:transform .4s var(--ease),width .4s var(--ease),background .6s}
+.segbody{padding:20px 22px}
+.modecols{display:grid;grid-template-columns:1.1fr 1fr;gap:24px}
+@media(max-width:760px){.modecols{grid-template-columns:1fr}}
+.mnote{font-size:13.5px;color:var(--ink-soft);line-height:1.55}
+.mnote b{color:var(--ink)}
+.mnote .em{font-family:"Fraunces",serif;font-style:italic;font-weight:500;color:var(--primary-deep)}
+.msummary{display:grid;gap:0}
+.msrow{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-top:1px solid var(--line-2);font-size:13.5px}
+.msrow:first-child{border-top:none}
+.msrow .mk{color:var(--ink-faint)}
+.msrow .mv{font-family:"JetBrains Mono";font-weight:700}
+.msrow .mv.big{font-size:16px}
+.diffnote{margin-top:16px;background:color-mix(in srgb,var(--primary) 9%,transparent);border:1px solid color-mix(in srgb,var(--primary) 24%,transparent);border-radius:12px;padding:13px 15px;font-size:13px;color:var(--ink-soft);line-height:1.5;display:flex;gap:10px;align-items:flex-start}
+.diffnote .di{flex:none;width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px;margin-top:1px;font-family:"Fraunces",serif;font-style:italic}
+.diffnote b{color:var(--ink)}
+/* mini schedule bars */
+.schemini{display:grid;gap:7px;margin-top:14px}
+.smbar{display:grid;grid-template-columns:78px 1fr auto;gap:10px;align-items:center;font-size:11.5px;font-family:"JetBrains Mono";color:var(--ink-faint)}
+.smbar .track{height:14px;border-radius:5px;background:var(--paper-2);overflow:hidden;position:relative;display:flex}
+.smbar .track i{height:100%;width:0;transition:width 1s var(--ease)}
+.smbar .track i.int{background:var(--primary)}
+.smbar .track i.prn{background:var(--ink)}
+.smbar .amt{font-weight:700;color:var(--ink)}
+.leg{display:flex;gap:16px;margin-top:12px;font-size:11.5px;color:var(--ink-faint)}
+.leg span{display:inline-flex;align-items:center;gap:6px}
+.leg i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.leg i.int{background:var(--primary)}.leg i.prn{background:var(--ink)}
+
+/* ---- two-col main ---- */
+.grid2{display:grid;grid-template-columns:1.55fr 1fr;gap:22px;margin-top:24px}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+
+/* ---- ledger ---- */
+.ledger .lrow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:13px 22px 13px 26px;border-top:1px solid var(--line-2);position:relative}
+.ledger .lrow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--line)}
+.ledger .lrow.t-disb::before{background:var(--accent)}
+.ledger .lrow.t-int::before{background:var(--primary)}
+.ledger .lrow.t-prn::before{background:var(--ink)}
+.ledger .l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
+.ledger .amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right;white-space:nowrap}
+.ledger .amt.in{color:var(--pos)} .ledger .amt.out{color:var(--ink)}
+.ledger .l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.ledger .l2r{font-size:11px;color:var(--ink-faint);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.pill.k-int{border-color:transparent;background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary-deep)}
+.pill.k-prn{border-color:transparent;background:color-mix(in srgb,var(--ink) 12%,transparent);color:var(--ink)}
+.pill.k-disb{border-color:transparent;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+
+/* ---- right rail ---- */
+.r-stack{display:grid;gap:22px;align-content:start}
+.collat .cbody{padding:20px 22px}
+.gold-top{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:16px;border-bottom:1px solid var(--line-2)}
+.gold-top .gl{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600}
+.gold-top .gv{font-family:"Fraunces",serif;font-weight:600;font-size:29px;color:var(--primary-deep);line-height:1;margin-top:6px}
+.gold-top .gv .cur{font-size:16px;color:var(--ink-faint);vertical-align:super}
+.gold-spec{text-align:right;font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono";line-height:1.7}
+.gold-spec b{color:var(--ink)}
+.gauge-wrap{display:flex;align-items:center;gap:18px;margin-top:18px;position:relative}
+.gauge-svg{flex:none}
+.gauge-arc{fill:none;stroke-width:13;stroke-linecap:round}
+.gauge-track{stroke:var(--paper-2)}
+.gauge-fill{stroke:var(--primary);transition:stroke-dashoffset 1.3s var(--ease)}
+.gauge-cap{stroke:var(--neg);stroke-width:2.5;stroke-linecap:round}
+.gauge-midwrap{position:absolute;left:0;top:0;width:132px;height:132px;display:grid;place-items:center;pointer-events:none}
+.gauge-mid{text-align:center;margin-top:14px}
+.gauge-mid .gp{font-family:"Fraunces",serif;font-weight:600;font-size:30px;line-height:1}
+.gauge-mid .gpl{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600;margin-top:2px}
+.gauge-side{font-size:12.5px;color:var(--ink-soft);line-height:1.75}
+.gauge-side .dotmark{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.gauge-side b{font-family:"JetBrains Mono"}
+.collat-foot{display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--line-2);font-size:12.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.status-pill{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:20px;background:color-mix(in srgb,var(--neg) 15%,transparent);color:var(--neg)}
+.standalone{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px dashed var(--line);color:var(--ink-soft)}
+
+.terms .tbody{padding:8px 0}
+.trow{display:flex;justify-content:space-between;align-items:center;padding:11px 22px;border-top:1px solid var(--line-2);font-size:13.5px}
+.trow:first-child{border-top:none}
+.trow .tk{color:var(--ink-faint);display:flex;align-items:center;gap:8px}
+.trow .tk svg{width:15px;height:15px;opacity:.7}
+.trow .tv{font-family:"JetBrains Mono";font-weight:600;text-align:right}
+
+.release .rbody{padding:20px 22px}
+.release .rlede{font-size:13.5px;color:var(--ink-soft);line-height:1.5}
+.release .rlede b{font-family:"Fraunces",serif;font-style:italic;font-weight:600;color:var(--primary-deep);font-size:18px}
+.bigbar{height:13px;border-radius:8px;background:var(--paper-2);overflow:hidden;position:relative;margin:16px 0 8px}
+.bigbar i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:linear-gradient(90deg,var(--primary),var(--primary-deep));width:0;transition:width 1.2s var(--ease)}
+.release .rrow{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.release .ramts{display:flex;justify-content:space-between;margin-top:14px;padding-top:14px;border-top:1px solid var(--line-2)}
+.release .ramts .ra .n{font-family:"Fraunces",serif;font-weight:600;font-size:20px}
+.release .ramts .ra .l{font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.release .ramts .ra.r{text-align:right}
+.release .ramts .ra.r .n{color:var(--neg)}
 </style>
 </head>
 <body>
 <div class="app">
+  <!-- sidebar -->
   <aside class="side">
-    <a class="brand" href="app.html"><span class="glyph"></span> Khata</a>
+    <a class="brand" href="index.html"><span class="glyph"></span> Khata</a>
+    <a class="newplan" href="create-plan.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
     <div class="navsec">Overview</div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</div>
+    <a class="nav-i" href="app.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
+    <a class="nav-i" href="holdings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
     <div class="navsec">Money plans</div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct">2</span></div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct">3</span></div>
-    <div class="nav-i on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct">3</span></div>
+    <a class="nav-i" href="asset-detail.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct">2</span></a>
+    <a class="nav-i" href="chit-detail.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct">3</span></a>
+    <a class="nav-i on" href="loan-detail.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct">2</span></a>
+    <a class="nav-i" href="retirement-401k.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k)</a>
     <div class="navsec">Records</div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Proofs</div>
+    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</a>
+    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
   </aside>
 
-  <main>
+  <!-- main -->
+  <main class="main">
     <div class="top">
-      <div class="crumb"><a href="app.html">Loans</a> <span>›</span> <b style="color:var(--ink)">Gold loan — HDFC</b></div>
+      <div>
+        <h1>HDFC gold loan</h1>
+        <div class="sub">Loans · taken · secured by gold · since 14 Jan 2026</div>
+      </div>
       <div class="top-right">
-        <div class="curtog" id="curtog"><span class="slide"></span><button data-set="inr" class="on">₹ INR</button><button data-set="usd">$ USD</button></div>
-        <button class="addbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Record repayment</button>
+        <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="inr" class="on"><span class="cs">₹</span> INR</button><button data-set="usd"><span class="cs">$</span> USD</button></div>
+        <a class="addbtn" href="log-payment.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Log payment</a>
+        <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init">A</span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
       </div>
     </div>
 
     <div class="content">
-      <div class="head fade">
-        <div>
-          <h1><span class="tag loan">Loan · taken</span> Gold loan — HDFC <span class="tag sec">secured</span></h1>
-          <div class="meta">opened 02 Mar 2026 · 8.5%/yr · reducing balance · bullet (interest-only) · matures Mar 2027</div>
+
+      <!-- ===== HEADER ===== -->
+      <div class="lhead">
+        <div class="lhero fade">
+          <div class="top-tags">
+            <span class="tag loan">Loan · taken</span>
+            <span class="chiptag">Secured</span>
+            <span class="chiptag">Bullet · interest-only</span>
+          </div>
+          <h2>HDFC gold loan</h2>
+          <div class="sub">8.5% p.a · monthly interest basis · gold collateral</div>
+          <div class="kpis">
+            <div class="kpi">
+              <div class="l">Principal owed</div>
+              <div class="v"><span class="cur symword">₹</span><span class="cv count" data-inr="396000"></span></div>
+              <div class="x">of <span class="symword">₹</span><span class="cv" data-inr="600000"></span> disbursed</div>
+            </div>
+            <div class="kpi">
+              <div class="l">Interest paid to date</div>
+              <div class="v"><span class="cur symword">₹</span><span class="cv count" data-inr="23319"></span></div>
+              <div class="x">7 monthly payments</div>
+            </div>
+            <div class="kpi">
+              <div class="l">Next interest due</div>
+              <div class="v due"><span class="cur symword">₹</span><span class="cv count" data-inr="2805"></span></div>
+              <div class="x">on 14 Jul 2026</div>
+            </div>
+          </div>
         </div>
-        <div class="kpis">
-          <div class="kpi"><div class="n neg"><span class="symword">₹</span><span class="cv" data-inr="396000" data-style="lakh"></span></div><div class="l">Principal owed</div></div>
-          <div class="kpi"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="22440"></span></div><div class="l">Interest paid</div></div>
-          <div class="kpi"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="2805"></span></div><div class="l">Next interest</div></div>
+
+        <div class="factcard fade d1">
+          <div class="ftitle">At a glance</div>
+          <div class="frow"><span class="fk">Structure</span><span class="fv">Bullet / interest-only</span></div>
+          <div class="frow"><span class="fk">Rate</span><span class="fv">8.5% p.a</span></div>
+          <div class="frow"><span class="fk">Basis</span><span class="fv">Monthly interest</span></div>
+          <div class="frow"><span class="fk">Monthly interest</span><span class="fv"><span class="symword">₹</span><span class="cv" data-inr="2805"></span></span></div>
+          <div class="frow"><span class="fk">Principal balloon</span><span class="fv">due at term</span></div>
+          <div class="frow"><span class="fk">Security</span><span class="fv">92g · 22K gold</span></div>
         </div>
       </div>
 
-      <div class="grid">
-        <!-- left: structure + repayment ledger -->
-        <div>
-          <div class="panel fade d2">
-            <div class="ph"><div class="t">Repayment structure</div><div class="meta">interest split from principal</div></div>
-            <div class="struct">
-              <div class="s on">Bullet · interest-only<small>pay interest monthly · principal at maturity</small></div>
-              <div class="s">EMI<small>fixed monthly principal + interest</small></div>
+      <!-- ===== SEGMENTED CONTROL: BULLET vs EMI ===== -->
+      <div class="seg-wrap">
+        <div class="panel fade d2" data-rise>
+          <div class="ph">
+            <div class="t">Repayment style</div>
+            <div class="segbar" id="segbar" role="tablist" aria-label="Repayment style">
+              <span class="sslide" id="sslide"></span>
+              <button data-mode="bullet" class="on" role="tab" aria-selected="true">Bullet</button>
+              <button data-mode="emi" role="tab" aria-selected="false">EMI</button>
             </div>
-            <div class="ph" style="border-top:none"><div class="t" style="font-size:15px">Ledger</div><div class="meta">interest + principal prepayments</div></div>
-            <div class="lrow"><div class="l1">Interest · Jun</div><div class="amt intr">−<span class="cv" data-inr="2805"></span></div><div class="l2">02 Jun · auto-accrued, paid</div><div class="l2r"><span class="pill i">interest</span><span class="pill">UPI</span></div></div>
-            <div class="lrow"><div class="l1">Principal prepayment</div><div class="amt prin">−<span class="cv" data-inr="104000"></span></div><div class="l2">20 May · reduced outstanding</div><div class="l2r"><span class="pill p">principal</span><span class="pill">transfer</span></div></div>
-            <div class="lrow"><div class="l1">Interest · May</div><div class="amt intr">−<span class="cv" data-inr="3542"></span></div><div class="l2">02 May · on ₹5,00,000</div><div class="l2r"><span class="pill i">interest</span><span class="pill">UPI</span></div></div>
-            <div class="lrow"><div class="l1">Principal prepayment</div><div class="amt prin">−<span class="cv" data-inr="100000"></span></div><div class="l2">28 Apr · reduced outstanding</div><div class="l2r"><span class="pill p">principal</span><span class="pill">cash</span></div></div>
-            <div class="lrow"><div class="l1">Interest · Apr</div><div class="amt intr">−<span class="cv" data-inr="4250"></span></div><div class="l2">02 Apr · on ₹6,00,000</div><div class="l2r"><span class="pill i">interest</span><span class="pill">UPI</span></div></div>
-            <div class="lrow"><div class="l1">Disbursed (principal in)</div><div class="amt" style="color:var(--pos)">+<span class="cv" data-inr="600000"></span></div><div class="l2">02 Mar · against gold pledge</div><div class="l2r"><span class="pill">disbursement</span><span class="pill">bank</span></div></div>
+          </div>
+          <div class="segbody">
+            <div class="modecols">
+              <div>
+                <p class="mnote" id="modeNote"></p>
+                <div class="schemini" id="schemini"></div>
+                <div class="leg"><span><i class="int"></i> interest</span><span><i class="prn"></i> principal</span></div>
+              </div>
+              <div>
+                <div class="msummary" id="msummary"></div>
+                <div class="diffnote">
+                  <span class="di">i</span>
+                  <span id="diffNote"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== MAIN GRID ===== -->
+      <div class="grid2">
+
+        <!-- LEFT: split ledger -->
+        <div>
+          <div class="panel fade d3" data-rise>
+            <div class="ph">
+              <div class="t" style="font-size:16px">Ledger</div>
+              <div class="meta">balance <span class="symword">₹</span><span class="cv" data-inr="396000"></span></div>
+            </div>
+            <div class="ledger">
+              <div class="lrow t-int">
+                <div class="l1">Interest · month 7</div>
+                <div class="amt out">−<span class="cv" data-inr="2805"></span></div>
+                <div class="l2">14 Jun · 10:12 IST</div>
+                <div class="l2r"><span class="pill k-int">interest</span><span class="pill">UPI</span><span class="proof">▣ proof</span></div>
+              </div>
+              <div class="lrow t-prn">
+                <div class="l1">Principal prepayment</div>
+                <div class="amt out">−<span class="cv" data-inr="100000"></span></div>
+                <div class="l2">02 Jun · 16:48 IST</div>
+                <div class="l2r"><span class="pill k-prn">principal</span><span class="pill">transfer</span><span class="pill">chit-payout</span><span class="proof">▣ proof</span></div>
+              </div>
+              <div class="lrow t-int">
+                <div class="l1">Interest · month 6</div>
+                <div class="amt out">−<span class="cv" data-inr="3514"></span></div>
+                <div class="l2">14 May · 09:30 IST</div>
+                <div class="l2r"><span class="pill k-int">interest</span><span class="pill">UPI</span><span class="proof">▣ proof</span></div>
+              </div>
+              <div class="lrow t-prn">
+                <div class="l1">Principal prepayment</div>
+                <div class="amt out">−<span class="cv" data-inr="104000"></span></div>
+                <div class="l2">28 Apr · 13:05 IST</div>
+                <div class="l2r"><span class="pill k-prn">principal</span><span class="pill">transfer</span><span class="pill">savings</span><span class="proof">▣ proof</span></div>
+              </div>
+              <div class="lrow t-int">
+                <div class="l1">Interest · month 5</div>
+                <div class="amt out">−<span class="cv" data-inr="4250"></span></div>
+                <div class="l2">14 Apr · 09:18 IST</div>
+                <div class="l2r"><span class="pill k-int">interest</span><span class="pill">UPI</span><span class="proof">▣ proof</span></div>
+              </div>
+              <div class="lrow t-int">
+                <div class="l1">Interest · month 4</div>
+                <div class="amt out">−<span class="cv" data-inr="4250"></span></div>
+                <div class="l2">14 Mar · 09:22 IST</div>
+                <div class="l2r"><span class="pill k-int">interest</span><span class="pill">cash</span><span class="proof">▣ proof</span></div>
+              </div>
+              <div class="lrow t-int">
+                <div class="l1">Interest · months 1–3</div>
+                <div class="amt out">−<span class="cv" data-inr="12750"></span></div>
+                <div class="l2">14 Feb – 14 Apr · cleared</div>
+                <div class="l2r"><span class="pill k-int">interest</span><span class="pill">cash</span><span class="proof">▣ proof</span></div>
+              </div>
+              <div class="lrow t-disb">
+                <div class="l1">Disbursement · gold pledged</div>
+                <div class="amt in">+<span class="cv" data-inr="600000"></span></div>
+                <div class="l2">14 Jan · 11:40 IST</div>
+                <div class="l2r"><span class="pill k-disb">disbursement</span><span class="pill">transfer</span><span class="proof">▣ sanction</span></div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- right: collateral + terms -->
-        <div>
-          <div class="panel fade d2">
-            <div class="ph"><div class="t">Collateral</div><div class="meta">pledged security</div></div>
-            <div class="col-hero">
-              <div class="col-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l3 4 5 1-3.5 4 .8 5L12 19l-5.3 2 .8-5L4 12l5-1z"/></svg></div>
-              <div><div class="big">Gold jewellery</div><div class="small">120 g · 22K · 5 items</div></div>
+        <!-- RIGHT RAIL -->
+        <div class="r-stack">
+
+          <!-- collateral card -->
+          <div class="panel collat fade d3" data-rise>
+            <div class="ph"><div class="t" style="font-size:16px"><span class="tag asset">Gold</span> Collateral</div><div class="meta">live-ish valuation</div></div>
+            <div class="cbody">
+              <div class="gold-top">
+                <div>
+                  <div class="gl">Pledged valuation</div>
+                  <div class="gv"><span class="cur symword">₹</span><span class="cv count" data-inr="528000"></span></div>
+                </div>
+                <div class="gold-spec">
+                  <b>92 g</b> · 22K<br>
+                  <span class="symword">₹</span><span class="cv" data-inr="5739"></span>/g<br>
+                  <span style="opacity:.8">24K eq. ₹6,260/g</span>
+                </div>
+              </div>
+
+              <div class="gauge-wrap">
+                <svg class="gauge-svg" width="132" height="132" viewBox="0 0 132 132" aria-label="Loan-to-value gauge, 75 percent against 75 percent lender cap">
+                  <path class="gauge-arc gauge-track" d="M 21 105 A 56 56 0 1 1 111 105"/>
+                  <path class="gauge-arc gauge-fill" id="ltvArc" d="M 21 105 A 56 56 0 1 1 111 105"/>
+                  <line class="gauge-cap" id="capTick" x1="0" y1="0" x2="0" y2="0"/>
+                </svg>
+                <div class="gauge-midwrap">
+                  <div class="gauge-mid">
+                    <div class="gp" id="ltvPct">75%</div>
+                    <div class="gpl">LTV</div>
+                  </div>
+                </div>
+                <div class="gauge-side">
+                  <div><span class="dotmark" style="background:var(--primary)"></span>current LTV <b>75%</b></div>
+                  <div><span class="dotmark" style="background:var(--neg)"></span>lender cap <b>75%</b></div>
+                  <div style="color:var(--ink-faint);margin-top:4px;font-size:11.5px">loan <span class="symword">₹</span><span class="cv" data-inr="396000"></span> ÷ value <span class="symword">₹</span><span class="cv" data-inr="528000"></span></div>
+                </div>
+              </div>
+
+              <div class="collat-foot">
+                <span class="status-pill">● Pledged</span>
+                <span class="standalone">Standalone loan</span>
+              </div>
             </div>
-            <div class="col-spec">
-              <div><div class="k">Rate / gram</div><div class="v"><span class="symword">₹</span><span class="cv" data-inr="6200"></span></div></div>
-              <div><div class="k">Valuation</div><div class="v"><span class="symword">₹</span><span class="cv" data-inr="744000" data-style="lakh"></span></div></div>
-            </div>
-            <div class="ltv">
-              <div class="lab"><span>Loan-to-value (current)</span><b>53%</b></div>
-              <div class="ltvbar"><i data-w="53"></i><span class="cap" style="left:75%"></span></div>
-              <div class="hint">owed <span class="symword">₹</span><span class="cv" data-inr="396000" data-style="lakh"></span> of <span class="symword">₹</span><span class="cv" data-inr="744000" data-style="lakh"></span> value · red line = 75% lender cap</div>
-            </div>
-            <div class="pledge"><span>Held at · HDFC Bank, Indiranagar</span><span class="st">⬢ Pledged</span></div>
-            <div class="linkrow">Standalone record · <b>+ link to a tracked asset</b> if you add this gold to Assets</div>
           </div>
 
-          <div class="panel fade d3">
-            <div class="ph"><div class="t">Loan terms</div></div>
-            <div class="terms">
-              <div class="r"><span class="k">Original principal</span><span class="v"><span class="symword">₹</span><span class="cv" data-inr="600000" data-style="lakh"></span></span></div>
-              <div class="r"><span class="k">Interest rate</span><span class="v">8.5% / yr</span></div>
-              <div class="r"><span class="k">Basis</span><span class="v">Reducing balance</span></div>
-              <div class="r"><span class="k">Unpaid interest</span><span class="v">Arrears (no compound)</span></div>
-              <div class="r"><span class="k">Structure</span><span class="v">Bullet · interest-only</span></div>
-              <div class="r"><span class="k">Principal repaid</span><span class="v"><span class="symword">₹</span><span class="cv" data-inr="204000" data-style="lakh"></span></span></div>
-              <div class="r"><span class="k">Maturity</span><span class="v">Mar 2027</span></div>
+          <!-- terms -->
+          <div class="panel terms fade d4" data-rise>
+            <div class="ph"><div class="t" style="font-size:16px">Loan terms</div><div class="meta">contract</div></div>
+            <div class="tbody">
+              <div class="trow"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-6 9 6v11H3z"/></svg> Lender</span><span class="tv">HDFC Bank</span></div>
+              <div class="trow"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg> Rate</span><span class="tv">8.5% p.a</span></div>
+              <div class="trow"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Basis</span><span class="tv">Monthly interest</span></div>
+              <div class="trow"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> Start date</span><span class="tv">14 Jan 2026</span></div>
+              <div class="trow"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Tenure</span><span class="tv">12 months</span></div>
+              <div class="trow"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Structure</span><span class="tv">Bullet / interest-only</span></div>
             </div>
           </div>
 
-          <div class="panel fade d4">
-            <div class="ph"><div class="t">Release tracker</div><div class="meta">collateral returns at ₹0</div></div>
-            <div class="ltv" style="border-top:none">
-              <div class="lab"><span>Principal cleared</span><b>34%</b></div>
-              <div class="ltvbar"><i data-w="34" style="background:linear-gradient(90deg,var(--gold),#8a6b1f)"></i></div>
-              <div class="hint">clear <span class="symword">₹</span><span class="cv" data-inr="396000" data-style="lakh"></span> more to release the gold</div>
+          <!-- release tracker -->
+          <div class="panel release fade d5" data-rise>
+            <div class="ph"><div class="t" style="font-size:16px">Release tracker</div><div class="meta">unpledge the gold</div></div>
+            <div class="rbody">
+              <p class="rlede">Clear <b><span class="symword">₹</span><span class="cv" data-inr="396000"></span> more</b> to release the pledged gold and close this loan.</p>
+              <div class="bigbar"><i data-w="34"></i></div>
+              <div class="rrow"><span>34% of principal cleared</span><span><span class="symword">₹</span><span class="cv" data-inr="204000"></span> repaid</span></div>
+              <div class="ramts">
+                <div class="ra"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="204000"></span></div><div class="l">Repaid</div></div>
+                <div class="ra r"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="396000"></span></div><div class="l">To release</div></div>
+              </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -222,14 +465,140 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(44px)}
 const RATE=83; let CUR=(location.hash==='#usd')?'usd':'inr';
 function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
 function usGroup(n){return Math.round(n).toLocaleString('en-US');}
-function abbr(v){if(CUR==='inr'){if(v>=1e7)return (v/1e7).toFixed(2).replace(/\.?0+$/,'')+'Cr';return (v/1e5).toFixed(v%1e5?2:0).replace(/\.?0+$/,'')+'L';}return (v/1e3).toFixed(v%1e3?1:0)+'k';}
+function abbr(v){if(CUR==='inr'){if(Math.abs(v)>=1e7)return (v/1e7).toFixed(2).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')+'Cr';return (v/1e5).toFixed(Math.abs(v)%1e5?2:0).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')+'L';}if(Math.abs(v)>=1e6)return (v/1e6).toFixed(2).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')+'M';return (v/1e3).toFixed(Math.abs(v)%1e3?1:0)+'k';}
 function sym(){return CUR==='inr'?'₹':'$';}
-function val(i){return CUR==='inr'?i:i/RATE;}
-function renderCV(el){const b=val(+el.dataset.inr);el.textContent=el.dataset.style==='lakh'?abbr(b):(CUR==='inr'?indGroup(b):usGroup(b));}
-function apply(){document.documentElement.dataset.cur=CUR;document.querySelectorAll('.symword').forEach(s=>s.textContent=sym());document.querySelectorAll('.cv').forEach(renderCV);document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on',b.dataset.set===CUR));}
-document.getElementById('curtog').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;CUR=b.dataset.set;apply();});
-apply();
-addEventListener('load',()=>setTimeout(()=>document.querySelectorAll('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%'),350));
+function val(inr){return CUR==='inr'?inr:inr/RATE;}
+function renderCV(el,animate){
+  const inr=+el.dataset.inr, base=val(inr), lakh=el.dataset.style==='lakh';
+  const out = lakh?abbr(base):(CUR==='inr'?indGroup(base):usGroup(base));
+  if(animate && el.classList.contains('count')){
+    const t0=performance.now(),dur=1300;
+    (function tick(t){const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3),v=base*e;
+      el.textContent=lakh?abbr(v):(CUR==='inr'?indGroup(v):usGroup(v));
+      if(p<1)requestAnimationFrame(tick);})(performance.now());
+  } else { el.textContent = out; }
+}
+function applyCurrency(animate){
+  document.documentElement.dataset.cur=CUR;
+  document.querySelectorAll('.symword').forEach(s=>s.textContent=sym());
+  document.querySelectorAll('.unitword').forEach(s=>s.textContent=CUR==='inr'?'rupee':'dollar');
+  document.querySelectorAll('.cv').forEach(el=>renderCV(el,animate));
+  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on',b.dataset.set===CUR));
+  renderMode();
+}
+const tog=document.getElementById('curtog');
+if(tog)tog.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;CUR=b.dataset.set;applyCurrency(false);});
+// scroll reveals + fire bars/counts when in view
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');
+  e.target.querySelectorAll?.('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%');
+  e.target.querySelectorAll?.('.cv.count').forEach(el=>renderCV(el,true));
+  io.unobserve(e.target);}});},{threshold:.16});
+document.querySelectorAll('[data-rise]').forEach(el=>io.observe(el));
+
+/* ===== LTV gauge: inline SVG 270° arc + 75% cap tick ===== */
+(function(){
+  const arc=document.getElementById('ltvArc');
+  if(!arc)return;
+  const len=arc.getTotalLength();                 // length of the 270° arc
+  const ltv=0.75;                                 // current LTV
+  arc.style.strokeDasharray=len;
+  arc.style.strokeDashoffset=len;                 // start empty
+  // lender-cap tick at 75% along the sweep (arc starts bottom-left -225°, sweeps +270°)
+  const cap=document.getElementById('capTick'), cx=66,cy=66,R=56;
+  const ang=(-225 + 270*0.75)*Math.PI/180;
+  const ix=cx+Math.cos(ang)*(R-9), iy=cy+Math.sin(ang)*(R-9);
+  const ox=cx+Math.cos(ang)*(R+9), oy=cy+Math.sin(ang)*(R+9);
+  cap.setAttribute('x1',ix.toFixed(1));cap.setAttribute('y1',iy.toFixed(1));
+  cap.setAttribute('x2',ox.toFixed(1));cap.setAttribute('y2',oy.toFixed(1));
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const fill=()=>{ arc.style.strokeDashoffset=len*(1-ltv); };
+  if(reduce){ fill(); }
+  else{
+    const gio=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){requestAnimationFrame(fill);gio.disconnect();}});},{threshold:.3});
+    gio.observe(arc.closest('.gauge-wrap'));
+    setTimeout(()=>{ if(arc.style.strokeDashoffset===''+len) fill(); },1400);
+  }
+})();
+
+/* ===== Bullet vs EMI segmented control ===== */
+const MODE={mode:'bullet'};
+const OWED=396000, RATEpa=8.5, REMAIN=8;          // months left in 12-mo tenure
+const r=RATEpa/1200;                               // monthly rate
+const monthlyInt=Math.round(OWED*r);               // interest-only payment ≈ 2805
+const emiPay=Math.round(OWED*r*Math.pow(1+r,REMAIN)/(Math.pow(1+r,REMAIN)-1));
+function fmt(inr){const b=val(inr);return sym()+(CUR==='inr'?indGroup(b):usGroup(b));}
+function row(k,v,big){return `<div class="msrow"><span class="mk">${k}</span><span class="mv${big?' big':''}">${v}</span></div>`;}
+function barRow(label,intAmt,prnAmt,scaleMax){
+  const tot=intAmt+prnAmt;
+  const iw=Math.max(2,Math.round(intAmt/scaleMax*100));
+  const pw=Math.max(0,Math.round(prnAmt/scaleMax*100));
+  return `<div class="smbar"><span>${label}</span><span class="track"><i class="int" data-fw="${iw}"></i><i class="prn" data-fw="${pw}"></i></span><span class="amt">${fmt(tot)}</span></div>`;
+}
+function renderMode(){
+  const note=document.getElementById('modeNote');
+  if(!note)return;
+  const sched=document.getElementById('schemini');
+  const summ=document.getElementById('msummary');
+  const diff=document.getElementById('diffNote');
+  const bulletInt=monthlyInt*REMAIN;
+  const emiTotal=emiPay*REMAIN, emiInt=emiTotal-OWED;
+  if(MODE.mode==='bullet'){
+    note.innerHTML=`<b>Bullet · interest-only.</b> You pay <span class="em">only the interest</span> each month — the full principal sits untouched until the term ends, when the whole `+fmt(OWED)+` balloon falls due in one shot. Lowest monthly outflow, largest final payment.`;
+    sched.innerHTML =
+      barRow('Mon 1–7', monthlyInt, 0, OWED) +
+      barRow('Mon 8 · final', monthlyInt, OWED, OWED);
+    summ.innerHTML =
+      row('Monthly payment', fmt(monthlyInt), true) +
+      row('Final balloon', fmt(OWED+monthlyInt)) +
+      row('Total interest', fmt(bulletInt)) +
+      row('Total outflow', fmt(OWED+bulletInt));
+    diff.innerHTML=`Switching to <b>EMI</b> raises each payment to <b>${fmt(emiPay)}</b> but kills the balloon — and trims total interest by <b>${fmt(bulletInt-emiInt)}</b> across the remaining ${REMAIN} months.`;
+  } else {
+    note.innerHTML=`<b>EMI · level payments.</b> Each month blends <span class="em">interest + principal</span> into one fixed `+fmt(emiPay)+` instalment, so the balance amortises to zero by term-end. No balloon, higher monthly outflow, less interest overall.`;
+    let rows='';
+    [1,4,REMAIN].forEach(mn=>{
+      let bb=OWED, ii=0, pp=0;
+      for(let k=1;k<=mn;k++){ii=bb*r; pp=emiPay-ii; bb-=pp;}
+      rows+=barRow('Mon '+mn, Math.round(ii), Math.round(pp), emiPay);
+    });
+    sched.innerHTML=rows;
+    summ.innerHTML =
+      row('Monthly payment', fmt(emiPay), true) +
+      row('Final balloon', '—') +
+      row('Total interest', fmt(emiInt)) +
+      row('Total outflow', fmt(emiTotal));
+    diff.innerHTML=`<b>EMI</b> clears the principal gradually, so there is <b>no ${fmt(OWED)} balloon</b> at term-end. Interest paid is <b>${fmt(emiInt)}</b> vs <b>${fmt(bulletInt)}</b> under bullet — a saving of <b>${fmt(bulletInt-emiInt)}</b>.`;
+  }
+  requestAnimationFrame(()=>document.querySelectorAll('#schemini .track i').forEach(b=>b.style.width=b.dataset.fw+'%'));
+}
+const segbar=document.getElementById('segbar');
+function moveSlide(btn){
+  const slide=document.getElementById('sslide');
+  slide.style.width=btn.offsetWidth+'px';
+  slide.style.transform='translateX('+(btn.offsetLeft-3)+'px)';
+}
+if(segbar){
+  segbar.addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    MODE.mode=b.dataset.mode;
+    segbar.querySelectorAll('button').forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-selected',x===b);});
+    moveSlide(b);
+    renderMode();
+  });
+}
+
+applyCurrency(false);
+addEventListener('load',()=>{
+  const onBtn=segbar?.querySelector('button.on'); if(onBtn)moveSlide(onBtn);
+  setTimeout(()=>{
+    document.querySelectorAll('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%');
+    document.querySelectorAll('.cv.count').forEach(el=>renderCV(el,true));
+    document.querySelectorAll('#schemini .track i').forEach(b=>b.style.width=b.dataset.fw+'%');
+  },350);
+});
+
+// profile photo upload (persists across screens via localStorage)
+(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
 </script>
 </body>
 </html>

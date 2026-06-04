@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Khata — log payment</title>
+<title>Khata — Log payment</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -11,190 +11,602 @@
 :root{
   --paper:#F7F1E6;--paper-2:#F1E8D7;--ink:#241B16;--ink-soft:#4A4035;--ink-faint:#8C8068;
   --line:#DBCDB0;--line-2:#E7DCC6;--primary:#C05E1B;--primary-deep:#9C4711;
-  --pos:#1F6B53;--pos-soft:#2E8C6E;--neg:#A6321F;--accent:#9E3B6E;--card:#FFFDF8;
-  --shadow:0 30px 80px -30px rgba(28,24,19,.6);--ease:cubic-bezier(.22,.68,0,1);
+  --pos:#1F6B53;--pos-soft:#2E8C6E;--neg:#A6321F;--accent:#1F6F86;--accent-dk:#E4A85A;--pos-dk:#5FC79E;--card:#FFFDF8;
+  --glow:color-mix(in srgb,var(--primary) 12%,transparent);
+  --shadow:0 1px 0 rgba(28,24,19,.04),0 16px 36px -24px rgba(28,24,19,.45);
+  --r:16px;--ease:cubic-bezier(.22,.68,0,1);
+}
+html[data-cur="usd"]{
+  --paper:#E9EFE8;--paper-2:#DDE7DB;--ink:#16241B;--ink-soft:#36473B;--ink-faint:#74866F;
+  --line:#C2D4C0;--line-2:#D2E0D0;--primary:#1C7A45;--primary-deep:#115C32;
+  --pos:#1C7A45;--pos-soft:#2E9457;--neg:#A6471F;--accent:#A9852F;--accent-dk:#D8BE78;--pos-dk:#5FC98C;--card:#FBFEFA;
+  --glow:color-mix(in srgb,var(--primary) 14%,transparent);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:15px;color:var(--ink);-webkit-font-smoothing:antialiased;background:var(--paper)}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;
+  font-size:15px;-webkit-font-smoothing:antialiased;position:relative;
+  transition:background .6s var(--ease),color .6s var(--ease)}
+/* film-grain overlay — keep on every screen */
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");}
 .mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+a{color:inherit;text-decoration:none}
 
-/* dimmed dashboard backdrop hint */
-.backdrop{position:fixed;inset:0;background:var(--paper);overflow:hidden}
-.backdrop::after{content:"";position:absolute;inset:0;background:rgba(28,22,16,.5);backdrop-filter:blur(3px)}
-.ghost-top{height:70px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 30px;opacity:.85}
-.ghost-brand{font-family:"Fraunces",serif;font-weight:600;font-size:21px;display:flex;gap:10px;align-items:center;color:var(--ink-faint)}
-.ghost-glyph{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));opacity:.6}
-.ghost-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:26px 30px}
-.ghost-card{height:92px;border:1px solid var(--line);border-radius:14px;background:var(--card);opacity:.6}
-.ghost-wide{height:230px;margin:0 30px;border:1px solid var(--line);border-radius:16px;background:var(--card);opacity:.5}
+/* ===== app shell (background, dimmed) ===== */
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;position:relative;z-index:1}
+@media(max-width:880px){.app{grid-template-columns:1fr}.side{display:none}}
+.side{border-right:1px solid var(--line);background:var(--paper-2);padding:22px 16px;position:sticky;top:0;height:100vh;transition:.6s}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:21px;padding:6px 8px 12px}
+.newplan{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 2px 14px;padding:10px;border-radius:11px;border:1px solid var(--line);color:var(--ink);font-weight:600;font-size:14px;cursor:pointer;transition:transform .2s,border-color .2s,background .2s}
+.newplan:hover{border-color:var(--ink);background:var(--card);transform:translateY(-1px)}
+.newplan svg{width:16px;height:16px}
+.glyph{width:28px;height:28px;border-radius:8px;flex:none;background:linear-gradient(145deg,var(--primary),var(--primary-deep));position:relative;box-shadow:0 6px 14px -6px var(--primary)}
+.glyph::before,.glyph::after{content:"";position:absolute;left:6px;right:6px;height:2px;background:var(--paper);border-radius:2px;opacity:.85}
+.glyph::before{top:10px}.glyph::after{top:16px;right:11px}
+.navsec{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:16px 10px 8px}
+.nav-i{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:.2s;font-size:14.5px}
+.nav-i svg{width:18px;height:18px;flex:none}
+.nav-i:hover{background:var(--line-2);color:var(--ink)}
+.nav-i.on{background:var(--ink);color:var(--paper)}
+.nav-i .ct{margin-left:auto;font-size:11px;font-family:"JetBrains Mono";opacity:.7}
+.main{min-width:0}
+.top{display:flex;align-items:center;justify-content:space-between;padding:18px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(8px);z-index:20;transition:.6s}
+.top h1{font-family:"Fraunces",serif;font-weight:600;font-size:23px;letter-spacing:-.01em}
+.top .sub{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-faint)}
+.top-right{display:flex;align-items:center;gap:14px}
+.curtog{display:inline-flex;align-items:center;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:4px;position:relative;box-shadow:inset 0 1px 2px rgba(28,24,19,.06);transition:background .6s,border-color .6s}
+.curtog button{font-family:"Hanken Grotesk";font-weight:700;font-size:12.5px;letter-spacing:.04em;border:none;background:transparent;color:var(--ink-faint);width:62px;height:34px;border-radius:100px;cursor:pointer;z-index:1;transition:color .35s var(--ease);display:flex;align-items:center;justify-content:center;gap:5px}
+.curtog button .cs{font-family:"Fraunces",serif;font-weight:600;font-size:17px;line-height:1;margin-top:-1px}
+.curtog button:not(.on):hover{color:var(--ink)}
+.curtog button.on{color:var(--paper)}
+.curtog .slide{position:absolute;top:4px;left:4px;width:62px;height:34px;border-radius:100px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));transition:transform .42s var(--ease),background .6s;box-shadow:0 6px 16px -6px var(--primary)}
+html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
+.addbtn{font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;display:flex;align-items:center;gap:7px;transition:transform .2s,background .6s;box-shadow:0 8px 18px -10px var(--primary)}
+.addbtn:hover{transform:translateY(-2px)}
+.avatar{position:relative;width:36px;height:36px;border-radius:11px;background:linear-gradient(150deg,var(--pos-soft),var(--pos));background-size:cover;background-position:center;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;cursor:pointer;overflow:hidden;transition:background .6s}
+.avatar input{display:none}
+.avatar .ava-ov{position:absolute;inset:0;display:grid;place-items:center;background:rgba(20,16,12,.48);opacity:0;transition:opacity .2s}
+.avatar:hover .ava-ov{opacity:1}
+.avatar .ava-ov svg{width:15px;height:15px;color:#fff}
+.avatar.has-img .ava-init{opacity:0}
+.content{padding:28px 30px 60px;max-width:1200px;position:relative;z-index:1}
 
-/* sheet */
-.sheet{position:fixed;top:0;right:0;height:100vh;width:min(486px,100%);background:var(--card);
-  border-left:1px solid var(--line);box-shadow:var(--shadow);display:flex;flex-direction:column;
-  animation:slide .5s var(--ease)}
-@keyframes slide{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
-.sh-head{padding:22px 26px 18px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between}
-.sh-head h2{font-family:"Fraunces",serif;font-weight:600;font-size:23px;letter-spacing:-.01em}
-.sh-head .sub{font-size:12.5px;color:var(--ink-faint);margin-top:4px;display:flex;align-items:center;gap:8px}
-.tag{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:5px}
+/* stat cards (faint behind overlay) */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:900px){.stats{grid-template-columns:1fr 1fr}}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:.6s}
+.stat .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;display:flex;align-items:center;gap:7px}
+.stat .v{font-family:"Fraunces",serif;font-weight:600;font-size:30px;letter-spacing:-.02em;margin-top:8px;line-height:1}
+.stat .v .cur{font-size:17px;color:var(--ink-faint);vertical-align:super}
+.stat .d{font-size:12px;margin-top:7px;font-family:"JetBrains Mono"}
+.stat .d.up{color:var(--pos)}.stat .d.dn{color:var(--neg)}
+.stat.hero-stat{background:var(--ink);color:var(--paper)}
+.stat.hero-stat .k{color:color-mix(in srgb,var(--paper) 60%,transparent)}
+.stat.hero-stat .v .cur{color:var(--accent-dk)}
+.stat.hero-stat::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0,color-mix(in srgb,var(--primary) 34%,transparent),transparent 60%)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:.6s}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.ph .t{font-family:"Fraunces",serif;font-weight:600;font-size:18px;display:flex;align-items:center;gap:10px}
+.ph .meta{font-size:12.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px}
 .tag.asset{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary-deep)}
-.x{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--paper);display:grid;place-items:center;cursor:pointer;color:var(--ink-soft);flex:none}
-.x:hover{background:var(--paper-2)}
+.grid2{display:grid;grid-template-columns:1.5fr 1fr;gap:22px;margin-top:24px}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
 
-.sh-body{flex:1;overflow-y:auto;padding:22px 26px;display:flex;flex-direction:column;gap:20px}
-.fg label{display:block;font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:9px}
-.field{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:var(--paper);cursor:pointer;transition:.2s;font-weight:500}
-.field:hover{border-color:var(--ink-faint)}
-.field .lft{display:flex;align-items:center;gap:10px}
-.field svg{width:16px;height:16px;color:var(--ink-faint)}
+/* the background app is dimmed + slightly blurred while the slide-over is open */
+.app.dimmed{filter:blur(2px) saturate(.92);transform:scale(.992);transition:filter .5s var(--ease),transform .5s var(--ease)}
 
-/* segmented */
-.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--paper-2);padding:5px;border-radius:13px;border:1px solid var(--line)}
-.seg button{font-family:inherit;font-weight:600;font-size:13.5px;border:none;background:transparent;color:var(--ink-soft);padding:9px 6px;border-radius:9px;cursor:pointer;transition:.25s}
-.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 2px 8px -3px rgba(0,0,0,.2)}
+/* ===== scrim ===== */
+.scrim{position:fixed;inset:0;z-index:40;background:rgba(24,18,12,.42);opacity:0;
+  backdrop-filter:blur(1px);transition:opacity .45s var(--ease)}
+.scrim.show{opacity:1}
+html[data-cur="usd"] .scrim{background:rgba(12,24,16,.44)}
 
-/* amount */
-.amount{display:flex;align-items:stretch;border:1.5px solid var(--primary);border-radius:13px;overflow:hidden;background:var(--paper)}
-.amount .cursel{display:flex;align-items:center;gap:5px;padding:0 14px;background:var(--paper-2);border-right:1px solid var(--line);font-family:"JetBrains Mono";font-weight:700;font-size:16px;color:var(--ink-soft);cursor:pointer}
-.amount input{flex:1;border:none;background:transparent;font-family:"JetBrains Mono";font-weight:700;font-size:26px;color:var(--ink);padding:14px 16px;outline:none;letter-spacing:-.01em}
-.amount .ofdue{padding:0 16px;display:flex;align-items:center;font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono";border-left:1px solid var(--line);text-align:right}
+/* ===== slide-over panel ===== */
+.over{position:fixed;top:0;right:0;bottom:0;z-index:50;width:min(560px,94vw);
+  background:var(--paper);border-left:1px solid var(--line);
+  box-shadow:-30px 0 80px -40px rgba(28,24,19,.55);
+  display:flex;flex-direction:column;transform:translateX(100%);
+  transition:transform .58s var(--ease),background .6s var(--ease);overflow:hidden}
+.over.show{transform:translateX(0)}
+.over::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n2'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n2)' opacity='.045'/%3E%3C/svg%3E");}
 
-.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ov-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding:22px 26px 18px;border-bottom:1px solid var(--line);position:relative;z-index:1;
+  background:color-mix(in srgb,var(--paper-2) 60%,var(--paper))}
+.ov-head .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--primary-deep);font-weight:700}
+.ov-head h2{font-family:"Fraunces",serif;font-weight:600;font-size:26px;letter-spacing:-.015em;margin-top:5px}
+.ov-head h2 em{font-style:italic;color:var(--primary-deep)}
+.ov-head .sub{font-size:12.5px;color:var(--ink-faint);margin-top:5px;font-family:"JetBrains Mono"}
+.ov-head .hd-right{display:flex;align-items:center;gap:12px}
+.xbtn{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--card);
+  color:var(--ink-soft);display:grid;place-items:center;cursor:pointer;transition:.2s;flex:none}
+.xbtn:hover{background:var(--line-2);color:var(--ink);transform:rotate(90deg)}
+.xbtn svg{width:16px;height:16px}
+
+.ov-body{flex:1;overflow-y:auto;padding:22px 26px 30px;position:relative;z-index:1;display:grid;gap:20px}
+.ov-body::-webkit-scrollbar{width:9px}
+.ov-body::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;border:3px solid var(--paper)}
+
+.field{display:grid;gap:8px}
+.lbl{font-size:11.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;display:flex;align-items:center;gap:8px}
+.lbl .opt{font-size:10px;font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--ink-faint);opacity:.7}
+
+/* base inputs */
+.inp,select.inp,textarea.inp{width:100%;font-family:"Hanken Grotesk",sans-serif;font-size:15px;color:var(--ink);
+  background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px 13px;outline:none;
+  transition:border-color .2s,box-shadow .2s}
+.inp:hover,select.inp:hover,textarea.inp:hover{border-color:var(--ink-faint)}
+.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--glow)}
+textarea.inp{resize:vertical;min-height:74px;line-height:1.5}
+.selwrap{position:relative}
+.selwrap select{appearance:none;cursor:pointer;padding-right:38px}
+.selwrap::after{content:"";position:absolute;right:15px;top:50%;width:8px;height:8px;border-right:2px solid var(--ink-faint);
+  border-bottom:2px solid var(--ink-faint);transform:translateY(-65%) rotate(45deg);pointer-events:none}
+.planmeta{display:flex;align-items:center;gap:8px;margin-top:2px;font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+
+/* segmented control */
+.seg{display:inline-flex;background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:3px;position:relative;width:100%}
+.seg .ind{position:absolute;top:3px;left:3px;bottom:3px;width:calc((100% - 6px)/3);border-radius:9px;
+  background:var(--card);border:1px solid var(--line);box-shadow:0 4px 10px -6px rgba(28,24,19,.4);
+  transition:transform .32s var(--ease)}
+.seg button{flex:1;position:relative;z-index:1;border:none;background:transparent;cursor:pointer;
+  font-family:"Hanken Grotesk",sans-serif;font-weight:600;font-size:13.5px;color:var(--ink-faint);
+  padding:9px 6px;border-radius:9px;transition:color .25s;display:flex;flex-direction:column;align-items:center;gap:1px}
+.seg button .sm{font-size:10px;font-weight:500;font-family:"JetBrains Mono";opacity:.7}
+.seg button.on{color:var(--ink)}
+.seg[data-i="1"] .ind{transform:translateX(100%)}
+.seg[data-i="2"] .ind{transform:translateX(200%)}
+
+/* amount row */
+.amtrow{display:grid;grid-template-columns:1fr auto;gap:10px}
+.amtbox{position:relative;display:flex;align-items:stretch;border:1px solid var(--line);border-radius:12px;background:var(--card);
+  transition:border-color .2s,box-shadow .2s;overflow:hidden}
+.amtbox:hover{border-color:var(--ink-faint)}
+.amtbox.focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--glow)}
+.amtbox .glyphbox{display:grid;place-items:center;width:46px;font-family:"Fraunces",serif;font-size:22px;color:var(--primary-deep);
+  border-right:1px solid var(--line-2);background:color-mix(in srgb,var(--primary) 7%,transparent)}
+.amtbox input{flex:1;border:none;outline:none;background:transparent;font-family:"JetBrains Mono";font-variant-numeric:tabular-nums;
+  font-weight:700;font-size:22px;letter-spacing:-.01em;color:var(--ink);padding:0 14px;min-width:0}
+.amtbox input::placeholder{color:var(--ink-faint);opacity:.55;font-weight:500}
+.curpick{position:relative;align-self:stretch}
+.curpick select{height:100%;appearance:none;cursor:pointer;border:1px solid var(--line);border-radius:12px;background:var(--paper-2);
+  font-family:"JetBrains Mono";font-weight:700;font-size:13px;color:var(--ink);padding:0 30px 0 14px;outline:none;transition:.2s}
+.curpick select:hover{border-color:var(--ink-faint)}
+.curpick select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--glow)}
+.curpick::after{content:"";position:absolute;right:13px;top:50%;width:7px;height:7px;border-right:2px solid var(--ink-faint);
+  border-bottom:2px solid var(--ink-faint);transform:translateY(-65%) rotate(45deg);pointer-events:none}
+.helper{font-size:12.5px;color:var(--ink-faint);font-family:"JetBrains Mono";display:flex;align-items:center;gap:7px}
+.helper b{color:var(--ink-soft);font-weight:700}
+.helper .quick{margin-left:auto;font-size:11px;font-weight:700;color:var(--primary-deep);background:color-mix(in srgb,var(--primary) 12%,transparent);
+  border:none;padding:3px 9px;border-radius:20px;cursor:pointer;transition:.2s;font-family:"JetBrains Mono"}
+.helper .quick:hover{background:color-mix(in srgb,var(--primary) 20%,transparent)}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:460px){.two{grid-template-columns:1fr}}
+
+/* chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{font-size:13px;font-weight:600;padding:8px 13px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink-soft);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:7px}
-.chip:hover{border-color:var(--ink-faint)}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--ink-soft);
+  background:var(--card);border:1px solid var(--line);border-radius:30px;padding:8px 14px;cursor:pointer;
+  transition:.2s;position:relative;user-select:none}
+.chip svg{width:15px;height:15px;opacity:.7}
+.chip:hover{border-color:var(--ink-faint);color:var(--ink)}
+.chip:focus-visible{outline:none;box-shadow:0 0 0 3px var(--glow);border-color:var(--primary)}
 .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.chip.on.src{background:var(--primary);border-color:var(--primary)}
+.chip.on svg{opacity:1}
+.chip.src.on{background:var(--primary-deep);border-color:var(--primary-deep);color:#fff}
 
-/* proof dropzone */
-.drop{border:1.5px dashed var(--line);border-radius:13px;padding:16px;background:var(--paper);display:flex;gap:14px;align-items:center}
-.thumb{width:62px;height:62px;border-radius:10px;flex:none;background:linear-gradient(160deg,#cfe3d8,#a9c9bb);position:relative;overflow:hidden;border:1px solid var(--line)}
-.thumb::before{content:"";position:absolute;left:8px;right:8px;top:10px;height:5px;background:rgba(255,255,255,.7);border-radius:3px;box-shadow:0 9px 0 rgba(255,255,255,.6),0 18px 0 rgba(255,255,255,.45),0 28px 0 rgba(255,255,255,.55)}
-.drop .dz{flex:1}
-.drop .dz .t{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px}
-.ocr{font-size:10.5px;font-weight:700;color:var(--pos);background:color-mix(in srgb,var(--pos) 14%,transparent);padding:3px 8px;border-radius:20px;letter-spacing:.02em}
-.drop .dz .h{font-size:12px;color:var(--ink-faint);margin-top:5px}
-.drop .add{font-size:12.5px;color:var(--primary-deep);font-weight:600;margin-top:6px;display:inline-block}
-textarea{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--paper);padding:12px 14px;font-family:inherit;font-size:14px;color:var(--ink);resize:none;outline:none}
-textarea:focus{border-color:var(--ink-faint)}
+/* dropzone */
+.drop{border:2px dashed var(--line);border-radius:14px;padding:22px;text-align:center;cursor:pointer;
+  background:color-mix(in srgb,var(--paper-2) 50%,var(--card));transition:.25s;position:relative}
+.drop:hover{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 6%,var(--card))}
+.drop:focus-visible{outline:none;box-shadow:0 0 0 3px var(--glow);border-color:var(--primary)}
+.drop.armed{border-style:solid;border-color:var(--pos);background:color-mix(in srgb,var(--pos) 7%,var(--card))}
+.drop .ic{width:38px;height:38px;border-radius:11px;margin:0 auto 10px;display:grid;place-items:center;
+  background:var(--paper-2);color:var(--primary-deep);transition:.25s}
+.drop.armed .ic{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.drop .ic svg{width:19px;height:19px}
+.drop .dt{font-weight:600;font-size:14px}
+.drop .dt b{color:var(--primary-deep);font-weight:700}
+.drop .dd{font-size:11.5px;color:var(--ink-faint);margin-top:3px;font-family:"JetBrains Mono"}
+.ocr{display:none;align-items:center;justify-content:center;gap:9px;margin-top:13px}
+.drop.armed .ocr{display:flex}
+.ocrchip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;font-family:"JetBrains Mono";
+  color:var(--pos);background:color-mix(in srgb,var(--pos) 13%,transparent);padding:5px 11px;border-radius:20px}
+.ocrchip .dot{width:7px;height:7px;border-radius:50%;background:var(--pos)}
+.ocr .use{font-size:11px;font-weight:700;color:var(--primary-deep);background:none;border:1px solid var(--line);
+  padding:5px 11px;border-radius:20px;cursor:pointer;font-family:"JetBrains Mono";transition:.2s}
+.ocr .use:hover{background:color-mix(in srgb,var(--primary) 12%,transparent);border-color:var(--primary)}
 
-/* footer preview */
-.sh-foot{border-top:1px solid var(--line);padding:18px 26px;background:var(--paper-2)}
-.preview{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:13px 15px;margin-bottom:14px}
-.preview .pr{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
-.preview .pr .k{color:var(--ink-soft)}
-.preview .pr .v{font-family:"JetBrains Mono";font-weight:700}
-.preview .roll{color:var(--primary-deep)}
-.preview .bal{border-top:1px solid var(--line-2);margin-top:7px;padding-top:8px}
-.preview .bal .v{color:var(--ink);font-size:14px}
-.acts{display:flex;gap:12px}
-.btn{flex:1;font-family:inherit;font-weight:600;font-size:15px;padding:13px;border-radius:12px;cursor:pointer;border:1px solid var(--line);transition:transform .2s}
-.btn.ghost{background:var(--paper);color:var(--ink-soft)}
-.btn.save{background:var(--ink);color:var(--paper);border-color:var(--ink);flex:1.6;display:flex;align-items:center;justify-content:center;gap:9px}
-.btn:hover{transform:translateY(-2px)}
+/* ===== sticky footer w/ live preview ===== */
+.ov-foot{border-top:1px solid var(--line);background:color-mix(in srgb,var(--paper-2) 70%,var(--paper));
+  padding:16px 26px 20px;position:relative;z-index:2}
+.preview{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:13px;
+  background:var(--card);border:1px solid var(--line);margin-bottom:14px;transition:.3s}
+.preview.live{border-color:var(--primary);box-shadow:0 0 0 3px var(--glow)}
+.preview .pic{width:38px;height:38px;border-radius:10px;flex:none;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--primary) 14%,transparent);color:var(--primary-deep)}
+.preview .pic svg{width:19px;height:19px}
+.preview .ptxt{flex:1;min-width:0;line-height:1.35}
+.preview .pl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+.preview .pm{font-size:14px;font-weight:600;margin-top:2px}
+.preview .pm .mono{font-weight:700}
+.preview .pm .carry{color:var(--primary-deep)}
+.preview .pm .bal{color:var(--ink)}
+.preview .pm em{font-style:italic;font-family:"Fraunces",serif;color:var(--primary-deep);font-weight:600}
+.preview .nextpill{flex:none;text-align:center;background:var(--ink);color:var(--paper);border-radius:11px;padding:7px 12px}
+.preview .nextpill .nn{font-family:"Fraunces",serif;font-weight:600;font-size:19px;line-height:1}
+.preview .nextpill .nl{font-size:9px;letter-spacing:.08em;text-transform:uppercase;opacity:.7;font-weight:700;margin-top:2px}
+
+.actions{display:flex;gap:11px}
+.btn{flex:1;font-family:"Hanken Grotesk",sans-serif;font-weight:600;font-size:15px;padding:13px;border-radius:12px;
+  cursor:pointer;border:1px solid var(--line);transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn.ghost{background:var(--card);color:var(--ink-soft)}
+.btn.ghost:hover{background:var(--line-2);color:var(--ink)}
+.btn.save{flex:1.7;background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.save:hover{transform:translateY(-2px);box-shadow:0 12px 26px -14px rgba(28,24,19,.6)}
+.btn.save svg{width:16px;height:16px}
+.btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--glow)}
+
+@media(prefers-reduced-motion:reduce){
+  .over,.scrim,.app.dimmed,.seg .ind,.preview{transition:none!important}
+  .over{transform:none}.xbtn:hover{transform:none}.btn.save:hover{transform:none}
+}
 </style>
 </head>
 <body>
 
-<!-- dimmed dashboard behind -->
-<div class="backdrop">
-  <div class="ghost-top"><div class="ghost-brand"><span class="ghost-glyph"></span> Khata</div><div style="width:120px;height:30px;border-radius:8px;background:var(--paper-2)"></div></div>
-  <div class="ghost-grid"><div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div><div class="ghost-card"></div></div>
-  <div class="ghost-wide"></div>
+<!-- ===== dimmed dashboard background ===== -->
+<div class="app dimmed" id="app" aria-hidden="true">
+  <aside class="side">
+    <a class="brand" href="index.html"><span class="glyph"></span> Khata</a>
+    <a class="newplan" href="create-plan.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
+    <div class="navsec">Overview</div>
+    <a class="nav-i on" href="app.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
+    <a class="nav-i" href="holdings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
+    <div class="navsec">Money plans</div>
+    <a class="nav-i" href="asset-detail.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct">2</span></a>
+    <a class="nav-i" href="chit-detail.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct">3</span></a>
+    <a class="nav-i" href="loan-detail.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct">2</span></a>
+    <a class="nav-i" href="retirement-401k.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k)</a>
+    <div class="navsec">Records</div>
+    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</a>
+    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>Dashboard</h1>
+        <div class="sub">Good evening, Arjun · 7 active plans</div>
+      </div>
+      <div class="top-right">
+        <div class="curtog" title="Primary currency"><span class="slide"></span><button data-set="inr" class="on"><span class="cs">₹</span> INR</button><button data-set="usd"><span class="cs">$</span> USD</button></div>
+        <button class="addbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Log payment</button>
+        <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init">A</span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
+      </div>
+    </div>
+    <div class="content">
+      <div class="stats">
+        <div class="stat hero-stat"><div class="k">Net position</div><div class="v"><span class="cur symword">₹</span><span class="cv" data-inr="1840000"></span></div><div class="d up" style="color:var(--accent-dk)">across all plans</div></div>
+        <div class="stat"><div class="k">Paid to date</div><div class="v"><span class="cur symword">₹</span><span class="cv" data-inr="1430000"></span></div><div class="d up">▲ <span class="cv" data-inr="240000"></span> this month</div></div>
+        <div class="stat"><div class="k">I owe</div><div class="v"><span class="cur symword">₹</span><span class="cv" data-inr="1010000"></span></div><div class="d dn">asset + 2 liabilities</div></div>
+        <div class="stat"><div class="k">Owed to me</div><div class="v"><span class="cur symword">₹</span><span class="cv" data-inr="932400"></span></div><div class="d up">loan given + chit dividends</div></div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <div class="ph"><div class="t"><span class="tag asset">Asset</span> Devanahalli plot</div><div class="meta">created 02 Apr · INR</div></div>
+          <div style="padding:22px;font-family:'JetBrains Mono';color:var(--ink-faint);font-size:13px">62% paid · 4 of 8 installments · remaining <span class="symword">₹</span><span class="cv" data-inr="760000"></span></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><div class="t">Ledger</div><div class="meta">balance <span class="symword">₹</span><span class="cv" data-inr="760000"></span></div></div>
+          <div style="padding:22px;font-family:'JetBrains Mono';color:var(--ink-faint);font-size:13px">last entry · Installment #4 · 04 Jun</div>
+        </div>
+      </div>
+    </div>
+  </main>
 </div>
 
-<!-- slide-over sheet -->
-<aside class="sheet">
-  <div class="sh-head">
+<!-- ===== scrim ===== -->
+<div class="scrim" id="scrim"></div>
+
+<!-- ===== slide-over ===== -->
+<aside class="over" id="over" role="dialog" aria-modal="true" aria-label="Log a payment">
+  <div class="ov-head">
     <div>
-      <h2>Log a payment</h2>
-      <div class="sub"><span class="tag asset">Asset</span> Devanahalli plot · money out</div>
+      <div class="eyebrow">New entry</div>
+      <h2>Log a <em>payment</em></h2>
+      <div class="sub">against Devanahalli plot · #5 due 18 Jun</div>
     </div>
-    <div class="x"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+    <div class="hd-right">
+      <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="inr" class="on">₹ INR</button><button data-set="usd">$ USD</button></div>
+      <button class="xbtn" id="closeBtn" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
   </div>
 
-  <div class="sh-body">
-    <div class="fg">
-      <label>Plan</label>
-      <div class="field"><span class="lft"><span class="tag asset">Asset</span> Devanahalli plot</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
+  <div class="ov-body">
+
+    <!-- plan picker -->
+    <div class="field">
+      <label class="lbl" for="planSel">Plan</label>
+      <div class="selwrap">
+        <select class="inp" id="planSel">
+          <option value="devanahalli" selected>Devanahalli plot · Asset</option>
+          <option value="chit">12-member auction · Chit</option>
+          <option value="gold">Gold loan — HDFC · Loan</option>
+          <option value="mehta">S. Mehta · Lent</option>
+          <option value="kumar">Borrowed — R. Kumar · Liability</option>
+        </select>
+      </div>
+      <div class="planmeta"><span class="tag asset">Asset</span> 4 of 8 paid · next #5 · base <span class="symword">₹</span><span class="cv" data-inr="150000"></span></div>
     </div>
 
-    <div class="fg">
-      <label>What is this?</label>
-      <div class="seg"><button class="on">Installment</button><button>Extra payment</button><button>Adjust plan</button></div>
-    </div>
-
-    <div class="fg">
-      <label>Applies to</label>
-      <div class="field"><span class="lft mono">Installment #5 · due 18 Jun</span>
-        <span class="mono" style="color:var(--ink-faint);font-size:13px">₹2,10,000</span></div>
-    </div>
-
-    <div class="fg">
-      <label>Amount paid</label>
-      <div class="amount">
-        <span class="cursel">₹ <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></span>
-        <input value="1,50,000" />
-        <span class="ofdue">of<br>₹2,10,000</span>
+    <!-- entry-type segmented -->
+    <div class="field">
+      <span class="lbl">Entry type</span>
+      <div class="seg" id="seg" data-i="0">
+        <span class="ind"></span>
+        <button type="button" class="on" data-k="installment">Installment<span class="sm">schedule</span></button>
+        <button type="button" data-k="extra">Extra<span class="sm">prepay</span></button>
+        <button type="button" data-k="adjust">Adjust<span class="sm">correction</span></button>
       </div>
     </div>
 
-    <div class="two">
-      <div class="fg"><label>Date &amp; time</label>
-        <div class="field"><span class="lft mono" style="font-size:13.5px">18 Jun · 11:30</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg></div>
+    <!-- amount -->
+    <div class="field">
+      <label class="lbl" for="amt">Amount <span class="opt">— what was paid</span></label>
+      <div class="amtrow">
+        <div class="amtbox" id="amtbox">
+          <span class="glyphbox symword">₹</span>
+          <input id="amt" inputmode="numeric" autocomplete="off" placeholder="0" value="2,70,000">
+        </div>
+        <div class="curpick">
+          <select id="amtCur" aria-label="Amount currency">
+            <option value="inr" selected>₹ INR</option>
+            <option value="usd">$ USD</option>
+          </select>
+        </div>
       </div>
-      <div class="fg"><label>Method</label>
-        <div class="field"><span class="lft">UPI</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></div>
-      </div>
-    </div>
-
-    <div class="fg">
-      <label>How it moved</label>
-      <div class="chips">
-        <span class="chip">Cash</span><span class="chip on">UPI</span><span class="chip">Bank transfer</span><span class="chip">Cheque</span>
-      </div>
-    </div>
-
-    <div class="fg">
-      <label>Funding source</label>
-      <div class="chips">
-        <span class="chip on src">Savings</span><span class="chip">Loan</span><span class="chip">Borrowed</span><span class="chip">Sold asset</span><span class="chip">Chit payout</span>
+      <div class="helper">
+        of <b><span class="symword">₹</span><span class="cv" data-inr="210000"></span> due</b> on #5
+        <button type="button" class="quick" id="fillDue">pay exact</button>
       </div>
     </div>
 
-    <div class="fg">
-      <label>Proof</label>
-      <div class="drop">
-        <div class="thumb"></div>
-        <div class="dz">
-          <div class="t">upi-18jun.png <span class="ocr">✦ detected ₹1,50,000 · 18 Jun</span></div>
-          <div class="h">Screenshot attached · tap to review extracted amount &amp; date</div>
-          <span class="add">+ add receipt, chat or photo</span>
+    <!-- date + time -->
+    <div class="field">
+      <span class="lbl">Date &amp; time</span>
+      <div class="two">
+        <input class="inp" type="date" id="dt" value="2026-06-04">
+        <input class="inp" type="time" id="tm" value="11:24">
+      </div>
+    </div>
+
+    <!-- method chips -->
+    <div class="field">
+      <span class="lbl">Method <span class="opt">— how it moved</span></span>
+      <div class="chips" id="methods" role="radiogroup" aria-label="Payment method">
+        <button type="button" class="chip on" role="radio" aria-checked="true" data-v="cash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg> Cash</button>
+        <button type="button" class="chip" role="radio" aria-checked="false" data-v="upi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l7-8 7 8-7 8z"/></svg> UPI</button>
+        <button type="button" class="chip" role="radio" aria-checked="false" data-v="transfer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg> Transfer</button>
+        <button type="button" class="chip" role="radio" aria-checked="false" data-v="cheque"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 14h6M16 14h1"/></svg> Cheque</button>
+      </div>
+    </div>
+
+    <!-- funding source chips -->
+    <div class="field">
+      <span class="lbl">Funding source <span class="opt">— where it came from</span></span>
+      <div class="chips" id="sources" role="radiogroup" aria-label="Funding source">
+        <button type="button" class="chip src on" role="radio" aria-checked="true" data-v="savings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Savings</button>
+        <button type="button" class="chip src" role="radio" aria-checked="false" data-v="loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12h6"/></svg> Loan</button>
+        <button type="button" class="chip src" role="radio" aria-checked="false" data-v="borrowed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a4 4 0 10-8 0M4 20a8 8 0 0116 0"/></svg> Borrowed</button>
+        <button type="button" class="chip src" role="radio" aria-checked="false" data-v="sold-asset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Sold asset</button>
+        <button type="button" class="chip src" role="radio" aria-checked="false" data-v="chit-payout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit payout</button>
+      </div>
+    </div>
+
+    <!-- proof dropzone -->
+    <div class="field">
+      <span class="lbl">Proof <span class="opt">— receipt / screenshot</span></span>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload proof">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></div>
+        <div class="dt" id="dropTitle">Drop a receipt or <b>browse</b></div>
+        <div class="dd" id="dropDesc">PNG · JPG · PDF — OCR reads the amount</div>
+        <div class="ocr">
+          <span class="ocrchip"><span class="dot"></span> OCR detected <span class="symword">₹</span><span class="cv" data-inr="270000"></span></span>
+          <button type="button" class="use" id="useOcr">use this</button>
         </div>
       </div>
     </div>
 
-    <div class="fg">
-      <label>Note <span style="text-transform:none;letter-spacing:0;color:var(--ink-faint);font-weight:500">(optional)</span></label>
-      <textarea rows="2" placeholder="e.g. paid to seller via GPay, balance next month">Partial — rest after salary.</textarea>
+    <!-- note -->
+    <div class="field">
+      <label class="lbl" for="note">Note <span class="opt">— optional</span></label>
+      <textarea class="inp" id="note" placeholder="e.g. clears #5 and prepays ₹60k toward #6…"></textarea>
     </div>
+
   </div>
 
-  <div class="sh-foot">
-    <div class="preview">
-      <div class="pr"><span class="k">Installment #5</span><span class="v">₹1,50,000 <span style="color:var(--ink-faint)">/ ₹2,10,000</span></span></div>
-      <div class="pr roll"><span class="k">↻ rolls forward to #6</span><span class="v">+₹60,000</span></div>
-      <div class="pr bal"><span class="k">Asset balance after</span><span class="v">₹6,10,000</span></div>
+  <!-- sticky footer: live roll-forward preview -->
+  <div class="ov-foot">
+    <div class="preview" id="preview">
+      <div class="pic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M14 6l6 6-6 6"/></svg></div>
+      <div class="ptxt">
+        <div class="pl">Roll-forward preview</div>
+        <div class="pm" id="prevText">Enter an amount to preview the roll-forward.</div>
+      </div>
+      <div class="nextpill"><div class="nn" id="nextNo">#6</div><div class="nl">next due</div></div>
     </div>
-    <div class="acts">
-      <button class="btn ghost">Cancel</button>
-      <button class="btn save"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M5 13l4 4L19 7"/></svg> Save payment</button>
+    <div class="actions">
+      <button class="btn ghost" id="cancelBtn">Cancel</button>
+      <button class="btn save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12l5 5L20 7"/></svg> Save payment</button>
     </div>
   </div>
 </aside>
 
+<script>
+/* ===== currency engine (shared kit contract) ===== */
+const RATE=83; let CUR=(location.hash==='#usd')?'usd':'inr';
+function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
+function usGroup(n){return Math.round(n).toLocaleString('en-US');}
+function abbr(v){if(CUR==='inr'){if(Math.abs(v)>=1e7)return (v/1e7).toFixed(2).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')+'Cr';return (v/1e5).toFixed(Math.abs(v)%1e5?2:0).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')+'L';}if(Math.abs(v)>=1e6)return (v/1e6).toFixed(2).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')+'M';return (v/1e3).toFixed(Math.abs(v)%1e3?1:0)+'k';}
+function sym(){return CUR==='inr'?'₹':'$';}
+function val(inr){return CUR==='inr'?inr:inr/RATE;}
+function fmt(inr,lakh){const base=val(inr);return lakh?abbr(base):(CUR==='inr'?indGroup(base):usGroup(base));}
+function renderCV(el,animate){
+  const inr=+el.dataset.inr, base=val(inr), lakh=el.dataset.style==='lakh';
+  const out = lakh?abbr(base):(CUR==='inr'?indGroup(base):usGroup(base));
+  if(animate && el.classList.contains('count')){
+    const t0=performance.now(),dur=1300;
+    (function tick(t){const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3),v=base*e;
+      el.textContent=lakh?abbr(v):(CUR==='inr'?indGroup(v):usGroup(v));
+      if(p<1)requestAnimationFrame(tick);})(performance.now());
+  } else { el.textContent = out; }
+}
+function applyCurrency(animate){
+  document.documentElement.dataset.cur=CUR;
+  document.querySelectorAll('.symword').forEach(s=>s.textContent=sym());
+  document.querySelectorAll('.unitword').forEach(s=>s.textContent=CUR==='inr'?'rupee':'dollar');
+  document.querySelectorAll('.cv').forEach(el=>renderCV(el,animate));
+  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on',b.dataset.set===CUR));
+  // keep amount-currency dropdown + typed amount in sync with global currency
+  if(amtCur && amtCur.value!==CUR){ reformatAmount(amtCur.value, CUR); amtCur.value=CUR; }
+  rollForward();
+}
+const tog=document.getElementById('curtog');
+if(tog)tog.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;CUR=b.dataset.set;applyCurrency(false);});
+
+/* ===== plan data (Devanahalli canon) ===== */
+const PLAN={ due:210000, base:150000, nextNo:6, balanceRemaining:760000 }; // #5 due (150k base + 60k carried), plan balance incl. due
+
+/* reformat the displayed amount when the currency unit flips, preserving the base-INR value */
+function reformatAmount(fromCur,toCur){
+  const raw=parseFloat((amtEl.value||'').replace(/[^0-9.]/g,''));
+  if(isNaN(raw))return;
+  const inr = fromCur==='usd' ? raw*RATE : raw;
+  const out = toCur==='usd' ? inr/RATE : inr;
+  amtEl.value = toCur==='inr' ? indGroup(out) : usGroup(out);
+}
+
+/* parse the amount field as base-INR (respects the ₹/$ dropdown) */
+const amtEl=document.getElementById('amt');
+const amtCur=document.getElementById('amtCur');
+function amountInr(){
+  const raw=parseFloat((amtEl.value||'').replace(/[^0-9.]/g,''))||0;
+  return amtCur.value==='usd' ? raw*RATE : raw;
+}
+
+/* ===== the roll-forward compute ===== */
+function rollForward(){
+  const paid=amountInr();
+  const due=PLAN.due;
+  const prevText=document.getElementById('prevText');
+  const nextNo=document.getElementById('nextNo');
+  const preview=document.getElementById('preview');
+  nextNo.textContent='#'+PLAN.nextNo;
+  if(paid<=0){
+    preview.classList.remove('live');
+    prevText.innerHTML='Enter an amount to preview the roll-forward.';
+    return;
+  }
+  preview.classList.add('live');
+  const carry=paid-due;                                  // +ve = prepay carried fwd, -ve = short rolled fwd
+  const balAfter=Math.max(0,PLAN.balanceRemaining-paid); // remaining plan balance after this payment
+  const S='<span class="symword">'+sym()+'</span>';
+  let line;
+  if(Math.abs(carry)<1){
+    line='Clears <em>#5</em> exactly · '+S+'<span class="mono bal">'+fmt(balAfter)+'</span> balance after';
+  }else if(carry>0){
+    line='<span class="mono carry">+'+S+fmt(carry)+'</span> → carried into <em>#'+PLAN.nextNo+'</em> · '
+        +'balance after <span class="mono bal">'+S+fmt(balAfter)+'</span>';
+  }else{
+    line='<span class="mono carry">−'+S+fmt(-carry)+'</span> short → rolled fwd to <em>#'+PLAN.nextNo+'</em> · '
+        +'balance after <span class="mono bal">'+S+fmt(balAfter)+'</span>';
+  }
+  prevText.innerHTML=line;
+}
+
+/* live wiring */
+amtEl.addEventListener('input',()=>{
+  const n=parseFloat((amtEl.value||'').replace(/[^0-9.]/g,''));
+  if(!isNaN(n) && amtCur.value==='inr'){ amtEl.value=indGroup(n); }
+  rollForward();
+});
+amtCur.addEventListener('change',e=>{
+  // amtCur dropdown drives the global currency too (re-theme + reformat)
+  CUR=e.target.value; applyCurrency(false);
+});
+
+/* amount box focus ring proxy */
+const amtbox=document.getElementById('amtbox');
+amtEl.addEventListener('focus',()=>amtbox.classList.add('focus'));
+amtEl.addEventListener('blur',()=>amtbox.classList.remove('focus'));
+
+/* pay-exact quick action */
+document.getElementById('fillDue').addEventListener('click',()=>{
+  const v=val(PLAN.due);
+  amtEl.value = amtCur.value==='inr'?indGroup(v):usGroup(v);
+  rollForward(); amtEl.focus();
+});
+
+/* ===== segmented control ===== */
+const seg=document.getElementById('seg');
+const segBtns=[...seg.querySelectorAll('button')];
+segBtns.forEach((b,i)=>b.addEventListener('click',()=>{
+  seg.dataset.i=i;
+  segBtns.forEach(x=>x.classList.toggle('on',x===b));
+}));
+
+/* ===== single-select chip groups (independent) ===== */
+function wireChips(id){
+  const grp=document.getElementById(id);
+  grp.querySelectorAll('.chip').forEach(chip=>chip.addEventListener('click',()=>{
+    grp.querySelectorAll('.chip').forEach(c=>{c.classList.remove('on');c.setAttribute('aria-checked','false');});
+    chip.classList.add('on');chip.setAttribute('aria-checked','true');
+  }));
+}
+wireChips('methods');
+wireChips('sources');
+
+/* ===== proof dropzone (faux upload + OCR) ===== */
+const drop=document.getElementById('drop');
+function armDrop(){
+  drop.classList.add('armed');
+  document.getElementById('dropTitle').innerHTML='receipt-jun04.jpg · <b>attached</b>';
+  document.getElementById('dropDesc').textContent='scanned · 1 page · 248 KB';
+}
+drop.addEventListener('click',armDrop);
+drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();armDrop();}});
+document.getElementById('useOcr').addEventListener('click',e=>{
+  e.stopPropagation();
+  const v=val(270000);
+  amtEl.value = CUR==='inr'?indGroup(v):usGroup(v);
+  rollForward();
+});
+
+/* ===== open / close choreography ===== */
+const scrim=document.getElementById('scrim');
+const over=document.getElementById('over');
+const app=document.getElementById('app');
+function openOver(){ scrim.classList.add('show'); over.classList.add('show'); app.classList.add('dimmed'); }
+function closeOver(){ over.classList.remove('show'); scrim.classList.remove('show'); location.href='app.html'; }
+scrim.addEventListener('click',closeOver);
+document.getElementById('closeBtn').addEventListener('click',closeOver);
+document.getElementById('cancelBtn').addEventListener('click',closeOver);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOver();});
+
+/* ===== init ===== */
+applyCurrency(false);
+rollForward();
+// animate the slide-in on load
+addEventListener('load',()=>{
+  requestAnimationFrame(()=>requestAnimationFrame(openOver));
+});
+
+// profile photo upload (persists across screens via localStorage)
+(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
+</script>
 </body>
 </html>

@@ -11,216 +11,369 @@
 :root{
   --paper:#F7F1E6;--paper-2:#F1E8D7;--ink:#241B16;--ink-soft:#4A4035;--ink-faint:#8C8068;
   --line:#DBCDB0;--line-2:#E7DCC6;--primary:#C05E1B;--primary-deep:#9C4711;
-  --pos:#1F6B53;--pos-soft:#2E8C6E;--neg:#A6321F;--accent:#9E3B6E;--gold:#B8902E;--card:#FFFDF8;
-  --shadow:0 1px 0 rgba(28,24,19,.04),0 16px 36px -24px rgba(28,24,19,.45);--r:16px;--ease:cubic-bezier(.22,.68,0,1);
+  --pos:#1F6B53;--pos-soft:#2E8C6E;--neg:#A6321F;--accent:#1F6F86;--accent-dk:#E4A85A;--pos-dk:#5FC79E;--card:#FFFDF8;
+  --glow:color-mix(in srgb,var(--primary) 12%,transparent);
+  --shadow:0 1px 0 rgba(28,24,19,.04),0 16px 36px -24px rgba(28,24,19,.45);
+  --r:16px;--ease:cubic-bezier(.22,.68,0,1);
 }
-html[data-cur="usd"]{--paper:#E9EFE8;--paper-2:#DDE7DB;--ink:#16241B;--ink-soft:#36473B;--ink-faint:#74866F;--line:#C2D4C0;--line-2:#D2E0D0;--primary:#1C7A45;--primary-deep:#115C32;--pos:#1C7A45;--pos-soft:#2E9457;--accent:#A9852F;--gold:#A9852F;--card:#FBFEFA;}
+html[data-cur="usd"]{
+  --paper:#E9EFE8;--paper-2:#DDE7DB;--ink:#16241B;--ink-soft:#36473B;--ink-faint:#74866F;
+  --line:#C2D4C0;--line-2:#D2E0D0;--primary:#1C7A45;--primary-deep:#115C32;
+  --pos:#1C7A45;--pos-soft:#2E9457;--neg:#A6471F;--accent:#A9852F;--accent-dk:#D8BE78;--pos-dk:#5FC98C;--card:#FBFEFA;
+  --glow:color-mix(in srgb,var(--primary) 14%,transparent);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--paper);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased;transition:.6s var(--ease)}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:"Hanken Grotesk",system-ui,sans-serif;
+  font-size:15px;-webkit-font-smoothing:antialiased;position:relative;
+  transition:background .6s var(--ease),color .6s var(--ease)}
+body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.045'/%3E%3C/svg%3E");}
 .mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
 a{color:inherit;text-decoration:none}
-.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh;position:relative;z-index:1}
 @media(max-width:880px){.app{grid-template-columns:1fr}.side{display:none}}
-.side{border-right:1px solid var(--line);background:var(--paper-2);padding:22px 16px;position:sticky;top:0;height:100vh}
-.brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:21px;padding:6px 8px 22px}
-.glyph{width:28px;height:28px;border-radius:8px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));position:relative;box-shadow:0 6px 14px -6px var(--primary)}
+.side{border-right:1px solid var(--line);background:var(--paper-2);padding:22px 16px;position:sticky;top:0;height:100vh;transition:.6s}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:21px;padding:6px 8px 12px}
+.newplan{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 2px 14px;padding:10px;border-radius:11px;border:1px solid var(--line);color:var(--ink);font-weight:600;font-size:14px;cursor:pointer;transition:transform .2s,border-color .2s,background .2s}
+.newplan:hover{border-color:var(--ink);background:var(--card);transform:translateY(-1px)}
+.newplan svg{width:16px;height:16px}
+.glyph{width:28px;height:28px;border-radius:8px;flex:none;background:linear-gradient(145deg,var(--primary),var(--primary-deep));position:relative;box-shadow:0 6px 14px -6px var(--primary)}
 .glyph::before,.glyph::after{content:"";position:absolute;left:6px;right:6px;height:2px;background:var(--paper);border-radius:2px;opacity:.85}
 .glyph::before{top:10px}.glyph::after{top:16px;right:11px}
 .navsec{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:16px 10px 8px}
-.nav-i{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;font-weight:500;color:var(--ink-soft);cursor:pointer;font-size:14.5px}
-.nav-i svg{width:18px;height:18px}.nav-i:hover{background:var(--line-2);color:var(--ink)}
+.nav-i{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:.2s;font-size:14.5px}
+.nav-i svg{width:18px;height:18px;flex:none}
+.nav-i:hover{background:var(--line-2);color:var(--ink)}
 .nav-i.on{background:var(--ink);color:var(--paper)}
 .nav-i .ct{margin-left:auto;font-size:11px;font-family:"JetBrains Mono";opacity:.7}
-
-.top{display:flex;align-items:center;justify-content:space-between;padding:16px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(8px);z-index:20}
-.crumb{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink-faint)}
+.main{min-width:0}
+.top{display:flex;align-items:center;justify-content:space-between;padding:18px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(8px);z-index:20;transition:.6s}
+.top h1{font-family:"Fraunces",serif;font-weight:600;font-size:23px;letter-spacing:-.01em}
+.top .sub{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-faint)}
 .top-right{display:flex;align-items:center;gap:14px}
-.curtog{display:inline-flex;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:3px;position:relative}
-.curtog button{font-family:"JetBrains Mono";font-weight:700;font-size:12.5px;border:none;background:transparent;color:var(--ink-faint);width:44px;height:28px;border-radius:100px;cursor:pointer;z-index:1}
-.curtog button.on{color:#fff}
-.curtog .slide{position:absolute;top:3px;left:3px;width:44px;height:28px;border-radius:100px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));transition:transform .4s var(--ease),background .6s}
-html[data-cur="usd"] .curtog .slide{transform:translateX(44px)}
-
-.content{padding:24px 30px 60px;max-width:1240px}
-.head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:18px;margin-bottom:20px}
-.head h1{font-family:"Fraunces",serif;font-weight:600;font-size:29px;letter-spacing:-.02em;display:flex;gap:11px;align-items:center}
-.head .meta{font-size:13px;color:var(--ink-faint);margin-top:5px;font-family:"JetBrains Mono"}
-.tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
-
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
-@media(max-width:900px){.stats{grid-template-columns:1fr 1fr}}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
-.stat .k{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
-.stat .v{font-family:"Fraunces",serif;font-weight:600;font-size:26px;margin-top:6px;letter-spacing:-.02em}
-.stat .d{font-size:11.5px;margin-top:5px;font-family:"JetBrains Mono";color:var(--ink-faint)}
-.stat.warn{background:color-mix(in srgb,var(--neg) 7%,transparent);border-color:color-mix(in srgb,var(--neg) 35%,transparent)}
-.stat.warn .v{color:var(--neg)}
-
-.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:22px}
-.ph{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
-.ph .t{font-family:"Fraunces",serif;font-weight:600;font-size:18px}
-.ph .meta{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono"}
-
-/* maximizer hero */
-.maxi{padding:22px}
-.maxi-top{display:flex;gap:26px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:20px}
-.reco{display:flex;align-items:center;gap:18px}
-.reco .ring{width:96px;height:96px;border-radius:50%;flex:none;display:grid;place-items:center;position:relative;
-  background:conic-gradient(var(--pos) 0 84%,var(--paper-2) 84% 100%);}
-.reco .ring::before{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--card)}
-.reco .ring .num{position:relative;font-family:"Fraunces",serif;font-weight:600;font-size:27px;line-height:1}
-.reco .ring .lb{position:relative;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint);font-weight:700;margin-top:2px}
-.reco .txt .h{font-family:"Fraunces",serif;font-weight:600;font-size:19px}
-.reco .txt .s{font-size:13.5px;color:var(--ink-soft);max-width:34ch;margin-top:4px}
-.reco .txt .s b{color:var(--pos)}
-.tutog{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-soft)}
-.sw{width:42px;height:24px;border-radius:20px;background:var(--ink);position:relative;cursor:pointer;flex:none}
-.sw::after{content:"";position:absolute;top:3px;left:21px;width:18px;height:18px;border-radius:50%;background:var(--paper)}
-.sw.off{background:var(--line)}.sw.off::after{left:3px}
-
-/* paycheck timeline */
-.scn{margin-bottom:14px}
-.scn .lab{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:7px}
-.scn .lab .l{font-weight:600}.scn .lab .r{font-family:"JetBrains Mono";color:var(--ink-faint)}
-.pcs{display:flex;gap:3px;height:38px;align-items:flex-end}
-.pc{flex:1;border-radius:3px 3px 1px 1px;background:var(--pos)}
-.pc.tall{background:var(--pos)}
-.pc.lost{background:color-mix(in srgb,var(--neg) 30%,transparent);border:1px dashed var(--neg)}
-.scn.bad .lab .r{color:var(--neg);font-weight:700}
-.warnbox{display:flex;gap:11px;align-items:flex-start;background:color-mix(in srgb,var(--neg) 8%,transparent);border:1px solid color-mix(in srgb,var(--neg) 30%,transparent);border-radius:11px;padding:13px 15px;font-size:13px;color:var(--ink-soft);margin-top:6px}
-.warnbox svg{width:18px;height:18px;color:var(--neg);flex:none;margin-top:1px}
-.warnbox b{color:var(--neg)}
-
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
-@media(max-width:1000px){.grid{grid-template-columns:1fr}}
-.kv{padding:6px 20px 14px}
-.kv .r{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line-2);font-size:14px}
-.kv .r:last-child{border-bottom:none}
-.kv .k{color:var(--ink-soft)}.kv .v{font-family:"JetBrains Mono";font-weight:700}
-.kv .v.pos{color:var(--pos)}.kv .v.neg{color:var(--neg)}
-.formula{padding:16px 20px;border-bottom:1px solid var(--line-2);font-size:13.5px;color:var(--ink-soft)}
-.formula b{color:var(--ink);font-family:"JetBrains Mono"}
-
-/* loan offset */
-.offset .kv .r.hl{background:color-mix(in srgb,var(--pos) 7%,transparent);margin:0 -20px;padding:10px 20px}
-.steps{padding:6px 20px 16px;display:grid;gap:10px}
-.stp{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;color:var(--ink-soft)}
-.stp .n{width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--paper);font-size:11px;font-weight:700;display:grid;place-items:center;flex:none;font-family:"JetBrains Mono"}
-.stp b{color:var(--ink)}
-.safe{font-size:11px;font-weight:700;color:var(--pos);background:color-mix(in srgb,var(--pos) 13%,transparent);padding:2px 7px;border-radius:20px}
-
-.balrow{display:flex;align-items:center;justify-content:space-between;padding:18px 20px}
-.balrow .l .nm{font-weight:600;font-size:15px}
-.balrow .l .t{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:2px}
-.balrow .v{font-family:"Fraunces",serif;font-weight:600;font-size:24px}
-.illq{font-size:9.5px;font-weight:700;color:var(--accent);background:color-mix(in srgb,var(--accent) 15%,transparent);padding:2px 6px;border-radius:5px;letter-spacing:.03em}
-
+.curtog{display:inline-flex;align-items:center;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:4px;position:relative;box-shadow:inset 0 1px 2px rgba(28,24,19,.06);transition:background .6s,border-color .6s}
+.curtog button{font-family:"Hanken Grotesk";font-weight:700;font-size:12.5px;letter-spacing:.04em;border:none;background:transparent;color:var(--ink-faint);width:62px;height:34px;border-radius:100px;cursor:pointer;z-index:1;transition:color .35s var(--ease);display:flex;align-items:center;justify-content:center;gap:5px}
+.curtog button .cs{font-family:"Fraunces",serif;font-weight:600;font-size:17px;line-height:1;margin-top:-1px}
+.curtog button:not(.on):hover{color:var(--ink)}
+.curtog button.on{color:var(--paper)}
+.curtog .slide{position:absolute;top:4px;left:4px;width:62px;height:34px;border-radius:100px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));transition:transform .42s var(--ease),background .6s;box-shadow:0 6px 16px -6px var(--primary)}
+html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
+.addbtn{font-weight:600;font-size:14px;padding:9px 16px;border-radius:10px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;display:flex;align-items:center;gap:7px;transition:transform .2s,background .6s;box-shadow:0 8px 18px -10px var(--primary)}
+.addbtn:hover{transform:translateY(-2px)}
+.avatar{position:relative;width:36px;height:36px;border-radius:11px;background:linear-gradient(150deg,var(--pos-soft),var(--pos));background-size:cover;background-position:center;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;cursor:pointer;overflow:hidden;transition:background .6s}
+.avatar input{display:none}
+.avatar .ava-ov{position:absolute;inset:0;display:grid;place-items:center;background:rgba(20,16,12,.48);opacity:0;transition:opacity .2s}
+.avatar:hover .ava-ov{opacity:1}
+.avatar .ava-ov svg{width:15px;height:15px;color:#fff}
+.avatar.has-img .ava-init{opacity:0}
+.content{padding:28px 30px 60px;max-width:1200px;position:relative;z-index:1}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:.6s}
+.ph{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.ph .t{font-family:"Fraunces",serif;font-weight:600;font-size:18px;display:flex;align-items:center;gap:10px}
+.ph .meta{font-size:12.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.tag{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:5px}
+.tag.asset{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary-deep)}
+.tag.chit{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.tag.loan{background:color-mix(in srgb,var(--neg) 15%,transparent);color:var(--neg)}
+.pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);text-transform:capitalize}
+.proof{font-size:10px;color:var(--primary-deep);font-weight:600;display:inline-flex;gap:3px;align-items:center}
 .fade{opacity:0;transform:translateY(16px);animation:rise .7s var(--ease) forwards}
-.fade.d1{animation-delay:.07s}.fade.d2{animation-delay:.14s}.fade.d3{animation-delay:.21s}.fade.d4{animation-delay:.28s}
+.fade.d1{animation-delay:.06s}.fade.d2{animation-delay:.13s}.fade.d3{animation-delay:.2s}.fade.d4{animation-delay:.27s}.fade.d5{animation-delay:.34s}
 @keyframes rise{to{opacity:1;transform:none}}
+[data-rise]{opacity:0;transform:translateY(22px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+[data-rise].in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.fade{animation:none;opacity:1;transform:none}[data-rise]{opacity:1;transform:none}*{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+/* ---- stat cards ---- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:900px){.stats{grid-template-columns:1fr 1fr}}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:.6s}
+.stat .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;display:flex;align-items:center;gap:7px}
+.stat .v{font-family:"Fraunces",serif;font-weight:600;font-size:30px;letter-spacing:-.02em;margin-top:8px;line-height:1}
+.stat .v .cur{font-size:17px;color:var(--ink-faint);vertical-align:super}
+.stat .d{font-size:12px;margin-top:7px;font-family:"JetBrains Mono"}
+.stat .d.up{color:var(--pos)}.stat .d.dn{color:var(--neg)}
+.stat.hero-stat{background:var(--ink);color:var(--paper)}
+.stat.hero-stat .k{color:color-mix(in srgb,var(--paper) 60%,transparent)}
+.stat.hero-stat .v .cur{color:var(--accent-dk)}
+.stat.hero-stat::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0,color-mix(in srgb,var(--primary) 34%,transparent),transparent 60%)}
+.stat.risk{border-color:color-mix(in srgb,var(--neg) 45%,var(--line))}
+.stat.risk::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 90% at 100% 0,color-mix(in srgb,var(--neg) 16%,transparent),transparent 62%)}
+.stat.risk .v{color:var(--neg)}
+.stat.risk .k{color:var(--neg)}
+.stat .mini{height:6px;border-radius:5px;background:var(--paper-2);overflow:hidden;position:relative;margin-top:11px}
+.stat .mini i{position:absolute;inset:0 auto 0 0;border-radius:5px;background:linear-gradient(90deg,var(--primary),var(--primary-deep));width:0;transition:width 1.2s var(--ease)}
+.stat .mini i.r{background:linear-gradient(90deg,var(--neg),#7d2415)}
+
+.grid2{display:grid;grid-template-columns:1.45fr 1fr;gap:22px;margin-top:24px}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+
+/* ---- maximizer ring ---- */
+.maxbody{padding:22px}
+.maxtop{display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+@media(max-width:560px){.maxtop{justify-content:center}}
+.ringwrap{position:relative;width:168px;height:168px;flex:none}
+.ringwrap svg{transform:rotate(-90deg);width:168px;height:168px}
+.ringwrap .ringtrack{fill:none;stroke:var(--paper-2);stroke-width:13}
+.ringwrap .ringfill{fill:none;stroke:url(#ringg);stroke-width:13;stroke-linecap:round;stroke-dasharray:440;stroke-dashoffset:440;transition:stroke-dashoffset 1.4s var(--ease)}
+.ringcap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.ringcap .pct{font-family:"Fraunces",serif;font-weight:600;font-size:40px;line-height:.9}
+.ringcap .lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin-top:6px}
+.maxnote{flex:1;min-width:220px}
+.maxnote h3{font-family:"Fraunces",serif;font-weight:600;font-size:19px;letter-spacing:-.01em}
+.maxnote h3 em{font-style:italic}
+.maxnote p{font-size:13.5px;color:var(--ink-soft);margin-top:7px;line-height:1.5}
+.maxnote p em{font-style:italic;font-family:"Fraunces",serif}
+.maxnote .reco{display:inline-flex;align-items:center;gap:7px;margin-top:13px;font-family:"JetBrains Mono";font-weight:700;font-size:13px;background:color-mix(in srgb,var(--pos) 14%,transparent);color:var(--pos);padding:6px 11px;border-radius:9px}
+
+/* ---- timelines ---- */
+.tlblock{margin-top:6px;border-top:1px solid var(--line)}
+.tl{padding:16px 22px}
+.tl .th{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;gap:10px;flex-wrap:wrap}
+.tl .th .nm{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px}
+.tl .th .verdict{font-size:11px;font-weight:700;font-family:"JetBrains Mono";padding:3px 8px;border-radius:6px}
+.verdict.good{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.verdict.bad{background:color-mix(in srgb,var(--neg) 15%,transparent);color:var(--neg)}
+.bars{display:flex;gap:3px;align-items:flex-end;height:64px}
+.bars .bar{flex:1;background:var(--paper-2);border-radius:3px 3px 0 0;position:relative;display:flex;align-items:flex-end;min-height:8px;height:100%}
+.bars .bar i{display:block;width:100%;height:0;border-radius:3px 3px 0 0;transition:height 1s var(--ease);transition-delay:calc(var(--i,0)*26ms)}
+.bars .bar i.g{background:linear-gradient(180deg,var(--pos-soft),var(--pos))}
+.bars .bar i.r{background:linear-gradient(180deg,#c0492e,var(--neg))}
+.bars .bar i.f{background:linear-gradient(180deg,#c9b896,#a8946f)}
+.tl .axis{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:6px}
+.tl .legend{display:flex;gap:16px;font-size:11px;color:var(--ink-soft);margin-top:9px;flex-wrap:wrap}
+.tl .legend span{display:inline-flex;align-items:center;gap:5px}
+.tl .legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+.sw.g{background:var(--pos)}.sw.r{background:var(--neg)}.sw.f{background:#a8946f}
+
+/* warning + trueup */
+.warn{margin:0 22px 18px;border:1px solid color-mix(in srgb,var(--neg) 40%,var(--line));background:color-mix(in srgb,var(--neg) 7%,transparent);border-radius:12px;padding:14px 16px;display:flex;gap:13px;align-items:flex-start;transition:.4s}
+.warn .ic{width:30px;height:30px;border-radius:8px;flex:none;background:color-mix(in srgb,var(--neg) 16%,transparent);color:var(--neg);display:grid;place-items:center;font-weight:800;font-family:"JetBrains Mono";transition:.4s}
+.warn .wt{font-weight:700;font-size:13.5px;color:var(--neg)}
+.warn .wt.safe{color:var(--pos)}
+.warn .ws{font-size:12.5px;color:var(--ink-soft);margin-top:3px;line-height:1.45}
+.warn .ws b{color:var(--ink);font-family:"JetBrains Mono"}
+.trueup{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:1px solid var(--line);gap:14px;flex-wrap:wrap}
+.trueup .tx{font-size:13px;color:var(--ink-soft);max-width:62%}
+.trueup .tx b{color:var(--ink)}
+.switch{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;font-size:13px;user-select:none}
+.switch .track{width:46px;height:26px;border-radius:100px;background:var(--paper-2);border:1px solid var(--line);position:relative;transition:.3s}
+.switch .knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--card);box-shadow:0 2px 5px rgba(0,0,0,.2);transition:transform .3s var(--ease)}
+.switch.on .track{background:linear-gradient(145deg,var(--primary),var(--primary-deep));border-color:transparent}
+.switch.on .knob{transform:translateX(20px)}
+.switch:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:6px}
+
+/* ---- breakdown table ---- */
+.formula{margin:0 22px 16px;background:var(--paper-2);border:1px dashed var(--line);border-radius:12px;padding:13px 16px;font-family:"JetBrains Mono";font-size:13px;color:var(--ink-soft);display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+.formula b{color:var(--primary-deep);font-weight:700}
+.tblwrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;min-width:520px}
+.tbl th{text-align:right;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:10px 22px;border-bottom:1px solid var(--line)}
+.tbl th:first-child{text-align:left}
+.tbl td{text-align:right;padding:11px 22px;border-bottom:1px solid var(--line-2);font-family:"JetBrains Mono";font-size:13px;font-variant-numeric:tabular-nums}
+.tbl td:first-child{text-align:left;font-family:"Hanken Grotesk";font-weight:600}
+.tbl tr:hover td{background:color-mix(in srgb,var(--primary) 4%,transparent)}
+.tbl td .lost{color:var(--neg);font-weight:700}
+.tbl td .full{color:var(--pos);font-weight:700}
+.tbl tfoot td{font-weight:700;color:var(--ink);border-top:1px solid var(--line);border-bottom:none;background:color-mix(in srgb,var(--primary) 5%,transparent)}
+
+/* ---- loan offset planner ---- */
+.intro{padding:18px 22px 16px;border-bottom:1px solid var(--line-2)}
+.intro b{color:var(--ink)}
+.steps{padding:8px 22px 18px}
+.step{display:grid;grid-template-columns:30px 1fr;gap:14px;padding:14px 0;border-top:1px solid var(--line-2)}
+.step:first-child{border-top:none}
+.step .no{width:28px;height:28px;border-radius:9px;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:"JetBrains Mono";font-weight:700;font-size:13px}
+.step .sh{font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.step .sb{font-size:13px;color:var(--ink-soft);margin-top:4px;line-height:1.5}
+.step .sb b{color:var(--ink);font-family:"JetBrains Mono"}
+.matchline{margin:4px 22px 0;padding:13px 16px;border-radius:11px;background:color-mix(in srgb,var(--pos) 9%,transparent);border:1px solid color-mix(in srgb,var(--pos) 30%,var(--line));display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.matchline .ml{font-size:12.5px;color:var(--ink-soft)}
+.matchline .ml b{color:var(--pos);font-family:"JetBrains Mono";font-weight:700}
+.tradeoff{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 22px 4px}
+@media(max-width:560px){.tradeoff{grid-template-columns:1fr}}
+.toff{border:1px solid var(--line);border-radius:12px;padding:14px}
+.toff .tl2{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+.toff .tv{font-family:"Fraunces",serif;font-weight:600;font-size:24px;margin-top:6px;line-height:1}
+.toff.minus .tv{color:var(--neg)}
+.toff.plus .tv{color:var(--pos)}
+.toff .ts{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:5px}
+.payoff{display:flex;align-items:center;justify-content:space-between;margin:16px 22px 4px;padding:14px 18px;border-radius:12px;background:var(--ink);color:var(--paper);gap:12px;flex-wrap:wrap}
+.payoff .pl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:color-mix(in srgb,var(--paper) 60%,transparent);font-weight:700}
+.payoff .pv{font-family:"Fraunces",serif;font-weight:600;font-size:22px;margin-top:3px}
+.payoff .seg{text-align:right}
+.payoff .seg .pv{color:var(--accent-dk)}
+.foot{padding:0 22px 20px;margin-top:14px}
+.foot div{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";line-height:1.6}
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="side">
-    <a class="brand" href="app.html"><span class="glyph"></span> Khata</a>
+    <a class="brand" href="index.html"><span class="glyph"></span> Khata</a>
+    <a class="newplan" href="create-plan.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
     <div class="navsec">Overview</div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l3 4 5 1-3.5 4 .8 5L12 19l-5.3 2 .8-5L4 12l5-1z"/></svg> Holdings <span class="ct">5</span></div>
+    <a class="nav-i" href="app.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
+    <a class="nav-i" href="holdings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
     <div class="navsec">Money plans</div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct">2</span></div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct">3</span></div>
-    <div class="nav-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct">3</span></div>
-    <div class="nav-i on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v6M12 8a5 5 0 105 5"/><circle cx="12" cy="13" r="9"/></svg> Retirement</div>
+    <a class="nav-i" href="asset-detail.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct">2</span></a>
+    <a class="nav-i" href="chit-detail.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct">3</span></a>
+    <a class="nav-i" href="loan-detail.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct">2</span></a>
+    <a class="nav-i on" href="retirement-401k.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k)</a>
+    <div class="navsec">Records</div>
+    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</a>
+    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
   </aside>
 
-  <main>
+  <main class="main">
     <div class="top">
-      <div class="crumb"><a href="app.html">Retirement</a> <span>›</span> <b style="color:var(--ink)">401(k) · 2026</b></div>
+      <div>
+        <h1>401(k) planner</h1>
+        <div class="sub">Arjun · plan year 2026 · Fidelity employer plan · 24 pay periods</div>
+      </div>
       <div class="top-right">
-        <div class="curtog" id="curtog"><span class="slide"></span><button data-set="inr">₹ INR</button><button data-set="usd" class="on">$ USD</button></div>
+        <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="inr"><span class="cs">₹</span> INR</button><button data-set="usd" class="on"><span class="cs">$</span> USD</button></div>
+        <a class="addbtn" href="log-payment.html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Log payment</a>
+        <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init">A</span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
       </div>
     </div>
 
     <div class="content">
-      <div class="head fade">
-        <div><h1><span class="tag">Retirement · US</span> 401(k) planner</h1><div class="meta">biweekly · 26 paychecks · 10 done, 16 left · employer: Acme Corp</div></div>
+
+      <!-- ===== STAT CARDS ===== -->
+      <div class="stats">
+        <div class="stat hero-stat fade">
+          <div class="k">Contributed YTD</div>
+          <div class="v"><span class="cur symword">$</span><span class="cv count" data-inr="1145400"></span></div>
+          <div class="d up" style="color:var(--accent-dk)">13 of 24 paychecks · 14% deferral</div>
+        </div>
+        <div class="stat fade d1">
+          <div class="k">Annual IRS limit</div>
+          <div class="v"><span class="cur symword">$</span><span class="cv count" data-inr="1909000"></span></div>
+          <div class="d up">60% used · <span class="cv" data-inr="763600"></span> headroom</div>
+          <div class="mini"><i data-w="60"></i></div>
+        </div>
+        <div class="stat fade d2">
+          <div class="k">Employer match captured</div>
+          <div class="v"><span class="cur symword">$</span><span class="cv count" data-inr="285376"></span></div>
+          <div class="d up">▲ on track · <span class="cv" data-inr="21952"></span>/paycheck</div>
+        </div>
+        <div class="stat risk fade d3">
+          <div class="k"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 9v4M12 17h.01M10.3 3.9 2.1 18a2 2 0 0 0 1.7 3h16.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Match at risk</div>
+          <div class="v"><span class="cur symword">$</span><span class="cv count" data-inr="127820"></span></div>
+          <div class="d dn">you max out before paycheck 24</div>
+          <div class="mini"><i class="r" data-w="48"></i></div>
+        </div>
       </div>
 
-      <div class="stats fade d1">
-        <div class="stat"><div class="k">Contributed YTD</div><div class="v"><span class="symword">$</span><span class="cv" data-inr="813400"></span></div><div class="d">of <span class="symword">$</span><span class="cv" data-inr="2033500"></span> limit</div></div>
-        <div class="stat"><div class="k">Annual limit</div><div class="v"><span class="symword">$</span><span class="cv" data-inr="2033500"></span></div><div class="d">2026 · employee</div></div>
-        <div class="stat"><div class="k">Match captured</div><div class="v" style="color:var(--pos)"><span class="symword">$</span><span class="cv" data-inr="139440"></span></div><div class="d">free money so far</div></div>
-        <div class="stat warn"><div class="k">Match at risk</div><div class="v">−<span class="symword">$</span><span class="cv" data-inr="55776"></span></div><div class="d">at current 28% rate</div></div>
-      </div>
-
-      <!-- maximizer hero -->
-      <div class="panel fade d2">
-        <div class="ph"><div class="t">Contribution maximizer</div><div class="meta">fill the limit · keep every match</div></div>
-        <div class="maxi">
-          <div class="maxi-top">
-            <div class="reco">
-              <div class="ring"><span class="num">22%</span><span class="lb">per check</span></div>
-              <div class="txt">
-                <div class="h">Set 22%, not 28%</div>
-                <div class="s">Spreads your <span class="symword">$</span><span class="cv" data-inr="1220100"></span> remaining across all 16 paychecks — hits the limit on the <b>last</b> check, so you keep the match every period.</div>
+      <div class="grid2">
+        <!-- ===== LEFT: MAXIMIZER ===== -->
+        <div>
+          <div class="panel fade d2" data-rise>
+            <div class="ph"><div class="t"><span class="tag chit">Plan</span> Contribution maximizer</div><div class="meta">smooth to year-end</div></div>
+            <div class="maxbody">
+              <div class="maxtop">
+                <div class="ringwrap">
+                  <svg viewBox="0 0 168 168" aria-hidden="true">
+                    <defs><linearGradient id="ringg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--pos-soft)"/><stop offset="1" stop-color="var(--pos)"/></linearGradient></defs>
+                    <circle class="ringtrack" cx="84" cy="84" r="70"/>
+                    <circle class="ringfill" id="ring" cx="84" cy="84" r="70"/>
+                  </svg>
+                  <div class="ringcap"><div class="pct" id="ringpct">11%</div><div class="lbl">Recommended<br>deferral</div></div>
+                </div>
+                <div class="maxnote">
+                  <h3>Spread it to the <em>last</em> paycheck.</h3>
+                  <p>At <b>11% per paycheck</b> you contribute exactly the <span class="symword">$</span><span class="cv" data-inr="1909000"></span> limit across all 24 periods — so the match deposits <em>every</em> period and nothing is left behind.</p>
+                  <span class="reco">▲ +<span class="cv" data-inr="127820"></span> match vs current</span>
+                </div>
               </div>
             </div>
-            <div class="tutog">Employer true-up <span class="sw off" id="tu"></span> <b style="color:var(--neg)">OFF</b></div>
+
+            <div class="tlblock">
+              <div class="tl">
+                <div class="th"><div class="nm"><span class="sw g"></span> Recommended · 11%</div><div class="verdict good">match every period ✓</div></div>
+                <div class="bars" id="barsGood"></div>
+                <div class="axis"><span>Jan · P1</span><span>Jun · P12</span><span>Dec · P24</span></div>
+              </div>
+              <div class="tl" style="border-top:1px solid var(--line-2)">
+                <div class="th"><div class="nm"><span class="sw r"></span> Current · 14% (too high)</div><div class="verdict bad">match lost late ✕</div></div>
+                <div class="bars" id="barsBad"></div>
+                <div class="axis"><span>Jan · P1</span><span>maxes ≈ P20</span><span>Dec · P24</span></div>
+                <div class="legend">
+                  <span><span class="sw g"></span> match earned</span>
+                  <span><span class="sw r"></span> capped out — no match</span>
+                  <span><span class="sw f"></span> true-up recovers</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="warn" id="warnBox">
+              <div class="ic">!</div>
+              <div>
+                <div class="wt" id="warnTitle"><span class="cv" data-inr="127820"></span> of employer match left on the table.</div>
+                <div class="ws" id="warnSub">At 14% you hit the <span class="symword">$</span><span class="cv" data-inr="1909000"></span> cap around paycheck 20. Paychecks 21–24 contribute <b>$0</b>, so the 50%-of-6% match never deposits for those <b>4 periods</b> — <span class="symword">$</span><span class="cv" data-inr="31954"></span> each.</div>
+              </div>
+            </div>
+
+            <div class="trueup" id="trueupRow">
+              <div class="tx"><b>Employer true-up</b> — if your plan trues-up at year-end, it back-fills any match you missed by capping early. Toggle to model it.</div>
+              <div class="switch" id="trueupSw" role="switch" aria-checked="false" tabindex="0" aria-label="Model employer true-up">
+                <span>True-up</span><span class="track"><span class="knob"></span></span>
+              </div>
+            </div>
           </div>
 
-          <div class="scn">
-            <div class="lab"><span class="l">✓ Recommended · 22%/check</span><span class="r"><span class="symword">$</span><span class="cv" data-inr="76692"></span>/check · maxes on check 26 · full match</span></div>
-            <div class="pcs" id="pcGood"></div>
-          </div>
-          <div class="scn bad">
-            <div class="lab"><span class="l">⚠ Current · 28%/check</span><span class="r"><span class="symword">$</span><span class="cv" data-inr="97608"></span>/check · maxes on check 22 · 4 checks lose match</span></div>
-            <div class="pcs" id="pcBad"></div>
-          </div>
-          <div class="warnbox">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9l-8 14A2 2 0 004 21h16a2 2 0 001.7-3l-8-14a2 2 0 00-3.4 0z"/></svg>
-            <div>At <b>28%</b> you hit the <span class="symword">$</span><span class="cv" data-inr="2033500"></span> cap by paycheck 22. Contributions stop → the <span class="symword">$</span><span class="cv" data-inr="13944"></span>/check match stops for the last 4 checks = <b>−<span class="symword">$</span><span class="cv" data-inr="55776"></span> lost</b>. True-up is OFF, so it won't be recovered. Drop to 22%.</div>
+          <!-- breakdown table -->
+          <div class="panel fade d3" data-rise style="margin-top:22px">
+            <div class="ph"><div class="t" style="font-size:16px">Per-paycheck breakdown</div><div class="meta">gross <span class="symword">$</span><span class="cv" data-inr="1909000"></span>/yr · 24 periods</div></div>
+            <div class="formula"><span>Match formula:</span> <b>50% of the first 6% of pay</b> <span>· max employer <span class="symword">$</span><span class="cv" data-inr="21952"></span>/period · <span class="symword">$</span><span class="cv" data-inr="526848"></span>/yr</span></div>
+            <div class="tblwrap">
+            <table class="tbl">
+              <thead><tr><th>Scenario</th><th>Defer %</th><th>You / period</th><th>Match / period</th><th>Year match</th></tr></thead>
+              <tbody>
+                <tr><td>Recommended</td><td>11%</td><td><span class="symword">$</span><span class="cv" data-inr="79542"></span></td><td><span class="full"><span class="symword">$</span><span class="cv" data-inr="21952"></span> ×24</span></td><td class="full"><span class="symword">$</span><span class="cv" data-inr="526848"></span></td></tr>
+                <tr><td>Current (too high)</td><td>14%</td><td><span class="symword">$</span><span class="cv" data-inr="101226"></span></td><td><span class="symword">$</span><span class="cv" data-inr="21952"></span> ×20</td><td class="lost"><span class="symword">$</span><span class="cv" data-inr="398972"></span></td></tr>
+                <tr><td>Loan-offset (min safe)</td><td>6%</td><td><span class="symword">$</span><span class="cv" data-inr="43388"></span></td><td><span class="full"><span class="symword">$</span><span class="cv" data-inr="21952"></span> ×24</span></td><td class="full"><span class="symword">$</span><span class="cv" data-inr="526848"></span></td></tr>
+              </tbody>
+              <tfoot><tr><td>Full-year match available</td><td>—</td><td>—</td><td>—</td><td><span class="symword">$</span><span class="cv" data-inr="526848"></span></td></tr></tfoot>
+            </table>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="grid">
-        <!-- left: per paycheck + match formula -->
+        <!-- ===== RIGHT: LOAN OFFSET PLANNER ===== -->
         <div>
-          <div class="panel fade d3">
-            <div class="ph"><div class="t">Per paycheck</div><div class="meta">at 22%</div></div>
-            <div class="formula">Match: <b>100% of first 3% + 50% of next 2%</b> → employer max <b>4%</b> of pay. Need ≥ 5% each check to capture it all.</div>
-            <div class="kv">
-              <div class="r"><span class="k">Gross / check</span><span class="v"><span class="symword">$</span><span class="cv" data-inr="348600"></span></span></div>
-              <div class="r"><span class="k">Your 22%</span><span class="v neg">−<span class="symword">$</span><span class="cv" data-inr="76692"></span></span></div>
-              <div class="r"><span class="k">Employer match (4%)</span><span class="v pos">+<span class="symword">$</span><span class="cv" data-inr="13944"></span></span></div>
-              <div class="r"><span class="k">Into 401(k) / check</span><span class="v"><span class="symword">$</span><span class="cv" data-inr="90636"></span></span></div>
+          <div class="panel fade d3" data-rise>
+            <div class="ph"><div class="t"><span class="tag loan">Loan</span> 401(k)-loan offset planner</div><div class="meta">free up cash</div></div>
+            <div class="intro">
+              <div style="font-size:13px;color:var(--ink-soft);line-height:1.55">You have a <b>401(k) loan</b> of <span class="symword">$</span><span class="cv" data-inr="1245000"></span> repaying at <span class="symword">$</span><span class="cv" data-inr="32702"></span>/paycheck. Lower your deferral to the match line to free repayment cash — without dropping below the 6% you need for full match.</div>
             </div>
-          </div>
 
-          <div class="panel fade d4">
-            <div class="ph"><div class="t">401(k) balance</div><div class="meta">feeds net worth</div></div>
-            <div class="balrow">
-              <div class="l"><div class="nm">Acme 401(k) <span class="illq">pre-tax · illiquid</span></div><div class="t">vested 100% · +12.4% YTD</div></div>
-              <div class="v"><span class="symword">$</span><span class="cv" data-inr="11786000" data-style="lakh"></span></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- right: loan offset -->
-        <div>
-          <div class="panel offset fade d3">
-            <div class="ph"><div class="t">401(k) loan offset</div><div class="meta">repay without losing match</div></div>
-            <div class="kv">
-              <div class="r"><span class="k">Loan from 401(k)</span><span class="v"><span class="symword">$</span><span class="cv" data-inr="1660000"></span></span></div>
-              <div class="r"><span class="k">Payroll repayment</span><span class="v neg">−<span class="symword">$</span><span class="cv" data-inr="15936"></span>/check</span></div>
-              <div class="r"><span class="k">Interest (paid to yourself)</span><span class="v">9% · 5 yr</span></div>
-            </div>
             <div class="steps">
-              <div class="stp"><span class="n">1</span><div>Reduce contribution <b>22% → 15%</b>, freeing <b><span class="symword">$</span><span class="cv" data-inr="24402"></span>/check</b>.</div></div>
-              <div class="stp"><span class="n">2</span><div>That covers the <span class="symword">$</span><span class="cv" data-inr="15936"></span> repayment with room to spare.</div></div>
-              <div class="stp"><span class="n">3</span><div>15% is still above the <b>5% match line</b> <span class="safe">✓ match safe</span> — no free money lost.</div></div>
-              <div class="stp"><span class="n">4</span><div>Tradeoff: year fill drops to <b><span class="symword">$</span><span class="cv" data-inr="1359540"></span></b>, loan clear by <b>Mar 2031</b>.</div></div>
+              <div class="step"><div class="no">1</div><div><div class="sh">Drop deferral 14% → <b style="color:var(--pos);font-family:JetBrains Mono">6%</b></div><div class="sb">Frees <b><span class="symword">$</span><span class="cv" data-inr="57838"></span></b>/paycheck of take-home — still <b>≥6%</b>, so full match is kept.</div></div></div>
+              <div class="step"><div class="no">2</div><div><div class="sh">Route freed cash → loan principal</div><div class="sb">Add <b><span class="symword">$</span><span class="cv" data-inr="49800"></span></b>/paycheck on top of the scheduled <span class="symword">$</span><span class="cv" data-inr="32702"></span>.</div></div></div>
+              <div class="step"><div class="no">3</div><div><div class="sh">Hold above the match line all year</div><div class="sb">6% × <span class="symword">$</span><span class="cv" data-inr="722500"></span> gross = the exact deferral that triggers the full <b>50%-of-6%</b> employer match.</div></div></div>
+              <div class="step"><div class="no">4</div><div><div class="sh">Restore 11% once the loan clears</div><div class="sb">Step deferral back up to hit the annual limit and resume max tax-deferred growth.</div></div></div>
+            </div>
+
+            <div class="matchline">
+              <div class="ml">Match line held: <b>6% minimum</b> · employer keeps depositing</div>
+              <div class="ml"><b><span class="symword">$</span><span class="cv" data-inr="526848"></span></b>/yr safe</div>
+            </div>
+
+            <div class="tradeoff">
+              <div class="toff minus"><div class="tl2">Tradeoff · less growth</div><div class="tv">−<span class="symword">$</span><span class="cv" data-inr="1145400"></span></div><div class="ts">deferral cut this year @ ~7%/yr</div></div>
+              <div class="toff plus"><div class="tl2">Interest saved</div><div class="tv">+<span class="symword">$</span><span class="cv" data-inr="201810"></span></div><div class="ts">faster payoff · less loan interest</div></div>
+            </div>
+
+            <div class="payoff">
+              <div><div class="pl">Loan payoff date</div><div class="pv">Mar 2027</div></div>
+              <div class="seg"><div class="pl">Pulled forward</div><div class="pv">9 months earlier</div></div>
+            </div>
+            <div class="foot">
+              <div>FX 1 USD = 83 INR · toggle ₹/$ to reformat every figure. Figures illustrative; confirm match formula &amp; true-up policy with your plan document.</div>
             </div>
           </div>
         </div>
@@ -230,20 +383,113 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(44px)}
 </div>
 
 <script>
-const RATE=83; let CUR=(location.hash==='#inr')?'inr':'usd';
+const RATE=83; let CUR=(location.hash==='#inr')?'inr':(document.documentElement.dataset.cur||'usd');
 function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
 function usGroup(n){return Math.round(n).toLocaleString('en-US');}
-function abbr(v){if(CUR==='inr'){if(v>=1e7)return (v/1e7).toFixed(2).replace(/\.?0+$/,'')+'Cr';return (v/1e5).toFixed(v%1e5?2:0).replace(/\.?0+$/,'')+'L';}return (v/1e3).toFixed(v%1e3?1:0)+'k';}
+function abbr(v){if(CUR==='inr'){if(Math.abs(v)>=1e7)return (v/1e7).toFixed(2).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')+'Cr';return (v/1e5).toFixed(Math.abs(v)%1e5?2:0).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')+'L';}if(Math.abs(v)>=1e6)return (v/1e6).toFixed(2).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'')+'M';return (v/1e3).toFixed(Math.abs(v)%1e3?1:0)+'k';}
 function sym(){return CUR==='inr'?'₹':'$';}
-function val(i){return CUR==='inr'?i:i/RATE;}
-function renderCV(el){const b=val(+el.dataset.inr);el.textContent=el.dataset.style==='lakh'?abbr(b):(CUR==='inr'?indGroup(b):usGroup(b));}
-function apply(){document.documentElement.dataset.cur=CUR;document.querySelectorAll('.symword').forEach(s=>s.textContent=sym());document.querySelectorAll('.cv').forEach(renderCV);document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on',b.dataset.set===CUR));}
-document.getElementById('curtog').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;CUR=b.dataset.set;apply();});
-// build paycheck bars
-function bars(id,total,maxAt,tall){const el=document.getElementById(id);for(let i=1;i<=total;i++){const b=document.createElement('span');b.className='pc';const done=i<=10;if(i<=maxAt){b.style.height=(tall?78:62)+'%';}else{b.className='pc lost';b.style.height='40%';}el.appendChild(b);}}
-bars('pcGood',26,26,false);
-bars('pcBad',26,22,true);
-apply();
+function val(inr){return CUR==='inr'?inr:inr/RATE;}
+function renderCV(el,animate){
+  const inr=+el.dataset.inr, base=val(inr), lakh=el.dataset.style==='lakh';
+  const out = lakh?abbr(base):(CUR==='inr'?indGroup(base):usGroup(base));
+  if(animate && el.classList.contains('count')){
+    const t0=performance.now(),dur=1300;
+    (function tick(t){const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3),v=base*e;
+      el.textContent=lakh?abbr(v):(CUR==='inr'?indGroup(v):usGroup(v));
+      if(p<1)requestAnimationFrame(tick);})(performance.now());
+  } else { el.textContent = out; }
+}
+function applyCurrency(animate){
+  document.documentElement.dataset.cur=CUR;
+  document.querySelectorAll('.symword').forEach(s=>s.textContent=sym());
+  document.querySelectorAll('.unitword').forEach(s=>s.textContent=CUR==='inr'?'rupee':'dollar');
+  document.querySelectorAll('.cv').forEach(el=>renderCV(el,animate));
+  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on',b.dataset.set===CUR));
+}
+const tog=document.getElementById('curtog');
+if(tog)tog.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;CUR=b.dataset.set;applyCurrency(false);});
+
+// scroll reveals + fire bars/counts when in view
+const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');
+  e.target.querySelectorAll?.('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%');
+  e.target.querySelectorAll?.('.cv.count').forEach(el=>renderCV(el,true));
+  io.unobserve(e.target);}});},{threshold:.16});
+document.querySelectorAll('[data-rise]').forEach(el=>io.observe(el));
+applyCurrency(false);
+
+/* ----- maximizer ring (animate stroke-dashoffset on reveal) ----- */
+const ring=document.getElementById('ring');
+function fireRing(){ if(ring){ const C=440; ring.style.strokeDashoffset = C*(1-0.86); } }
+
+/* ----- per-paycheck timeline bars ----- */
+const N=24; let TRUEUP=false;
+const goodBars=document.getElementById('barsGood');
+const badBars=document.getElementById('barsBad');
+function buildBars(container, fn){
+  container.innerHTML='';
+  for(let i=0;i<N;i++){
+    const cell=fn(i);
+    const bar=document.createElement('div'); bar.className='bar'; bar.dataset.h=cell.h;
+    const fill=document.createElement('i'); fill.className=cell.cls; fill.style.setProperty('--i',i);
+    bar.appendChild(fill);
+    container.appendChild(bar);
+  }
+}
+// Recommended 11%: even fill all 24 periods, all green.
+function goodCell(i){ return {cls:'g', h: 56 + Math.round(Math.sin(i*0.5)*3)}; }
+// Current 14%: green + earning match until ~P20, then capped.
+// True-up off → final 4 periods red (match lost). True-up on → fawn (recovered).
+function badCell(i){
+  if(i<20) return {cls:'g', h: 68};
+  return TRUEUP ? {cls:'f', h: 68} : {cls:'r', h: 14};
+}
+function renderTimelines(){ buildBars(goodBars, goodCell); buildBars(badBars, badCell); }
+function animateBars(){
+  document.querySelectorAll('.bars .bar').forEach(b=>{ b.querySelector('i').style.height=b.dataset.h+'%'; });
+}
+renderTimelines();
+
+/* ----- true-up toggle ----- */
+const sw=document.getElementById('trueupSw');
+const warnBox=document.getElementById('warnBox');
+const warnTitle=document.getElementById('warnTitle');
+const warnSub=document.getElementById('warnSub');
+function setTrueup(on){
+  TRUEUP=on;
+  sw.classList.toggle('on',on);
+  sw.setAttribute('aria-checked',on?'true':'false');
+  renderTimelines();
+  requestAnimationFrame(()=>requestAnimationFrame(animateBars));
+  const ic=warnBox.querySelector('.ic');
+  if(on){
+    warnBox.style.borderColor='color-mix(in srgb,var(--pos) 40%,var(--line))';
+    warnBox.style.background='color-mix(in srgb,var(--pos) 7%,transparent)';
+    ic.style.background='color-mix(in srgb,var(--pos) 16%,transparent)'; ic.style.color='var(--pos)'; ic.textContent='✓';
+    warnTitle.classList.add('safe');
+    warnTitle.innerHTML='Match fully recovered by year-end true-up.';
+    warnSub.innerHTML='Your employer back-fills the <b>4</b> capped periods at the next true-up run, depositing the missed <span class="symword">'+sym()+'</span><span class="cv" data-inr="127820"></span> — nothing lost, but it lands months later instead of each paycheck.';
+  } else {
+    warnBox.style.borderColor='color-mix(in srgb,var(--neg) 40%,var(--line))';
+    warnBox.style.background='color-mix(in srgb,var(--neg) 7%,transparent)';
+    ic.style.background='color-mix(in srgb,var(--neg) 16%,transparent)'; ic.style.color='var(--neg)'; ic.textContent='!';
+    warnTitle.classList.remove('safe');
+    warnTitle.innerHTML='<span class="cv" data-inr="127820"></span> of employer match left on the table.';
+    warnSub.innerHTML='At 14% you hit the <span class="symword">'+sym()+'</span><span class="cv" data-inr="1909000"></span> cap around paycheck 20. Paychecks 21–24 contribute <b>$0</b>, so the 50%-of-6% match never deposits for those <b>4 periods</b> — <span class="symword">'+sym()+'</span><span class="cv" data-inr="31954"></span> each.';
+  }
+  warnBox.querySelectorAll('.cv').forEach(el=>renderCV(el,false));
+}
+sw.addEventListener('click',()=>setTrueup(!TRUEUP));
+sw.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();setTrueup(!TRUEUP);}});
+
+addEventListener('load',()=>setTimeout(()=>{
+  document.querySelectorAll('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%');
+  document.querySelectorAll('.cv.count').forEach(el=>renderCV(el,true));
+  fireRing();
+  animateBars();
+},350));
+
+// profile photo upload (persists across screens via localStorage)
+(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
 </script>
 </body>
 </html>
