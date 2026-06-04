@@ -1,2 +1,10 @@
+.venv/
+khata.db
+khata.db-wal
+khata.db-shm
+__pycache__/
+*.pyc
+.env
+.pytest_cache/
 .DS_Store
 **/.DS_Store

@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Khata — app</title></head>
+<body>
+  <h1>Khata app</h1>
+  <p id="who">Loading…</p>
+  <script>
+    fetch("/api/auth/me").then(r => r.ok ? r.json() : null).then(d => {
+      document.getElementById("who").textContent =
+        d ? `Signed in as ${d.user.display_name}` : "Not signed in";
+    });
+  </script>
+</body></html>
