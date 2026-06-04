@@ -1,0 +1,9 @@
+{
+  "project": "khata",
+  "phase": 1,
+  "plan": "1-foundation-auth",
+  "tasks_total": 9,
+  "tasks_done": 0,
+  "last_updated": "2026-06-04",
+  "notes": "Foundation & local auth. Update tasks_done as tasks complete."
+}
