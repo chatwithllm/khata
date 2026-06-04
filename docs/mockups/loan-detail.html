@@ -170,7 +170,9 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
 .pill.k-disb{border-color:transparent;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
 
 /* ---- right rail ---- */
-.r-stack{display:grid;gap:22px;align-content:start}
+.r-stack{display:flex;flex-direction:column;gap:22px}
+.r-stack>.panel:last-child{flex:1 1 auto;display:flex;flex-direction:column}
+.r-stack>.panel:last-child .tbody,.r-stack>.panel:last-child .rbody{flex:1;display:flex;flex-direction:column;justify-content:space-between}
 .collat .cbody{padding:20px 22px}
 .gold-top{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:16px;border-bottom:1px solid var(--line-2)}
 .gold-top .gl{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600}
@@ -323,8 +325,8 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
       <!-- ===== MAIN GRID ===== -->
       <div class="grid2">
 
-        <!-- LEFT: split ledger -->
-        <div>
+        <!-- LEFT: Ledger + release tracker -->
+        <div class="r-stack">
           <div class="panel fade d3" data-rise>
             <div class="ph">
               <div class="t" style="font-size:16px">Ledger</div>
@@ -378,6 +380,19 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
                 <div class="amt in">+<span class="cv" data-inr="600000"></span></div>
                 <div class="l2">14 Jan · 11:40 IST</div>
                 <div class="l2r"><span class="pill k-disb">disbursement</span><span class="pill">transfer</span><span class="proof">▣ sanction</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- release tracker -->
+          <div class="panel release fade d4" data-rise>
+            <div class="ph"><div class="t" style="font-size:16px">Release tracker</div><div class="meta">unpledge the gold</div></div>
+            <div class="rbody">
+              <p class="rlede">Clear <b><span class="symword">₹</span><span class="cv" data-inr="396000"></span> more</b> to release the pledged gold and close this loan.</p>
+              <div class="bigbar"><i data-w="34"></i></div>
+              <div class="rrow"><span>34% of principal cleared</span><span><span class="symword">₹</span><span class="cv" data-inr="204000"></span> repaid</span></div>
+              <div class="ramts">
+                <div class="ra"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="204000"></span></div><div class="l">Repaid</div></div>
+                <div class="ra r"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="396000"></span></div><div class="l">To release</div></div>
               </div>
             </div>
           </div>
@@ -438,20 +453,6 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
               <div class="trow"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg> Start date</span><span class="tv">14 Jan 2026</span></div>
               <div class="trow"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Tenure</span><span class="tv">12 months</span></div>
               <div class="trow"><span class="tk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Structure</span><span class="tv">Bullet / interest-only</span></div>
-            </div>
-          </div>
-
-          <!-- release tracker -->
-          <div class="panel release fade d5" data-rise>
-            <div class="ph"><div class="t" style="font-size:16px">Release tracker</div><div class="meta">unpledge the gold</div></div>
-            <div class="rbody">
-              <p class="rlede">Clear <b><span class="symword">₹</span><span class="cv" data-inr="396000"></span> more</b> to release the pledged gold and close this loan.</p>
-              <div class="bigbar"><i data-w="34"></i></div>
-              <div class="rrow"><span>34% of principal cleared</span><span><span class="symword">₹</span><span class="cv" data-inr="204000"></span> repaid</span></div>
-              <div class="ramts">
-                <div class="ra"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="204000"></span></div><div class="l">Repaid</div></div>
-                <div class="ra r"><div class="n"><span class="symword">₹</span><span class="cv" data-inr="396000"></span></div><div class="l">To release</div></div>
-              </div>
             </div>
           </div>
 
