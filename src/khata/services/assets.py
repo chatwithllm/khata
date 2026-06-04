@@ -67,5 +67,45 @@ def list_plans(session: Session, owner_id) -> list[Plan]:
         select(Plan).where(Plan.owner_user_id == owner_id).order_by(Plan.created_at.desc())))
 
 
-def asset_state(session: Session, plan: Plan) -> dict:  # implemented in Task 5
-    raise NotImplementedError
+def asset_state(session: Session, plan: Plan) -> dict:
+    total = plan.asset.total_price_minor if plan.asset is not None else 0
+    outs = [e for e in plan.ledger_entries if e.direction == "out"]
+    paid = sum(e.amount_minor for e in outs)
+
+    pool = paid
+    rows = []
+    next_due_seq = None
+    for inst in sorted(plan.installments, key=lambda i: i.seq):
+        applied = min(pool, inst.planned_amount_minor)
+        pool -= applied
+        if applied == inst.planned_amount_minor:
+            status = "paid"
+        elif applied > 0:
+            status = "partial"
+        else:
+            status = "due"
+        if status != "paid" and next_due_seq is None:
+            next_due_seq = inst.seq
+        rows.append({"seq": inst.seq,
+                     "planned_amount_minor": inst.planned_amount_minor,
+                     "applied_minor": applied,
+                     "status": status})
+
+    by_source: dict[str, int] = {}
+    for e in outs:
+        by_source[e.funding_source] = by_source.get(e.funding_source, 0) + e.amount_minor
+    # NOTE: pcts are rounded independently and may not sum to exactly 100.
+    funding_breakdown = [
+        {"source": src, "amount_minor": amt, "pct": round(amt * 100 / paid) if paid else 0}
+        for src, amt in sorted(by_source.items(), key=lambda kv: kv[1], reverse=True)
+    ]
+
+    return {
+        "total_price_minor": total,
+        "paid_to_date_minor": paid,
+        "remaining_minor": max(0, total - paid),
+        "overpaid_minor": max(0, paid - total),
+        "next_due_seq": next_due_seq,
+        "installments": rows,
+        "funding_breakdown": funding_breakdown,
+    }
