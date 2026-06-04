@@ -2,8 +2,10 @@
   "project": "khata",
   "phase": 1,
   "plan": "1-foundation-auth",
-  "tasks_total": 9,
-  "tasks_done": 0,
+  "tasks_total": 10,
+  "tasks_done": 10,
   "last_updated": "2026-06-04",
-  "notes": "Foundation & local auth. Update tasks_done as tasks complete."
+  "tests": "11 passed",
+  "python": "3.12",
+  "notes": "Plan 1 complete: Flask app factory, SQLAlchemy/SQLite+WAL, Alembic, User model, password hashing, auth service + /api/auth API with sessions, static shell + features tab, learning loop, dev entrypoint. Next: Plan 2 (plan + ledger core, asset roll-forward)."
 }

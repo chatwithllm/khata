@@ -5,10 +5,21 @@ A privacy-first, self-hosted app for the money patterns generic budgeting tools 
 > Working name: **Khata** (खाता — ledger/account).
 
 ## Status
-Design complete. Implementation not started. Phase-1 plan next.
+**Phase 1 · Plan 1 complete** — Flask + SQLite (WAL) + Alembic foundation with local
+multi-user auth (register / login / logout / session / current-user). Test-first; 11 tests green.
+Next: Plan 2 (Plan + ledger core, Asset type with roll-forward installments).
 
 ## Stack (default, web-first)
 Flask + SQLAlchemy + SQLite (WAL) + Alembic · vanilla-JS SPA · Docker. Responsive web first; native mobile later.
+
+## Run locally
+```bash
+python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env
+PYTHONPATH=src KHATA_DATABASE_URL=sqlite:///khata.db .venv/bin/alembic upgrade head
+PYTHONPATH=src .venv/bin/python wsgi.py   # http://localhost:5050
+.venv/bin/python -m pytest -v             # run tests
+```
 
 ## Plan types
 - **Asset purchase** — installments, roll-forward, proof, funding sources, joint contributors + ownership share.
