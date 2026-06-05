@@ -4,10 +4,11 @@ from flask import Blueprint, g, jsonify, request
 
 from ..models import Plan, User
 from ..money import format_minor, pct_to_bps, to_micro, to_minor
-from ..services import assets, holdings, loans, sharing
+from ..services import assets, chits, holdings, loans, sharing
 from ..services.assets import PlanError
 from ..services.loans import LoanError
 from ..services.holdings import HoldingError
+from ..services.chits import ChitError
 from .auth import current_user
 
 bp = Blueprint("plans", __name__, url_prefix="/api/plans")
@@ -50,6 +51,10 @@ def _summary(plan: Plan) -> dict:
         base.update({"asset_class": plan.holding.asset_class, "unit": plan.holding.unit,
                      "symbol": plan.holding.symbol,
                      "current_price_minor": plan.holding.current_price_minor})
+    elif plan.type == "chit" and plan.chit is not None:
+        base.update({"chit_value_minor": plan.chit.chit_value_minor,
+                     "n_members": plan.chit.n_members,
+                     "commission_bps": plan.chit.commission_bps})
     else:
         base["total_price_minor"] = plan.asset.total_price_minor if plan.asset else None
     return base
@@ -60,6 +65,8 @@ def _detail(plan: Plan) -> dict:
         state = loans.loan_state(g.db, plan.loan, as_of=date.today())
     elif plan.type == "holding":
         state = holdings.holding_state(g.db, plan.holding)
+    elif plan.type == "chit":
+        state = chits.chit_state(g.db, plan.chit)
     else:
         state = assets.asset_state(g.db, plan)
     return {"plan": _summary(plan), "state": state}
@@ -106,6 +113,13 @@ def create():
                 g.db, owner_id=user.id, name=data.get("name", ""), currency=currency,
                 asset_class=data.get("asset_class", ""), unit=data.get("unit", ""),
                 symbol=data.get("symbol"), purity=data.get("purity"))
+        elif ptype == "chit":
+            plan = chits.create_chit_plan(
+                g.db, owner_id=user.id, name=data.get("name", ""), currency=currency,
+                chit_value_minor=to_minor(data.get("chit_value", ""), currency),
+                n_members=int(data.get("n_members", 0)),
+                commission_bps=pct_to_bps(data.get("commission", "0")),
+                start_date=date.fromisoformat(data["start_date"]) if data.get("start_date") else date.today())
         else:
             total = to_minor(data.get("total_price", ""), currency)
             plan = assets.create_asset_plan(g.db, owner_id=user.id, name=data.get("name", ""),
@@ -114,7 +128,7 @@ def create():
             if items:
                 assets.set_installments(g.db, plan=plan, items=_parse_items(items, currency))
         g.db.commit()
-    except (PlanError, LoanError, HoldingError, ValueError, TypeError) as e:
+    except (PlanError, LoanError, HoldingError, ChitError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(_detail(plan)), 201
@@ -359,3 +373,48 @@ def loan_entry(plan_id):
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(entry=_entry_json(entry, plan),
                    state=loans.loan_state(g.db, plan.loan, as_of=date.today())), 201
+
+
+@bp.post("/<int:plan_id>/chit/entries")
+def chit_entry(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "chit":
+        return jsonify(error="not_a_chit"), 400
+    data = request.get_json(silent=True) or {}
+    try:
+        entry = chits.log_chit_entry(
+            g.db, plan=plan, user_id=user.id, kind=data.get("kind", ""),
+            amount_minor=to_minor(data.get("amount", ""), plan.currency),
+            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"))
+        g.db.commit()
+    except (ChitError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(entry=_entry_json(entry, plan),
+                   state=chits.chit_state(g.db, plan.chit)), 201
+
+
+@bp.get("/<int:plan_id>/chit/dividend")
+def chit_dividend(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _accessible_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "chit":
+        return jsonify(error="not_a_chit"), 400
+    try:
+        bid = to_minor(request.args.get("bid", ""), plan.currency)
+    except (ValueError, TypeError) as e:
+        return jsonify(error="invalid", detail=str(e)), 400
+    if bid <= 0 or bid > plan.chit.chit_value_minor:
+        return jsonify(error="invalid", detail="bid must be > 0 and <= chit value"), 400
+    return jsonify(chits.auction_dividend(
+        chit_value_minor=plan.chit.chit_value_minor, commission_bps=plan.chit.commission_bps,
+        n_members=plan.chit.n_members, winning_bid_minor=bid)), 200
