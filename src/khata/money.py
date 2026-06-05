@@ -1,4 +1,4 @@
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 SUPPORTED_CURRENCIES = {"INR", "USD"}
 _EXP = 2  # both INR and USD use 2 minor digits
@@ -20,7 +20,10 @@ def to_minor(value: "str | int", currency: str) -> int:
     s = str(value).strip().replace(",", "").replace("_", "")
     if not s:
         raise ValueError("empty amount")
-    d = Decimal(s)
+    try:
+        d = Decimal(s)
+    except InvalidOperation:
+        raise ValueError(f"invalid number: {s!r}")
     if not d.is_finite():
         raise ValueError(f"non-finite amount: {s!r}")
     minor = (d * (10 ** _EXP)).quantize(Decimal(1), rounding=ROUND_HALF_UP)
@@ -42,7 +45,10 @@ def pct_to_bps(value) -> int:
     s = str(value).strip().replace(",", "").replace("_", "").rstrip("%").strip()
     if not s:
         raise ValueError("empty rate")
-    d = Decimal(s)
+    try:
+        d = Decimal(s)
+    except InvalidOperation:
+        raise ValueError(f"invalid number: {s!r}")
     if not d.is_finite():
         raise ValueError(f"non-finite rate: {s!r}")
     return int((d * 100).quantize(Decimal(1), rounding=ROUND_HALF_UP))
@@ -63,7 +69,10 @@ def to_micro(value: "str | int") -> int:
     s = str(value).strip().replace(",", "").replace("_", "")
     if not s:
         raise ValueError("empty quantity")
-    d = Decimal(s)
+    try:
+        d = Decimal(s)
+    except InvalidOperation:
+        raise ValueError(f"invalid number: {s!r}")
     if not d.is_finite():
         raise ValueError(f"non-finite quantity: {s!r}")
     return int((d * (10 ** _MICRO_EXP)).quantize(Decimal(1), rounding=ROUND_HALF_UP))

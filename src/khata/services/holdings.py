@@ -44,6 +44,8 @@ def _qty_held_micro(plan: Plan) -> int:
 
 def _add_entry(session, plan, *, user_id, kind, direction, quantity_micro, amount_minor,
                occurred_at, note) -> LedgerEntry:
+    if quantity_micro is None or amount_minor is None:
+        raise ValidationError("quantity and amount are required")
     if quantity_micro <= 0:
         raise ValidationError("quantity must be > 0")
     if amount_minor <= 0:
@@ -67,7 +69,7 @@ def add_buy(session: Session, *, plan: Plan, user_id, quantity_micro, amount_min
 
 def add_sell(session: Session, *, plan: Plan, user_id, quantity_micro, amount_minor, occurred_at,
              note=None) -> LedgerEntry:
-    if quantity_micro is not None and quantity_micro > 0 and quantity_micro > _qty_held_micro(plan):
+    if quantity_micro is not None and quantity_micro > _qty_held_micro(plan):
         raise ValidationError("cannot sell more than currently held")
     return _add_entry(session, plan, user_id=user_id, kind="sell", direction="in",
                       quantity_micro=quantity_micro, amount_minor=amount_minor,
