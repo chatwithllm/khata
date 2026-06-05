@@ -24,3 +24,22 @@ def test_features_page_lists_limitations(client):
     r = client.get("/features")
     assert r.status_code == 200
     assert b"Limitations" in r.data
+
+
+def test_features_page_has_editorial_sections(client):
+    r = client.get("/features")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["Single source of truth", "Sign in with Google",
+                   "Limitations", "ledger.css"]:
+        assert needle in body
+
+
+def test_landing_has_login_and_google_hook(client):
+    r = client.get("/")
+    assert r.status_code == 200
+    body = r.data.decode()
+    assert "/api/auth/login" in body
+    assert "/api/auth/config" in body      # decides whether to show Google button
+    assert "/api/auth/google" in body
+    assert "ledger.css" in body

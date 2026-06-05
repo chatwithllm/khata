@@ -1,7 +1,120 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><title>Khata</title></head>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — your money, your ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/assets/ledger.css">
+</head>
 <body>
-  <h1>Khata — money the way you actually pay it</h1>
-  <p>Privacy-first money-plans &amp; net-worth ledger.</p>
-  <p><a href="/app">Open app</a> · <a href="/features">Features</a></p>
-</body></html>
+<div class="wrap">
+  <nav class="nav">
+    <a class="brand" href="/"><span class="glyph"></span> Khata</a>
+    <div><a class="link" href="/features">Features</a><a class="link" href="/app">Open app</a></div>
+  </nav>
+
+  <section class="hero" style="display:grid;grid-template-columns:1.2fr .8fr;gap:48px;align-items:center">
+    <div class="reveal">
+      <h1>Your money,<br>your ledger,<br>your machine.</h1>
+      <p>A privacy-first, self-hosted ledger for money plans and net worth — INR-native, multi-currency, exact to the paise. <a class="tlink" href="/features">See features &amp; limits →</a></p>
+    </div>
+
+    <div class="card reveal" id="auth">
+      <div class="authrow">
+        <strong id="auth-title" style="font-family:'Fraunces',serif;font-size:20px">Sign in</strong>
+        <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+        <input id="name" type="text" placeholder="Display name" autocomplete="name" style="display:none">
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+        <div class="err" id="err"></div>
+        <button class="btn" id="submit">Sign in</button>
+        <div class="muted">
+          <span id="toggle-text">New here?</span>
+          <span class="tlink" id="toggle">Create an account</span>
+        </div>
+        <div id="google-area" style="display:none">
+          <div class="muted" style="margin:8px 0">— or —</div>
+          <div id="g_id_onload"></div>
+          <div class="gbtn" id="g_btn"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Khata — your money, your ledger, your machine.</span>
+    <span><a class="link" href="/features">Features</a></span>
+  </footer>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let mode = "login";  // or "register"
+
+  $("toggle").addEventListener("click", () => {
+    mode = mode === "login" ? "register" : "login";
+    const reg = mode === "register";
+    $("auth-title").textContent = reg ? "Create account" : "Sign in";
+    $("submit").textContent = reg ? "Create account" : "Sign in";
+    $("name").style.display = reg ? "block" : "none";
+    $("toggle-text").textContent = reg ? "Have an account?" : "New here?";
+    $("toggle").textContent = reg ? "Sign in" : "Create an account";
+    $("err").textContent = "";
+  });
+
+  $("submit").addEventListener("click", async () => {
+    $("err").textContent = "";
+    const path = mode === "register" ? "/api/auth/register" : "/api/auth/login";
+    const payload = { email: $("email").value, password: $("password").value };
+    if (mode === "register") payload.display_name = $("name").value;
+    const r = await fetch(path, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (r.ok) { window.location.href = "/app"; return; }
+    const e = await r.json().catch(() => ({}));
+    $("err").textContent = ({
+      invalid_credentials: "Wrong email or password.",
+      email_taken: "That email already has an account.",
+      invalid: "Check your details and try again.",
+    })[e.error] || "Something went wrong.";
+  });
+
+  // Google button — only if the server has a client id configured.
+  (async () => {
+    let cid = null;
+    try { cid = (await (await fetch("/api/auth/config")).json()).google_client_id; } catch (_) {}
+    if (!cid) return;
+    $("google-area").style.display = "block";
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true;
+    s.onload = () => {
+      google.accounts.id.initialize({ client_id: cid, callback: onGoogle });
+      google.accounts.id.renderButton($("g_btn"), { theme: "outline", size: "large", width: 320 });
+    };
+    document.head.appendChild(s);
+  })();
+
+  async function onGoogle(resp) {
+    const r = await fetch("/api/auth/google", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential: resp.credential }),
+    });
+    if (r.ok) { window.location.href = "/app"; return; }
+    const e = await r.json().catch(() => ({}));
+    $("err").textContent = ({
+      email_unverified: "Your Google email isn't verified.",
+      google_not_configured: "Google sign-in isn't enabled here.",
+    })[e.error] || "Google sign-in failed.";
+  }
+
+  const io = new IntersectionObserver((es) => {
+    es.forEach((x) => { if (x.isIntersecting) { x.target.classList.add("in"); io.unobserve(x.target); } });
+  }, { threshold: .12 });
+  document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+</script>
+</body>
+</html>

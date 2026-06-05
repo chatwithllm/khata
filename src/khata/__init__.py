@@ -10,6 +10,9 @@ def create_app(config: Config | None = None) -> Flask:
     app.config["SECRET_KEY"] = cfg.secret_key
     app.config["KHATA"] = cfg
 
+    from .services.auth import verify_google_credential
+    app.config["GOOGLE_VERIFIER"] = verify_google_credential
+
     engine = make_engine(cfg.database_url)
     SessionLocal = make_session_factory(engine)
     app.config["ENGINE"] = engine

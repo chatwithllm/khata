@@ -42,3 +42,66 @@ def test_duplicate_register_conflicts(client):
     payload = {"email": "a@b.com", "display_name": "A", "password": "pw12345"}
     assert client.post("/api/auth/register", json=payload).status_code == 201
     assert client.post("/api/auth/register", json=payload).status_code == 409
+
+
+def _google_client(verifier, client_id="test-cid"):
+    cfg = Config()
+    cfg.database_url = "sqlite:///:memory:"
+    cfg.google_client_id = client_id
+    app = create_app(cfg)
+    app.config["TESTING"] = True
+    app.config["GOOGLE_VERIFIER"] = verifier
+    Base.metadata.create_all(app.config["ENGINE"])
+    return app.test_client()
+
+
+def test_auth_config_reports_client_id():
+    c = _google_client(lambda cred, cid: {}, client_id="abc.apps.googleusercontent.com")
+    r = c.get("/api/auth/config")
+    assert r.status_code == 200
+    assert r.get_json()["google_client_id"] == "abc.apps.googleusercontent.com"
+
+
+def test_auth_config_null_when_unset(client):
+    r = client.get("/api/auth/config")
+    assert r.status_code == 200
+    assert r.get_json()["google_client_id"] is None
+
+
+def test_google_login_creates_and_sets_session():
+    claims = {"sub": "z-1", "email": "z@b.com", "email_verified": True, "name": "Zoya"}
+    c = _google_client(lambda cred, cid: claims)
+    r = c.post("/api/auth/google", json={"credential": "fake"})
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body["created"] is True
+    assert body["user"]["email"] == "z@b.com"
+    # session established → /me works
+    assert c.get("/api/auth/me").status_code == 200
+
+
+def test_google_login_not_configured_503(client):
+    # default Config() has no google_client_id
+    r = client.post("/api/auth/google", json={"credential": "fake"})
+    assert r.status_code == 503
+    assert r.get_json()["error"] == "google_not_configured"
+
+
+def test_google_login_invalid_token_401():
+    from khata.services.auth import GoogleAuthError
+
+    def bad(cred, cid):
+        raise GoogleAuthError("bad signature")
+
+    c = _google_client(bad)
+    r = c.post("/api/auth/google", json={"credential": "fake"})
+    assert r.status_code == 401
+    assert r.get_json()["error"] == "invalid_token"
+
+
+def test_google_login_unverified_email_403():
+    claims = {"sub": "z-2", "email": "z2@b.com", "email_verified": False, "name": "Z2"}
+    c = _google_client(lambda cred, cid: claims)
+    r = c.post("/api/auth/google", json={"credential": "fake"})
+    assert r.status_code == 403
+    assert r.get_json()["error"] == "email_unverified"

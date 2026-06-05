@@ -87,3 +87,29 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
 - Review-driven cleanup: `api.plans.index` and `dashboard.net_position` had duplicated owned+member
   resolution; extracted `sharing.user_plans(session, user_id) -> (owned, member)` (newest-first,
   deduped) used by both. Dropped an always-true `assert ... or True` scaffold line in a dashboard test.
+
+## 2026-06-04 — Plan 5 (Google sign-in + Features page)
+- Google sign-in is identity-only via GIS ID tokens. The verifier (`verify_google_credential`,
+  google-auth) is **injected** through `app.config["GOOGLE_VERIFIER"]` and imports google-auth
+  lazily, so all auth logic is unit-tested with plain claims dicts — no network, no real client ID.
+- `login_with_google` is find-by-`google_sub` → link-by-verified-email → create. Linking/creation is
+  gated on `email_verified` (raises `EmailUnverifiedError` → 403). `google_sub` is unique; matching by
+  sub first means a changed Google email never forks the account. Review-fix: refuse to link when the
+  email-matched account already has a *different* google_sub (`GoogleAuthError("account_link_conflict")`,
+  maps to 401) — prevents silently overwriting an existing Google identity.
+- API split: `GET /api/auth/config` exposes the (public) client id so a fully static frontend can
+  decide whether to render the Google button; `POST /api/auth/google` 503s when unconfigured — so
+  self-hosters who skip OAuth still get working email/password.
+- Frontend now has a real shared stylesheet `static/assets/ledger.css` (extracted verbatim from the
+  mockup kit §2) used by both static pages — the first step toward building the real app UI off the
+  mockups. The landing login JS sets all error text via textContent (XSS-safe) and never loads GIS
+  unless a client id is configured.
+
+### Deferred follow-ups
+- Let Google-created users (password_hash=NULL) set a password later (account settings).
+- Import Google profile picture (we already support manual upload; left out per YAGNI).
+- The landing/login page is hand-rolled HTML+JS; when the real app shell is built, consolidate the
+  auth JS into a shared module. Remove the unused `#g_id_onload` div.
+- `verify_google_credential` catches only ValueError; a google-auth TransportError (Google
+  unreachable during cert fetch) currently propagates as 500 — acceptable (not the user's token), note
+  before prod.
