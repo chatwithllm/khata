@@ -260,3 +260,9 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   (corpus nominal+real cards) + Update modal pre-filled from state + create Retirement tab.
 - **Phase 4 done:** chit funds + secured loans/collateral + retirement planner — three new domains,
   each backend + UI, money-reviewed. Test suite 127→153.
+
+## 2026-06-05 — Plan 5.1 (Account settings)
+- `/settings` page + `set_password`/`update_profile` endpoints (session-authed, no old-password — so
+  Google-created `password_hash=None` users can add a password and then use email/password login).
+  `_user_json` exposes `has_password` → UI shows "Set" vs "Change". Currency/FX reuse existing endpoints.
+  Sidebar Settings is now a real link. createElement-only.

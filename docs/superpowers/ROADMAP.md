@@ -69,7 +69,7 @@ record the chosen product model explicitly.
 ---
 
 ## Phase 5 — Settings, hardening & advanced
-- [ ] **5.1 Account settings.** Google-created users set a password; edit display name + profile photo;
+- [x] **5.1 Account settings.** Google-created users set a password; edit display name + profile photo;
   base-currency & FX management UI; clears the deferred auth follow-ups.
 - [ ] **5.2 Hardening sweep.** Burn down the `AGENT_LEARNINGS.md` deferred follow-ups: `add_buy`/
   `add_sell` `None`-qty → `ValidationError` guard + holdings edge tests (sell-to-zero, multiple sells,
