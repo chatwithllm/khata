@@ -121,6 +121,16 @@
 </div>
 
 <script>
+// When arriving with ?type=<asset|chit|loan|retirement>, hide the dashboard-only
+// widgets SYNCHRONOUSLY before first paint, so they don't flash before the focused
+// list renders. (boot() also reasserts this once data loads.)
+(function(){
+  const tf = new URLSearchParams(location.search).get('type');
+  if(!tf) return;
+  const hide = (sel)=>{ const e=document.querySelector(sel); if(e) e.style.display='none'; };
+  hide('.stats'); hide('#featured'); hide('#rightcol');
+  const g=document.querySelector('.grid2'); if(g) g.style.gridTemplateColumns='1fr';
+})();
 const $ = (id) => document.getElementById(id);
 let BASE = "INR";
 
