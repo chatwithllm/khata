@@ -2,14 +2,14 @@
   "project": "khata",
   "plan": "docs/superpowers/ROADMAP.md \u2014 Phases 3\u20135 (12 plans)",
   "started_at": "2026-06-04T00:00:00Z",
-  "updated_at": "2026-06-05T11:15:00Z",
+  "updated_at": "2026-06-05T12:00:00Z",
   "total_tasks": 17,
-  "tasks_done": 16,
+  "tasks_done": 17,
   "current_task": {
-    "id": "6.5",
-    "title": "Holdings + create + settings + analysis fidelity",
-    "phase": "Phase 6 - UI fidelity",
-    "status": "pending"
+    "id": "done",
+    "title": "Phase 6 UI fidelity complete \u2014 whole app matches the mockups",
+    "phase": "Complete",
+    "status": "completed"
   },
   "phases": [
     {
@@ -28,12 +28,12 @@
       "status": "done"
     },
     {
-      "name": "Phase 6 - UI fidelity (6.1-6.4 done; 6.5 next)",
+      "name": "Phase 6 - UI fidelity (6.1-6.5 COMPLETE)",
       "task_range": "13-17",
-      "status": "in_progress"
+      "status": "done"
     }
   ],
-  "last_commit": "87a3bd3",
+  "last_commit": "24b4197",
   "last_gate_passed": true,
   "open_issues": 0,
   "incidents": 3,
@@ -109,6 +109,13 @@
       "gate": "pass",
       "commit": "87a3bd3",
       "timestamp": "2026-06-05T11:10:00Z"
+    },
+    {
+      "task": "6.5",
+      "title": "Holdings/Create/Settings/Analysis fidelity + Phase 6 complete",
+      "gate": "pass",
+      "commit": "24b4197",
+      "timestamp": "2026-06-05T11:55:00Z"
     }
   ]
 }

@@ -8,7 +8,7 @@ recommended option on every design fork. Deploy locally + final report at the ve
 Branching: one branch/PR per phase; each plan gets its own spec + plan + tests + reviews.
 
 ## Snapshot
-- **Tests:** 181 passing · Python 3.12 · Phases 1-5 COMPLETE (12/12) + Phase 6 UI fidelity (4/5)
+- **Tests:** 181 passing · Python 3.12 · Phases 1-5 COMPLETE (12/12) + Phase 6 UI fidelity COMPLETE (5/5)
 - **Merged:** Phases 1Ã¢ÂÂ2 (PRs #1Ã¢ÂÂ#7) + Plan 3.1 app shell (PR #8).
 - **Now building:** Phase 3 (app UI) on `feat/phase3-ui` Ã¢ÂÂ Phase 3 done â integration review + PR next.
 - **Live dashboard (LAN):** http://192.168.50.189:9001/dashboard.html (auto-refresh 5s).
@@ -45,9 +45,13 @@ Branching: one branch/PR per phase; each plan gets its own spec + plan + tests +
 - [x] 6.2 Shared app-shell CSS (static/assets/app.css)
 - [x] 6.3 Asset detail + log-payment fidelity
 - [x] 6.4 Loan + chit + retirement detail fidelity
-- [ ] 6.5 Holdings + create + settings + analysis fidelity
+- [x] 6.5 Holdings + create + settings + analysis fidelity
 
 ## Log (newest first)
+- **6.5 - Holdings/Create/Settings/Analysis fidelity (Phase 6 FINALE)** (`feat/phase6-fidelity`). Holdings net
+  worth + table on the shell (spot-ticker gated off — no fabricated market data); create-plan reskinned with
+  all 5 plan types (enums verified) + redirect-to-detail; holding-detail/settings/analysis shell consistency;
+  restored the chit auction-what-if calculator. Review PASS. **Phase 6 COMPLETE.** 181 tests. PR opened.
 - **6.4 - Loan/Chit/Retirement detail fidelity** (`feat/phase6-fidelity`). All three detail pages on the
   editorial shell + grid2 panels wired to live state. Loan: release tracker + conditional collateral/LTV.
   Chit: real ledger + rounds strip (aggregate win only) + net-position chart from cumulative ledger.

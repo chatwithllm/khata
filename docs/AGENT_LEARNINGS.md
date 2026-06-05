@@ -325,3 +325,12 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   retirement split total base made honest. **Follow-up for 6.5:** the chit dividend/auction-what-if
   calculator (GET /chit/dividend) was dropped from the fidelity port — endpoint still live; restore as a
   compact slide-over so it isn't an orphaned endpoint.
+- **6.5 Holdings/Create/Settings/Analysis fidelity + Phase 6 finale:** holdings ported to editorial shell
+  (net-worth KPIs + holdings table + manual-quote inputs + FX controls); the mockup's "Live spot prices"
+  ticker is decorative market data we don't have → gated on /api/feed/config (off by default → omitted, never
+  fabricated). create-plan reskinned with all FIVE plan types creatable, every dropdown/payload key verified
+  against create() + service enums (ASSET_CLASSES, DIRECTIONS, INTEREST_TYPES, SUPPORTED_CURRENCIES) — on 201
+  redirects to the new plan's detail route. holding-detail/settings/analysis given shell consistency. Restored
+  the chit auction-what-if calculator (GET /chit/dividend) as a panel so the live endpoint isn't orphaned.
+  Adversarial review PASS, no defects. Phase 6 (UI fidelity) COMPLETE — the whole app now matches the
+  editorial mockups, wired to live data, XSS-safe, with honest degradation wherever the backend lacks data.

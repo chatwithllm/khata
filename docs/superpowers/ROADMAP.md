@@ -115,6 +115,6 @@ backend data — ported gracefully, never fabricated; logged for a later backend
 - [x] **6.2 Shared app shell CSS** — extract the mockup shell CSS to `static/assets/app.css` (folded into 6.1/6.3).
 - [x] **6.3 Asset detail + log-payment** — port `asset-detail.html` / `log-payment.html`.
 - [x] **6.4 Loan + chit + retirement detail** — port `loan-detail.html` / `chit-detail.html` / `retirement-401k.html`.
-- [ ] **6.5 Holdings + create + settings + analysis** — port `holdings.html` / `create-plan.html` + polish settings/analysis.
+- [x] **6.5 Holdings + create + settings + analysis** — port `holdings.html` / `create-plan.html` + polish settings/analysis.
 
-**Phase 6 done when:** the real app visually matches the mockups, fully wired to live data.
+**Phase 6 COMPLETE (2026-06-05).**  the real app visually matches the mockups, fully wired to live data.
