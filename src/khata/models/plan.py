@@ -31,6 +31,8 @@ class Plan(Base):
         back_populates="plan", uselist=False, cascade="all, delete-orphan")
     chit: Mapped["Chit | None"] = relationship(
         back_populates="plan", uselist=False, cascade="all, delete-orphan")
+    retirement: Mapped["Retirement | None"] = relationship(
+        back_populates="plan", uselist=False, cascade="all, delete-orphan")
     installments: Mapped[list["Installment"]] = relationship(
         back_populates="plan", cascade="all, delete-orphan", order_by="Installment.seq")
     ledger_entries: Mapped[list["LedgerEntry"]] = relationship(
