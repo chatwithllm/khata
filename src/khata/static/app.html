@@ -97,7 +97,7 @@
       <!-- stat row -->
       <div class="stats">
         <div class="stat hero-stat fade"><div class="k">Net position</div><div class="v"><span class="cur" id="nw-cur">₹</span><span id="networth">—</span></div><div class="d up" style="color:var(--accent-dk)">across all plans</div></div>
-        <div class="stat fade d1"><div class="k">Paid to date</div><div class="v"><span class="cur" id="paid-cur">₹</span><span id="paid">—</span></div><div class="d up">into your asset plans</div></div>
+        <div class="stat fade d1"><div class="k">Paid to date</div><div class="v"><span class="cur" id="paid-cur">₹</span><span id="paid">—</span></div><div class="d up" id="paid-d">into your asset plans</div></div>
         <div class="stat fade d2"><div class="k">I owe</div><div class="v"><span class="cur" id="iowe-cur">₹</span><span id="iowe">—</span></div><div class="d dn">loans you've taken</div></div>
         <div class="stat fade d3"><div class="k">Owed to me</div><div class="v"><span class="cur" id="owed-cur">₹</span><span id="owed">—</span></div><div class="d up">loans given + chit dividends</div></div>
       </div>
@@ -249,6 +249,32 @@ function fmtDate(iso){
   const hh=String(d.getHours()).padStart(2,'0');
   const mm=String(d.getMinutes()).padStart(2,'0');
   return day+' '+mon+' · '+hh+':'+mm;
+}
+
+// ── stat card #2 "Paid to date" month-delta subtitle ──
+// derives a REAL "most recent month with out-payments" figure from the featured
+// asset ledger; labels it with that month's actual name (not "this month").
+function setPaidMonthDelta(ledger){
+  const sub=$('paid-d');
+  if(!sub || !Array.isArray(ledger)) return;
+  const outs=ledger.filter(r=>r && r.direction==='out' && r.occurred_at && r.amount_minor!=null);
+  if(!outs.length) return; // leave existing honest text
+  // most recent YYYY-MM among out-payments
+  let latestKey='';
+  for(const r of outs){
+    const key=String(r.occurred_at).slice(0,7); // YYYY-MM
+    if(key>latestKey) latestKey=key;
+  }
+  if(!latestKey) return;
+  let sum=0;
+  for(const r of outs){ if(String(r.occurred_at).slice(0,7)===latestKey) sum+=Math.abs(r.amount_minor); }
+  const [y,m]=latestKey.split('-');
+  const monthName=new Date(Number(y), Number(m)-1, 1).toLocaleString('en-US',{month:'long'});
+  sub.textContent='';
+  sub.append(document.createTextNode('▲ '));
+  sub.append(amtSpan(sum));
+  sub.append(document.createTextNode(' · '+monthName+' '+y));
+  sub.classList.add('up');
 }
 
 function renderFeaturedEmpty(box){
@@ -451,6 +477,8 @@ async function boot(){
     try{
       const d=await fetch('/api/plans/'+assets[0].id).then(r=>r.json());
       renderFeatured(featBox, d.plan, d.state);
+      try{ setPaidMonthDelta(d.state && d.state.ledger); }
+      catch(err){ console.error('paid month-delta failed', err); }
     }catch(e){ renderFeaturedEmpty(featBox); }
   } else {
     renderFeaturedEmpty(featBox);
@@ -474,9 +502,19 @@ async function boot(){
     else if(dir==='given') given.push(d);
   }
   // order: chit, then liabilities, then lent (given)
-  for(const p of chitPlans){ const d=details[p.id]; if(d) right.append(chitPanel(d)); }
-  if(taken.length) right.append(liabPanel(taken));
-  for(const d of given){ right.append(loanGivenPanel(d)); }
+  // each panel append is isolated so one failing panel can't blank the column
+  for(const p of chitPlans){
+    try{ const d=details[p.id]; if(d) right.append(chitPanel(d)); }
+    catch(err){ console.error('chitPanel failed for plan '+p.id, err); }
+  }
+  if(taken.length){
+    try{ right.append(liabPanel(taken)); }
+    catch(err){ console.error('liabPanel failed', err); }
+  }
+  for(const d of given){
+    try{ right.append(loanGivenPanel(d)); }
+    catch(err){ console.error('loanGivenPanel failed for plan '+(d&&d.plan&&d.plan.id), err); }
+  }
   if(!right.children.length){
     const p=el('div','panel fade d3');
     const ph=el('div','ph'); ph.append(el('div','t','Activity'), el('div','meta','')); ph.querySelector('.t').style.fontSize='16px';
