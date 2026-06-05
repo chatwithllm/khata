@@ -176,6 +176,22 @@
   </div>
 </aside>
 
+<!-- edit-entry slide-over (reuses #scrim) -->
+<aside class="over" id="edit-over" aria-hidden="true">
+  <div class="oh">
+    <div class="eyebrow">Edit</div>
+    <h3>Edit a loan <em>entry</em></h3>
+    <div class="osub" id="edit-osub"></div>
+  </div>
+  <div class="obody">
+    <div class="fld"><label for="edit-amount">Amount</label><input id="edit-amount" placeholder="50,000" inputmode="decimal"></div>
+    <div class="fld"><label for="edit-occurred">Date (when it happened)</label><input id="edit-occurred" type="date"></div>
+    <div class="fld"><label for="edit-note">Note (optional)</label><input id="edit-note" placeholder=""></div>
+    <div class="err" id="edit-err"></div>
+    <div class="acts"><button class="save" id="edit-save">Save changes</button><span class="cancel" id="edit-cancel">Cancel</span><span class="del" id="del-entry" style="margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
+  </div>
+</aside>
+
 <!-- pledge-collateral slide-over -->
 <div class="scrim" id="pscrim"></div>
 <aside class="over" id="pover" aria-hidden="true">
@@ -389,6 +405,12 @@ function renderLedger(box, st){
     if(meta2.pill) l2r.append(el('span','pill '+meta2.pill, meta2.pillText));
     if(it.method) l2r.append(el('span','pill', it.method));
     if(it.has_proof){ l2r.append(el('span','proof','▣ proof')); }
+    if(it.id!=null){
+      const edit=el('span','proof','✎ edit'); edit.style.cursor='pointer'; edit.tabIndex=0; edit.setAttribute('role','button');
+      edit.addEventListener('click', ()=>openEdit(it));
+      edit.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); openEdit(it); } });
+      l2r.append(edit);
+    }
     lrow.append(l2r);
     led.append(lrow);
   }
@@ -560,6 +582,19 @@ async function loadPledgeList(){
 function openOver(){ $('err').textContent=''; $('scrim').classList.add('on'); $('over').classList.add('on'); $('over').setAttribute('aria-hidden','false'); $('amount').focus(); }
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
 
+// ── edit-entry slide-over open/close (PATCH/DELETE existing ledger entry) ──
+let editId=null;
+function openEdit(it){
+  editId=it.id;
+  $('edit-err').textContent='';
+  $('edit-osub').textContent=(LEDGER_KIND[it.kind]?LEDGER_KIND[it.kind].label:(it.kind||'entry'));
+  $('edit-amount').value=(Math.abs(it.amount_minor||0)/100);
+  $('edit-note').value=it.note||'';
+  $('edit-occurred').value=(it.occurred_at||'').slice(0,10);
+  $('scrim').classList.add('on'); $('edit-over').classList.add('on'); $('edit-over').setAttribute('aria-hidden','false'); $('edit-amount').focus();
+}
+function closeEdit(){ $('scrim').classList.remove('on'); $('edit-over').classList.remove('on'); $('edit-over').setAttribute('aria-hidden','true'); }
+
 // ── boot ──
 async function boot(){
   const me = await fetch('/api/auth/me');
@@ -621,10 +656,32 @@ $('etype').addEventListener('change', ()=>{
 });
 $('addbtn').addEventListener('click', openOver);
 $('cancel').addEventListener('click', closeOver);
-$('scrim').addEventListener('click', closeOver);
+$('scrim').addEventListener('click', ()=>{ closeOver(); closeEdit(); });
+$('edit-cancel').addEventListener('click', closeEdit);
 $('pcancel').addEventListener('click', closePledge);
 $('pscrim').addEventListener('click', closePledge);
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closePledge(); } });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeEdit(); closePledge(); } });
+
+// ── edit slide-over: PATCH (save changes) / DELETE (delete entry) ──
+$('edit-save').addEventListener('click', async ()=>{
+  if(editId==null) return;
+  $('edit-err').textContent='';
+  const occ = $('edit-occurred').value ? $('edit-occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift
+  const body = { amount:$('edit-amount').value, occurred_at:occ, note:$('edit-note').value || null };
+  const r = await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if(r.ok){ closeEdit(); boot(); return; }
+  const e = await r.json().catch(()=>({}));
+  $('edit-err').textContent = e.detail || e.error || 'Could not save changes.';
+});
+$('del-entry').addEventListener('click', async ()=>{
+  if(editId==null) return;
+  if(!confirm('Delete this entry? This cannot be undone.')) return;
+  $('edit-err').textContent='';
+  const r = await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'DELETE' });
+  if(r.ok){ closeEdit(); boot(); return; }
+  const e = await r.json().catch(()=>({}));
+  $('edit-err').textContent = e.detail || e.error || 'Could not delete.';
+});
 $('save').addEventListener('click', async ()=>{
   $('err').textContent='';
   const kind=$('etype').value;

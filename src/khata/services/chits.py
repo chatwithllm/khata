@@ -69,7 +69,8 @@ def chit_state(session: Session, chit: Chit) -> dict:
     prize = total("chit_prize")
     subscription = _round(Decimal(chit.chit_value_minor) / chit.n_members) if chit.n_members else 0
     months_recorded = sum(1 for e in plan.ledger_entries if e.kind == "chit_contribution")
-    ledger = [{"kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
+    ledger = [{"id": e.id, "kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
+               "created_at": e.created_at.isoformat() if e.created_at else None,
                "occurred_at": e.occurred_at.isoformat(), "note": e.note}
               for e in plan.ledger_entries if e.kind in CHIT_KINDS]
     return {

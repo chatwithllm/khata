@@ -250,6 +250,22 @@
   </div>
 </aside>
 
+<!-- edit-entry slide-over -->
+<aside class="over" id="edit-over" aria-hidden="true">
+  <div class="oh">
+    <div class="eyebrow">Edit</div>
+    <h3>Edit chit <em>entry</em></h3>
+    <div class="osub" id="edit-osub"></div>
+  </div>
+  <div class="obody">
+    <div class="fld"><label for="edit-amount">Amount</label><input id="edit-amount" placeholder="16,667" inputmode="decimal"></div>
+    <div class="fld"><label for="edit-occurred">Date (when it happened)</label><input id="edit-occurred" type="date"></div>
+    <div class="fld"><label for="edit-note">Note (optional)</label><input id="edit-note" placeholder="month 6 subscription"></div>
+    <div class="err" id="edit-err"></div>
+    <div class="acts"><button class="save" id="edit-save">Save changes</button><span class="cancel" id="edit-cancel">Cancel</span><span class="del" id="del-entry" style="margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
+  </div>
+</aside>
+
 <script src="/static/assets/sharing.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -514,6 +530,15 @@ function renderLedger(box, st){
     const ss=el('span','symword'); ss.textContent=pfx+sym(BASE); aw.append(ss);
     const nn=el('span'); nn.textContent=fmtNum(Math.abs(e.amount_minor), BASE); aw.append(nn);
     amt.append(aw);
+    // ✎ edit affordance — opens the edit slide-over pre-filled from this entry
+    if(e.id!=null){
+      const edit=el('span','proof','✎ edit');
+      edit.style.cssText='cursor:pointer;font-size:11.5px;color:var(--ink-faint);margin-top:4px;display:inline-block';
+      edit.tabIndex=0; edit.setAttribute('role','button');
+      edit.addEventListener('click', ()=>openEdit(e));
+      edit.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); openEdit(e); } });
+      amt.append(document.createElement('br'), edit);
+    }
     r.append(dot, li, amt);
     body.append(r);
   }
@@ -674,6 +699,20 @@ function renderMembers(box){
 function openOver(){ $('err').textContent=''; $('scrim').classList.add('on'); $('over').classList.add('on'); $('over').setAttribute('aria-hidden','false'); $('amount').focus(); }
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
 
+// ── edit-entry slide-over open/close ──
+let editId=null;
+function openEdit(e){
+  editId=e.id;
+  $('edit-err').textContent='';
+  $('edit-amount').value=(Math.abs(e.amount_minor||0)/100);
+  $('edit-note').value=e.note||'';
+  $('edit-occurred').value=(e.occurred_at||'').slice(0,10);
+  $('edit-osub').textContent='in '+($('name').textContent||'this chit');
+  $('scrim').classList.add('on'); $('edit-over').classList.add('on'); $('edit-over').setAttribute('aria-hidden','false');
+  $('edit-amount').focus();
+}
+function closeEdit(){ $('scrim').classList.remove('on'); $('edit-over').classList.remove('on'); $('edit-over').setAttribute('aria-hidden','true'); }
+
 // ── 7.4 in-page not-found (no redirect) ──
 // Renders a centered "Plan not found" panel into the main content region.
 function renderNotFound(){
@@ -771,8 +810,8 @@ $('curtog').addEventListener('click', async (e)=>{
 // ── add-entry wiring ──
 $('addbtn').addEventListener('click', openOver);
 $('cancel').addEventListener('click', closeOver);
-$('scrim').addEventListener('click', closeOver);
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); } });
+$('scrim').addEventListener('click', ()=>{ closeOver(); closeEdit(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeEdit(); } });
 $('save').addEventListener('click', async ()=>{
   $('err').textContent='';
   const body={ kind:$('kind').value, amount:$('amount').value, occurred_at:($('occurred').value || null), note:($('note').value || null) };
@@ -780,6 +819,28 @@ $('save').addEventListener('click', async ()=>{
   if(r.ok){ closeOver(); $('amount').value=''; $('note').value=''; $('occurred').value=''; boot(); return; }
   const e=await r.json().catch(()=>({}));
   $('err').textContent = e.detail || e.error || 'Could not save the entry.';
+});
+
+// ── edit-entry wiring (chit entries send only amount, occurred_at, note) ──
+$('edit-cancel').addEventListener('click', closeEdit);
+$('edit-save').addEventListener('click', async ()=>{
+  if(editId==null) return;
+  $('edit-err').textContent='';
+  const occ = $('edit-occurred').value ? $('edit-occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift
+  const body={ amount:$('edit-amount').value, occurred_at:occ, note:($('edit-note').value || null) };
+  const r=await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if(r.ok){ closeEdit(); boot(); return; }
+  const e=await r.json().catch(()=>({}));
+  $('edit-err').textContent = e.detail || e.error || 'Could not save changes.';
+});
+$('del-entry').addEventListener('click', async ()=>{
+  if(editId==null) return;
+  if(!confirm('Delete this entry? This cannot be undone.')) return;
+  $('edit-err').textContent='';
+  const r=await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'DELETE' });
+  if(r.ok){ closeEdit(); boot(); return; }
+  const e=await r.json().catch(()=>({}));
+  $('edit-err').textContent = e.detail || e.error || 'Could not delete.';
 });
 
 // ── profile photo upload (localStorage, display-only) ──
