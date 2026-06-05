@@ -78,10 +78,10 @@
     <h3>Log a payment</h3>
     <div class="fld"><label>Amount</label><input id="amount" placeholder="50,000"></div>
     <div class="fld"><label>Method</label>
-      <select id="method"><option>transfer</option><option>upi</option><option>cash</option><option>card</option></select>
+      <select id="method"><option value="transfer">Transfer</option><option value="upi">UPI</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select>
     </div>
     <div class="fld"><label>Funding source</label>
-      <select id="fsource"><option>savings</option><option>salary</option><option>chit payout</option><option>other</option></select>
+      <select id="fsource"><option value="savings">Savings</option><option value="loan">Loan</option><option value="borrowed">Borrowed</option><option value="sold_asset">Sold asset</option><option value="chit_payout">Chit payout</option><option value="other">Other</option></select>
     </div>
     <div class="fld"><label>Note (optional)</label><input id="note" placeholder=""></div>
     <div class="err" id="err"></div>
