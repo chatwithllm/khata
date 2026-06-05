@@ -155,6 +155,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Sidebar type links now carry ?type on ALL pages (was one-click only from the dashboard; two clicks from detail pages).
 - 2026-06-05 — Loan edit form includes Principal (fixes ₹0 loans); Edit/Delete restyled as proper buttons.
 - 2026-06-05 — Can edit a loan's terms + delete a whole plan (PATCH/DELETE /api/plans/<id>).
 - 2026-06-05 — Loan create form now captures Principal (logs opening disbursement).
