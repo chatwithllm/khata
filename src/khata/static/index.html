@@ -30,7 +30,7 @@
         <button data-set="usd">$ USD</button>
       </div>
       <span class="nav-div"></span>
-      <a href="#start" class="btn-nav">Sign in →</a>
+      <a href="#start" class="btn-nav" id="nav-signin">Sign in →</a>
     </div>
   </div>
 </nav>
@@ -43,7 +43,7 @@
       <h1>Money the way <em>you actually</em> pay it.</h1>
       <p class="lede">Buying an asset in pieces as funds arrive? Running or joining a chit fund? Track every rupee — paid, owed, and owed to you — with proof, on your own hardware.</p>
       <div class="cta-row">
-        <a href="#start" class="btn-dark">Sign in <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a href="#start" class="btn-dark" id="hero-signin">Sign in <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         <a href="#how" class="btn-alt"><span>See how it works</span></a>
       </div>
       <p class="cta-note"><b>✓</b> Google sign-in or a local password. Nothing leaves your machine.</p>
@@ -310,6 +310,11 @@
   function closeSignin() { modal.classList.remove("on"); }
   $("signin-open").addEventListener("click", openSignin);
   $("google-open").addEventListener("click", openSignin);
+  // "Sign in" in the nav + hero open the form in ONE step (no scroll-then-click).
+  ["nav-signin", "hero-signin"].forEach((id) => {
+    const el = $(id);
+    if (el) el.addEventListener("click", (e) => { e.preventDefault(); openSignin(); });
+  });
   $("signin-close").addEventListener("click", closeSignin);
   modal.addEventListener("click", (e) => { if (e.target === modal) closeSignin(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSignin(); });

@@ -145,6 +145,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Landing: nav + hero 'Sign in' open the sign-in/create modal in one click (was scroll-then-click).
 - 2026-06-05 — Added Log out to every app page's sidebar (dashboard + 9 detail/tool pages).
 - 2026-06-05 — Created this as-built spec. Recorded: editable ledger (PATCH /entries), payment occurred_at
   vs created_at, ledger exposure in asset/loan state, single-port deploy (:5057). Full app on
