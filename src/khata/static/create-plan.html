@@ -262,10 +262,14 @@
         <!-- Loan -->
         <div class="grp" data-grp="loan" hidden>
           <div class="frow">
+            <div class="fld"><label>Principal · amount borrowed / lent</label><input class="inp mono" id="principal" placeholder="5,00,000" inputmode="decimal"></div>
             <div class="fld"><label>Direction</label>
               <select class="inp" id="direction"><option value="taken">I borrowed (taken)</option><option value="given">I lent (given)</option></select>
             </div>
+          </div>
+          <div class="frow">
             <div class="fld"><label>Counterparty</label><input class="inp" id="counterparty" placeholder="HDFC / Priya"></div>
+            <div class="fld"></div>
           </div>
           <div class="frow">
             <div class="fld"><label>Interest</label>
@@ -500,6 +504,7 @@ function validateStep(s){
     const need = [];
     if(!$("name").value.trim()){ markBad($("name"), true); need.push("name"); }
     if(type === "asset" && !numClean($("total_price").value)){ markBad($("total_price"), true); need.push("total price"); }
+    if(type === "loan" && !numClean($("principal").value)){ markBad($("principal"), true); need.push("principal"); }
     if(type === "loan" && !$("counterparty").value.trim()){ markBad($("counterparty"), true); need.push("counterparty"); }
     if(type === "loan" && $("interest_type").value !== "none" && !numClean($("rate").value)){ markBad($("rate"), true); need.push("rate"); }
     if(type === "holding" && !$("unit").value.trim()){ markBad($("unit"), true); need.push("unit"); }
@@ -536,6 +541,7 @@ function renderReview(){
     const n = document.querySelectorAll(".inst").length;
     reviewRow("Installments", n ? String(n) + " scheduled" : "none");
   } else if(type === "loan"){
+    reviewRow("Principal", $("principal").value);
     reviewRow("Direction", $("direction").value);
     reviewRow("Counterparty", $("counterparty").value);
     reviewRow("Interest", $("interest_type").value);
@@ -661,12 +667,22 @@ const ROUTE = { asset: "/asset/", loan: "/loan/", holding: "/holding/",
 
 async function submitPlan(){
   $("err").textContent = "";
+  // loan: the principal is recorded as the opening disbursement (Khata models principal
+  // as dated disbursements, supporting later top-ups/tranches).
+  const loanPrincipal = (type === "loan") ? ($("principal").value || "").trim() : "";
+  const startDate = (type === "loan") ? ($("start_date").value || "") : "";
   const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" },
                                         body: JSON.stringify(payload()) });
   if(r.status === 401){ window.location.href = "/"; return; }
   if(r.ok){
     const d = await r.json().catch(() => ({}));
     const plan = d.plan || {};
+    if(type === "loan" && plan.id != null && loanPrincipal){
+      const dr = await fetch("/api/plans/" + plan.id + "/loan/disbursements", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: loanPrincipal, occurred_at: startDate ? startDate + "T12:00:00" : null, note: "Opening principal" }) });
+      if(!dr.ok){ const e = await dr.json().catch(() => ({})); $("err").textContent = "Loan created, but principal failed: " + (e.detail || e.error || "try adding it on the loan page."); }
+    }
     const route = ROUTE[plan.type] || "/app";
     window.location.href = (plan.id != null && ROUTE[plan.type]) ? route + plan.id : "/app";
     return;
