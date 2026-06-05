@@ -114,6 +114,16 @@ def asset_state(session: Session, plan: Plan) -> dict:
                              "paid_minor": amt,
                              "pct": round(amt * 100 / paid) if paid else 0})
 
+    # Surface existing ledger_entries rows in the state JSON (mirrors chit_state.ledger).
+    # No new model/migration — these rows already exist; we just include them.
+    ledger = [
+        {"kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
+         "occurred_at": e.occurred_at.isoformat(), "method": e.method,
+         "funding_source": e.funding_source, "note": e.note,
+         "has_proof": bool(e.proof_ref)}
+        for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
+    ]
+
     return {
         "total_price_minor": total,
         "paid_to_date_minor": paid,
@@ -123,4 +133,5 @@ def asset_state(session: Session, plan: Plan) -> dict:
         "installments": rows,
         "funding_breakdown": funding_breakdown,
         "contributors": contributors,
+        "ledger": ledger,
     }

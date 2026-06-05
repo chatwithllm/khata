@@ -177,6 +177,16 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
             collateral = {"plan_id": cp.id, "name": cp.name, "asset_class": hs["asset_class"],
                           "currency": cp.currency, "value_minor": val, "ltv_pct": ltv}
 
+    # Surface existing ledger_entries rows in the state JSON (mirrors chit_state.ledger).
+    # No new model/migration — these rows already exist; we just include them.
+    ledger = [
+        {"kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
+         "occurred_at": e.occurred_at.isoformat(), "method": e.method,
+         "funding_source": e.funding_source, "note": e.note,
+         "has_proof": bool(e.proof_ref)}
+        for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
+    ]
+
     return {
         "direction": loan.direction,
         "currency": plan.currency,
@@ -191,4 +201,5 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
         "months_behind": months_behind,
         "secured": secured,
         "collateral": collateral,
+        "ledger": ledger,
     }
