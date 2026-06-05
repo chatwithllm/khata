@@ -266,3 +266,14 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   Google-created `password_hash=None` users can add a password and then use email/password login).
   `_user_json` exposes `has_password` → UI shows "Set" vs "Change". Currency/FX reuse existing endpoints.
   Sidebar Settings is now a real link. createElement-only.
+
+## 2026-06-05 — Plan 5.2 (Hardening sweep)
+- **Systemic 500→400 fix:** `money.to_minor`/`to_micro`/`pct_to_bps` now catch `decimal.InvalidOperation`
+  → `ValueError`, so a non-numeric amount/rate/quantity on ANY money endpoint returns 400 (the API except
+  tuples already catch ValueError) instead of 500. One central change, app-wide. No-float discipline
+  proven intact (float→TypeError guard runs before the parse; reviewer reconfirmed).
+- Holdings `_add_entry` rejects None quantity/amount with `ValidationError` (was TypeError); edge tests
+  added (sell-to-zero, multiple sells, quote=0 → value 0 not None). `fmtMicro` null-guarded on both
+  holdings pages.
+- Deferred (still logged): unused `session` arg on `*_state`/`net_worth`; `loan_state` `as_of`;
+  `ledger_entries(plan_id,kind)` index; DB CHECK/unique constraints; google transport-error handling.

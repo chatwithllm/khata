@@ -71,7 +71,7 @@ record the chosen product model explicitly.
 ## Phase 5 — Settings, hardening & advanced
 - [x] **5.1 Account settings.** Google-created users set a password; edit display name + profile photo;
   base-currency & FX management UI; clears the deferred auth follow-ups.
-- [ ] **5.2 Hardening sweep.** Burn down the `AGENT_LEARNINGS.md` deferred follow-ups: `add_buy`/
+- [x] **5.2 Hardening sweep.** Burn down the `AGENT_LEARNINGS.md` deferred follow-ups: `add_buy`/
   `add_sell` `None`-qty → `ValidationError` guard + holdings edge tests (sell-to-zero, multiple sells,
   quote=0); reconcile the unused `session` arg across `*_state`/`net_worth`; `fmtMicro` null guard;
   expose `loan_state` `as_of`; index `ledger_entries(plan_id, kind)`; type-filter `list_plans`; DB
