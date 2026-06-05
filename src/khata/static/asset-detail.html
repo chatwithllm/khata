@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — Asset</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/assets/ledger.css">
+<style>
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+  .topbar .brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:20px}
+  .topbar .glyph{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,var(--primary),var(--primary-deep))}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;margin:8px 0 16px;gap:12px}
+  .head h1{font-family:"Fraunces",serif;font-weight:600;font-size:30px}
+  .head .meta{font-size:13px;color:var(--ink-faint)}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+  @media(max-width:680px){.cards{grid-template-columns:1fr}}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
+  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-faint);font-weight:700}
+  .stat .v{font-family:"Fraunces",serif;font-size:24px;margin-top:6px}
+  .sec{margin:24px 0}
+  .sec h2{font-family:"Fraunces",serif;font-size:19px;margin-bottom:10px}
+  table.sched{width:100%;border-collapse:collapse}
+  table.sched th,table.sched td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
+  table.sched th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint)}
+  .badge{font-size:11px;font-family:"JetBrains Mono";font-weight:700;padding:2px 8px;border-radius:100px}
+  .badge.paid{color:var(--pos);background:color-mix(in srgb,var(--pos) 12%,transparent)}
+  .badge.partial{color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,transparent)}
+  .badge.due{color:var(--ink-faint);background:var(--paper-2)}
+  .fund{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+  .fund .nm{width:120px;font-size:13px} .fund .bar{flex:1;height:8px;background:var(--paper-2);border-radius:100px;overflow:hidden}
+  .fund .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--primary),var(--primary-deep))}
+  .fund .amt{font-family:"JetBrains Mono";font-size:12.5px;color:var(--ink-soft);width:120px;text-align:right}
+  .con{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .con .pct{margin-left:auto;font-family:"JetBrains Mono";font-size:12.5px;color:var(--ink-soft)}
+  .modal{position:fixed;inset:0;background:rgba(20,16,12,.45);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal.on{display:flex}
+  .sheet{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;width:min(440px,92vw);box-shadow:var(--shadow)}
+  .sheet h3{font-family:"Fraunces",serif;font-size:20px;margin-bottom:12px}
+  .fld{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+  .fld label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+  .fld input,.fld select{font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
+  .err{color:var(--neg);font-size:13px;min-height:18px}
+  .acts{display:flex;gap:10px;align-items:center;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="/app"><span class="glyph"></span> Khata</a>
+    <a class="link" href="/app">← Back to app</a>
+  </div>
+
+  <div class="head">
+    <div><h1 id="name">Asset</h1><div class="meta" id="meta">—</div></div>
+    <button class="btn" id="logbtn">Log payment</button>
+  </div>
+
+  <div class="cards">
+    <div class="stat"><div class="k">Total</div><div class="v mono" id="total">—</div></div>
+    <div class="stat"><div class="k">Paid to date</div><div class="v mono" id="paid">—</div></div>
+    <div class="stat"><div class="k">Remaining</div><div class="v mono" id="remaining">—</div></div>
+  </div>
+
+  <div class="sec"><h2>Installment schedule</h2>
+    <table class="sched"><thead><tr><th>#</th><th>Planned</th><th>Applied</th><th>Status</th></tr></thead>
+    <tbody id="sched"></tbody></table>
+  </div>
+
+  <div class="sec"><h2>Funding</h2><div id="funding"></div></div>
+  <div class="sec"><h2>Contributors</h2><div id="contribs"></div></div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <h3>Log a payment</h3>
+    <div class="fld"><label>Amount</label><input id="amount" placeholder="50,000"></div>
+    <div class="fld"><label>Method</label>
+      <select id="method"><option>transfer</option><option>upi</option><option>cash</option><option>card</option></select>
+    </div>
+    <div class="fld"><label>Funding source</label>
+      <select id="fsource"><option>savings</option><option>salary</option><option>chit payout</option><option>other</option></select>
+    </div>
+    <div class="fld"><label>Note (optional)</label><input id="note" placeholder=""></div>
+    <div class="err" id="err"></div>
+    <div class="acts"><button class="btn" id="save">Save payment</button><a class="link" id="cancel">Cancel</a></div>
+  </div>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const SYM = { INR: "₹", USD: "$" };
+  const pid = parseInt(location.pathname.split("/").pop(), 10);
+  let currency = "INR";
+
+  function fmtMinor(m, ccy) {
+    if (m === null || m === undefined) return "—";
+    const neg = m < 0, v = Math.abs(m) / 100;
+    return (neg ? "-" : "") + (SYM[ccy] || "") + v.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  }
+  const cell = (txt, cls) => { const td = document.createElement("td"); if (cls) td.className = cls; td.textContent = txt; return td; };
+
+  async function load() {
+    const r = await fetch("/api/plans/" + pid);
+    if (r.status === 401) { window.location.href = "/"; return; }
+    if (!r.ok) { window.location.href = "/app"; return; }
+    const d = await r.json();
+    if (d.plan.type !== "asset") { window.location.href = "/app"; return; }
+    currency = d.plan.currency;
+    const st = d.state;
+    $("name").textContent = d.plan.name;
+    $("meta").textContent = d.plan.type + " · " + currency + " · " + d.plan.status;
+    $("total").textContent = fmtMinor(st.total_price_minor, currency);
+    $("paid").textContent = fmtMinor(st.paid_to_date_minor, currency);
+    $("remaining").textContent = fmtMinor(st.remaining_minor, currency);
+
+    const sb = $("sched"); sb.textContent = "";
+    if (!st.installments.length) sb.appendChild(cell("No schedule set."));
+    for (const it of st.installments) {
+      const tr = document.createElement("tr");
+      const badge = document.createElement("span"); badge.className = "badge " + it.status; badge.textContent = it.status;
+      const stTd = document.createElement("td"); stTd.appendChild(badge);
+      tr.append(cell("#" + it.seq), cell(fmtMinor(it.planned_amount_minor, currency), "mono"),
+                cell(fmtMinor(it.applied_minor, currency), "mono"), stTd);
+      sb.appendChild(tr);
+    }
+
+    const fb = $("funding"); fb.textContent = "";
+    if (!st.funding_breakdown.length) fb.appendChild((() => { const e = document.createElement("div"); e.className = "muted"; e.textContent = "No payments yet."; return e; })());
+    for (const f of st.funding_breakdown) {
+      const row = document.createElement("div"); row.className = "fund";
+      const nm = document.createElement("div"); nm.className = "nm"; nm.textContent = f.source || "—";
+      const bar = document.createElement("div"); bar.className = "bar";
+      const i = document.createElement("i"); i.style.width = (f.pct || 0) + "%"; bar.appendChild(i);
+      const amt = document.createElement("div"); amt.className = "amt"; amt.textContent = fmtMinor(f.amount_minor, currency) + " · " + (f.pct || 0) + "%";
+      row.append(nm, bar, amt); fb.appendChild(row);
+    }
+
+    const cb = $("contribs"); cb.textContent = "";
+    if (!st.contributors || !st.contributors.length) cb.appendChild((() => { const e = document.createElement("div"); e.className = "muted"; e.textContent = "Just you so far."; return e; })());
+    for (const c of (st.contributors || [])) {
+      const row = document.createElement("div"); row.className = "con";
+      const nm = document.createElement("span"); nm.textContent = c.display_name || ("user " + c.user_id);
+      const pct = document.createElement("span"); pct.className = "pct"; pct.textContent = fmtMinor(c.paid_minor, currency) + " · " + c.pct + "%";
+      row.append(nm, pct); cb.appendChild(row);
+    }
+  }
+
+  $("logbtn").addEventListener("click", () => { $("err").textContent = ""; $("modal").classList.add("on"); });
+  $("cancel").addEventListener("click", () => $("modal").classList.remove("on"));
+  $("save").addEventListener("click", async () => {
+    $("err").textContent = "";
+    const body = { amount: $("amount").value, method: $("method").value,
+                   funding_source: $("fsource").value, note: $("note").value || null };
+    const r = await fetch("/api/plans/" + pid + "/payments", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (r.ok) { $("modal").classList.remove("on"); $("amount").value = ""; load(); return; }
+    const e = await r.json().catch(() => ({})); $("err").textContent = e.detail || e.error || "Could not log payment.";
+  });
+
+  load();
+</script>
+</body>
+</html>
