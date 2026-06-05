@@ -71,6 +71,7 @@
 
   <div class="sec"><h2>Funding</h2><div id="funding"></div></div>
   <div class="sec"><h2>Contributors</h2><div id="contribs"></div></div>
+  <div class="sec"><div id="sharing"></div></div>
 </div>
 
 <div class="modal" id="modal">
@@ -89,6 +90,7 @@
   </div>
 </div>
 
+<script src="/static/assets/sharing.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   const SYM = { INR: "₹", USD: "$" };
@@ -146,6 +148,7 @@
       const pct = document.createElement("span"); pct.className = "pct"; pct.textContent = fmtMinor(c.paid_minor, currency) + " · " + c.pct + "%";
       row.append(nm, pct); cb.appendChild(row);
     }
+    mountSharing(pid, $("sharing"));
   }
 
   $("logbtn").addEventListener("click", () => { $("err").textContent = ""; $("modal").classList.add("on"); });
