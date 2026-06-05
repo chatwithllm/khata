@@ -16,6 +16,44 @@
 .kpi.pos .n{color:var(--pos)} .kpi.neg .n{color:var(--neg)}
 .wonbadge{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:color-mix(in srgb,var(--pos) 18%,transparent);color:var(--pos);padding:3px 9px;border-radius:20px;margin-left:8px}
 
+/* 7.1 header badge pills (real fields only: commission %, monthly, member count) */
+.chit-badges{display:flex;gap:8px;flex-wrap:wrap;padding:14px 22px 0}
+.chit-badges .pill{font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);text-transform:none;background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.chit-badges .pill.comm{background:color-mix(in srgb,var(--primary) 9%,transparent);border-color:color-mix(in srgb,var(--primary) 28%,transparent);color:var(--primary-deep)}
+
+/* 7.2 expanded stat grid (5-6 cards; hero net-position) */
+.chit-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper-2)}
+@media(max-width:560px){.chit-kpis{grid-template-columns:1fr 1fr}}
+.chit-kpis .kpi{padding:16px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.chit-kpis .kpi:nth-child(3n){border-right:none}
+.chit-kpis .kpi .l{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+.chit-kpis .kpi .n{font-family:"Fraunces",serif;font-weight:600;font-size:24px;letter-spacing:-.02em;margin-top:6px;line-height:1}
+.chit-kpis .kpi .d{font-size:11px;margin-top:6px;font-family:"JetBrains Mono";color:var(--ink-faint)}
+.chit-kpis .kpi.pos .n{color:var(--pos)} .chit-kpis .kpi.neg .n{color:var(--neg)}
+.chit-kpis .kpi.hero-stat{background:var(--ink);color:var(--paper)}
+.chit-kpis .kpi.hero-stat .l{color:color-mix(in srgb,var(--paper) 60%,transparent)}
+.chit-kpis .kpi.hero-stat .n{color:var(--pos-dk)}
+.chit-kpis .kpi.hero-stat .n.neg{color:var(--neg)}
+.chit-kpis .kpi.hero-stat .d{color:color-mix(in srgb,var(--paper) 60%,transparent)}
+
+/* 7.3 auction rounds table (taker parsed from dividend notes; bid% not in data) */
+.rtbl-wrap{overflow-x:auto;border-top:1px solid var(--line-2)}
+.rtbl{width:100%;border-collapse:collapse;font-size:13px}
+.rtbl thead th{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;text-align:right;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--paper-2);white-space:nowrap}
+.rtbl thead th.lf{text-align:left}
+.rtbl tbody td{padding:10px 16px;border-bottom:1px solid var(--line-2);text-align:right;font-family:"JetBrains Mono";font-variant-numeric:tabular-nums;white-space:nowrap}
+.rtbl tbody td.lf{text-align:left;font-family:"Hanken Grotesk"}
+.rtbl tbody tr:last-child td{border-bottom:none}
+.rtbl tbody tr:hover{background:var(--line-2)}
+.rtbl tbody tr.now{background:color-mix(in srgb,var(--primary) 8%,transparent)}
+.rtbl tbody tr.now:hover{background:color-mix(in srgb,var(--primary) 13%,transparent)}
+.rtbl tbody tr.open td{color:var(--ink-faint)}
+.rtbl .rn{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;background:var(--paper-2);color:var(--ink-faint);margin-right:9px;font-family:"JetBrains Mono";vertical-align:middle}
+.rtbl tbody tr.done .rn{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.rtbl tbody tr.now .rn{background:var(--primary);color:#fff}
+.rtbl .who{font-weight:600;font-size:13.5px}
+.rtbl td.divamt.in{color:var(--pos);font-weight:700}
+
 /* auction rounds strip */
 .chit-body{padding:20px 22px}
 .rounds{display:flex;gap:6px;margin:4px 0 14px;flex-wrap:wrap}
@@ -252,22 +290,37 @@ function renderHeader(box, plan, st){
   const nm=el('span'); nm.textContent=plan.name; t.append(nm);
   if(st.won) t.append(el('span','wonbadge','Prize won'));
   const commPct=(st.commission_bps/100);
-  const metaBits=[st.n_members+'-member', commPct+'% commission'];
-  ph.append(t, el('div','meta', metaBits.join(' · ')));
+  ph.append(t, el('div','meta', 'auction · monthly'));
   box.append(ph);
 
-  const kpis=el('div','kpis');
-  function kpi(cls,label,minor){
+  // 7.1: badge pills backed by REAL fields only (commission %, monthly cadence, member count).
+  // No role/variant field exists in the data, so no AUCTION/ORGANIZER role pill is invented.
+  const badges=el('div','chit-badges');
+  badges.append(
+    el('span','pill comm', commPct+'% Commission'),
+    el('span','pill', 'Monthly'),
+    el('span','pill', st.n_members+' members'));
+  box.append(badges);
+
+  // 7.2: expanded stat grid (5-6 cards) — net position is the hero card.
+  const kpis=el('div','chit-kpis');
+  function kpi(cls,label,node,detail){
     const k=el('div','kpi'+(cls?' '+cls:''));
     k.append(el('div','l',label));
-    const n=el('div','n'); n.append(amtSpan(minor)); k.append(n);
+    const n=el('div','n'); n.append(node); k.append(n);
+    if(detail) k.append(el('div','d',detail));
     return k;
   }
-  const netCls = (st.net_position_minor||0) > 0 ? 'pos' : ((st.net_position_minor||0) < 0 ? 'neg' : '');
+  function txt(s){ return document.createTextNode(s); }
+  const np = st.net_position_minor||0;
+  const netCls = np > 0 ? 'pos' : (np < 0 ? 'neg' : '');
   kpis.append(
-    kpi('','Chit value',st.chit_value_minor),
-    kpi(netCls,'My net position',st.net_position_minor),
-    kpi('','Net contributed',st.net_contributed_minor));
+    kpi('hero-stat '+netCls,'Net position', amtSpan(st.net_position_minor), 'paid in vs received'),
+    kpi('','Total paid in', amtSpan(st.total_contributed_minor), st.months_recorded+' rounds'),
+    kpi('','Dividends earned', amtSpan(st.total_dividends_minor), 'across recorded rounds'),
+    kpi('','Contribution / mo', amtSpan(st.subscription_minor), 'base subscription'),
+    kpi('','Members', txt(String(st.n_members)), 'in the chit'),
+    kpi('','Rounds recorded', txt(st.months_recorded+' of '+st.n_members), 'auction history'));
   box.append(kpis);
 
   // subscription/commission caption line
@@ -298,9 +351,8 @@ function renderRounds(box, st){
     if(k<=rec) cls='rd done';
     else if(k===rec+1) cls='rd now';
     const rd=el('div',cls);
+    // 7.5: color-only dots — round number only, no "done"/"next" text labels (mockup omits them)
     rd.append(el('span','r',String(k)));
-    if(k===rec+1 && k<=n) rd.append(document.createTextNode('next'));
-    else if(k<=rec) rd.append(document.createTextNode('done'));
     rounds.append(rd);
   }
   // Per-round winner is NOT tracked — only the aggregate `won` flag exists.
@@ -315,6 +367,57 @@ function renderRounds(box, st){
   if(won) legend.append(el('span', null, '★ you won a round'));
   body.append(legend);
   box.append(body);
+
+  // 7.3: per-round table from REAL data — taker parsed from each chit_dividend note,
+  // dividend/member = that entry's amount_minor. Columns we cannot back (bid %, your-take)
+  // are intentionally omitted (never fabricated). Future rounds shown as "open".
+  const ledger = st.ledger || [];
+  const byRound = {};        // round number -> { taker, dividend_minor }
+  for(const e of ledger){
+    if(e.kind!=='chit_dividend') continue;
+    const note=e.note || '';
+    const rm=note.match(/Round\s+(\d+)/i);
+    if(!rm) continue;
+    const rnum=parseInt(rm[1],10);
+    let taker=null;
+    const ti=note.indexOf('taker ');
+    if(ti>=0) taker=note.slice(ti+'taker '.length).trim();
+    byRound[rnum]={ taker: taker, dividend_minor: e.amount_minor };
+  }
+
+  const tw=el('div','rtbl-wrap');
+  const tbl=el('table','rtbl');
+  const thead=el('thead'); const htr=el('tr');
+  htr.append(el('th','lf','Round / taker'), el('th',null,'Dividend / member'));
+  thead.append(htr); tbl.append(thead);
+  const tbody=el('tbody');
+  for(let k=1;k<=n;k++){
+    const info=byRound[k];
+    let trCls='';
+    if(k<=rec) trCls='done';
+    else if(k===rec+1) trCls='now';
+    else trCls='open';
+    const tr=el('tr', trCls);
+    const lf=el('td','lf');
+    lf.append(el('span','rn',String(k)));
+    if(info && info.taker){
+      lf.append(el('span','who', info.taker));
+    } else if(k<=rec){
+      // recorded but no parseable taker note
+      lf.append(el('span','who', '—'));
+    } else {
+      lf.append(el('span','who', 'open auction'));
+    }
+    tr.append(lf);
+    // dividend/member cell
+    if(info && info.dividend_minor!==undefined && info.dividend_minor!==null){
+      const dt=el('td','divamt in'); dt.append(amtSpan(info.dividend_minor)); tr.append(dt);
+    } else {
+      tr.append(el('td',null,'—'));
+    }
+    tbody.append(tr);
+  }
+  tbl.append(tbody); tw.append(tbl); box.append(tw);
 }
 
 // ── my position breakdown ──
