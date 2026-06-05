@@ -112,6 +112,7 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   balances recompute. Frontend: ✎ edit on each asset-detail ledger row reopens the slide-over pre-filled.
 - **2026-06-05 — Payment date.** Log-payment slide-over has a "Date (when it happened)" field → `occurred_at`
   (distinct from auto `created_at` = when logged). Ledger shows "· logged X" when the two differ.
+- **2026-06-05 — Tag who paid (contributor per entry).** Log-payment / add-disbursement / edit-entry forms gain a **Paid by · contributor** dropdown (plan members; shown only when the plan is shared with >1 member). Sends `paid_by` = a member's user_id; the API validates membership (400 otherwise) and sets the entry's `logged_by_user_id`. Asset contributor shares + the ledger 'paid by X' line reflect it — so joint buys and co-funded loans (e.g. ₹2L + ₹8L of a ₹10L loan) are auditable per person. Ledger rows now expose `logged_by_user_id` + `paid_by_name`. On asset-detail and loan-detail.
 - **2026-06-05 — Edit / delete a whole plan.** `PATCH /api/plans/<id>` edits a plan (loan terms: name/direction/counterparty/interest_type/rate/start_date/tenure; other types: name) and `DELETE /api/plans/<id>` removes the whole plan + all its entries (owner-only, cascades). Frontend: loan-detail header has polished **✎ Edit** + **Delete** ghost buttons. The Edit slide-over includes a **Principal** field (maps to disbursements: creates the opening one if none, patches the single existing one, or notes tranches → edit on ledger) — so a ₹0 loan can be corrected in place. Loan summary now exposes start_date + tenure_months for pre-fill. (Before this, plan terms couldn't be corrected and plans couldn't be deleted.)
 - **2026-06-05 — Loan create asks for Principal.** The create-plan loan step now has a required **Principal (amount borrowed/lent)** field. On submit it creates the loan plan then logs the opening amount via `POST /loan/disbursements` (dated the start date) — so the loan has its principal immediately and interest/outstanding compute. (Khata models principal as dated disbursements → later top-ups/tranches still work.) Was a real flaw: loans were created with ₹0 and nothing could be calculated.
 - **2026-06-05 — Edit/Delete on loan & chit ledgers** (same as asset): ✎ edit per row → slide-over → PATCH/DELETE /entries/<id>. chit_state.ledger now carries id+created_at.
@@ -155,6 +156,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Can tag who paid/contributed each entry (paid_by → contributor shares + audit).
 - 2026-06-05 — Fixed dashboard 'flash' when filtering: widgets hide AND the sidebar highlight is set synchronously (pre-paint) on ?type, so refresh no longer flashes Dashboard→type.
 - 2026-06-05 — Sidebar type links now carry ?type on ALL pages (was one-click only from the dashboard; two clicks from detail pages).
 - 2026-06-05 — Loan edit form includes Principal (fixes ₹0 loans); Edit/Delete restyled as proper buttons.

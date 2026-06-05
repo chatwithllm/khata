@@ -181,6 +181,9 @@
     </div>
     <div class="fld"><label for="occurred">When (optional)</label><input id="occurred" type="datetime-local"></div>
     <div class="fld"><label for="note">Note (optional)</label><input id="note" placeholder=""></div>
+    <div class="fld" id="paidby-fld" style="display:none"><label for="paid-by">Paid by · contributor</label>
+      <select id="paid-by"></select>
+    </div>
     <div class="err" id="err"></div>
     <div class="acts"><button class="save" id="save">Save entry</button><span class="cancel" id="cancel">Cancel</span></div>
   </div>
@@ -197,6 +200,9 @@
     <div class="fld"><label for="edit-amount">Amount</label><input id="edit-amount" placeholder="50,000" inputmode="decimal"></div>
     <div class="fld"><label for="edit-occurred">Date (when it happened)</label><input id="edit-occurred" type="date"></div>
     <div class="fld"><label for="edit-note">Note (optional)</label><input id="edit-note" placeholder=""></div>
+    <div class="fld" id="edit-paidby-fld" style="display:none"><label for="edit-paid-by">Paid by · contributor</label>
+      <select id="edit-paid-by"></select>
+    </div>
     <div class="err" id="edit-err"></div>
     <div class="acts"><button class="save" id="edit-save">Save changes</button><span class="cancel" id="edit-cancel">Cancel</span><span class="del" id="del-entry" style="margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
   </div>
@@ -248,6 +254,21 @@ const $ = (id) => document.getElementById(id);
 const pid = parseInt(location.pathname.split("/").pop(), 10);
 let BASE = "INR";
 let DATA = null;
+let ME_ID = null;
+let MEMBERS = [];
+
+// rebuild a "Paid by · contributor" select from MEMBERS; value=user_id (K4: textContent only)
+function fillPaidBy(selectEl, uid){
+  if(!selectEl) return;
+  selectEl.textContent='';
+  for(const m of MEMBERS){
+    const o=document.createElement('option');
+    o.value=String(m.user_id);
+    o.textContent=(m.display_name||m.email||('user '+m.user_id))+(m.user_id===ME_ID?' (you)':'');
+    selectEl.append(o);
+  }
+  if(uid!==null && uid!==undefined) selectEl.value=String(uid);
+}
 
 // ── currency formatting (real amounts already in BASE; no client-side conversion) ──
 function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
@@ -445,7 +466,9 @@ function renderLedger(box, st){
     const signed = isIn ? Math.abs(it.amount_minor) : -Math.abs(it.amount_minor);
     amt.append(amtSpan(signed));
     lrow.append(amt);
-    lrow.append(el('div','l2', fmtLedgerDate(it.occurred_at)));
+    let metaLine=fmtLedgerDate(it.occurred_at);
+    if(MEMBERS.length>1 && it.paid_by_name){ metaLine += ' · '+it.paid_by_name; }
+    lrow.append(el('div','l2', metaLine));
     const l2r=el('div','l2r');
     if(meta2.pill) l2r.append(el('span','pill '+meta2.pill, meta2.pillText));
     if(it.method) l2r.append(el('span','pill', it.method));
@@ -624,7 +647,10 @@ async function loadPledgeList(){
 }
 
 // ── add-entry slide-over open/close ──
-function openOver(){ $('err').textContent=''; $('scrim').classList.add('on'); $('over').classList.add('on'); $('over').setAttribute('aria-hidden','false'); $('amount').focus(); }
+function openOver(){ $('err').textContent='';
+  if(MEMBERS.length>1){ $('paidby-fld').style.display='flex'; fillPaidBy($('paid-by'), ME_ID); }
+  else { $('paidby-fld').style.display='none'; }
+  $('scrim').classList.add('on'); $('over').classList.add('on'); $('over').setAttribute('aria-hidden','false'); $('amount').focus(); }
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
 
 // ── edit-entry slide-over open/close (PATCH/DELETE existing ledger entry) ──
@@ -636,6 +662,8 @@ function openEdit(it){
   $('edit-amount').value=(Math.abs(it.amount_minor||0)/100);
   $('edit-note').value=it.note||'';
   $('edit-occurred').value=(it.occurred_at||'').slice(0,10);
+  if(MEMBERS.length>1){ $('edit-paidby-fld').style.display='flex'; fillPaidBy($('edit-paid-by'), it.logged_by_user_id); }
+  else { $('edit-paidby-fld').style.display='none'; }
   $('scrim').classList.add('on'); $('edit-over').classList.add('on'); $('edit-over').setAttribute('aria-hidden','false'); $('edit-amount').focus();
 }
 function closeEdit(){ $('scrim').classList.remove('on'); $('edit-over').classList.remove('on'); $('edit-over').setAttribute('aria-hidden','true'); }
@@ -678,7 +706,12 @@ async function boot(){
   const me = await fetch('/api/auth/me');
   if(me.status===401){ window.location.href='/'; return; }
   const user=(await me.json()).user;
+  ME_ID = user.id;
   $('ava-init').textContent=((user.display_name||'?')[0]||'?').toUpperCase();
+
+  // contributors (owner + shared members) for the "Paid by" field — fetched once per boot
+  try{ MEMBERS = (await fetch('/api/plans/'+pid+'/members').then(r=>r.json())).members || []; }
+  catch(e){ MEMBERS = []; }
 
   const r = await fetch('/api/plans/'+pid);
   if(r.status===401){ window.location.href='/'; return; }
@@ -783,6 +816,7 @@ $('edit-save').addEventListener('click', async ()=>{
   $('edit-err').textContent='';
   const occ = $('edit-occurred').value ? $('edit-occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift
   const body = { amount:$('edit-amount').value, occurred_at:occ, note:$('edit-note').value || null };
+  if($('edit-paidby-fld').style.display!=='none' && $('edit-paid-by').value){ body.paid_by = $('edit-paid-by').value; }
   const r = await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   if(r.ok){ closeEdit(); boot(); return; }
   const e = await r.json().catch(()=>({}));
@@ -809,6 +843,7 @@ $('save').addEventListener('click', async ()=>{
     url='/api/plans/'+pid+'/loan/entries';
     body={ kind, amount:$('amount').value, method:$('method').value, occurred_at:occurred, note:$('note').value || null };
   }
+  if($('paidby-fld').style.display!=='none' && $('paid-by').value){ body.paid_by = $('paid-by').value; }
   const r=await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   if(r.ok){ closeOver(); $('amount').value=''; $('note').value=''; $('occurred').value=''; boot(); return; }
   const e=await r.json().catch(()=>({}));

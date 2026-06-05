@@ -4,7 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from sqlalchemy.orm import Session
 
-from ..models import Plan, Loan, LedgerEntry
+from ..models import Plan, Loan, LedgerEntry, User
 from ..money import SUPPORTED_CURRENCIES
 
 DIRECTIONS = {"given", "taken"}
@@ -214,12 +214,18 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
 
     # Surface existing ledger_entries rows in the state JSON (mirrors chit_state.ledger).
     # No new model/migration — these rows already exist; we just include them.
+    _names = {}
+    for e in plan.ledger_entries:
+        if e.logged_by_user_id not in _names:
+            _u = session.get(User, e.logged_by_user_id)
+            _names[e.logged_by_user_id] = _u.display_name if _u else None
     ledger = [
         {"id": e.id, "kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
          "created_at": e.created_at.isoformat() if e.created_at else None,
          "occurred_at": e.occurred_at.isoformat(), "method": e.method,
          "funding_source": e.funding_source, "note": e.note,
-         "has_proof": bool(e.proof_ref)}
+         "has_proof": bool(e.proof_ref),
+         "logged_by_user_id": e.logged_by_user_id, "paid_by_name": _names.get(e.logged_by_user_id)}
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
     ]
 

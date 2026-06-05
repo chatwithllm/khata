@@ -67,7 +67,7 @@ def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred
 
 def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
                         amount_minor=None, occurred_at=None, method=None,
-                        funding_source=None, note=None) -> LedgerEntry:
+                        funding_source=None, note=None, logged_by_user_id=None) -> LedgerEntry:
     """Edit an existing ledger entry in-place (owner-only at the API layer).
     Only the provided fields change; kind/direction stay immutable. Derived
     balances recompute on the next *_state call (balances are never stored)."""
@@ -90,6 +90,8 @@ def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
         entry.funding_source = funding_source
     if note is not None:
         entry.note = note
+    if logged_by_user_id is not None:
+        entry.logged_by_user_id = logged_by_user_id
     session.flush()
     return entry
 
@@ -171,12 +173,18 @@ def asset_state(session: Session, plan: Plan) -> dict:
 
     # Surface existing ledger_entries rows in the state JSON (mirrors chit_state.ledger).
     # No new model/migration — these rows already exist; we just include them.
+    _names = {}
+    for e in plan.ledger_entries:
+        if e.logged_by_user_id not in _names:
+            _u = session.get(User, e.logged_by_user_id)
+            _names[e.logged_by_user_id] = _u.display_name if _u else None
     ledger = [
         {"id": e.id, "kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
          "created_at": e.created_at.isoformat() if e.created_at else None,
          "occurred_at": e.occurred_at.isoformat(), "method": e.method,
          "funding_source": e.funding_source, "note": e.note,
-         "has_proof": bool(e.proof_ref)}
+         "has_proof": bool(e.proof_ref),
+         "logged_by_user_id": e.logged_by_user_id, "paid_by_name": _names.get(e.logged_by_user_id)}
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
     ]
 

@@ -266,3 +266,29 @@ def test_edit_loan_terms_and_delete_plan(client):
     # unauth → 401
     client.post("/api/auth/logout")
     assert client.delete(f"/api/plans/{pid}").status_code == 401
+
+
+def test_tag_paid_by_contributor(client):
+    # owner + a second member
+    client.post("/api/auth/register", json={"email": "owner@b.com", "display_name": "Owner", "password": "pw12345"})
+    client.post("/api/auth/register", json={"email": "mate@b.com", "display_name": "Mate", "password": "pw12345"})
+    mate_id = client.get("/api/auth/me").get_json()["user"]["id"]   # logged in as mate now
+    client.post("/api/auth/login", json={"email": "owner@b.com", "password": "pw12345"})
+    pid = client.post("/api/plans", json={"type": "asset", "name": "Plot", "currency": "INR",
+                                          "total_price": "10,00,000"}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{pid}/members", json={"email": "mate@b.com"})
+    # log a payment tagged as paid by mate
+    r = client.post(f"/api/plans/{pid}/payments", json={"amount": "2,00,000", "method": "cash",
+                                                        "funding_source": "savings", "paid_by": mate_id})
+    assert r.status_code == 201
+    st = client.get(f"/api/plans/{pid}").get_json()["state"]
+    e = st["ledger"][0]
+    assert e["logged_by_user_id"] == mate_id and e["paid_by_name"] == "Mate"
+    assert any(c["display_name"] == "Mate" and c["paid_minor"] == 20000000 for c in st["contributors"])
+    # re-tag via edit (paid_by → owner)
+    owner_id = client.get("/api/auth/me").get_json()["user"]["id"]
+    assert client.patch(f"/api/plans/{pid}/entries/{e['id']}", json={"paid_by": owner_id}).status_code == 200
+    assert client.get(f"/api/plans/{pid}").get_json()["state"]["ledger"][0]["paid_by_name"] == "Owner"
+    # non-member → 400
+    assert client.post(f"/api/plans/{pid}/payments", json={"amount": "100", "method": "cash",
+                                                           "funding_source": "savings", "paid_by": 999999}).status_code == 400

@@ -122,6 +122,7 @@
     <div class="fld"><label for="fsource">Funding source</label>
       <select id="fsource"><option value="savings">Savings</option><option value="loan">Loan</option><option value="borrowed">Borrowed</option><option value="sold_asset">Sold asset</option><option value="chit_payout">Chit payout</option><option value="other">Other</option></select>
     </div>
+    <div class="fld" id="paidby-fld" style="display:none"><label for="paid-by">Paid by · contributor</label><select id="paid-by"></select></div>
     <div class="fld"><label for="note">Note (optional)</label><input id="note" placeholder=""></div>
     <div class="err" id="err"></div>
     <div class="acts"><button class="save" id="save">Save payment</button><span class="cancel" id="cancel">Cancel</span><span class="del" id="del-entry" style="display:none;margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
@@ -150,6 +151,23 @@ const pid = parseInt(location.pathname.split("/").pop(), 10);
 let BASE = "INR";
 let nextDueSeq = null;
 let planName = "";
+let ME_ID = null;        // current user id (from /api/auth/me)
+let MEMBERS = [];        // plan members [{user_id, email, display_name, role}]
+
+// ── "Paid by · contributor" field: hide for solo plans, else rebuild + select uid ──
+function fillPaidBy(uid){
+  const fld=$('paidby-fld'), sel=$('paid-by');
+  if(MEMBERS.length < 2){ fld.style.display='none'; return; }   // solo plan — no contributor choice
+  fld.style.display='flex';
+  sel.textContent='';
+  for(const m of MEMBERS){
+    const opt=document.createElement('option');
+    opt.value=m.user_id;
+    opt.textContent=(m.display_name||m.email||('User '+m.user_id))+(m.user_id===ME_ID?' (you)':'');
+    sel.append(opt);
+  }
+  if(uid!=null) sel.value=uid;
+}
 
 // ── currency formatting (real amounts already in BASE; no client-side conversion) ──
 function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
@@ -364,6 +382,8 @@ function renderLedger(box, st){
     let l2txt = d ? (fmtDay(d)+' · '+fmtTime(d)) : '—';
     const cd=parseISO(lr.created_at);
     if(cd && d && fmtDay(cd)!==fmtDay(d)) l2txt += ' · logged '+fmtDay(cd);
+    // who paid this entry — only meaningful on shared plans (≥2 members)
+    if(MEMBERS.length>1 && lr.paid_by_name) l2txt += ' · '+lr.paid_by_name;
     row.append(el('div','l2', l2txt));
     // l2r — method + funding_source pills + proof + edit
     const l2r=el('div','l2r');
@@ -494,6 +514,7 @@ function openOver(){ // NEW payment
   editId=null; setTitle('Log a','payment'); $('oeyebrow').textContent='New entry'; $('save').textContent='Save payment';
   $('amount').value=''; $('note').value=''; $('method').value='transfer'; $('fsource').value='savings'; $('occurred').value=todayISO();
   $('del-entry').style.display='none';   // no delete when logging a new entry
+  fillPaidBy(ME_ID);                      // default contributor = current user
   showOver(); $('amount').focus();
 }
 function openEdit(lr){ // EDIT existing entry
@@ -504,6 +525,7 @@ function openEdit(lr){ // EDIT existing entry
   if(lr.funding_source) $('fsource').value=lr.funding_source;
   $('occurred').value=(lr.occurred_at||'').slice(0,10)||todayISO();
   $('del-entry').style.display='inline';  // delete available when editing
+  fillPaidBy(lr.logged_by_user_id);       // preselect the entry's existing contributor
   showOver(); $('amount').focus();
 }
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
@@ -549,7 +571,11 @@ async function boot(){
   if(me.status===401){ window.location.href='/'; return; }
   const user=(await me.json()).user;
   const myUserId = user.id;
+  ME_ID = user.id;
   $('ava-init').textContent=((user.display_name||'?')[0]||'?').toUpperCase();
+
+  // members list (owner + shared) — used by the "Paid by · contributor" field
+  MEMBERS = (await fetch('/api/plans/'+pid+'/members').then(r=>r.json()).catch(()=>({}))).members || [];
 
   const r = await fetch('/api/plans/'+pid);
   if(r.status===401){ window.location.href='/'; return; }
@@ -630,6 +656,7 @@ $('save').addEventListener('click', async ()=>{
   const body = { amount: $('amount').value, method: $('method').value,
                  funding_source: $('fsource').value, note: $('note').value || null,
                  occurred_at: occ };
+  if($('paidby-fld').style.display!=='none') body.paid_by = $('paid-by').value;  // contributor tag (shared plans)
   const url = editId ? ('/api/plans/'+pid+'/entries/'+editId) : ('/api/plans/'+pid+'/payments');
   const r = await fetch(url, { method: editId ? 'PATCH' : 'POST',
     headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });

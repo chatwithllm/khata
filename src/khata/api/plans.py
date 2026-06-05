@@ -99,6 +99,19 @@ def _accessible_plan(user, plan_id):
     return plan, None
 
 
+def _payer_uid(plan, data, default_uid):
+    """Resolve who actually paid/contributed an entry: an optional `paid_by` user id
+    that must be a member of the plan; defaults to the caller. Lets joint plans attribute
+    each entry to the real contributor (for audit + ownership shares)."""
+    pb = data.get("paid_by")
+    if pb in (None, ""):
+        return default_uid
+    uid = int(pb)
+    if not sharing.accessible(g.db, plan=plan, user_id=uid):
+        raise ValueError("paid_by must be a member of this plan")
+    return uid
+
+
 @bp.post("")
 def create():
     user = current_user()
@@ -259,7 +272,7 @@ def payment(plan_id):
         amount = to_minor(data.get("amount", ""), plan.currency)
         occurred = _parse_dt(data.get("occurred_at"))
         entry = assets.log_payment(
-            g.db, plan=plan, user_id=user.id, amount_minor=amount, occurred_at=occurred,
+            g.db, plan=plan, user_id=_payer_uid(plan, data, user.id), amount_minor=amount, occurred_at=occurred,
             method=data.get("method", ""), funding_source=data.get("funding_source", ""),
             proof_ref=data.get("proof_ref"), note=data.get("note"))
         g.db.commit()
@@ -291,6 +304,8 @@ def update_entry(plan_id, entry_id):
         for k in ("method", "funding_source", "note"):
             if k in data:
                 fields[k] = data.get(k)
+        if "paid_by" in data:
+            fields["logged_by_user_id"] = _payer_uid(plan, data, plan.owner_user_id)
         assets.update_ledger_entry(g.db, plan=plan, entry_id=entry_id, **fields)
         g.db.commit()
     except (PlanError, ValueError, TypeError) as e:
@@ -329,7 +344,7 @@ def loan_disbursement(plan_id):
     data = request.get_json(silent=True) or {}
     try:
         entry = loans.add_disbursement(
-            g.db, plan=plan, user_id=user.id,
+            g.db, plan=plan, user_id=_payer_uid(plan, data, user.id),
             amount_minor=to_minor(data.get("amount", ""), plan.currency),
             occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"))
         g.db.commit()
