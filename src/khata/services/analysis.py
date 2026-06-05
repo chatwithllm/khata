@@ -1,6 +1,5 @@
 from decimal import Decimal, ROUND_HALF_UP
 
-from sqlalchemy.orm import Session  # noqa: F401  (kept for signature symmetry / future use)
 
 
 class AnalysisError(Exception):
