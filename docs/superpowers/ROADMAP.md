@@ -100,3 +100,21 @@ Sign in (email/pw or Google) → create & operate every plan type (asset, loan, 
 loan, retirement) from the browser → share plans with attribution → see a correct, cross-currency net
 worth → run the analysis tools → optionally pull live prices. Self-hosted, privacy-first, exact-to-the-
 paise, no float, balances derived.
+
+---
+
+## Phase 6 — UI Fidelity (match the mockups)
+The Phase-3 app UI was functional but lean. This phase ports each `docs/mockups/*.html` composition onto
+the real pages with live data (XSS-safe), so the app matches the editorial design it was specced from.
+Some mockup details (cross-plan ledger feed, per-round chit auctions, this-month deltas) exceed current
+backend data — ported gracefully, never fabricated; logged for a later backend pass.
+
+- [ ] **6.1 Dashboard** (`app.html`) — sidebar+counts, rich topbar (greeting · plan count · INR/USD
+  toggle · Log payment · avatar), hero stat cards, grid2 panels (featured asset schedule, liabilities,
+  chit, loan-given). Live data.
+- [ ] **6.2 Shared app shell CSS** — extract the mockup shell CSS to `static/assets/app.css` (folded into 6.1/6.3).
+- [ ] **6.3 Asset detail + log-payment** — port `asset-detail.html` / `log-payment.html`.
+- [ ] **6.4 Loan + chit + retirement detail** — port `loan-detail.html` / `chit-detail.html` / `retirement-401k.html`.
+- [ ] **6.5 Holdings + create + settings + analysis** — port `holdings.html` / `create-plan.html` + polish settings/analysis.
+
+**Phase 6 done when:** the real app visually matches the mockups, fully wired to live data.
