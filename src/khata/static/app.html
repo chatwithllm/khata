@@ -464,6 +464,7 @@ function loanGivenPanel(g){
 
 // ── pending share invitations ──
 const PLAN_TYPE_LABEL={asset:'asset plan',loan:'loan',holding:'holding',chit:'chit fund',retirement:'retirement plan'};
+const artLabel=(t)=>{const l=PLAN_TYPE_LABEL[t]||'plan';return (/^[aeiou]/i.test(l)?'an ':'a ')+l;};
 async function renderInvites(){
   const box=$('invites'); if(!box) return;
   let invs=[];
@@ -486,7 +487,7 @@ async function renderInvites(){
     const txt=el('div','itxt');
     const t1=el('div','it1');
     const by=el('b',null,inv.shared_by||inv.shared_by_email||'Someone');
-    t1.append(by, document.createTextNode(' shared a '+(PLAN_TYPE_LABEL[inv.plan_type]||'plan')+' with you'));
+    t1.append(by, document.createTextNode(' shared '+artLabel(inv.plan_type)+' with you'));
     const t2=el('div','it2', '“'+inv.plan_name+'” · '+(inv.role||'contributor')+' · awaiting your approval');
     txt.append(t1,t2);
 
