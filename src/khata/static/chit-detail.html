@@ -12,6 +12,16 @@
 /* ── chit-detail.html-only rules (shell + shared groups live in app.css) ── */
 .emptypanel{padding:30px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px}
 
+/* 7.4 in-page not-found state (replaces a silent redirect to /app on 404/403) */
+.notfound{display:grid;place-items:center;min-height:60vh;padding:40px 22px}
+.notfound .nf-card{max-width:420px;text-align:center;padding:40px 34px;border:1px solid var(--line);border-radius:18px;background:var(--card);box-shadow:0 18px 50px -34px rgba(28,24,19,.4)}
+.notfound .nf-glyph{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;margin:0 auto 18px;background:color-mix(in srgb,var(--neg) 12%,transparent);color:var(--neg)}
+.notfound .nf-glyph svg{width:26px;height:26px}
+.notfound h2{font-family:"Fraunces",serif;font-weight:600;font-size:25px;letter-spacing:-.01em}
+.notfound p{font-size:14px;color:var(--ink-faint);margin-top:10px;line-height:1.5}
+.notfound .nf-back{display:inline-flex;align-items:center;gap:7px;margin-top:22px;font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;background:var(--primary);color:var(--paper);text-decoration:none;box-shadow:0 8px 18px -10px var(--primary);transition:transform .2s}
+.notfound .nf-back:hover{transform:translateY(-2px)}
+
 /* header KPI accents */
 .kpi.pos .n{color:var(--pos)} .kpi.neg .n{color:var(--neg)}
 .wonbadge{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:color-mix(in srgb,var(--pos) 18%,transparent);color:var(--pos);padding:3px 9px;border-radius:20px;margin-left:8px}
@@ -20,6 +30,7 @@
 .chit-badges{display:flex;gap:8px;flex-wrap:wrap;padding:14px 22px 0}
 .chit-badges .pill{font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);text-transform:none;background:color-mix(in srgb,var(--ink) 4%,transparent)}
 .chit-badges .pill.comm{background:color-mix(in srgb,var(--primary) 9%,transparent);border-color:color-mix(in srgb,var(--primary) 28%,transparent);color:var(--primary-deep)}
+.chit-badges .pill.role{background:color-mix(in srgb,var(--ink) 7%,transparent);border-color:color-mix(in srgb,var(--ink) 16%,transparent);color:var(--ink-soft);font-weight:700;letter-spacing:.02em}
 
 /* 7.2 expanded stat grid (5-6 cards; hero net-position) */
 .chit-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper-2)}
@@ -283,7 +294,7 @@ function fmtDate(iso){
 const KIND_LABEL = { chit_contribution: "Contribution", chit_dividend: "Dividend", chit_prize: "Prize" };
 
 // ── header KPIs ──
-function renderHeader(box, plan, st){
+function renderHeader(box, plan, st, isOwner){
   box.textContent='';
   const ph=el('div','ph');
   const t=el('div','t'); t.append(el('span','tag chit','Chit'), document.createTextNode(' '));
@@ -293,9 +304,15 @@ function renderHeader(box, plan, st){
   ph.append(t, el('div','meta', 'auction · monthly'));
   box.append(ph);
 
-  // 7.1: badge pills backed by REAL fields only (commission %, monthly cadence, member count).
-  // No role/variant field exists in the data, so no AUCTION/ORGANIZER role pill is invented.
+  // 7.1: badge pills backed by REAL signals only — never an invented role.
+  //  · Auction    → state.commission_bps > 0 (auction chits charge commission; pure rotating don't)
+  //  · Organizer  → this user owns the plan (/api/dashboard role==='owner', passed in as isOwner)
+  //  · Member     → state.total_contributed_minor > 0 (the user pays subscriptions)
+  // plus the existing commission % and Monthly cadence pills, and member count.
   const badges=el('div','chit-badges');
+  if(st.commission_bps > 0) badges.append(el('span','pill role', 'Auction'));
+  if(isOwner) badges.append(el('span','pill role', 'Organizer'));
+  if((st.total_contributed_minor||0) > 0) badges.append(el('span','pill role', 'Member'));
   badges.append(
     el('span','pill comm', commPct+'% Commission'),
     el('span','pill', 'Monthly'),
@@ -368,11 +385,13 @@ function renderRounds(box, st){
   body.append(legend);
   box.append(body);
 
-  // 7.3: per-round table from REAL data — taker parsed from each chit_dividend note,
-  // dividend/member = that entry's amount_minor. Columns we cannot back (bid %, your-take)
-  // are intentionally omitted (never fabricated). Future rounds shown as "open".
+  // 7.3: per-round table from REAL data — taker, bid %, dividend/member and your-pay all
+  // parsed/derived from each chit_dividend note ("Round N · taker <Name> · bid <N>%").
+  //  · BID %    → parsed from the note ("bid N%")
+  //  · YOUR PAY → subscription_minor − that round's dividend-per-member (the entry's amount_minor)
+  // Future rounds (no ledger entry) show "—" in both columns — never fabricated.
   const ledger = st.ledger || [];
-  const byRound = {};        // round number -> { taker, dividend_minor }
+  const byRound = {};        // round number -> { taker, dividend_minor, bid_pct }
   for(const e of ledger){
     if(e.kind!=='chit_dividend') continue;
     const note=e.note || '';
@@ -381,14 +400,22 @@ function renderRounds(box, st){
     const rnum=parseInt(rm[1],10);
     let taker=null;
     const ti=note.indexOf('taker ');
-    if(ti>=0) taker=note.slice(ti+'taker '.length).trim();
-    byRound[rnum]={ taker: taker, dividend_minor: e.amount_minor };
+    if(ti>=0){
+      taker=note.slice(ti+'taker '.length).trim();
+      // strip a trailing " · bid N%" segment from the taker name if present
+      const dot=taker.indexOf('·');
+      if(dot>=0) taker=taker.slice(0,dot).trim();
+    }
+    let bidPct=null;
+    const bm=note.match(/bid\s+(\d+(?:\.\d+)?)\s*%/i);
+    if(bm) bidPct=bm[1];
+    byRound[rnum]={ taker: taker, dividend_minor: e.amount_minor, bid_pct: bidPct };
   }
 
   const tw=el('div','rtbl-wrap');
   const tbl=el('table','rtbl');
   const thead=el('thead'); const htr=el('tr');
-  htr.append(el('th','lf','Round / taker'), el('th',null,'Dividend / member'));
+  htr.append(el('th','lf','Round / taker'), el('th',null,'Bid %'), el('th',null,'Dividend / member'), el('th',null,'Your pay'));
   thead.append(htr); tbl.append(thead);
   const tbody=el('tbody');
   for(let k=1;k<=n;k++){
@@ -409,9 +436,22 @@ function renderRounds(box, st){
       lf.append(el('span','who', 'open auction'));
     }
     tr.append(lf);
+    // bid % cell (parsed from note; "—" when absent)
+    if(info && info.bid_pct!==null && info.bid_pct!==undefined){
+      tr.append(el('td',null, info.bid_pct+'%'));
+    } else {
+      tr.append(el('td',null,'—'));
+    }
     // dividend/member cell
     if(info && info.dividend_minor!==undefined && info.dividend_minor!==null){
       const dt=el('td','divamt in'); dt.append(amtSpan(info.dividend_minor)); tr.append(dt);
+    } else {
+      tr.append(el('td',null,'—'));
+    }
+    // your-pay cell = subscription − dividend per member (derived; only when we have the dividend)
+    if(info && info.dividend_minor!==undefined && info.dividend_minor!==null){
+      const yourPay=(st.subscription_minor||0) - info.dividend_minor;
+      const yt=el('td'); yt.append(amtSpan(yourPay)); tr.append(yt);
     } else {
       tr.append(el('td',null,'—'));
     }
@@ -633,6 +673,32 @@ function renderMembers(box){
 function openOver(){ $('err').textContent=''; $('scrim').classList.add('on'); $('over').classList.add('on'); $('over').setAttribute('aria-hidden','false'); $('amount').focus(); }
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
 
+// ── 7.4 in-page not-found (no redirect) ──
+// Renders a centered "Plan not found" panel into the main content region.
+function renderNotFound(){
+  const content=document.querySelector('.content');
+  if(!content) return;
+  content.textContent='';
+  const wrap=el('div','notfound');
+  const card=el('div','nf-card');
+  const glyph=el('div','nf-glyph');
+  const svgNS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(svgNS,'svg');
+  svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('fill','none');
+  svg.setAttribute('stroke','currentColor'); svg.setAttribute('stroke-width','2');
+  const c=document.createElementNS(svgNS,'circle'); c.setAttribute('cx','12'); c.setAttribute('cy','12'); c.setAttribute('r','9'); svg.append(c);
+  const l1=document.createElementNS(svgNS,'line'); l1.setAttribute('x1','12'); l1.setAttribute('y1','8'); l1.setAttribute('x2','12'); l1.setAttribute('y2','13'); svg.append(l1);
+  const l2=document.createElementNS(svgNS,'line'); l2.setAttribute('x1','12'); l2.setAttribute('y1','16'); l2.setAttribute('x2','12'); l2.setAttribute('y2','16.5'); svg.append(l2);
+  glyph.append(svg);
+  card.append(glyph);
+  card.append(el('h2','','Plan not found'));
+  card.append(el('p','',"This chit doesn't exist or isn't yours."));
+  const back=el('a','nf-back'); back.href='/app'; back.textContent='Back to dashboard';
+  card.append(back);
+  wrap.append(card);
+  content.append(wrap);
+}
+
 // ── boot ──
 async function boot(){
   const me = await fetch('/api/auth/me');
@@ -642,11 +708,24 @@ async function boot(){
 
   const r = await fetch('/api/plans/'+pid);
   if(r.status===401){ window.location.href='/'; return; }
-  if(!r.ok){ window.location.href='/app'; return; }
+  // 7.4: non-ok (404/403) → render an in-page not-found state instead of bouncing to /app.
+  if(!r.ok){ renderNotFound(); return; }
   const d = await r.json();
-  if(d.plan.type!=='chit'){ window.location.href='/app'; return; }
+  // wrong plan type for this page is also a "not found" for the chit view (no redirect).
+  if(!d.plan || d.plan.type!=='chit'){ renderNotFound(); return; }
 
   const plan=d.plan, st=d.state;
+
+  // ownership: which dashboard plans does this user own? (drives the "Organizer" pill)
+  let isOwner=false;
+  try{
+    const dash = await fetch('/api/dashboard');
+    if(dash.ok){
+      const dj = await dash.json();
+      const mine = (dj.plans || []).find(p => p.id===pid);
+      if(mine && mine.role==='owner') isOwner=true;
+    }
+  }catch(e){}
   BASE = plan.currency || 'INR';
   document.documentElement.dataset.cur = BASE.toLowerCase();
   document.title = 'Khata — '+plan.name;
@@ -656,7 +735,7 @@ async function boot(){
   $('sub').textContent = 'Chit funds · '+st.n_members+' members · '+plan.status+' · '+BASE;
   $('osub').textContent = 'to '+plan.name;
 
-  renderHeader($('header-panel'), plan, st);
+  renderHeader($('header-panel'), plan, st, isOwner);
   renderRounds($('rounds-panel'), st);
   renderLedger($('ledger-panel'), st);
   renderPosition($('position-panel'), st);
