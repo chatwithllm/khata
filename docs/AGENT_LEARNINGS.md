@@ -285,3 +285,15 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   − interest_cost`; verdict hold if net>0 else sell. Pure/derived, no float. New `analysis` blueprint
   (`GET /api/analysis/hold-vs-sell`, auth-gated) + `/analysis` page (verdict green/red). Math constants
   pre-computed + reviewer-recomputed (₹10L gold/10%/₹6L@9%/18mo → net +₹80,112.33, hold).
+
+## 2026-06-05 — Plan 5.4 (Live market feeds, optional) — ROADMAP COMPLETE
+- Optional live-price seam mirroring Google sign-in's graceful degradation: `KHATA_PRICE_FEED` config flag
+  + injectable `app.config["PRICE_PROVIDER"]` (default `live_price_provider` raises — unwired out of the
+  box) + `GET /api/feed/config {enabled}` + owner-only `POST /holding/refresh-quote` (503 when off, 502 on
+  provider error, else set_quote from the spot). **Unset ⇒ feeds off ⇒ manual quotes only** — zero
+  behavior change by default; a self-hoster supplies a provider to enable. Tested via a stub provider.
+  Holding-detail shows a "Refresh price (live)" button only when configured.
+- **ENTIRE ROADMAP COMPLETE:** Phases 1–5, 12 plans, 178 tests. App fully built — auth (email/Google),
+  sharing, assets, loans (+ secured/collateral), holdings, net worth (+ cross-currency), chit funds,
+  retirement planner, settings, analysis, optional feeds — all operable in the browser, money-reviewed,
+  no float, derived balances, self-hosted.

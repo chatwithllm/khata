@@ -80,7 +80,7 @@ record the chosen product model explicitly.
 - [x] **5.3 Analysis tools** (`holdings.html` analysis section). Gold-loan-vs-selling decision
   calculator (hold-and-borrow vs sell: appreciation vs interest cost, net outcome) + any other what-if
   views. Pure derived calculators.
-- [ ] **5.4 Live market feeds (optional, last).** Replace manual quotes + FX with an **optional**
+- [x] **5.4 Live market feeds (optional, last).** Replace manual quotes + FX with an **optional**
   market-data integration (spot gold/silver, equity, FX), behind config, manual entry as fallback when
   unconfigured (same graceful-degradation pattern as Google sign-in).
 
