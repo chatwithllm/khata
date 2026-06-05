@@ -60,3 +60,11 @@ def test_app_shell_served(client):
     for needle in ["/api/auth/me", "/api/networth", "/api/dashboard", "/api/plans",
                    "Net worth", "ledger.css", "/holdings", "/features"]:
         assert needle in body
+
+
+def test_create_page_served(client):
+    r = client.get("/create")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["/api/plans", "Asset", "Loan", "Holding", "ledger.css", "/api/auth/me"]:
+        assert needle in body

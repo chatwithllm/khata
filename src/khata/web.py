@@ -25,3 +25,8 @@ def features():
 @bp.get("/holdings")
 def holdings():
     return send_from_directory(_static_dir(), "holdings.html")
+
+
+@bp.get("/create")
+def create_plan():
+    return send_from_directory(_static_dir(), "create-plan.html")
