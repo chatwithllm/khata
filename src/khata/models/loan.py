@@ -1,7 +1,8 @@
 from datetime import date
 
-from sqlalchemy import Date, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import expression
 
 from ..db import Base
 
@@ -19,5 +20,8 @@ class Loan(Base):
     repayment: Mapped[str] = mapped_column(String(12), nullable=False, default="bullet")
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     tenure_months: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    secured: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=expression.false())
+    collateral_plan_id: Mapped[int | None] = mapped_column(ForeignKey("plans.id"), nullable=True)
 
-    plan: Mapped["Plan"] = relationship(back_populates="loan")
+    plan: Mapped["Plan"] = relationship(back_populates="loan", foreign_keys=[plan_id])

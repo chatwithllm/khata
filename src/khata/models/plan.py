@@ -25,7 +25,8 @@ class Plan(Base):
     asset: Mapped["AssetPurchase | None"] = relationship(
         back_populates="plan", uselist=False, cascade="all, delete-orphan")
     loan: Mapped["Loan | None"] = relationship(
-        back_populates="plan", uselist=False, cascade="all, delete-orphan")
+        back_populates="plan", uselist=False, cascade="all, delete-orphan",
+        foreign_keys="Loan.plan_id")
     holding: Mapped["Holding | None"] = relationship(
         back_populates="plan", uselist=False, cascade="all, delete-orphan")
     chit: Mapped["Chit | None"] = relationship(
