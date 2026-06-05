@@ -58,3 +58,29 @@ def test_pct_to_bps_rejects_float_and_empty():
         pct_to_bps(8.5)
     with pytest.raises(ValueError):
         pct_to_bps("")
+
+
+def test_to_micro_round_trip():
+    from khata.money import to_micro, format_micro
+    assert to_micro("92.5") == 92_500_000
+    assert to_micro(10) == 10_000_000
+    assert to_micro("1,250.125") == 1_250_125_000
+    assert format_micro(92_500_000) == "92.5"
+    assert format_micro(10_000_000) == "10"
+    assert format_micro(1_250_125_000) == "1250.125"
+
+
+def test_to_micro_rejects_float():
+    import pytest
+    from khata.money import to_micro
+    with pytest.raises(TypeError):
+        to_micro(92.5)
+
+
+def test_to_micro_rejects_garbage():
+    import pytest
+    from khata.money import to_micro
+    with pytest.raises(ValueError):
+        to_micro("")
+    with pytest.raises(Exception):
+        to_micro("abc")
