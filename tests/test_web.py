@@ -62,6 +62,13 @@ def test_app_shell_served(client):
         assert needle in body
 
 
+def test_dashboard_fidelity_markers(client):
+    body = client.get("/app").data.decode()
+    for needle in ["/api/auth/me", "/api/dashboard", "/api/networth", "/api/plans",
+                   "curtog", "Log payment", "Liabilities", "Net worth"]:
+        assert needle in body
+
+
 def test_create_page_served(client):
     r = client.get("/create")
     assert r.status_code == 200
