@@ -219,3 +219,16 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   contain that literal, not assemble it at runtime.
 - Phase 3 complete: every existing domain (asset/loan/holding) is fully operable in the browser —
   create, view, log, and share — no curl.
+
+## 2026-06-04 — Plan 4.1 (Chit funds)
+- New `chit` plan type, participant-cashflow model: `chits` detail (chit_value/n_members/commission_bps/
+  start_date) + ledger kinds chit_contribution(out)/chit_dividend(in)/chit_prize(in). `chit_state`
+  derives subscription, totals, net_contributed, and net_position (=prize+dividends−contributed); a pure
+  `auction_dividend` calculator (commission, dividend pool, per-member, prize — Decimal, ROUND_HALF_UP).
+  Money review confirmed no bare int/int float division anywhere.
+- API: create dispatch (asset|loan|holding|chit) + `/chit/entries` (owner-only) + `/chit/dividend?bid=`
+  (guarded: bid ≤0 or > chit_value → 400, prevents a negative prize). UI: chit-detail page with a live
+  dividend calculator + entry log + sharing panel; create-plan Chit tab; app chit chip/count.
+- DEFERRED (Phase 5.2): `money.to_minor("abc")` raises `decimal.InvalidOperation` (an ArithmeticError,
+  NOT ValueError), so a malformed numeric string → 500 across ALL money endpoints. Fix centrally in
+  money.py (catch InvalidOperation → ValueError) so every endpoint returns 400.

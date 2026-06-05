@@ -57,6 +57,7 @@
     <div class="nav-i" data-filter="asset">Assets <span class="ct" id="ct-asset"></span></div>
     <div class="nav-i" data-filter="loan">Loans <span class="ct" id="ct-loan"></span></div>
     <div class="nav-i" data-filter="holding">Holdings <span class="ct" id="ct-holding"></span></div>
+    <div class="nav-i" data-filter="chit">Chit funds <span class="ct" id="ct-chit"></span></div>
     <div class="navsec">More</div>
     <a class="nav-i" href="/features">Features</a>
     <div class="nav-i soon">Settings <span class="ct">soon</span></div>
@@ -83,6 +84,7 @@
         <span class="chip" data-f="asset">Assets</span>
         <span class="chip" data-f="loan">Loans</span>
         <span class="chip" data-f="holding">Holdings</span>
+        <span class="chip" data-f="chit">Chits</span>
       </div>
       <div id="plans"></div>
     </div>
@@ -153,6 +155,7 @@
     $("ct-asset").textContent = by("asset");
     $("ct-loan").textContent = by("loan");
     $("ct-holding").textContent = by("holding");
+    $("ct-chit").textContent = by("chit");
     render("all");
   }
 

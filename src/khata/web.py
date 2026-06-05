@@ -45,3 +45,8 @@ def loan_detail(plan_id):
 @bp.get("/holding/<int:plan_id>")
 def holding_detail(plan_id):
     return send_from_directory(_static_dir(), "holding-detail.html")
+
+
+@bp.get("/chit/<int:plan_id>")
+def chit_detail(plan_id):
+    return send_from_directory(_static_dir(), "chit-detail.html")
