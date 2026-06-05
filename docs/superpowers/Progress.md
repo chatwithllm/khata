@@ -8,7 +8,7 @@ recommended option on every design fork. Deploy locally + final report at the ve
 Branching: one branch/PR per phase; each plan gets its own spec + plan + tests + reviews.
 
 ## Snapshot
-- **Tests:** 142 passing · Python 3.12
+- **Tests:** 153 passing · Python 3.12
 - **Merged:** Phases 1Ã¢ÂÂ2 (PRs #1Ã¢ÂÂ#7) + Plan 3.1 app shell (PR #8).
 - **Now building:** Phase 3 (app UI) on `feat/phase3-ui` Ã¢ÂÂ Phase 3 done â integration review + PR next.
 - **Live dashboard (LAN):** http://192.168.50.189:9001/dashboard.html (auto-refresh 5s).
@@ -32,7 +32,7 @@ Branching: one branch/PR per phase; each plan gets its own spec + plan + tests +
 ### Phase 4 Ã¢ÂÂ New domains
 - [x] 4.1 Chit funds (auction/dividend model) — backend + UI
 - [x] 4.2 Secured loans / collateral (LTV) — backend + UI
-- [ ] 4.3 Retirement / 401(k) planner
+- [x] 4.3 Retirement / 401(k) planner — backend + UI
 
 ### Phase 5 Ã¢ÂÂ Settings, hardening & advanced
 - [ ] 5.1 Account settings

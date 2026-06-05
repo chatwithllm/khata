@@ -247,3 +247,16 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
 - API: create accepts inline `collateral_plan_id` (atomic — a bad id rolls back the whole loan create);
   `POST /loan/collateral` link/unlink (owner-only). UI: loan-detail Collateral section with an LTV badge
   (green<60 / amber 60–80 / red>80) + a pledge modal listing same-currency holdings. createElement-only.
+
+## 2026-06-05 — Plan 4.3 (Retirement / 401(k) planner) — PHASE 4 COMPLETE
+- New `retirement` plan type: a pure forward projection (no ledger). `retirements` detail stores inputs
+  (current_balance, monthly_contribution, employer_match_bps, annual_return_bps, inflation_bps, current/
+  retirement age). `retirement_state` derives the corpus: monthly-compound FV of balance + an
+  employer-matched contribution annuity, discounted by inflation for a real-terms figure. **All Decimal,
+  `Decimal ** int` for the growth factor (exact, no float, no roots, no math.pow).** Money review
+  recomputed every scenario to the minor unit (8%/360mo → ₹1,49,03,594.49 nominal, ₹24,74,621.56 real).
+- `update_retirement` merges only settable fields, validates the MERGED dict BEFORE setattr → a bad
+  update leaves the row unchanged (atomic). API: create dispatch + `/retirement/update`; UI: planner page
+  (corpus nominal+real cards) + Update modal pre-filled from state + create Retirement tab.
+- **Phase 4 done:** chit funds + secured loans/collateral + retirement planner — three new domains,
+  each backend + UI, money-reviewed. Test suite 127→153.
