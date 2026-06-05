@@ -2,12 +2,12 @@
   "project": "khata",
   "plan": "docs/superpowers/ROADMAP.md \u2014 Phases 3\u20135 (12 plans)",
   "started_at": "2026-06-04T00:00:00Z",
-  "updated_at": "2026-06-05T08:21:32Z",
+  "updated_at": "2026-06-05T08:46:26Z",
   "total_tasks": 12,
-  "tasks_done": 6,
+  "tasks_done": 7,
   "current_task": {
-    "id": "4.2",
-    "title": "Secured loans / collateral (backend + UI)",
+    "id": "4.3",
+    "title": "Retirement / 401(k) planner (backend + UI)",
     "phase": "Phase 4 \u2014 New domains",
     "status": "in_progress"
   },
@@ -18,7 +18,7 @@
       "status": "done"
     },
     {
-      "name": "Phase 4 \u2014 New domains (chit \u2713 / secured / retirement)",
+      "name": "Phase 4 \u2014 New domains (chit \u2713 / secured \u2713 / retirement)",
       "task_range": "4.1\u20134.3",
       "status": "active"
     },
@@ -28,11 +28,11 @@
       "status": "pending"
     }
   ],
-  "last_commit": "bdaa3e6",
-  "last_gate_passed": "4.1 chit funds \u2014 money review \u2713 + end-to-end (dividend 250000, bid-guard 400)",
+  "last_commit": "2512803",
+  "last_gate_passed": "4.2 secured loans \u2014 LTV 50 end-to-end \u2713, atomic create-collateral rollback \u2713",
   "open_issues": 0,
-  "incidents": 2,
-  "tests": "127 passed",
+  "incidents": 3,
+  "tests": "142 passed",
   "python": "3.12",
   "log": [
     {
@@ -62,6 +62,13 @@
       "gate": "passed",
       "commit": "6af53e6",
       "timestamp": "2026-06-05T03:18:30Z"
+    },
+    {
+      "task": "4.2",
+      "title": "Secured loans / collateral (LTV)",
+      "gate": "passed",
+      "commit": "2512803",
+      "timestamp": "2026-06-05T08:46:26Z"
     }
   ]
 }
