@@ -284,11 +284,9 @@ function renderRounds(box, st){
     else if(k<=rec) rd.append(document.createTextNode('done'));
     rounds.append(rd);
   }
-  // aggregate win marker only (per-round winner is NOT tracked) — mark the last recorded round
-  if(won && rec>0){
-    const winCell=rounds.children[rec-1];
-    if(winCell){ const wm=el('span','wm','★'); winCell.append(wm); }
-  }
+  // Per-round winner is NOT tracked — only the aggregate `won` flag exists.
+  // Do not pin a star to any specific round (would fabricate which round was won);
+  // the aggregate win is surfaced via the legend badge + the header "Prize won" badge.
   body.append(rounds);
   const legend=el('div','rounds-legend');
   function lg(color,label){ const s=el('span'); s.append(el('i','dotk'), document.createTextNode(label)); s.firstChild.style.background=color; return s; }

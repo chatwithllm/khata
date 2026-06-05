@@ -311,7 +311,11 @@ function renderContribution(box, st){
   const matchTotal=Math.max(0,(st.total_contributions_minor||0)-youTotal); // employer portion
   const growth=Math.max(0,(st.projected_corpus_minor||0)
     -(st.total_contributions_minor||0)-(st.current_balance_minor||0)); // compound growth (clamp ≥0)
+  // Include the opening balance so the segments sum to the projected corpus —
+  // otherwise the "100% = projected corpus" total row would overstate the base
+  // the percentages are measured against.
   const segs=[
+    {label:'Opening balance',     minor:(st.current_balance_minor||0), color:'var(--ink-faint)'},
     {label:'Your contributions', minor:youTotal, color:'var(--primary)'},
     {label:'Employer match',      minor:matchTotal, color:'var(--pos)'},
     {label:'Projected growth',    minor:growth, color:'var(--accent)'},
