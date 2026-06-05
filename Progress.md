@@ -1,82 +1,66 @@
 # Khata — Progress & Resume Point
 
-> **Read this first when resuming.** It is the single starting point — you should
-> not need any prior conversation to continue. Pair it with the design spec and
-> the implementation plan (linked below).
+> **Read this first when resuming.** Single starting point — you should not need prior
+> conversation to continue. The authoritative technical record is
+> [`docs/specs/khata-AS-BUILT.md`](docs/specs/khata-AS-BUILT.md) (the from-scratch rebuild
+> blueprint, updated in the same commit as every change). This file is the orientation layer.
 
-**Last updated:** 2026-06-04
-**Stage:** Design complete · Phase-1 / Plan-1 written · **implementation NOT started**
-**Next action:** Execute Plan 1 (see *Resume in 30 seconds*).
-
----
-
-## Resume in 30 seconds
-1. Read this file.
-2. Skim the spec: [`docs/specs/2026-06-04-khata-design.md`](docs/specs/2026-06-04-khata-design.md)
-3. Open the plan: [`docs/superpowers/plans/2026-06-04-khata-phase1-foundation.md`](docs/superpowers/plans/2026-06-04-khata-phase1-foundation.md)
-4. Execute it task-by-task (TDD). Recommended: superpowers **subagent-driven-development** (fresh subagent per task) or **executing-plans** (inline, batched with checkpoints).
-5. Update `build_status.json` + append to `docs/AGENT_LEARNINGS.md` as you go.
+**Last updated:** 2026-06-05
+**Stage:** App fully built, deployed, and in active real-use iteration. 206 tests passing.
+**Next action:** pick the next user-driven enhancement, or build the parked chit win-projection.
 
 ---
+
+## Resume in 60 seconds
+1. Read this file, then skim [`docs/specs/khata-AS-BUILT.md`](docs/specs/khata-AS-BUILT.md) (§9 = enhancement log, bottom = change log).
+2. Code lives in this worktree: `/tmp/khata-landing` (branch `feat/landing-page`).
+3. Run tests: `cd /tmp/khata-landing && PYTHONPATH=src /Users/assistant/dev/active/khata/.venv/bin/python -m pytest -q`
+4. App is (or was) live on **:5057** — restart with `/Users/assistant/dev/active/khata/run-app.sh`.
+5. Working habits (see *Process* below) are mandatory: update AS-BUILT doc + change log in the same commit; headless-verify UI before "done".
 
 ## What Khata is
-A privacy-first, self-hosted personal **money-plans & net-worth ledger** for patterns
-generic budgeting apps don't model. One trustworthy ledger (single source of truth,
-proof images, precise timestamps), multi-currency (₹/$), multi-user with shared plans.
+Privacy-first, self-hosted personal **money-plans & net-worth ledger**. One trustworthy ledger
+(single source of truth, proof images, precise timestamps), multi-currency (₹/$), multi-user with
+shared plans. Plan types: asset purchase, chit fund, loan (given/taken, secured), 401(k)/retirement,
+holdings + net worth.
 
-**Plan types:**
-- **Asset purchase** — irregular installments, roll-forward when you under/overpay, funding sources, joint contributors + ownership share.
-- **Chit fund (chitti)** — pure rotating + auction; member/organizer; dividends, commission, net position.
-- **Loan** — given or taken; unsecured or secured (collateral/LTV); EMI or bullet; interest tiers; tranches/top-ups.
-- **401(k)** — contribution maximizer (fill limit without losing employer match) + loan-offset planner.
-- **Holdings + net worth** — gold/silver/cash/stocks at live prices; unrealized gain; **hold-vs-sell** decision insight (gold appreciation vs loan interest).
+## Architecture (locked)
+- Flask 3.1 app-factory `create_app(cfg)` · SQLAlchemy 2.0 (typed) · Alembic (batch mode) · SQLite · pytest.
+- **Static HTML pages + JSON APIs** — NO Jinja/render_template. Vanilla-JS client render (`createElement`+`textContent`, never innerHTML on API data = "K4").
+- **Money = integer minor units (×100) / micro (×10⁶); balances DERIVED, never stored** — every `*_state()` recomputes from `ledger_entries`. No float.
+- Layout: `src/khata/` = `models/ services/ api/ web.py static/ money.py config.py db.py`. CSS: `ledger.css` (landing, `.landing`-scoped) + `app.css` (app shell + detail panels).
 
-## Decisions locked (don't re-litigate without reason)
-- **Standalone app** named **Khata** (खाता = ledger). Not a module inside LocalOCR.
-- **Web-first**, self-hosted, responsive (works in phone browser). Native mobile = later phase.
-- **Stack:** Flask + SQLAlchemy 2.0 + SQLite (WAL) + Alembic backend · vanilla-JS SPA · Docker.
-- **Multi-user from Phase 1**: accounts (local password + Google OAuth), shared plans, per-payment contributor attribution, auto ownership share. (User chose full multi-user in MVP.)
-- **Multi-currency** ₹/$ with primary-currency theming (INR = saffron/paper, USD = greenback). Ledger keeps original currency+amount immutably; conversion is display-only.
-- **Money = integer minor units; balances are always derived from ledger rows** (locked build rules).
-- **Live prices**: auto-fetch (only external call) + manual fallback (offline-capable). Added in Phase 3.
-- **In-app Features & limitations tab** + a **development learning loop** ship continuously, each phase.
+## Deploy / run (canonical local instance)
+- Port **5057** serves this worktree's code; **real user data** in `~/dev/active/khata/khata_app.db`; secret in `.env.app`; restart via `~/dev/active/khata/run-app.sh` (runs `alembic upgrade head` then boots).
+- HTML served `Cache-Control: no-store` (always fresh). Static edits live on reload; **Python edits need run-app.sh restart**.
+- venv: `/Users/assistant/dev/active/khata/.venv`. Demo seed DB `khata_live.db` (throwaway; `demo@khata.local` / `khata1234`).
+- **Never wipe `khata_app.db`** (real data). Stage files explicitly — never `git add -A` (the live server rewrites `build_status.json`; `.env.*` and `khata_*.db*` stay untracked).
 
-## Build phases (MVP-first)
-| Phase | Ships |
-|---|---|
-| **1 — MVP** | Asset + Loan (unsecured) · ledger + proof · roll-forward · dashboard · **multi-user + ownership share** · INR |
-| 2 | Chit funds (pure/auction) · multi-currency ₹/$ |
-| 3 | Holdings + live prices + net worth + hold-vs-sell · secured loans (collateral/LTV/EMI/bullet) |
-| 4 | 401(k) · OCR screenshot→amount autofill · native mobile |
+## Verification harness (use before any "done")
+- **Headless jsdom** render at `/tmp/jsdomtest` (has `jsdom`): fetch-shim forwards to a temp server with the login cookie + stubs (`IntersectionObserver`, `requestAnimationFrame`, `confirm`, `scrollIntoView`, `mountSharing`). Catches silent JS throws. Cookie file is `#HttpOnly_`-prefixed — strip that prefix when parsing.
+- Temp verify servers on ports **5058 / 5059** (kill after). Real screenshots via headless Chrome on a script-stripped DOM snapshot (`<base href>` + remove `<script>`).
 
-## Phase-1 plan series (each ships working software)
-1. **Foundation & local auth** — WRITTEN, ready to execute (`docs/superpowers/plans/2026-06-04-khata-phase1-foundation.md`).
-2. Plan + ledger core (integer money, derived balances) + Asset type + roll-forward + asset API. *(to write)*
-3. Loan type (given/taken, unsecured): tranches, interest accrual, principal-vs-interest ledger. *(to write)*
-4. Sharing & contributors: PlanMembership, per-payment attribution, ownership share, net-position dashboard. *(to write)*
-5. Google OAuth + polished Features/limitations page wired to mockups. *(to write)*
+## What's built (all shipped, tested, committed, pushed)
+Full app to mockup fidelity (9 screens) + the real-use enhancements layered on while using it. Highlights this session:
+- **Tag who paid** each ledger entry (`paid_by` → contributor shares + audit).
+- **Two-party sharing consent — Phase 1**: invitations. Add a user → `invited` membership; plan hidden until they Accept (dashboard banner) / Decline (re-invitable). `plan_memberships.status`, `GET /api/invitations`.
+- **Two-party — Phase 2**: per-entry amount agreement, counter-propose loop. `ledger_entries.amount_status`/`counter_amount_minor`; confirm/counter/accept until both agree; interim counts, flagged unconfirmed. `GET /api/confirmations`, `POST /api/plans/<id>/entries/<eid>/amount`.
+- **Chit monthly schedule** + next-due reminder (derived; chit-detail month grid + overdue banner).
+- **Whole-instance backup & restore** — in-app JSON (`GET /api/backup`, `POST /api/restore` merge) + CLI `scripts/backup.sh|restore.sh` (raw SQLite, replace). **Operator-gated** (first user or `KHATA_OPERATOR_EMAILS`); pre-restore snapshot `0o600`. (Security review addressed; `password_hash` intentionally kept in backup so restored logins work — documented in `services/backup.py:_row`.)
 
-## What exists right now
-- `README.md` — project overview + run instructions.
-- `docs/specs/2026-06-04-khata-design.md` — the full design spec (the brainstormed intent brief).
-- `docs/mockups/` — **9 HTML mockups** (open in a browser) + PNG previews:
-  `index.html` (landing, currency-themed) · `app.html` (dashboard) · `asset-detail.html` (incl. joint contributors) · `chit-detail.html` · `loan-detail.html` (secured/gold) · `holdings.html` (net worth + hold-vs-sell) · `retirement-401k.html` · `log-payment.html` (entry sheet) · `create-plan.html` (wizard).
-- `docs/superpowers/plans/2026-06-04-khata-phase1-foundation.md` — Plan 1 (10 TDD tasks).
-- **No source code yet.** `src/` is empty — Plan 1 creates `src/khata/...`.
+Migrations: `b7a1m3status1` (membership.status), `b8a2confirm1` (entry amount_status+counter). Batch mode, `server_default` for existing rows, round-trips verified.
+
+## Parked / next
+- **Chit win/return projection** — DESIGN LOCKED, not built. Inputs: win-month K, your bid B, assumed avg bid A. Outputs: prize pocketed (`V−B`), dividends earned (`(n−1)·(A−commission)/n`), net (`dividends−B`), **effective annual return via monthly IRR**, + early-vs-late context. Endpoint `GET /api/plans/<id>/chit/projection?win_month=&bid=&avg_bid=`; a "Win projection" card on chit-detail (assumptions clearly labeled). No schema change.
+- Standing: build win-projection on request, then push.
 
 ## Git
-```
-99820c1 docs(plan): Phase 1 / Plan 1 — foundation & local auth (TDD)
-a1f1fe0 chore(init): scaffold Khata project + design spec + mockups
-```
-Local repo only (no GitHub remote yet — push when ready).
+- Branch `feat/landing-page`, pushed, level with `origin`. **PR #14** open: "App build: mockup-fidelity UI + real-use enhancements". 48 commits.
+- Commit trailer: `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`. PR footer: 🤖 Generated with Claude Code. No direct main push, no force-push.
 
-## Still flexible (settle during execution)
-- Exact dependency pins / Python patch version.
-- Hosting/deploy specifics (Docker compose) — Phase 1 runs via `wsgi.py` on localhost:5050.
-- Backup/export format.
-- GitHub remote + CI.
-
-## Open follow-ups captured but not yet planned
-- Cross-plan links (chit payout funds an asset payment) — model supports it; UI/flow in later phases.
-- Per-user net-worth views once sharing lands (Plan 4).
+## Process (mandatory habits)
+1. **Every change updates `docs/specs/khata-AS-BUILT.md`** (relevant section + bottom change log) in the **same commit** — a rebuild reads the doc, not the app.
+2. **Headless-verify UI** (jsdom render = 0 JS throws; screenshot for visual) before calling anything done.
+3. TDD-ish: add/adjust tests; full suite green before commit.
+4. **CAVEMAN MODE** is active (terse responses; code/commits/security written normally). Persists until user says "stop caveman".
+5. Decisions are gathered via `AskUserQuestion`, design surfaced + approved before building (brainstorming gate).
