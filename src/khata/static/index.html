@@ -48,10 +48,11 @@
       </div>
       <p class="cta-note"><b>✓</b> Google sign-in or a local password. Nothing leaves your machine.</p>
     </div>
-    <div class="dash-preview reveal">
+    <div class="dash-preview reveal" data-d="3">
+      <div class="sheen"></div>
       <div class="dash-top">
         <div>
-          <div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px">Net position · all plans</div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px"><span class="livedot"></span>Net position · all plans</div>
           <div class="netnum"><small>₹</small>18,40,000</div>
         </div>
         <span class="chip">▲ on track</span>
@@ -61,7 +62,7 @@
           <div><span class="tag asset">Asset</span><span class="name">Devanahalli plot</span></div>
           <div class="amt">₹12.40L / ₹20L</div>
         </div>
-        <div class="bar"><i class="asset-fill" style="width:62%"></i></div>
+        <div class="bar"><i class="asset-fill" data-w="62"></i></div>
         <div class="plan-meta"><span>62% paid</span><span>next 1,50,000 · Jun 18</span></div>
       </div>
       <div class="plan-row">
@@ -69,7 +70,7 @@
           <div><span class="tag chit">Chit</span><span class="name">12-member auction</span></div>
           <div class="amt">round 5 / 12</div>
         </div>
-        <div class="bar"><i class="chit-fill" style="width:42%"></i></div>
+        <div class="bar"><i class="chit-fill" data-w="42"></i></div>
         <div class="plan-meta"><span>+18,400 dividends</span><span>my turn · round 9</span></div>
       </div>
       <div class="plan-row" style="border-bottom:none">
@@ -77,7 +78,7 @@
           <div><span class="tag loan">Loan</span><span class="name">Borrowed — R. Kumar</span></div>
           <div class="amt" style="color:var(--neg)">₹3.10L left</div>
         </div>
-        <div class="bar"><i class="loan-fill" style="width:38%"></i></div>
+        <div class="bar"><i class="loan-fill" data-w="38"></i></div>
         <div class="plan-meta"><span>repaid 1,90,000</span><span>of 5,00,000</span></div>
       </div>
     </div>
@@ -292,6 +293,13 @@
     es.forEach((x) => { if (x.isIntersecting) { x.target.classList.add('in'); io.unobserve(x.target); } });
   }, { threshold: 0.1 });
   document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+  // Grow the hero dashboard-preview bars from 0 → their data-w% on load.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll('.dash-preview .bar i[data-w]').forEach((b) => {
+      b.style.width = b.dataset.w + '%';
+    });
+  }));
 
   // ── Sign-in modal (opened by the finale CTAs) ──
   const modal = $("signin-modal");

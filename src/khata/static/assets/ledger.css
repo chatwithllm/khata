@@ -51,7 +51,7 @@ a{color:inherit;text-decoration:none}
 /* ── Landing page (all rules scoped under .landing so they can't leak into
       features.html / the app shell, which also load ledger.css) ── */
 .landing .glyph{width:28px;height:28px;border-radius:8px;flex:none;background:linear-gradient(145deg,var(--primary),var(--primary-deep));box-shadow:0 6px 14px -6px var(--primary)}
-.landing nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(12px) saturate(1.1);border-bottom:1px solid transparent;transition:border-color .3s}
+.landing nav{position:sticky;top:0;z-index:100;background:color-mix(in srgb,var(--paper) 82%,transparent);backdrop-filter:blur(12px) saturate(1.1);border-bottom:1px solid transparent;transition:border-color .4s,background .6s,box-shadow .4s}
 .landing nav.scrolled{border-bottom-color:var(--line-2)}
 .landing .nav-inner{max-width:1080px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px}
 .landing .brand{display:flex;align-items:center;gap:8px;font-family:"Fraunces",serif;font-weight:600;font-size:20px;text-decoration:none;color:var(--ink)}
@@ -75,16 +75,16 @@ a{color:inherit;text-decoration:none}
 .landing .hero-grid{max-width:1080px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:1.05fr 380px;gap:44px;align-items:center;min-height:480px}
 @media(max-width:760px){.landing .hero-grid{grid-template-columns:1fr;gap:40px}}
 .landing .eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:6px 14px;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--primary);margin-bottom:20px}
-.landing .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--pos-soft);flex-shrink:0}
+.landing .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--pos-soft);flex-shrink:0;animation:landpulse 2.4s infinite}
 .landing header h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(38px,5.5vw,62px);letter-spacing:-.025em;line-height:1.04;margin-bottom:20px}
 .landing header h1 em{font-style:italic;color:var(--primary);white-space:nowrap}
 .landing .lede{font-size:17px;color:var(--ink-soft);line-height:1.65;max-width:52ch;margin-bottom:28px}
 .landing .cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-.landing .btn-dark{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:var(--paper);font-size:14px;font-weight:600;padding:11px 20px;border-radius:100px;text-decoration:none;transition:opacity .2s}
-.landing .btn-dark:hover{opacity:.8}
-.landing .btn-alt{display:inline-flex;align-items:center;background:transparent;color:var(--ink-soft);font-size:14px;font-weight:500;padding:11px 8px;border:none;text-decoration:none;transition:color .2s}
+.landing .btn-dark{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:var(--paper);font-size:14px;font-weight:600;padding:11px 20px;border-radius:100px;text-decoration:none;transition:transform .2s var(--ease),box-shadow .2s var(--ease),background .6s,color .6s,opacity .2s}
+.landing .btn-dark:hover{transform:translateY(-2px);box-shadow:0 12px 26px -14px rgba(28,24,19,.6)}
+.landing .btn-alt{display:inline-flex;align-items:center;background:transparent;color:var(--ink-soft);font-size:14px;font-weight:500;padding:11px 8px;border:none;text-decoration:none;transition:color .2s,transform .2s var(--ease)}
 .landing .btn-alt span{border-bottom:1px solid transparent;transition:border-color .2s}
-.landing .btn-alt:hover{color:var(--ink)}
+.landing .btn-alt:hover{color:var(--ink);transform:translateY(-1px)}
 .landing .btn-alt:hover span{border-bottom-color:var(--ink);text-underline-offset:3px}
 .landing .cta-note{font-size:13px;color:var(--ink-faint)}
 .landing .cta-note b{color:var(--pos)}
@@ -176,10 +176,10 @@ a{color:inherit;text-decoration:none}
 .landing .finale h2{color:var(--paper);margin-bottom:32px}
 .landing .finale h2 em{color:var(--primary)}
 .landing .finale-btns{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:28px}
-.landing .btn-google{display:inline-flex;align-items:center;gap:8px;background:var(--paper);color:var(--ink);font-size:14px;font-weight:600;padding:12px 22px;border-radius:100px;text-decoration:none;transition:opacity .2s}
-.landing .btn-google:hover{opacity:.9}
-.landing .btn-ghost{display:inline-flex;align-items:center;background:transparent;color:color-mix(in srgb,var(--paper) 60%,transparent);font-size:14px;font-weight:500;padding:12px 22px;border-radius:100px;border:1px solid color-mix(in srgb,var(--paper) 20%,transparent);text-decoration:none;transition:border-color .2s,color .2s}
-.landing .btn-ghost:hover{border-color:color-mix(in srgb,var(--paper) 40%,transparent);color:var(--paper)}
+.landing .btn-google{display:inline-flex;align-items:center;gap:8px;background:var(--paper);color:var(--ink);font-size:14px;font-weight:600;padding:12px 22px;border-radius:100px;text-decoration:none;transition:transform .2s var(--ease),box-shadow .2s var(--ease),opacity .2s}
+.landing .btn-google:hover{transform:translateY(-2px);box-shadow:0 12px 28px -14px rgba(0,0,0,.5)}
+.landing .btn-ghost{display:inline-flex;align-items:center;background:transparent;color:color-mix(in srgb,var(--paper) 60%,transparent);font-size:14px;font-weight:500;padding:12px 22px;border-radius:100px;border:1px solid color-mix(in srgb,var(--paper) 20%,transparent);text-decoration:none;transition:border-color .2s,color .2s,transform .2s var(--ease),box-shadow .2s var(--ease)}
+.landing .btn-ghost:hover{border-color:color-mix(in srgb,var(--paper) 40%,transparent);color:var(--paper);transform:translateY(-2px);box-shadow:0 12px 28px -14px rgba(0,0,0,.45)}
 .landing .finale-tags{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
 
 /* Footer */
@@ -192,8 +192,8 @@ a{color:inherit;text-decoration:none}
 .landing .finale .card{text-align:left;max-width:380px;margin:0 auto 28px}
 
 /* Reveal animations (scoped — features.html keeps the global .reveal) */
-.landing .reveal{opacity:0;transform:translateY(16px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
-.landing .reveal.in{opacity:1;transform:none}
+.landing .reveal{opacity:0;transform:translateY(26px);filter:blur(5px);transition:opacity .9s var(--ease),transform .9s var(--ease),filter .9s var(--ease)}
+.landing .reveal.in{opacity:1;transform:none;filter:none}
 
 /* Strip below hero — small SVG dot icons instead of emoji */
 .landing .hero-strip{display:flex;gap:28px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft)}
@@ -211,3 +211,30 @@ a{color:inherit;text-decoration:none}
 .landing .signin-modal .x{position:absolute;top:14px;right:16px;font-size:20px;line-height:1;color:var(--ink-faint);cursor:pointer;background:none;border:none}
 .landing .signin-modal .x:hover{color:var(--ink)}
 @media(prefers-reduced-motion:reduce){.landing .signin-modal .card{animation:none}}
+
+/* ── Landing hero-card + reveal animations (from index mockup) ── */
+@keyframes landpulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--pos-soft) 60%,transparent)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@keyframes landsweep{0%,100%{left:-70%}11%{left:130%}}
+@keyframes landdrift{from{transform:translate3d(-2%,-1%,0) scale(1)}to{transform:translate3d(3%,2%,0) scale(1.09)}}
+.landing .livedot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--pos-soft);margin-right:7px;vertical-align:baseline;animation:landpulse 2.4s infinite}
+/* drifting glow + sheen sweep on the dashboard-preview card */
+.landing .dash-preview{position:relative;isolation:isolate}
+.landing .dash-preview::before{content:"";position:absolute;inset:-30% -20% auto auto;width:60%;height:60%;z-index:-1;border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--primary) 22%,transparent),transparent 70%);filter:blur(26px);opacity:.55;animation:landdrift 22s var(--ease) infinite alternate}
+.landing .dash-preview .sheen{position:absolute;inset:0;border-radius:20px;overflow:hidden;pointer-events:none;z-index:2}
+.landing .dash-preview .sheen::before{content:"";position:absolute;top:-10%;left:-70%;width:42%;height:120%;
+  background:linear-gradient(100deg,transparent,color-mix(in srgb,#fff 45%,transparent),transparent);transform:skewX(-16deg);animation:landsweep 7.5s var(--ease) 1.8s infinite}
+/* bars grow from 0 → data-w% (JS sets width on load) */
+.landing .dash-preview .bar i{width:0;transition:width 1.3s var(--ease),background .6s;will-change:width}
+/* plan-row hover tint */
+.landing .plan-row{transition:background .2s}
+.landing .plan-row:hover{background:color-mix(in srgb,var(--primary) 5%,transparent)}
+/* staggered reveal delays (opt-in via data-d) */
+.landing .reveal[data-d="1"]{transition-delay:.08s}
+.landing .reveal[data-d="2"]{transition-delay:.16s}
+.landing .reveal[data-d="3"]{transition-delay:.24s}
+@media(prefers-reduced-motion:reduce){
+  .landing .reveal{opacity:1;transform:none;filter:none;transition:none}
+  .landing .livedot,.landing .eyebrow .dot,.landing .dash-preview::before,.landing .dash-preview .sheen::before{animation:none}
+  .landing .dash-preview .bar i{transition:none}
+}
