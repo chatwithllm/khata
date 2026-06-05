@@ -2,12 +2,12 @@
   "project": "khata",
   "plan": "docs/superpowers/ROADMAP.md \u2014 Phases 3\u20135 (12 plans)",
   "started_at": "2026-06-04T00:00:00Z",
-  "updated_at": "2026-06-05T09:22:57Z",
+  "updated_at": "2026-06-05T09:33:17Z",
   "total_tasks": 12,
-  "tasks_done": 9,
+  "tasks_done": 10,
   "current_task": {
-    "id": "5.2",
-    "title": "Hardening sweep",
+    "id": "5.3",
+    "title": "Analysis tools (hold-vs-sell calculator)",
     "phase": "Phase 5 \u2014 Settings/hardening/analysis",
     "status": "in_progress"
   },
@@ -28,20 +28,13 @@
       "status": "active"
     }
   ],
-  "last_commit": "4373819",
-  "last_gate_passed": "5.1 settings \u2014 set password \u2192 login \u2713, profile rename \u2713",
+  "last_commit": "ee2b234",
+  "last_gate_passed": "5.2 hardening \u2014 malformed amount 500\u2192400 app-wide \u2713 (no-float intact)",
   "open_issues": 0,
   "incidents": 3,
-  "tests": "160 passed",
+  "tests": "165 passed",
   "python": "3.12",
   "log": [
-    {
-      "task": "3.4",
-      "title": "Loan detail",
-      "gate": "passed",
-      "commit": "db2fb76",
-      "timestamp": "2026-06-04T23:00:00Z"
-    },
     {
       "task": "3.5",
       "title": "Holding detail + sharing \u2014 Phase 3 shipped (PR #9) + LAN deploy",
@@ -76,6 +69,13 @@
       "gate": "passed",
       "commit": "4373819",
       "timestamp": "2026-06-05T09:22:57Z"
+    },
+    {
+      "task": "5.2",
+      "title": "Hardening sweep (500\u2192400, holdings guards)",
+      "gate": "passed",
+      "commit": "ee2b234",
+      "timestamp": "2026-06-05T09:33:17Z"
     }
   ]
 }
