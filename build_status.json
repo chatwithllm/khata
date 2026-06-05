@@ -2,12 +2,12 @@
   "project": "khata",
   "plan": "docs/superpowers/ROADMAP.md \u2014 Phases 3\u20135 (12 plans)",
   "started_at": "2026-06-04T00:00:00Z",
-  "updated_at": "2026-06-05T09:33:17Z",
+  "updated_at": "2026-06-05T09:40:57Z",
   "total_tasks": 12,
-  "tasks_done": 10,
+  "tasks_done": 11,
   "current_task": {
-    "id": "5.3",
-    "title": "Analysis tools (hold-vs-sell calculator)",
+    "id": "5.4",
+    "title": "Live market feeds (optional)",
     "phase": "Phase 5 \u2014 Settings/hardening/analysis",
     "status": "in_progress"
   },
@@ -28,20 +28,13 @@
       "status": "active"
     }
   ],
-  "last_commit": "ee2b234",
-  "last_gate_passed": "5.2 hardening \u2014 malformed amount 500\u2192400 app-wide \u2713 (no-float intact)",
+  "last_commit": "9bfee56",
+  "last_gate_passed": "5.3 analysis \u2014 hold-vs-sell net 8011233 verdict hold \u2713",
   "open_issues": 0,
   "incidents": 3,
-  "tests": "165 passed",
+  "tests": "172 passed",
   "python": "3.12",
   "log": [
-    {
-      "task": "3.5",
-      "title": "Holding detail + sharing \u2014 Phase 3 shipped (PR #9) + LAN deploy",
-      "gate": "passed",
-      "commit": "07ed540",
-      "timestamp": "2026-06-04T23:30:00Z"
-    },
     {
       "task": "4.1",
       "title": "Chit funds (model/service/API/UI, money-reviewed)",
@@ -76,6 +69,13 @@
       "gate": "passed",
       "commit": "ee2b234",
       "timestamp": "2026-06-05T09:33:17Z"
+    },
+    {
+      "task": "5.3",
+      "title": "Analysis tools (hold-vs-sell)",
+      "gate": "passed",
+      "commit": "9bfee56",
+      "timestamp": "2026-06-05T09:40:57Z"
     }
   ]
 }
