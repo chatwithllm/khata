@@ -1,10 +1,10 @@
 from datetime import date, datetime, timezone
 
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 
 from ..models import Plan, User
 from ..money import format_minor, pct_to_bps, to_micro, to_minor
-from ..services import assets, chits, holdings, loans, retirement, sharing
+from ..services import assets, chits, feed, holdings, loans, retirement, sharing
 from ..services.assets import PlanError
 from ..services.loans import LoanError
 from ..services.holdings import HoldingError
@@ -333,6 +333,30 @@ def holding_quote(plan_id):
     except (HoldingError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(state=holdings.holding_state(g.db, plan.holding)), 200
+
+
+@bp.post("/<int:plan_id>/holding/refresh-quote")
+def holding_refresh_quote(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "holding":
+        return jsonify(error="not_a_holding"), 400
+    cfg = current_app.config["KHATA"]
+    if not feed.feed_enabled(cfg):
+        return jsonify(error="feed_not_configured"), 503
+    provider = current_app.config["PRICE_PROVIDER"]
+    try:
+        price = provider(plan.holding.asset_class, plan.holding.symbol, plan.currency, cfg.price_feed)
+        holdings.set_quote(g.db, plan=plan, price_minor=price, as_of=_parse_dt(None))
+        g.db.commit()
+    except (feed.FeedError, HoldingError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="feed_error", detail=str(e)), 502
     return jsonify(state=holdings.holding_state(g.db, plan.holding)), 200
 
 

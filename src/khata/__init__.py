@@ -13,6 +13,9 @@ def create_app(config: Config | None = None) -> Flask:
     from .services.auth import verify_google_credential
     app.config["GOOGLE_VERIFIER"] = verify_google_credential
 
+    from .services.feed import live_price_provider
+    app.config["PRICE_PROVIDER"] = live_price_provider
+
     engine = make_engine(cfg.database_url)
     SessionLocal = make_session_factory(engine)
     app.config["ENGINE"] = engine
@@ -51,5 +54,8 @@ def create_app(config: Config | None = None) -> Flask:
 
     from .api.analysis import bp as analysis_bp
     app.register_blueprint(analysis_bp)
+
+    from .api.feed import bp as feed_bp
+    app.register_blueprint(feed_bp)
 
     return app
