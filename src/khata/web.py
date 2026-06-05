@@ -55,3 +55,8 @@ def chit_detail(plan_id):
 @bp.get("/retirement/<int:plan_id>")
 def retirement_detail(plan_id):
     return send_from_directory(_static_dir(), "retirement-detail.html")
+
+
+@bp.get("/settings")
+def settings():
+    return send_from_directory(_static_dir(), "settings.html")

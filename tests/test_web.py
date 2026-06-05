@@ -120,3 +120,11 @@ def test_retirement_detail_served(client):
     body = r.data.decode()
     for needle in ["/api/plans", "/retirement/update", "sharing.js", "ledger.css"]:
         assert needle in body
+
+
+def test_settings_page_served(client):
+    r = client.get("/settings")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["/api/auth/password", "/api/auth/profile", "/api/base-currency", "ledger.css"]:
+        assert needle in body
