@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — Holdings &amp; Net Worth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/assets/ledger.css">
+<style>
+  .nw{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:18px 0}
+  .nw .card .k{font-size:12px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.1em;font-weight:700}
+  .nw .card .v{font-family:"Fraunces",serif;font-size:28px;margin-top:6px}
+  table.hold{width:100%;border-collapse:collapse;margin-top:8px}
+  table.hold th,table.hold td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  table.hold th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint)}
+  .flag{display:inline-block;font-size:11px;font-family:"JetBrains Mono";color:var(--accent);font-weight:700}
+  .ctl{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0 20px}
+  .ctl input,.ctl select{font-family:inherit;font-size:14px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
+  .warn{color:var(--neg);font-size:13px;min-height:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="nav">
+    <a class="brand" href="/"><span class="glyph"></span> Khata</a>
+    <div><a class="link" href="/features">Features</a><a class="link" href="/app">Open app</a></div>
+  </nav>
+
+  <header class="hero" style="padding:32px 0 8px">
+    <h1>Holdings &amp; net worth</h1>
+    <p>Your positions and loans, consolidated into one figure in your base currency.</p>
+  </header>
+
+  <section class="nw" id="nw">
+    <div class="card"><div class="k">Assets</div><div class="v mono" id="assets">—</div></div>
+    <div class="card"><div class="k">Liabilities</div><div class="v mono" id="liabilities">—</div></div>
+    <div class="card"><div class="k">Net worth</div><div class="v mono" id="net">—</div></div>
+  </section>
+
+  <div class="warn" id="callout"></div>
+
+  <div class="ctl">
+    <label class="muted">Base
+      <select id="base"><option value="INR">INR ₹</option><option value="USD">USD $</option></select>
+    </label>
+    <label class="muted">FX 1
+      <select id="fxq"><option value="USD">USD</option><option value="INR">INR</option></select>
+      =
+      <input id="fxr" placeholder="83.42" style="width:90px">
+      <span id="fxbase">base</span>
+    </label>
+    <button class="btn" id="setfx">Set rate</button>
+    <span class="warn" id="err"></span>
+  </div>
+
+  <table class="hold">
+    <thead><tr><th>Holding</th><th>Qty</th><th>Value</th><th>Gain</th><th>In base</th><th>Quote</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const SYM = { INR: "₹", USD: "$" };
+
+  function fmtMinor(m, ccy) {
+    if (m === null || m === undefined) return "—";
+    const neg = m < 0; const v = Math.abs(m) / 100;
+    return (neg ? "-" : "") + (SYM[ccy] || "") + v.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  }
+  function fmtMicro(q) { return (q / 1e6).toLocaleString("en-IN"); }
+
+  async function load() {
+    const r = await fetch("/api/networth");
+    if (r.status === 401) { window.location.href = "/"; return; }
+    const d = await r.json();
+    const base = d.base_currency;
+    $("base").value = base;
+    $("fxbase").textContent = base;
+    $("assets").textContent = fmtMinor(d.assets_minor, base);
+    $("liabilities").textContent = fmtMinor(d.liabilities_minor, base);
+    $("net").textContent = fmtMinor(d.net_worth_minor, base);
+
+    const bits = [];
+    if (d.unpriced.length) bits.push(d.unpriced.length + " unpriced holding(s)");
+    for (const [ccy, b] of Object.entries(d.unconverted)) {
+      bits.push("unconverted " + ccy + ": " + fmtMinor(b.assets_minor, ccy) + " assets / " + fmtMinor(b.liabilities_minor, ccy) + " liab (set an FX rate)");
+    }
+    $("callout").textContent = bits.join(" · ");
+
+    $("rows").innerHTML = "";
+    for (const h of d.holdings) {
+      const tr = document.createElement("tr");
+      const inbase = h.value_in_base_minor === null
+        ? (h.priced ? '<span class="flag">no rate</span>' : '<span class="flag">unpriced</span>')
+        : fmtMinor(h.value_in_base_minor, base);
+      tr.innerHTML =
+        "<td>" + h.name + " <span class='muted'>" + h.asset_class + "</span></td>" +
+        "<td class='mono'>" + fmtMicro(h.qty_held_micro) + "</td>" +
+        "<td class='mono'>" + fmtMinor(h.current_value_minor, h.currency) + "</td>" +
+        "<td class='mono'>" + fmtMinor(h.unrealized_gain_minor, h.currency) + "</td>" +
+        "<td class='mono'>" + inbase + "</td>" +
+        "<td><input data-id='" + h.id + "' class='q' placeholder='price/unit' style='width:96px'></td>";
+      $("rows").appendChild(tr);
+    }
+    document.querySelectorAll("input.q").forEach((el) => {
+      el.addEventListener("keydown", async (e) => {
+        if (e.key !== "Enter") return;
+        await post("/api/plans/" + el.dataset.id + "/holding/quote", { price: el.value });
+        load();
+      });
+    });
+  }
+
+  async function post(path, body) {
+    $("err").textContent = "";
+    const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify(body) });
+    if (!r.ok) { const e = await r.json().catch(() => ({})); $("err").textContent = e.detail || e.error || "Failed"; }
+    return r.ok;
+  }
+
+  $("base").addEventListener("change", async () => {
+    if (await post("/api/base-currency", { currency: $("base").value })) load();
+  });
+  $("setfx").addEventListener("click", async () => {
+    if (await post("/api/fx-rates", { quote: $("fxq").value, rate: $("fxr").value })) { $("fxr").value = ""; load(); }
+  });
+
+  load();
+</script>
+</body>
+</html>
