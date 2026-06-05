@@ -110,3 +110,31 @@ def test_google_link_conflict_when_email_user_already_linked(session):
     from sqlalchemy import select
     u = session.scalar(select(User).where(User.email == "x@b.com"))
     assert u.google_sub == "sub-A"
+
+
+def test_set_password_for_google_user(session):
+    from khata.services.auth import set_password, authenticate_user
+    from khata.models import User
+    u = User(email="g@b.com", display_name="G", password_hash=None, google_sub="sub-x")
+    session.add(u); session.flush()
+    set_password(session, user=u, password="newpw123"); session.commit()
+    assert authenticate_user(session, email="g@b.com", password="newpw123").id == u.id
+
+
+def test_set_password_too_short_rejected(session):
+    import pytest
+    from khata.services.auth import set_password, AuthError
+    from khata.models import User
+    u = User(email="g@b.com", display_name="G", password_hash=None); session.add(u); session.flush()
+    with pytest.raises(AuthError):
+        set_password(session, user=u, password="x")
+
+
+def test_update_profile(session):
+    import pytest
+    from khata.services.auth import update_profile, AuthError, register_user
+    u = register_user(session, email="a@b.com", display_name="Old", password="pw12345"); session.commit()
+    update_profile(session, user=u, display_name="  New Name  "); session.commit()
+    assert u.display_name == "New Name"
+    with pytest.raises(AuthError):
+        update_profile(session, user=u, display_name="   ")
