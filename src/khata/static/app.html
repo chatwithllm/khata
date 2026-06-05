@@ -321,6 +321,12 @@ function chitPanel(c){
   const ph=el('div','ph');
   const t=el('div','t'); t.append(el('span','tag chit','Chit'), document.createTextNode(' '));
   const nm=el('span'); nm.textContent=c.plan.name; t.append(nm);
+  // real-signal badges: Auction (commission>0), Organizer (owner role)
+  const badges=el('div'); badges.style.cssText='display:inline-flex;gap:6px;margin-left:8px';
+  const pill=(txt)=>{ const s=el('span'); s.textContent=txt; s.style.cssText='font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)'; return s; };
+  if((st.commission_bps||0)>0) badges.append(pill('Auction'));
+  if(((window.__roleById||{})[c.plan.id])==='owner') badges.append(pill('Organizer'));
+  if(badges.children.length) t.append(badges);
   ph.append(t, el('div','meta', st.n_members+' members'));
   p.append(ph);
   const body=el('div','chit-body');
@@ -369,10 +375,10 @@ function loanGivenPanel(g){
   const rows=el('div','fillrows'); rows.style.padding='18px 22px';
   const splitBox=el('div'); splitBox.style.cssText='display:flex;justify-content:space-between;align-items:flex-end';
   const L=el('div');
-  L.append(el('div', null, 'Principal outstanding')).style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600';
+  const lLbl=el('div', null, 'Principal outstanding'); lLbl.style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600'; L.append(lLbl);
   const lv=el('div'); lv.style.cssText='font-family:Fraunces,serif;font-weight:600;font-size:28px;color:var(--pos);line-height:1;margin-top:5px'; lv.append(amtSpan(st.principal_outstanding_minor)); L.append(lv);
   const R=el('div'); R.style.textAlign='right';
-  R.append(el('div', null, 'Interest due')).style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600';
+  const rLbl=el('div', null, 'Interest due'); rLbl.style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600'; R.append(rLbl);
   const rv=el('div','mono'); rv.style.cssText='font-weight:700;font-size:17px;color:var(--primary-deep);margin-top:5px'; rv.append(amtSpan(st.interest_due_minor)); R.append(rv);
   splitBox.style.borderBottom='1px solid var(--line-2)';
   splitBox.style.paddingBottom='14px';
@@ -427,6 +433,10 @@ async function boot(){
     fetch('/api/plans').then(r=>r.json()),
   ]);
   BASE = nw.base_currency || 'INR';
+  // role per plan id (from /api/dashboard) — used for the chit "Organizer" badge
+  const roleById = {};
+  (dash.plans || []).forEach(p => { roleById[p.id] = p.role; });
+  window.__roleById = roleById;
   document.documentElement.dataset.cur = BASE.toLowerCase();
   // currency toggle highlight
   document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));
