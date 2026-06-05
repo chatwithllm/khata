@@ -69,6 +69,21 @@ def test_dashboard_fidelity_markers(client):
         assert needle in body
 
 
+def test_app_css_served_with_shell_markers(client):
+    r = client.get("/static/assets/app.css")
+    assert r.status_code == 200
+    body = r.data.decode()
+    # shared app-shell markers must live in the extracted stylesheet
+    for needle in [".nav-i", ".curtog", ".curtog .slide", "body::before"]:
+        assert needle in body
+
+
+def test_app_shell_links_app_css(client):
+    r = client.get("/app")
+    assert r.status_code == 200
+    assert "/static/assets/app.css" in r.data.decode()
+
+
 def test_create_page_served(client):
     r = client.get("/create")
     assert r.status_code == 200
