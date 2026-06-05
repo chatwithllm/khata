@@ -3,6 +3,15 @@ from flask import Blueprint, current_app, send_from_directory
 bp = Blueprint("web", __name__)
 
 
+@bp.after_request
+def _no_store_html(resp):
+    # HTML pages carry evolving inline JS; never let a browser serve a stale page.
+    # Versioned static assets (ledger.css?v=N, app.css) stay cacheable.
+    if resp.mimetype == "text/html":
+        resp.headers["Cache-Control"] = "no-store, must-revalidate"
+    return resp
+
+
 def _static_dir() -> str:
     return current_app.static_folder
 
