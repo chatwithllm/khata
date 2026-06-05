@@ -136,3 +136,9 @@ def test_analysis_page_served(client):
     body = r.data.decode()
     for needle in ["/api/analysis/hold-vs-sell", "ledger.css"]:
         assert needle in body
+
+
+def test_holding_detail_has_feed_refresh(client):
+    body = client.get("/holding/1").data.decode()
+    assert "/holding/refresh-quote" in body
+    assert "/api/feed/config" in body

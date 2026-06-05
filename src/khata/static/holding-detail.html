@@ -42,7 +42,10 @@
   </div>
   <div class="head">
     <div><h1 id="name">Holding</h1><div class="meta" id="meta">—</div></div>
-    <button class="btn" id="actbtn">Buy / Sell / Quote</button>
+    <div class="acts">
+      <button class="btn" id="refreshbtn" style="display:none">Refresh price (live)</button>
+      <button class="btn" id="actbtn">Buy / Sell / Quote</button>
+    </div>
   </div>
   <div class="cards">
     <div class="stat"><div class="k">Current value</div><div class="v mono" id="value">—</div></div>
@@ -102,6 +105,8 @@
       + " · realized " + fmtMinor(st.realized_gain_minor, currency)
       + (st.current_price_minor != null ? " · quote " + fmtMinor(st.current_price_minor, currency) + "/" + st.unit : " · no quote");
     mountSharing(pid, $("sharing"));
+    const fc = await fetch("/api/feed/config");
+    if (fc.ok) { const fcd = await fc.json().catch(() => ({})); if (fcd.enabled) $("refreshbtn").style.display = ""; }
   }
 
   function syncFields() {
@@ -123,6 +128,12 @@
     const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (r.ok) { $("modal").classList.remove("on"); $("quantity").value = ""; $("amount").value = ""; $("price").value = ""; load(); return; }
     const e = await r.json().catch(() => ({})); $("err").textContent = e.detail || e.error || "Could not save.";
+  });
+
+  $("refreshbtn").addEventListener("click", async () => {
+    const r = await fetch("/api/plans/" + pid + "/holding/refresh-quote", { method: "POST" });
+    if (r.ok) { load(); return; }
+    const e = await r.json().catch(() => ({})); $("statusline").textContent = e.detail || e.error || "Could not refresh price.";
   });
 
   load();
