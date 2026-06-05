@@ -9,8 +9,10 @@ from khata.services.loans import (
     add_disbursement,
     log_loan_entry,
     loan_state,
+    set_collateral,
     ValidationError,
 )
+from khata.services.holdings import create_holding_plan, add_buy, set_quote
 
 
 @pytest.fixture
@@ -160,3 +162,114 @@ def test_interest_end_of_month_start_clamps(ctx):
     assert len(st["schedule"]) == 2
     assert st["schedule"][1]["period_start"] == "2026-02-28"   # Feb clamped from day 31
     assert st["interest_accrued_minor"] == 200000              # 2 × 1% × 1,00,000
+
+
+# ── Collateral / LTV (Plan 4.2 Task 2) ───────────────────────────────────────
+
+def _quoted_holding(s, owner_id, *, currency="INR", price_minor=10000000):
+    """Holding with a buy of 10 units, quoted so current_value_minor == price_minor*10.
+    With price_minor=10000000 → current_value_minor == 100000000 (₹10,00,000)."""
+    hp = create_holding_plan(s, owner_id=owner_id, name="Gold", currency=currency,
+                             asset_class="gold", unit="g")
+    add_buy(s, plan=hp, user_id=owner_id, quantity_micro=10_000_000,  # 10 units
+            amount_minor=80000000, occurred_at=_dt(2026, 1, 1))
+    set_quote(s, plan=hp, price_minor=price_minor, as_of=date(2026, 1, 1))
+    return hp
+
+
+def _taken_loan_disbursed(s, owner_id, amount_minor, *, currency="INR"):
+    lp = create_loan_plan(s, owner_id=owner_id, name="GL", currency=currency,
+                          direction="taken", interest_type="none", rate_bps=0,
+                          start_date=date(2026, 1, 1))
+    add_disbursement(s, plan=lp, user_id=owner_id, amount_minor=amount_minor,
+                     occurred_at=_dt(2026, 1, 1))
+    return lp
+
+
+def test_set_collateral_and_ltv(ctx):
+    s, u = ctx
+    hp = _quoted_holding(s, u.id)                              # value 100000000
+    lp = _taken_loan_disbursed(s, u.id, 60000000)             # principal 60000000
+    set_collateral(s, plan=lp, collateral_plan_id=hp.id)
+    s.commit()
+    st = loan_state(s, lp.loan, as_of=date(2026, 6, 1))
+    assert st["secured"] is True
+    assert st["collateral"] is not None
+    assert st["collateral"]["plan_id"] == hp.id
+    assert st["collateral"]["asset_class"] == "gold"
+    assert st["collateral"]["currency"] == "INR"
+    assert st["collateral"]["value_minor"] == 100000000
+    # round(60000000 * 100 / 100000000) == round(60.0) == 60
+    assert st["collateral"]["ltv_pct"] == 60
+
+
+def test_set_collateral_non_holding_rejected(ctx):
+    s, u = ctx
+    lp = _taken_loan_disbursed(s, u.id, 60000000)
+    # another loan plan (type == "loan", not "holding") as collateral target
+    other = create_loan_plan(s, owner_id=u.id, name="Other", currency="INR",
+                             direction="taken", interest_type="none", rate_bps=0,
+                             start_date=date(2026, 1, 1))
+    with pytest.raises(ValidationError):
+        set_collateral(s, plan=lp, collateral_plan_id=other.id)
+
+
+def test_set_collateral_cross_currency_rejected(ctx):
+    s, u = ctx
+    hp = create_holding_plan(s, owner_id=u.id, name="US Gold", currency="USD",
+                             asset_class="gold", unit="oz")
+    lp = _taken_loan_disbursed(s, u.id, 60000000, currency="INR")
+    with pytest.raises(ValidationError):
+        set_collateral(s, plan=lp, collateral_plan_id=hp.id)
+
+
+def test_set_collateral_cross_owner_rejected(ctx):
+    s, u = ctx
+    other_user = User(email="b@b.com", display_name="Bina", password_hash="x")
+    s.add(other_user)
+    s.flush()
+    hp = create_holding_plan(s, owner_id=other_user.id, name="Their Gold", currency="INR",
+                             asset_class="gold", unit="g")
+    lp = _taken_loan_disbursed(s, u.id, 60000000)
+    with pytest.raises(ValidationError):
+        set_collateral(s, plan=lp, collateral_plan_id=hp.id)
+
+
+def test_set_collateral_unlink(ctx):
+    s, u = ctx
+    hp = _quoted_holding(s, u.id)
+    lp = _taken_loan_disbursed(s, u.id, 60000000)
+    set_collateral(s, plan=lp, collateral_plan_id=hp.id)
+    set_collateral(s, plan=lp, collateral_plan_id=None)
+    s.commit()
+    st = loan_state(s, lp.loan, as_of=date(2026, 6, 1))
+    assert st["secured"] is False
+    assert st["collateral"] is None
+
+
+def test_set_collateral_unquoted_holding_no_ltv(ctx):
+    s, u = ctx
+    # holding with a buy but NO quote → current_value_minor is None
+    hp = create_holding_plan(s, owner_id=u.id, name="Unquoted", currency="INR",
+                             asset_class="gold", unit="g")
+    add_buy(s, plan=hp, user_id=u.id, quantity_micro=10_000_000,
+            amount_minor=80000000, occurred_at=_dt(2026, 1, 1))
+    lp = _taken_loan_disbursed(s, u.id, 60000000)
+    set_collateral(s, plan=lp, collateral_plan_id=hp.id)
+    s.commit()
+    st = loan_state(s, lp.loan, as_of=date(2026, 6, 1))
+    assert st["secured"] is True
+    assert st["collateral"] is not None
+    assert st["collateral"]["value_minor"] is None
+    assert st["collateral"]["ltv_pct"] is None
+
+
+def test_collateral_ltv_rounds_half_up(ctx):
+    s, u = ctx
+    # value 100000000; principal 66666667 → 66.666... → HALF_UP → 67
+    hp = _quoted_holding(s, u.id)                              # value 100000000
+    lp = _taken_loan_disbursed(s, u.id, 66666667)
+    set_collateral(s, plan=lp, collateral_plan_id=hp.id)
+    s.commit()
+    st = loan_state(s, lp.loan, as_of=date(2026, 6, 1))
+    assert st["collateral"]["ltv_pct"] == 67
