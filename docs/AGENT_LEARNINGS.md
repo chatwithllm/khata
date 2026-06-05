@@ -313,3 +313,15 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   METHODS/SOURCES enums. **Honest degradation:** omitted the mockup's ledger panel, projection sparkline,
   linked-liability, and proof gallery — no backend endpoint exposes that data, so render nothing rather than
   fabricate. Schedule `.mt` shows status text (paid in full / part-paid / due), not fabricated dates/badges.
+- **6.4 Loan/Chit/Retirement detail fidelity:** ported all three detail pages to the editorial shell + grid2
+  panels wired to live `loan_state`/`chit_state`/`retirement_state`. Loan: KPIs + release tracker (real
+  schedule w/ period dates) + conditional collateral/LTV + terms; raw entry-ledger omitted (no GET). Chit:
+  KPIs + rounds strip (aggregate `won` only — per-round winners NOT tracked, so no per-cell star) + my
+  position + REAL ledger (chit_state exposes it) + terms + roster; net-position chart drawn from cumulative
+  ledger (real). Retirement: KPIs + projection (growth curve replicates the backend compound formula exactly,
+  displays server corpus figures) + contribution split (segments incl. opening balance sum to corpus) +
+  editable assumptions → /retirement/update; 401(k)-loan offset planner omitted (no model). Adversarial
+  review caught two issues, both fixed: chit per-round win-star (fabricated which round won) removed;
+  retirement split total base made honest. **Follow-up for 6.5:** the chit dividend/auction-what-if
+  calculator (GET /chit/dividend) was dropped from the fidelity port — endpoint still live; restore as a
+  compact slide-over so it isn't an orphaned endpoint.

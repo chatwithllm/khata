@@ -8,7 +8,7 @@ recommended option on every design fork. Deploy locally + final report at the ve
 Branching: one branch/PR per phase; each plan gets its own spec + plan + tests + reviews.
 
 ## Snapshot
-- **Tests:** 181 passing · Python 3.12 · Phases 1-5 COMPLETE (12/12) + Phase 6 UI fidelity (3/5)
+- **Tests:** 181 passing · Python 3.12 · Phases 1-5 COMPLETE (12/12) + Phase 6 UI fidelity (4/5)
 - **Merged:** Phases 1Ã¢ÂÂ2 (PRs #1Ã¢ÂÂ#7) + Plan 3.1 app shell (PR #8).
 - **Now building:** Phase 3 (app UI) on `feat/phase3-ui` Ã¢ÂÂ Phase 3 done â integration review + PR next.
 - **Live dashboard (LAN):** http://192.168.50.189:9001/dashboard.html (auto-refresh 5s).
@@ -44,10 +44,16 @@ Branching: one branch/PR per phase; each plan gets its own spec + plan + tests +
 - [x] 6.1 Dashboard fidelity (app.html)
 - [x] 6.2 Shared app-shell CSS (static/assets/app.css)
 - [x] 6.3 Asset detail + log-payment fidelity
-- [ ] 6.4 Loan + chit + retirement detail fidelity
+- [x] 6.4 Loan + chit + retirement detail fidelity
 - [ ] 6.5 Holdings + create + settings + analysis fidelity
 
 ## Log (newest first)
+- **6.4 - Loan/Chit/Retirement detail fidelity** (`feat/phase6-fidelity`). All three detail pages on the
+  editorial shell + grid2 panels wired to live state. Loan: release tracker + conditional collateral/LTV.
+  Chit: real ledger + rounds strip (aggregate win only) + net-position chart from cumulative ledger.
+  Retirement: projection curve replicating the backend compound formula + contribution split. Adversarial
+  review PASS after 2 fixes (chit per-round star removed; retirement split base honest). 181 tests.
+  Follow-up 6.5: restore chit auction-what-if calculator (/chit/dividend) as a slide-over.
 - **6.3 - Asset-detail fidelity** (`feat/phase6-fidelity`). Editorial shell + grid2 panels (KPIs+progress,
   schedule status-dots, funding stacked-bar, contributors sharebar, members). Log-payment -> slide-over on
   real /payments. Ledger/projection/proof/linked-liability omitted (no endpoint - honest degradation).

@@ -2,12 +2,12 @@
   "project": "khata",
   "plan": "docs/superpowers/ROADMAP.md \u2014 Phases 3\u20135 (12 plans)",
   "started_at": "2026-06-04T00:00:00Z",
-  "updated_at": "2026-06-05T10:30:00Z",
+  "updated_at": "2026-06-05T11:15:00Z",
   "total_tasks": 17,
-  "tasks_done": 15,
+  "tasks_done": 16,
   "current_task": {
-    "id": "6.4",
-    "title": "Loan + chit + retirement detail fidelity",
+    "id": "6.5",
+    "title": "Holdings + create + settings + analysis fidelity",
     "phase": "Phase 6 - UI fidelity",
     "status": "pending"
   },
@@ -28,12 +28,12 @@
       "status": "done"
     },
     {
-      "name": "Phase 6 - UI fidelity (6.1 dashboard / 6.2 app.css / 6.3 asset-detail done)",
+      "name": "Phase 6 - UI fidelity (6.1-6.4 done; 6.5 next)",
       "task_range": "13-17",
       "status": "in_progress"
     }
   ],
-  "last_commit": "bebb578",
+  "last_commit": "87a3bd3",
   "last_gate_passed": true,
   "open_issues": 0,
   "incidents": 3,
@@ -102,6 +102,13 @@
       "gate": "pass",
       "commit": "bebb578",
       "timestamp": "2026-06-05T10:25:00Z"
+    },
+    {
+      "task": "6.4",
+      "title": "Loan+Chit+Retirement detail fidelity",
+      "gate": "pass",
+      "commit": "87a3bd3",
+      "timestamp": "2026-06-05T11:10:00Z"
     }
   ]
 }
