@@ -7,136 +7,390 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/assets/ledger.css">
+<link rel="stylesheet" href="/static/assets/app.css">
 <style>
-  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
-  .topbar .brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:20px}
-  .topbar .glyph{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,var(--primary),var(--primary-deep))}
-  .head{display:flex;align-items:flex-end;justify-content:space-between;margin:8px 0 16px;gap:12px}
-  .head h1{font-family:"Fraunces",serif;font-weight:600;font-size:30px}
-  .head .meta{font-size:13px;color:var(--ink-faint)}
-  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:10px}
-  @media(max-width:680px){.cards{grid-template-columns:1fr}}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
-  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-faint);font-weight:700}
-  .stat .v{font-family:"Fraunces",serif;font-size:24px;margin-top:6px}
-  .stat .v.pos{color:var(--pos)} .stat .v.neg{color:var(--neg)}
-  .statusline{font-size:13px;color:var(--ink-soft);margin-bottom:18px}
-  .sec{margin:22px 0}
-  .modal{position:fixed;inset:0;background:rgba(20,16,12,.45);display:none;align-items:center;justify-content:center;z-index:50}
-  .modal.on{display:flex}
-  .sheet{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;width:min(440px,92vw);box-shadow:var(--shadow)}
-  .sheet h3{font-family:"Fraunces",serif;font-size:20px;margin-bottom:12px}
-  .fld{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
-  .fld label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
-  .fld input,.fld select{font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
-  .err{color:var(--neg);font-size:13px;min-height:18px}
-  .acts{display:flex;gap:10px;align-items:center;margin-top:6px}
+/* ── holding-detail.html-only rules (shell + shared groups live in app.css) ── */
+.emptypanel{padding:30px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px}
+
+/* header KPI accents */
+.kpi.pos .n{color:var(--pos)} .kpi.neg .n{color:var(--neg)}
+
+/* position readout */
+.terms{padding:6px 0}
+.terms .trow{display:flex;justify-content:space-between;align-items:center;padding:11px 22px;border-top:1px solid var(--line-2);font-size:13.5px}
+.terms .trow:first-child{border-top:none}
+.terms .trow .tk{color:var(--ink-faint)}
+.terms .trow .tv{font-family:"JetBrains Mono";font-weight:600;text-align:right}
+.terms .trow .tv.pos{color:var(--pos)} .terms .trow .tv.neg{color:var(--neg)}
+
+/* refresh (live) button — quieter than the primary add button */
+.livebtn{font-weight:600;font-size:13.5px;padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer}
+.livebtn:hover{border-color:var(--primary);color:var(--ink)}
+
+/* slide-over (copied from asset-detail pattern) */
+.scrim{position:fixed;inset:0;background:rgba(20,16,12,.45);opacity:0;visibility:hidden;transition:opacity .3s var(--ease),visibility .3s;z-index:40}
+.scrim.on{opacity:1;visibility:visible}
+.over{position:fixed;top:0;right:0;bottom:0;width:min(440px,94vw);background:var(--card);border-left:1px solid var(--line);box-shadow:-24px 0 60px -30px rgba(28,24,19,.5);transform:translateX(100%);transition:transform .42s var(--ease);z-index:45;display:flex;flex-direction:column;overflow-y:auto}
+.over.on{transform:none}
+.over .oh{padding:24px 26px 18px;border-bottom:1px solid var(--line)}
+.over .eyebrow{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+.over .oh h3{font-family:"Fraunces",serif;font-weight:600;font-size:24px;margin-top:6px;letter-spacing:-.01em}
+.over .oh h3 em{font-style:italic;color:var(--primary-deep)}
+.over .osub{font-size:12.5px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:6px}
+.over .obody{padding:22px 26px;display:flex;flex-direction:column;gap:14px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+.fld input,.fld select{font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);transition:border-color .2s}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--primary)}
+.err{color:var(--neg);font-size:13px;min-height:18px}
+.acts{display:flex;gap:12px;align-items:center;margin-top:4px}
+.acts .save{font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;box-shadow:0 8px 18px -10px var(--primary);transition:transform .2s}
+.acts .save:hover{transform:translateY(-2px)}
+.acts .cancel{font-weight:600;font-size:14px;color:var(--ink-faint);cursor:pointer}
+.acts .cancel:hover{color:var(--ink)}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="topbar">
+<div class="app">
+  <!-- sidebar -->
+  <aside class="side">
     <a class="brand" href="/app"><span class="glyph"></span> Khata</a>
-    <a class="link" href="/app">← Back to app</a>
-  </div>
-  <div class="head">
-    <div><h1 id="name">Holding</h1><div class="meta" id="meta">—</div></div>
-    <div class="acts">
-      <button class="btn" id="refreshbtn" style="display:none">Refresh price (live)</button>
-      <button class="btn" id="actbtn">Buy / Sell / Quote</button>
+    <a class="newplan" href="/create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
+    <div class="navsec">Overview</div>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
+    <a class="nav-i on" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
+    <div class="navsec">Money plans</div>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <div class="navsec">Records</div>
+    <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
+    <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
+    <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+  </aside>
+
+  <!-- main -->
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1 id="name">Holding</h1>
+        <div class="sub" id="sub">—</div>
+      </div>
+      <div class="top-right">
+        <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="INR"><span class="cs">₹</span> INR</button><button data-set="USD"><span class="cs">$</span> USD</button></div>
+        <button class="livebtn" id="refreshbtn" style="display:none">Refresh (live)</button>
+        <button class="addbtn" id="addbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Buy / Sell / Quote</button>
+        <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init" id="ava-init"></span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
+      </div>
     </div>
-  </div>
-  <div class="cards">
-    <div class="stat"><div class="k">Current value</div><div class="v mono" id="value">—</div></div>
-    <div class="stat"><div class="k">Unrealized gain</div><div class="v mono" id="gain">—</div></div>
-    <div class="stat"><div class="k">Quantity held</div><div class="v mono" id="qty">—</div></div>
-  </div>
-  <div class="statusline" id="statusline"></div>
-  <div class="sec"><div id="sharing"></div></div>
+
+    <div class="content">
+      <div class="grid2">
+        <!-- LEFT MAIN -->
+        <div class="stack fillcol">
+          <!-- header KPIs -->
+          <div class="panel fade" id="header-panel"></div>
+          <!-- position -->
+          <div class="panel fade d1 fill" id="position-panel"></div>
+        </div>
+
+        <!-- RIGHT RAIL -->
+        <div class="stack fillcol">
+          <!-- live quote -->
+          <div class="panel fade d2" id="quote-panel"></div>
+          <!-- members (sharing) -->
+          <div class="panel fade d3 fill" id="members-panel"></div>
+        </div>
+      </div>
+    </div>
+  </main>
 </div>
 
-<div class="modal" id="modal">
-  <div class="sheet">
-    <h3>Holding action</h3>
-    <div class="fld"><label>Action</label>
-      <select id="act"><option value="buy">Buy</option><option value="sell">Sell</option><option value="quote">Set quote (price/unit)</option></select>
-    </div>
-    <div class="fld" id="qtyfld"><label>Quantity</label><input id="quantity" placeholder="10"></div>
-    <div class="fld" id="amtfld"><label>Amount (total cash)</label><input id="amount" placeholder="5,00,000"></div>
-    <div class="fld" id="pricefld" style="display:none"><label>Price per unit</label><input id="price" placeholder="60,000"></div>
-    <div class="err" id="err"></div>
-    <div class="acts"><button class="btn" id="save">Save</button><a class="link" id="cancel">Cancel</a></div>
+<!-- buy/sell/quote slide-over -->
+<div class="scrim" id="scrim"></div>
+<aside class="over" id="over" aria-hidden="true">
+  <div class="oh">
+    <div class="eyebrow">Holding action</div>
+    <h3>Buy, sell or <em>quote</em></h3>
+    <div class="osub" id="osub"></div>
   </div>
-</div>
+  <div class="obody">
+    <div class="fld"><label for="act">Action</label>
+      <select id="act"><option value="buy">Buy</option><option value="sell">Sell</option><option value="quote">Set quote (price / unit)</option></select>
+    </div>
+    <div class="fld" id="qtyfld"><label for="quantity">Quantity</label><input id="quantity" placeholder="10" inputmode="decimal"></div>
+    <div class="fld" id="amtfld"><label for="amount">Amount (total cash)</label><input id="amount" placeholder="5,00,000" inputmode="decimal"></div>
+    <div class="fld" id="pricefld" style="display:none"><label for="price">Price per unit</label><input id="price" placeholder="60,000" inputmode="decimal"></div>
+    <div class="err" id="err"></div>
+    <div class="acts"><button class="save" id="save">Save</button><span class="cancel" id="cancel">Cancel</span></div>
+  </div>
+</aside>
 
 <script src="/static/assets/sharing.js"></script>
 <script>
-  const $ = (id) => document.getElementById(id);
-  const SYM = { INR: "₹", USD: "$" };
-  const pid = parseInt(location.pathname.split("/").pop(), 10);
-  let currency = "INR";
+const $ = (id) => document.getElementById(id);
+const pid = parseInt(location.pathname.split("/").pop(), 10);
+let BASE = "INR";
+let UNIT = "";
 
-  function fmtMinor(m, ccy) {
-    if (m === null || m === undefined) return "—";
-    const neg = m < 0, v = Math.abs(m) / 100;
-    return (neg ? "-" : "") + (SYM[ccy] || "") + v.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+// ── currency formatting (real amounts already in BASE; no client-side conversion) ──
+function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
+function usGroup(n){return Math.round(n).toLocaleString('en-US');}
+function sym(ccy){return ccy==='INR'?'₹':'$';}
+function fmtNum(minor, ccy){
+  if(minor===null||minor===undefined) return '—';
+  const v=minor/100;
+  return ccy==='INR'?indGroup(v):usGroup(v);
+}
+// quantity is micro-units (×1e6); render qty/1e6 grouped, no symbol
+function fmtQty(micro){
+  if(micro===null||micro===undefined) return '—';
+  const v=micro/1e6;
+  return (BASE==='INR'?v.toLocaleString('en-IN'):v.toLocaleString('en-US'));
+}
+
+function el(tag, cls, text){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined && text!==null) e.textContent=text;
+  return e;
+}
+// an amount cell = <symbol><number>, all textContent (K4)
+function amtSpan(minor, cls){
+  const wrap=document.createElement('span');
+  if(cls) wrap.className=cls;
+  if(minor===null||minor===undefined){ wrap.textContent='—'; return wrap; }
+  const neg=minor<0;
+  const s=document.createElement('span'); s.className='symword'; s.textContent=(neg?'-':'')+sym(BASE);
+  const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(minor), BASE);
+  wrap.append(s,n);
+  return wrap;
+}
+
+// "2025-02-15" / ISO -> "15 Feb 2025"
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDate(iso){
+  if(!iso) return '—';
+  const parts=String(iso).split('T')[0].split('-');
+  if(parts.length<3) return iso;
+  const y=parts[0], mi=parseInt(parts[1],10)-1, d=parseInt(parts[2],10);
+  return d+' '+(MONTHS[mi]||'?')+' '+y;
+}
+
+// ── header KPIs ──
+function renderHeader(box, plan, st){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t'); t.append(el('span','tag holding','Holding'), document.createTextNode(' '));
+  const nm=el('span'); nm.textContent=plan.name; t.append(nm);
+  const metaBits=[st.asset_class];
+  if(st.purity) metaBits.push(st.purity);
+  if(st.symbol) metaBits.push(st.symbol);
+  ph.append(t, el('div','meta', metaBits.join(' · ')));
+  box.append(ph);
+
+  const kpis=el('div','kpis');
+  function kpiAmt(cls,label,minor){
+    const k=el('div','kpi'+(cls?' '+cls:''));
+    k.append(el('div','l',label));
+    const n=el('div','n'); n.append(amtSpan(minor)); k.append(n);
+    return k;
   }
-  function fmtMicro(q) { if (q === null || q === undefined) return "—"; return (q / 1e6).toLocaleString("en-IN"); }
+  const gainCls = (st.unrealized_gain_minor||0) > 0 ? 'pos' : ((st.unrealized_gain_minor||0) < 0 ? 'neg' : '');
+  // quantity KPI (qty held / 1e6 + unit), text-only
+  const qk=el('div','kpi');
+  qk.append(el('div','l','Quantity held'));
+  const qn=el('div','n'); qn.textContent=fmtQty(st.qty_held_micro)+' '+st.unit; qk.append(qn);
+  kpis.append(
+    kpiAmt('','Current value',st.current_value_minor),
+    kpiAmt(gainCls,'Unrealized gain',st.unrealized_gain_minor),
+    qk);
+  box.append(kpis);
 
-  async function load() {
-    const r = await fetch("/api/plans/" + pid);
-    if (r.status === 401) { window.location.href = "/"; return; }
-    if (!r.ok) { window.location.href = "/app"; return; }
-    const d = await r.json();
-    if (d.plan.type !== "holding") { window.location.href = "/app"; return; }
-    currency = d.plan.currency;
-    const st = d.state, p = d.plan;
-    $("name").textContent = p.name;
-    $("meta").textContent = st.asset_class + (st.purity ? " · " + st.purity : "")
-      + (st.symbol ? " · " + st.symbol : "") + " · " + currency + " · " + p.status;
-    $("value").textContent = fmtMinor(st.current_value_minor, currency);
-    const g = $("gain"); g.textContent = fmtMinor(st.unrealized_gain_minor, currency);
-    g.classList.toggle("pos", (st.unrealized_gain_minor || 0) > 0);
-    g.classList.toggle("neg", (st.unrealized_gain_minor || 0) < 0);
-    $("qty").textContent = fmtMicro(st.qty_held_micro) + " " + st.unit;
-    $("statusline").textContent = "Avg cost " + fmtMinor(st.avg_cost_per_unit_minor, currency) + "/" + st.unit
-      + " · cost of held " + fmtMinor(st.cost_of_held_minor, currency)
-      + " · realized " + fmtMinor(st.realized_gain_minor, currency)
-      + (st.current_price_minor != null ? " · quote " + fmtMinor(st.current_price_minor, currency) + "/" + st.unit : " · no quote");
-    mountSharing(pid, $("sharing"));
-    const fc = await fetch("/api/feed/config");
-    if (fc.ok) { const fcd = await fc.json().catch(() => ({})); if (fcd.enabled) $("refreshbtn").style.display = ""; }
+  // caption line
+  const head=el('div','planhead');
+  const row=el('div','row');
+  const lcap=el('span');
+  lcap.append(document.createTextNode('avg cost '));
+  lcap.append(amtSpan(st.avg_cost_per_unit_minor));
+  lcap.append(document.createTextNode('/'+st.unit));
+  row.append(lcap);
+  row.append(el('span', null, (st.current_price_minor!=null ? 'quote set' : 'no quote yet')));
+  head.append(row);
+  box.append(head);
+}
+
+// ── position panel ──
+function renderPosition(box, st){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Position'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','cost & gains'));
+  box.append(ph);
+  const body=el('div','terms');
+  function trowAmt(k,minor,cls){
+    const r=el('div','trow');
+    r.append(el('span','tk',k));
+    const tv=el('span','tv'+(cls?' '+cls:'')); tv.append(amtSpan(minor)); r.append(tv);
+    body.append(r);
   }
-
-  function syncFields() {
-    const a = $("act").value;
-    $("qtyfld").style.display = a === "quote" ? "none" : "block";
-    $("amtfld").style.display = a === "quote" ? "none" : "block";
-    $("pricefld").style.display = a === "quote" ? "block" : "none";
+  function trowText(k,v){
+    const r=el('div','trow');
+    r.append(el('span','tk',k));
+    const tv=el('span','tv'); tv.textContent=v; r.append(tv);
+    body.append(r);
   }
-  $("act").addEventListener("change", syncFields);
-  $("actbtn").addEventListener("click", () => { $("err").textContent = ""; syncFields(); $("modal").classList.add("on"); });
-  $("cancel").addEventListener("click", () => $("modal").classList.remove("on"));
-  $("save").addEventListener("click", async () => {
-    $("err").textContent = "";
-    const a = $("act").value;
-    let url, body;
-    if (a === "quote") { url = "/api/plans/" + pid + "/holding/quote"; body = { price: $("price").value }; }
-    else { url = "/api/plans/" + pid + (a === "buy" ? "/holding/buys" : "/holding/sells");
-           body = { quantity: $("quantity").value, amount: $("amount").value }; }
-    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (r.ok) { $("modal").classList.remove("on"); $("quantity").value = ""; $("amount").value = ""; $("price").value = ""; load(); return; }
-    const e = await r.json().catch(() => ({})); $("err").textContent = e.detail || e.error || "Could not save.";
-  });
+  trowAmt('Avg cost / '+st.unit, st.avg_cost_per_unit_minor);
+  trowAmt('Cost of held', st.cost_of_held_minor);
+  trowAmt('Current price / '+st.unit, st.current_price_minor);
+  trowText('Price as of', st.price_as_of ? fmtDate(st.price_as_of) : 'no quote');
+  const rgCls = (st.realized_gain_minor||0) > 0 ? 'pos' : ((st.realized_gain_minor||0) < 0 ? 'neg' : '');
+  trowAmt('Realized gain', st.realized_gain_minor, rgCls);
+  box.append(body);
+}
 
-  $("refreshbtn").addEventListener("click", async () => {
-    const r = await fetch("/api/plans/" + pid + "/holding/refresh-quote", { method: "POST" });
-    if (r.ok) { load(); return; }
-    const e = await r.json().catch(() => ({})); $("statusline").textContent = e.detail || e.error || "Could not refresh price.";
-  });
+// ── live quote panel ──
+function renderQuote(box, st){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Live quote'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','manual or feed'));
+  box.append(ph);
+  const body=el('div','terms');
+  function trowAmt(k,minor){
+    const r=el('div','trow');
+    r.append(el('span','tk',k));
+    const tv=el('span','tv'); tv.append(amtSpan(minor)); r.append(tv);
+    body.append(r);
+  }
+  function trowText(k,v){
+    const r=el('div','trow');
+    r.append(el('span','tk',k));
+    const tv=el('span','tv'); tv.textContent=v; r.append(tv);
+    body.append(r);
+  }
+  if(st.current_price_minor==null){
+    box.append(el('div','emptypanel','No quote yet. Set one via Quote, or refresh from a live feed.'));
+    return;
+  }
+  trowAmt('Price / '+st.unit, st.current_price_minor);
+  trowText('As of', st.price_as_of ? fmtDate(st.price_as_of) : '—');
+  trowAmt('Current value', st.current_value_minor);
+  box.append(body);
+}
 
-  load();
+// ── members (sharing) ──
+function renderMembers(box){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Members'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','joint ownership'));
+  box.append(ph);
+  const body=el('div'); body.style.padding='18px 22px';
+  box.append(body);
+  mountSharing(pid, body);
+}
+
+// ── slide-over open/close ──
+function syncFields(){
+  const a=$('act').value;
+  $('qtyfld').style.display = a==='quote' ? 'none' : 'flex';
+  $('amtfld').style.display = a==='quote' ? 'none' : 'flex';
+  $('pricefld').style.display = a==='quote' ? 'flex' : 'none';
+}
+function openOver(){ $('err').textContent=''; syncFields(); $('scrim').classList.add('on'); $('over').classList.add('on'); $('over').setAttribute('aria-hidden','false'); $('quantity').focus(); }
+function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
+
+// ── boot ──
+async function boot(){
+  const me = await fetch('/api/auth/me');
+  if(me.status===401){ window.location.href='/'; return; }
+  const user=(await me.json()).user;
+  $('ava-init').textContent=((user.display_name||'?')[0]||'?').toUpperCase();
+
+  const r = await fetch('/api/plans/'+pid);
+  if(r.status===401){ window.location.href='/'; return; }
+  if(!r.ok){ window.location.href='/app'; return; }
+  const d = await r.json();
+  if(d.plan.type!=='holding'){ window.location.href='/app'; return; }
+
+  const plan=d.plan, st=d.state;
+  BASE = plan.currency || 'INR';
+  UNIT = st.unit || '';
+  document.documentElement.dataset.cur = BASE.toLowerCase();
+  document.title = 'Khata — '+plan.name;
+  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));
+
+  $('name').textContent = plan.name;
+  $('sub').textContent = 'Holdings · '+st.asset_class+' · '+plan.status+' · '+BASE;
+  $('osub').textContent = 'on '+plan.name;
+
+  renderHeader($('header-panel'), plan, st);
+  renderPosition($('position-panel'), st);
+  renderQuote($('quote-panel'), st);
+  renderMembers($('members-panel'));
+
+  // sidebar counts from /api/plans
+  try{
+    const plansResp = await fetch('/api/plans').then(x=>x.json());
+    const plans = plansResp.plans || [];
+    const by=(t)=>plans.filter(p=>p.type===t).length||'';
+    $('ct-asset').textContent=by('asset');
+    $('ct-chit').textContent=by('chit');
+    $('ct-loan').textContent=by('loan');
+    $('ct-retirement').textContent=by('retirement');
+  }catch(e){}
+
+  // feed-gated "Refresh (live)" button
+  try{
+    const fc = await fetch('/api/feed/config');
+    if(fc.ok){ const fcd = await fc.json().catch(()=>({})); if(fcd.enabled) $('refreshbtn').style.display=''; }
+  }catch(e){}
+
+  setTimeout(()=>document.querySelectorAll('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%'),350);
+}
+
+// ── currency toggle: real base-currency switch ──
+$('curtog').addEventListener('click', async (e)=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const target=b.dataset.set;
+  if(target===BASE) return;
+  await fetch('/api/base-currency',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({currency:target})});
+  location.reload();
+});
+
+// ── buy/sell/quote wiring ──
+$('act').addEventListener('change', syncFields);
+$('addbtn').addEventListener('click', openOver);
+$('cancel').addEventListener('click', closeOver);
+$('scrim').addEventListener('click', closeOver);
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeOver(); });
+$('save').addEventListener('click', async ()=>{
+  $('err').textContent='';
+  const a=$('act').value;
+  let url, body;
+  if(a==='quote'){ url='/api/plans/'+pid+'/holding/quote'; body={ price:$('price').value }; }
+  else{ url='/api/plans/'+pid+(a==='buy'?'/holding/buys':'/holding/sells');
+        body={ quantity:$('quantity').value, amount:$('amount').value }; }
+  const r=await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if(r.ok){ closeOver(); $('quantity').value=''; $('amount').value=''; $('price').value=''; boot(); return; }
+  const e=await r.json().catch(()=>({}));
+  $('err').textContent = e.detail || e.error || 'Could not save.';
+});
+
+// ── feed-gated live refresh ──
+$('refreshbtn').addEventListener('click', async ()=>{
+  const r=await fetch('/api/plans/'+pid+'/holding/refresh-quote', { method:'POST' });
+  if(r.ok){ boot(); return; }
+  const e=await r.json().catch(()=>({}));
+  $('sub').textContent = e.detail || e.error || 'Could not refresh price.';
+});
+
+// ── profile photo upload (localStorage, display-only) ──
+(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
+
+boot();
 </script>
 </body>
 </html>

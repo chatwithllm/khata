@@ -72,6 +72,23 @@
 .terms .trow .tk{color:var(--ink-faint)}
 .terms .trow .tv{font-family:"JetBrains Mono";font-weight:600;text-align:right}
 
+/* auction what-if (dividend calculator) */
+.calc{padding:18px 22px;display:flex;flex-direction:column;gap:13px}
+.calc .cfld{display:flex;flex-direction:column;gap:6px}
+.calc .cfld label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+.calc .cinput{display:flex;gap:10px;align-items:center}
+.calc .cinput input{flex:1;font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);transition:border-color .2s}
+.calc .cinput input:focus{outline:none;border-color:var(--primary)}
+.calc .cgo{font-weight:600;font-size:14px;padding:10px 16px;border-radius:10px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;box-shadow:0 8px 18px -10px var(--primary);transition:transform .2s}
+.calc .cgo:hover{transform:translateY(-2px)}
+.calc .cerr{color:var(--neg);font-size:13px;min-height:18px}
+.calc .cres{border-top:1px solid var(--line-2);padding-top:4px}
+.calc .crow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line-2);font-size:13.5px}
+.calc .crow:first-child{border-top:none}
+.calc .crow .ck{color:var(--ink-faint)}
+.calc .crow .cv{font-family:"JetBrains Mono";font-weight:700}
+.calc .crow .cv.in{color:var(--pos)}
+
 /* slide-over (copied from loan-detail pattern) */
 .scrim{position:fixed;inset:0;background:rgba(20,16,12,.45);opacity:0;visibility:hidden;transition:opacity .3s var(--ease),visibility .3s;z-index:40}
 .scrim.on{opacity:1;visibility:visible}
@@ -149,6 +166,8 @@
           <div class="panel fade d3" id="chart-panel" style="display:none"></div>
           <!-- chit terms -->
           <div class="panel fade d3" id="terms-panel"></div>
+          <!-- auction what-if (dividend calculator) -->
+          <div class="panel fade d3" id="dividend-panel"></div>
           <!-- members (sharing) -->
           <div class="panel fade d4 fill" id="members-panel"></div>
         </div>
@@ -435,6 +454,66 @@ function renderTerms(box, st){
   box.append(body);
 }
 
+// ── auction what-if (dividend calculator) ──
+// GET /api/plans/<id>/chit/dividend?bid=<amount> → auction_dividend():
+//   { commission_minor, dividend_pool_minor, dividend_per_member_minor, prize_minor }
+// Net subscription (this round) = subscription_minor − dividend_per_member_minor (derived here).
+function renderDividend(box, st){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Auction what-if'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','dividend per member'));
+  box.append(ph);
+  const body=el('div','calc');
+
+  const fld=el('div','cfld');
+  fld.append(el('label', null, 'Winning bid'));
+  const inputRow=el('div','cinput');
+  const inp=el('input'); inp.id='bid'; inp.setAttribute('inputmode','decimal'); inp.placeholder='1,90,000';
+  const go=el('button','cgo','Compute'); go.id='bidgo'; go.type='button';
+  inputRow.append(inp, go);
+  fld.append(inputRow);
+  body.append(fld);
+
+  const err=el('div','cerr'); err.id='biderr';
+  body.append(err);
+
+  const res=el('div','cres'); res.id='bidres'; res.style.display='none';
+  body.append(res);
+  box.append(body);
+
+  function crow(label, valNode, cls){
+    const r=el('div','crow');
+    r.append(el('span','ck',label));
+    const v=el('span','cv'+(cls?' '+cls:''));
+    v.append(valNode);
+    r.append(v);
+    return r;
+  }
+
+  async function compute(){
+    err.textContent='';
+    res.style.display='none';
+    res.textContent='';
+    const bid=inp.value.trim();
+    if(!bid){ err.textContent='Enter a winning bid.'; return; }
+    const r=await fetch('/api/plans/'+pid+'/chit/dividend?bid='+encodeURIComponent(bid));
+    if(r.status===401){ window.location.href='/'; return; }
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){ err.textContent = j.detail || j.error || 'Could not compute.'; return; }
+    // derived: net subscription this round = subscription − dividend per member
+    const netSub = (st.subscription_minor||0) - (j.dividend_per_member_minor||0);
+    res.append(crow('Commission', amtSpan(j.commission_minor)));
+    res.append(crow('Dividend pool', amtSpan(j.dividend_pool_minor)));
+    res.append(crow('Dividend / member', amtSpan(j.dividend_per_member_minor), 'in'));
+    res.append(crow('Prize (winner gets)', amtSpan(j.prize_minor)));
+    res.append(crow('Net subscription / member', amtSpan(netSub)));
+    res.style.display='';
+  }
+  go.addEventListener('click', compute);
+  inp.addEventListener('keydown', (e)=>{ if(e.key==='Enter') compute(); });
+}
+
 // ── members (sharing) ──
 function renderMembers(box){
   box.textContent='';
@@ -480,6 +559,7 @@ async function boot(){
   renderPosition($('position-panel'), st);
   renderChart($('chart-panel'), st);
   renderTerms($('terms-panel'), st);
+  renderDividend($('dividend-panel'), st);
   renderMembers($('members-panel'));
 
   // sidebar counts from /api/plans

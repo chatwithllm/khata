@@ -139,7 +139,7 @@ def test_holding_detail_served(client):
     r = client.get("/holding/1")
     assert r.status_code == 200
     body = r.data.decode()
-    for needle in ["/api/plans", "/holding/buys", "/holding/quote", "sharing.js", "ledger.css"]:
+    for needle in ["/api/plans", "/holding/buys", "/holding/quote", "sharing.js", "app.css"]:
         assert needle in body
 
 
@@ -154,7 +154,7 @@ def test_chit_detail_served(client):
     assert r.status_code == 200
     body = r.data.decode()
     for needle in ["/api/plans/", "app.css", "curtog", "/chit/entries",
-                   "position", "/api/auth/me", "sharing.js"]:
+                   "/chit/dividend", "position", "/api/auth/me", "sharing.js"]:
         assert needle in body
 
 
@@ -177,7 +177,7 @@ def test_settings_page_served(client):
     r = client.get("/settings")
     assert r.status_code == 200
     body = r.data.decode()
-    for needle in ["/api/auth/password", "/api/auth/profile", "/api/base-currency", "ledger.css"]:
+    for needle in ["/api/auth/password", "/api/auth/profile", "/api/base-currency", "app.css"]:
         assert needle in body
 
 
@@ -185,7 +185,7 @@ def test_analysis_page_served(client):
     r = client.get("/analysis")
     assert r.status_code == 200
     body = r.data.decode()
-    for needle in ["/api/analysis/hold-vs-sell", "ledger.css"]:
+    for needle in ["/api/analysis/hold-vs-sell", "app.css"]:
         assert needle in body
 
 
