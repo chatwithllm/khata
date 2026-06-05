@@ -8,9 +8,10 @@ recommended option on every design fork. Deploy locally + final report at the ve
 Branching: one branch/PR per phase; each plan gets its own spec + plan + tests + reviews.
 
 ## Snapshot
-- **Tests:** 113 passing · **Python:** 3.12
+- **Tests:** 114 passing · **Python:** 3.12
 - **Merged:** Phases 1–2 (PRs #1–#7) + Plan 3.1 app shell (PR #8).
-- **Now building:** Phase 3 (app UI) on `feat/phase3-ui`.
+- **Now building:** Phase 3 (app UI) on `feat/phase3-ui` — 3.2 done, 3.3 next.
+- **Live dashboard (LAN):** http://192.168.50.189:9001/dashboard.html (auto-refresh 5s).
 
 ## Progress board
 
@@ -23,7 +24,7 @@ Branching: one branch/PR per phase; each plan gets its own spec + plan + tests +
 
 ### Phase 3 — App UI build-out (in progress)
 - [x] 3.1 App shell + dashboard (PR #8, merged)
-- [ ] 3.2 Create-plan flow
+- [x] 3.2 Create-plan flow
 - [ ] 3.3 Asset detail + log-payment
 - [ ] 3.4 Loan detail
 - [ ] 3.5 Holding detail + sharing panel
@@ -40,5 +41,7 @@ Branching: one branch/PR per phase; each plan gets its own spec + plan + tests +
 - [ ] 5.4 Live market feeds (optional)
 
 ## Log (newest first)
+- **3.2 — Create-plan flow** ✓ (`feat/phase3-ui`). `/create` tabbed form (asset/loan/holding) → POST
+  /api/plans, installments builder, auth-guarded. Done-gate: all 3 types create 201. 113→114 tests.
 - **3.1 — App shell + dashboard** ✓ merged (PR #8). Real `/app`: sidebar, topbar (greeting/base/logout),
   net-worth/paid/owe/owed cards, type-filterable plan list. Client auth guard, XSS-safe. 112→113 tests.

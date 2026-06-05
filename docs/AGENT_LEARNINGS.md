@@ -182,3 +182,12 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   rows for now (clickable detail lands with the detail pages).
 - Follow-up (Phase 5.2): the dashboard fetches have no non-401 error handling — a rejected fetch leaves
   cards at "—" and rejects Promise.all silently. Add error UI in the hardening sweep.
+
+## 2026-06-04 — Plan 3.2 (Create-plan flow)
+- `/create` page: one tabbed form (asset/loan/holding) that builds the exact JSON shape each type needs
+  and posts to `POST /api/plans`, redirecting to `/app`. Auth-guarded client-side; installments add/remove
+  builder; rate field reveals only for interest≠none. No backend change. Error `{detail|error}` via
+  textContent; all dynamic rows via createElement (K4). Contract pre-flighted against `api/plans.py` (K5).
+- Now under the web-app-builder harness: `agent-rules.md` (K1–K8) is binding for every task; done-gate
+  requires a real end-to-end verification (booted the app, created all 3 types → 201), not just a green
+  test. `build_status.json` is the live dashboard feed (orchestrator-owned).

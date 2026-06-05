@@ -1,13 +1,13 @@
 {
   "project": "khata",
   "plan": "docs/superpowers/ROADMAP.md — Phases 3–5 (12 plans)",
-  "started_at": "2026-06-05T02:17:23Z",
-  "updated_at": "2026-06-05T02:21:36Z",
+  "started_at": "2026-06-04T00:00:00Z",
+  "updated_at": "2026-06-05T02:26:35Z",
   "total_tasks": 12,
-  "tasks_done": 1,
+  "tasks_done": 2,
   "current_task": {
-    "id": "3.2",
-    "title": "Create-plan flow (tabbed asset/loan/holding form)",
+    "id": "3.3",
+    "title": "Asset detail page + log-payment modal",
     "phase": "Phase 3 — App UI build-out",
     "status": "in_progress"
   },
@@ -16,13 +16,14 @@
     { "name": "Phase 4 — New domains (chit/secured/retirement)", "task_range": "4.1–4.3", "status": "pending" },
     { "name": "Phase 5 — Settings · hardening · analysis · feeds", "task_range": "5.1–5.4", "status": "pending" }
   ],
-  "last_commit": "b8d6d4d",
-  "last_gate_passed": "3.1 final integration review",
+  "last_commit": "c79d3e7",
+  "last_gate_passed": "3.2 create-plan — end-to-end create (all 3 types) ✓",
   "open_issues": 0,
   "incidents": 0,
-  "tests": "113 passed",
+  "tests": "114 passed",
   "python": "3.12",
   "log": [
-    { "task": "3.1", "title": "App shell + dashboard", "gate": "passed", "commit": "b8d6d4d", "timestamp": "2026-06-05T02:17:23Z" }
+    { "task": "3.1", "title": "App shell + dashboard", "gate": "passed", "commit": "bed3516", "timestamp": "2026-06-04T21:30:00Z" },
+    { "task": "3.2", "title": "Create-plan flow", "gate": "passed", "commit": "c79d3e7", "timestamp": "2026-06-05T02:26:35Z" }
   ]
 }

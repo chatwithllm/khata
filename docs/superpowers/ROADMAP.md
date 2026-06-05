@@ -33,7 +33,7 @@ highest usability payoff; little new backend. Shared `ledger.css` + a real app s
   (`GET /api/auth/me`, redirect to `/` on 401), overview from `GET /api/dashboard` + `GET /api/networth`,
   plan list from `GET /api/plans`, currency/base toggle, profile + logout. Foundation every other
   Phase-3 page mounts into.
-- [ ] **3.2 Create-plan flow** (`create-plan.html`). Wired form → `POST /api/plans` for asset | loan |
+- [x] **3.2 Create-plan flow** (`create-plan.html`). Wired form → `POST /api/plans` for asset | loan |
   holding (type switch, asset installments builder). Redirect to the new plan's detail.
 - [ ] **3.3 Asset detail + log-payment** (`asset-detail.html`, `log-payment.html`). Schedule,
   roll-forward, funding breakdown, contributors, payment log; wired to detail + `installments` +
