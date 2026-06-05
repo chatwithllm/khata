@@ -106,3 +106,17 @@ def test_chit_detail_served(client):
     body = r.data.decode()
     for needle in ["/api/plans", "/chit/entries", "/chit/dividend", "sharing.js", "ledger.css"]:
         assert needle in body
+
+
+def test_loan_detail_has_collateral(client):
+    body = client.get("/loan/1").data.decode()
+    assert "/loan/collateral" in body
+    assert "Collateral" in body or "collateral" in body
+
+
+def test_retirement_detail_served(client):
+    r = client.get("/retirement/1")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["/api/plans", "/retirement/update", "sharing.js", "ledger.css"]:
+        assert needle in body

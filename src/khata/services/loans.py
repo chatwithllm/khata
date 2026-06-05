@@ -43,6 +43,26 @@ def create_loan_plan(session: Session, *, owner_id, name, currency, direction, i
     return plan
 
 
+def set_collateral(session: Session, *, plan: Plan, collateral_plan_id):
+    loan = plan.loan
+    if collateral_plan_id is None:
+        loan.secured = False
+        loan.collateral_plan_id = None
+        session.flush()
+        return loan
+    coll = session.get(Plan, collateral_plan_id)
+    if coll is None or coll.type != "holding":
+        raise ValidationError("collateral must be a holding plan")
+    if coll.owner_user_id != plan.owner_user_id:
+        raise ValidationError("collateral must be owned by you")
+    if coll.currency != plan.currency:
+        raise ValidationError("collateral must match the loan currency")
+    loan.secured = True
+    loan.collateral_plan_id = coll.id
+    session.flush()
+    return loan
+
+
 def _direction_for(loan_direction: str, kind: str) -> str:
     if loan_direction == "taken":
         return "in" if kind == "disbursement" else "out"
@@ -143,6 +163,20 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
                 next_due_month = row["month_index"]
 
     interest_due = max(0, interest_accrued - interest_paid)
+
+    secured = bool(loan.secured)
+    collateral = None
+    if loan.collateral_plan_id is not None:
+        from . import holdings
+        cp = session.get(Plan, loan.collateral_plan_id)
+        if cp is not None and cp.holding is not None:
+            hs = holdings.holding_state(session, cp.holding)
+            val = hs["current_value_minor"]
+            ltv = (int((Decimal(max(0, principal_outstanding)) * 100 / val)
+                       .quantize(Decimal(1), rounding=ROUND_HALF_UP)) if val else None)
+            collateral = {"plan_id": cp.id, "name": cp.name, "asset_class": hs["asset_class"],
+                          "currency": cp.currency, "value_minor": val, "ltv_pct": ltv}
+
     return {
         "direction": loan.direction,
         "currency": plan.currency,
@@ -155,4 +189,6 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
         "schedule": schedule,
         "next_due_month": next_due_month,
         "months_behind": months_behind,
+        "secured": secured,
+        "collateral": collateral,
     }

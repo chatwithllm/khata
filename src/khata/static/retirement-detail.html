@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — Retirement</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/assets/ledger.css">
+<style>
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+  .topbar .brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:20px}
+  .topbar .glyph{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,var(--primary),var(--primary-deep))}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;margin:8px 0 16px;gap:12px}
+  .head h1{font-family:"Fraunces",serif;font-weight:600;font-size:30px}
+  .head .meta{font-size:13px;color:var(--ink-faint)}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:10px}
+  @media(max-width:680px){.cards{grid-template-columns:1fr}}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
+  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-faint);font-weight:700}
+  .stat .v{font-family:"Fraunces",serif;font-size:24px;margin-top:6px}
+  .statusline{font-size:13px;color:var(--ink-soft);margin-bottom:18px}
+  .sec{margin:22px 0}
+  .modal{position:fixed;inset:0;background:rgba(20,16,12,.45);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal.on{display:flex}
+  .sheet{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;width:min(440px,92vw);box-shadow:var(--shadow)}
+  .sheet h3{font-family:"Fraunces",serif;font-size:20px;margin-bottom:12px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .fld{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+  .fld label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+  .fld input,.fld select{font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
+  .err{color:var(--neg);font-size:13px;min-height:18px}
+  .acts{display:flex;gap:10px;align-items:center;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="/app"><span class="glyph"></span> Khata</a>
+    <a class="link" href="/app">← Back to app</a>
+  </div>
+  <div class="head">
+    <div><h1 id="name">Retirement</h1><div class="meta" id="meta">—</div></div>
+    <button class="btn" id="actbtn">Update plan</button>
+  </div>
+  <div class="cards">
+    <div class="stat"><div class="k">Projected corpus</div><div class="v mono" id="corpus">—</div></div>
+    <div class="stat"><div class="k">In today's money</div><div class="v mono" id="corpusreal">—</div></div>
+    <div class="stat"><div class="k">Years to retirement</div><div class="v mono" id="years">—</div></div>
+  </div>
+  <div class="statusline" id="statusline"></div>
+  <div class="sec"><div id="sharing"></div></div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <h3>Update plan</h3>
+    <div class="row2">
+      <div class="fld"><label>Current balance</label><input id="current_balance" placeholder="0"></div>
+      <div class="fld"><label>Monthly contribution</label><input id="monthly_contribution" placeholder="10,000"></div>
+    </div>
+    <div class="row2">
+      <div class="fld"><label>Employer match %</label><input id="employer_match" placeholder="0"></div>
+      <div class="fld"><label>Annual return %</label><input id="annual_return" placeholder="8"></div>
+    </div>
+    <div class="row2">
+      <div class="fld"><label>Inflation %</label><input id="inflation" placeholder="6"></div>
+      <div class="fld"><label>Current age</label><input id="current_age" placeholder="30"></div>
+    </div>
+    <div class="fld"><label>Retirement age</label><input id="retirement_age" placeholder="60"></div>
+    <div class="err" id="err"></div>
+    <div class="acts"><button class="btn" id="save">Save</button><a class="link" id="cancel">Cancel</a></div>
+  </div>
+</div>
+
+<script src="/static/assets/sharing.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const SYM = { INR: "₹", USD: "$" };
+  const pid = parseInt(location.pathname.split("/").pop(), 10);
+  let currency = "INR";
+  let cur = null;
+
+  function fmtMinor(m, ccy) {
+    if (m === null || m === undefined) return "—";
+    const neg = m < 0, v = Math.abs(m) / 100;
+    return (neg ? "-" : "") + (SYM[ccy] || "") + v.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  }
+
+  async function load() {
+    const r = await fetch("/api/plans/" + pid);
+    if (r.status === 401) { window.location.href = "/"; return; }
+    if (!r.ok) { window.location.href = "/app"; return; }
+    const d = await r.json();
+    if (d.plan.type !== "retirement") { window.location.href = "/app"; return; }
+    currency = d.plan.currency;
+    const st = d.state, p = d.plan;
+    cur = st;
+    $("name").textContent = p.name;
+    $("meta").textContent = "retirement · " + currency + " · " + p.status;
+    $("corpus").textContent = fmtMinor(st.projected_corpus_minor, currency);
+    $("corpusreal").textContent = fmtMinor(st.projected_corpus_real_minor, currency);
+    $("years").textContent = (st.months_to_retirement / 12).toLocaleString("en-IN");
+    $("statusline").textContent = "Balance " + fmtMinor(st.current_balance_minor, currency)
+      + " · " + fmtMinor(st.monthly_contribution_minor, currency) + "/mo + " + (st.employer_match_bps / 100) + "% match"
+      + " · " + (st.annual_return_bps / 100) + "% return · " + (st.inflation_bps / 100) + "% inflation"
+      + " · effective " + fmtMinor(st.effective_monthly_minor, currency) + "/mo"
+      + " · you'll put in " + fmtMinor(st.total_contributions_minor, currency);
+    mountSharing(pid, $("sharing"));
+  }
+
+  $("actbtn").addEventListener("click", () => {
+    $("err").textContent = "";
+    if (cur) {
+      $("current_balance").value = cur.current_balance_minor / 100;
+      $("monthly_contribution").value = cur.monthly_contribution_minor / 100;
+      $("employer_match").value = cur.employer_match_bps / 100;
+      $("annual_return").value = cur.annual_return_bps / 100;
+      $("inflation").value = cur.inflation_bps / 100;
+      $("current_age").value = parseInt(cur.current_age, 10);
+      $("retirement_age").value = parseInt(cur.retirement_age, 10);
+    }
+    $("modal").classList.add("on");
+  });
+  $("cancel").addEventListener("click", () => $("modal").classList.remove("on"));
+  $("save").addEventListener("click", async () => {
+    $("err").textContent = "";
+    const body = {};
+    for (const k of ["current_balance", "monthly_contribution", "employer_match",
+                     "annual_return", "inflation", "current_age", "retirement_age"]) {
+      const v = $(k).value.trim();
+      if (v !== "") body[k] = v;
+    }
+    const r = await fetch("/api/plans/" + pid + "/retirement/update",
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (r.ok) { $("modal").classList.remove("on"); load(); return; }
+    const e = await r.json().catch(() => ({}));
+    $("err").textContent = e.detail || e.error || "Could not save.";
+  });
+
+  load();
+</script>
+</body>
+</html>

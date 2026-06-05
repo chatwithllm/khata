@@ -57,10 +57,10 @@ record the chosen product model explicitly.
   payout mechanism (default: monthly **auction**, lowest-bid-wins, dividend split among members — to be
   fixed in the spec), derived per-member ledger + pot/payout state. Reuses the plan/membership spine.
   Backend + UI.
-- [ ] **4.2 Secured loans / collateral.** Extend the loan domain: pledge a holding (or asset) as
+- [x] **4.2 Secured loans / collateral.** Extend the loan domain: pledge a holding (or asset) as
   collateral, `secured` flag, derived LTV (collateral current value ÷ principal outstanding); surface
   in loan detail + net worth (collateral isn't double-counted). Backend + UI.
-- [ ] **4.3 Retirement / 401(k) planner** (`retirement-401k.html`). Contributions + employer match +
+- [x] **4.3 Retirement / 401(k) planner** (`retirement-401k.html`). Contributions + employer match +
   a derived projection (corpus at retirement under assumed return/inflation, all integer/Decimal).
   Backend (a `retirement` plan type or a projection service) + UI.
 
