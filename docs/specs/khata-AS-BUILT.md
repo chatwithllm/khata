@@ -112,7 +112,7 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   balances recompute. Frontend: ✎ edit on each asset-detail ledger row reopens the slide-over pre-filled.
 - **2026-06-05 — Payment date.** Log-payment slide-over has a "Date (when it happened)" field → `occurred_at`
   (distinct from auto `created_at` = when logged). Ledger shows "· logged X" when the two differ.
-- **2026-06-05 — Log out.** Dashboard sidebar gains a **Log out** item → `POST /api/auth/logout` then
+- **2026-06-05 — Log out.** **Every app page's** sidebar has a **Log out** item → `POST /api/auth/logout` then
   redirect `/` (the rich dashboard had shipped without one). Endpoint already existed.
 - **2026-06-05 — `ledger` exposed in asset/loan state** (was chit-only); entries carry `id` + `created_at`.
 
@@ -145,7 +145,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
-- 2026-06-05 — Added a Log out control to the dashboard sidebar.
+- 2026-06-05 — Added Log out to every app page's sidebar (dashboard + 9 detail/tool pages).
 - 2026-06-05 — Created this as-built spec. Recorded: editable ledger (PATCH /entries), payment occurred_at
   vs created_at, ledger exposure in asset/loan state, single-port deploy (:5057). Full app on
   `feat/landing-page` (PR #14); roadmap Phases 1–6 done; deviations/deferrals in §10.
