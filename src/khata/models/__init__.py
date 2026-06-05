@@ -5,3 +5,4 @@ from .ledger import LedgerEntry  # noqa: F401
 from .loan import Loan  # noqa: F401
 from .membership import PlanMembership  # noqa: F401
 from .holding import Holding  # noqa: F401
+from .fx import FxRate  # noqa: F401

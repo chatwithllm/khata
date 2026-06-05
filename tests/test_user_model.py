@@ -33,3 +33,15 @@ def test_google_sub_persists_and_is_unique():
     s.add(User(email="h@b.com", display_name="H", password_hash=None, google_sub="sub-123"))
     with pytest.raises(IntegrityError):
         s.commit()
+
+
+def test_user_base_currency_defaults_inr():
+    from khata.db import Base, make_engine, make_session_factory
+    from khata.models import User
+    engine = make_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    s = make_session_factory(engine)()
+    u = User(email="bc@b.com", display_name="BC", password_hash="x")
+    s.add(u)
+    s.commit()
+    assert s.get(User, u.id).base_currency == "INR"

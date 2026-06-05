@@ -18,6 +18,8 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     google_sub: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True, index=True)
+    base_currency: Mapped[str] = mapped_column(
+        String(3), nullable=False, default="INR", server_default="INR")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     def __repr__(self) -> str:
