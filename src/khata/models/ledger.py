@@ -20,6 +20,7 @@ class LedgerEntry(Base):
     direction: Mapped[str] = mapped_column(String(3), nullable=False, default="out")
     kind: Mapped[str | None] = mapped_column(String(24), nullable=True)
     amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    quantity_micro: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     method: Mapped[str | None] = mapped_column(String(20), nullable=True)
