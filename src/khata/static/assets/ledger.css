@@ -72,18 +72,20 @@ a{color:inherit;text-decoration:none}
 
 /* Hero */
 .landing header{padding:80px 0 0}
-.landing .hero-grid{max-width:1080px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:1fr 420px;gap:60px;align-items:center;min-height:480px}
-@media(max-width:860px){.landing .hero-grid{grid-template-columns:1fr;gap:40px}}
+.landing .hero-grid{max-width:1080px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:1.05fr 380px;gap:44px;align-items:center;min-height:480px}
+@media(max-width:760px){.landing .hero-grid{grid-template-columns:1fr;gap:40px}}
 .landing .eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:6px 14px;font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--primary);margin-bottom:20px}
 .landing .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--pos-soft);flex-shrink:0}
 .landing header h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(38px,5.5vw,62px);letter-spacing:-.025em;line-height:1.04;margin-bottom:20px}
-.landing header h1 em{font-style:italic;color:var(--primary)}
+.landing header h1 em{font-style:italic;color:var(--primary);white-space:nowrap}
 .landing .lede{font-size:17px;color:var(--ink-soft);line-height:1.65;max-width:52ch;margin-bottom:28px}
 .landing .cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
 .landing .btn-dark{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:var(--paper);font-size:14px;font-weight:600;padding:11px 20px;border-radius:100px;text-decoration:none;transition:opacity .2s}
 .landing .btn-dark:hover{opacity:.8}
-.landing .btn-alt{display:inline-flex;align-items:center;background:transparent;color:var(--ink-soft);font-size:14px;font-weight:500;padding:11px 20px;border-radius:100px;border:1px solid var(--line);text-decoration:none;transition:border-color .2s,color .2s}
-.landing .btn-alt:hover{border-color:var(--ink-soft);color:var(--ink)}
+.landing .btn-alt{display:inline-flex;align-items:center;background:transparent;color:var(--ink-soft);font-size:14px;font-weight:500;padding:11px 8px;border:none;text-decoration:none;transition:color .2s}
+.landing .btn-alt span{border-bottom:1px solid transparent;transition:border-color .2s}
+.landing .btn-alt:hover{color:var(--ink)}
+.landing .btn-alt:hover span{border-bottom-color:var(--ink);text-underline-offset:3px}
 .landing .cta-note{font-size:13px;color:var(--ink-faint)}
 .landing .cta-note b{color:var(--pos)}
 
@@ -192,3 +194,20 @@ a{color:inherit;text-decoration:none}
 /* Reveal animations (scoped — features.html keeps the global .reveal) */
 .landing .reveal{opacity:0;transform:translateY(16px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
 .landing .reveal.in{opacity:1;transform:none}
+
+/* Strip below hero — small SVG dot icons instead of emoji */
+.landing .hero-strip{display:flex;gap:28px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft)}
+.landing .hero-strip span{display:inline-flex;align-items:center;gap:8px}
+.landing .hero-strip svg{width:15px;height:15px;flex:none;color:var(--primary);opacity:.85}
+
+/* Hero "Sign in" dark button — arrow icon */
+.landing .btn-dark svg{width:15px;height:15px}
+
+/* Finale CTA buttons open the sign-in modal (not the embedded form) */
+.landing .signin-modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,#140f0c 55%,transparent);backdrop-filter:blur(4px)}
+.landing .signin-modal.on{display:flex}
+.landing .signin-modal .card{position:relative;width:min(380px,94vw);text-align:left;animation:signin-rise .4s var(--ease)}
+@keyframes signin-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.landing .signin-modal .x{position:absolute;top:14px;right:16px;font-size:20px;line-height:1;color:var(--ink-faint);cursor:pointer;background:none;border:none}
+.landing .signin-modal .x:hover{color:var(--ink)}
+@media(prefers-reduced-motion:reduce){.landing .signin-modal .card{animation:none}}

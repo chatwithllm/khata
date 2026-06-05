@@ -43,8 +43,8 @@
       <h1>Money the way <em>you actually</em> pay it.</h1>
       <p class="lede">Buying an asset in pieces as funds arrive? Running or joining a chit fund? Track every rupee — paid, owed, and owed to you — with proof, on your own hardware.</p>
       <div class="cta-row">
-        <a href="#start" class="btn-dark">Sign in</a>
-        <a href="#how" class="btn-alt">See how it works</a>
+        <a href="#start" class="btn-dark">Sign in <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a href="#how" class="btn-alt"><span>See how it works</span></a>
       </div>
       <p class="cta-note"><b>✓</b> Google sign-in or a local password. Nothing leaves your machine.</p>
     </div>
@@ -84,10 +84,10 @@
   </div>
   <!-- strip below hero -->
   <div style="background:var(--paper-2);border-top:1px solid var(--line);margin-top:60px;padding:18px 0">
-    <div class="sec-wrap" style="display:flex;gap:32px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft)">
-      <span>🔒 Privacy-first — your data stays yours</span>
-      <span>📒 One ledger, single source of truth</span>
-      <span>💱 Multi-currency · ₹ &amp; $ · installments &amp; chits</span>
+    <div class="sec-wrap hero-strip">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z"/></svg> Privacy-first — your data stays yours</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h11l3 3v13H5z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg> One ledger, single source of truth</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg> Multi-currency · ₹ &amp; $ · installments &amp; chits</span>
     </div>
   </div>
 </header>
@@ -229,24 +229,9 @@
     <p style="font-size:16px;color:color-mix(in srgb,var(--paper) 65%,transparent);max-width:48ch;margin:0 auto 32px;line-height:1.6">One number that's hard to get right by hand — across every asset and every chit, what you owe, what you're owed, where you net out.</p>
     <h2 style="color:var(--paper)">Take control of how <em>you actually pay.</em></h2>
 
-    <div class="card reveal" id="auth">
-      <div class="authrow">
-        <strong id="auth-title" style="font-family:'Fraunces',serif;font-size:20px">Sign in</strong>
-        <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
-        <input id="name" type="text" placeholder="Display name" autocomplete="name" style="display:none">
-        <input id="password" type="password" placeholder="Password" autocomplete="current-password">
-        <div class="err" id="err"></div>
-        <button class="btn" id="submit">Sign in</button>
-        <div class="muted">
-          <span id="toggle-text">New here?</span>
-          <span class="tlink" id="toggle">Create an account</span>
-        </div>
-        <div id="google-area" style="display:none">
-          <div class="muted" style="margin:8px 0">— or —</div>
-          <div id="g_id_onload"></div>
-          <div class="gbtn" id="g_btn"></div>
-        </div>
-      </div>
+    <div class="finale-btns">
+      <button type="button" class="btn-ghost" id="google-open" style="display:none">Continue with Google</button>
+      <button type="button" class="btn-google" id="signin-open">Sign in / Create account</button>
     </div>
 
     <div class="finale-tags">Self-hosted · Privacy-first · Multi-currency</div>
@@ -261,6 +246,30 @@
     <p>Installments &amp; chits · ₹ / $</p>
   </div>
 </footer>
+
+<!-- SIGN-IN MODAL — opened by the finale CTAs; hosts the real auth form (logic unchanged) -->
+<div class="signin-modal" id="signin-modal" role="dialog" aria-modal="true" aria-label="Sign in">
+  <div class="card">
+    <button type="button" class="x" id="signin-close" aria-label="Close">×</button>
+    <div class="authrow">
+      <strong id="auth-title" style="font-family:'Fraunces',serif;font-size:20px">Sign in</strong>
+      <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+      <input id="name" type="text" placeholder="Display name" autocomplete="name" style="display:none">
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+      <div class="err" id="err"></div>
+      <button class="btn" id="submit">Sign in</button>
+      <div class="muted">
+        <span id="toggle-text">New here?</span>
+        <span class="tlink" id="toggle">Create an account</span>
+      </div>
+      <div id="google-area" style="display:none">
+        <div class="muted" style="margin:8px 0">— or —</div>
+        <div id="g_id_onload"></div>
+        <div class="gbtn" id="g_btn"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
   const $ = (id) => document.getElementById(id);
@@ -283,6 +292,16 @@
     es.forEach((x) => { if (x.isIntersecting) { x.target.classList.add('in'); io.unobserve(x.target); } });
   }, { threshold: 0.1 });
   document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+  // ── Sign-in modal (opened by the finale CTAs) ──
+  const modal = $("signin-modal");
+  function openSignin() { modal.classList.add("on"); setTimeout(() => $("email").focus(), 50); }
+  function closeSignin() { modal.classList.remove("on"); }
+  $("signin-open").addEventListener("click", openSignin);
+  $("google-open").addEventListener("click", openSignin);
+  $("signin-close").addEventListener("click", closeSignin);
+  modal.addEventListener("click", (e) => { if (e.target === modal) closeSignin(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSignin(); });
 
   // ── Auth (logic preserved verbatim from the prior sign-in page) ──
   let mode = "login";  // or "register"
@@ -321,6 +340,7 @@
     let cid = null;
     try { cid = (await (await fetch("/api/auth/config")).json()).google_client_id; } catch (_) {}
     if (!cid) return;
+    $("google-open").style.display = "inline-flex";   // reveal the finale "Continue with Google" CTA
     $("google-area").style.display = "block";
     const s = document.createElement("script");
     s.src = "https://accounts.google.com/gsi/client";
