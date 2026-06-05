@@ -109,11 +109,11 @@ the real pages with live data (XSS-safe), so the app matches the editorial desig
 Some mockup details (cross-plan ledger feed, per-round chit auctions, this-month deltas) exceed current
 backend data — ported gracefully, never fabricated; logged for a later backend pass.
 
-- [ ] **6.1 Dashboard** (`app.html`) — sidebar+counts, rich topbar (greeting · plan count · INR/USD
+- [x] **6.1 Dashboard** (`app.html`) — sidebar+counts, rich topbar (greeting · plan count · INR/USD
   toggle · Log payment · avatar), hero stat cards, grid2 panels (featured asset schedule, liabilities,
   chit, loan-given). Live data.
-- [ ] **6.2 Shared app shell CSS** — extract the mockup shell CSS to `static/assets/app.css` (folded into 6.1/6.3).
-- [ ] **6.3 Asset detail + log-payment** — port `asset-detail.html` / `log-payment.html`.
+- [x] **6.2 Shared app shell CSS** — extract the mockup shell CSS to `static/assets/app.css` (folded into 6.1/6.3).
+- [x] **6.3 Asset detail + log-payment** — port `asset-detail.html` / `log-payment.html`.
 - [ ] **6.4 Loan + chit + retirement detail** — port `loan-detail.html` / `chit-detail.html` / `retirement-401k.html`.
 - [ ] **6.5 Holdings + create + settings + analysis** — port `holdings.html` / `create-plan.html` + polish settings/analysis.
 

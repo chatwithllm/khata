@@ -297,3 +297,19 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   sharing, assets, loans (+ secured/collateral), holdings, net worth (+ cross-currency), chit funds,
   retirement planner, settings, analysis, optional feeds — all operable in the browser, money-reviewed,
   no float, derived balances, self-hosted.
+
+## Phase 6 — UI fidelity (match the editorial mockups)
+- **6.1 Dashboard fidelity:** rebuilt `app.html` to `docs/mockups/app.html` (sidebar+counts, rich topbar,
+  hero stat cards, grid2 panels) wired to live data. Dropped the mockup's fake `RATE=83` INR→USD —
+  amounts render in the user's real base currency (Indian grouping for INR, en-US for USD); curtog switches
+  the real base via `POST /api/base-currency` + reload. XSS-safe (createElement+textContent, zero innerHTML).
+- **6.2 Shared shell CSS:** extracted the inlined editorial shell + detail-panel CSS from app.html into
+  `static/assets/app.css` (one source of truth for sidebar/topbar/panels/kpis/sched/fund/contrib, consumed
+  by app.html + all detail pages). Verified a visual no-op via selector before/after audit. `ledger.css`
+  remains the landing/marketing stylesheet; the app shell now uses `app.css`.
+- **6.3 Asset-detail fidelity:** ported `asset-detail.html` to the editorial shell + grid2 panels (KPIs+
+  progress, installment schedule with status dots, funding-sources stacked bar, contributors sharebar,
+  members/sharing). Log-payment became a slide-over reusing the real `POST /payments` with the exact
+  METHODS/SOURCES enums. **Honest degradation:** omitted the mockup's ledger panel, projection sparkline,
+  linked-liability, and proof gallery — no backend endpoint exposes that data, so render nothing rather than
+  fabricate. Schedule `.mt` shows status text (paid in full / part-paid / due), not fabricated dates/badges.

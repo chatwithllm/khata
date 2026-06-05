@@ -2,14 +2,14 @@
   "project": "khata",
   "plan": "docs/superpowers/ROADMAP.md \u2014 Phases 3\u20135 (12 plans)",
   "started_at": "2026-06-04T00:00:00Z",
-  "updated_at": "2026-06-05T09:40:57Z",
-  "total_tasks": 12,
-  "tasks_done": 11,
+  "updated_at": "2026-06-05T10:30:00Z",
+  "total_tasks": 17,
+  "tasks_done": 15,
   "current_task": {
-    "id": "5.4",
-    "title": "Live market feeds (optional)",
-    "phase": "Phase 5 \u2014 Settings/hardening/analysis",
-    "status": "in_progress"
+    "id": "6.4",
+    "title": "Loan + chit + retirement detail fidelity",
+    "phase": "Phase 6 - UI fidelity",
+    "status": "pending"
   },
   "phases": [
     {
@@ -25,23 +25,21 @@
     {
       "name": "Phase 5 \u2014 Settings \u00b7 hardening \u00b7 analysis \u00b7 feeds",
       "task_range": "5.1\u20135.4",
-      "status": "active"
+      "status": "done"
+    },
+    {
+      "name": "Phase 6 - UI fidelity (6.1 dashboard / 6.2 app.css / 6.3 asset-detail done)",
+      "task_range": "13-17",
+      "status": "in_progress"
     }
   ],
-  "last_commit": "9bfee56",
-  "last_gate_passed": "5.3 analysis \u2014 hold-vs-sell net 8011233 verdict hold \u2713",
+  "last_commit": "bebb578",
+  "last_gate_passed": true,
   "open_issues": 0,
   "incidents": 3,
-  "tests": "172 passed",
+  "tests": "178 passed",
   "python": "3.12",
   "log": [
-    {
-      "task": "4.1",
-      "title": "Chit funds (model/service/API/UI, money-reviewed)",
-      "gate": "passed",
-      "commit": "6af53e6",
-      "timestamp": "2026-06-05T03:18:30Z"
-    },
     {
       "task": "4.2",
       "title": "Secured loans / collateral (LTV)",
@@ -76,6 +74,34 @@
       "gate": "passed",
       "commit": "9bfee56",
       "timestamp": "2026-06-05T09:40:57Z"
+    },
+    {
+      "task": "5.4",
+      "title": "Live feeds \u2014 ROADMAP COMPLETE (12/12)",
+      "gate": "passed",
+      "commit": "e36509d",
+      "timestamp": "2026-06-05T09:57:29Z"
+    },
+    {
+      "task": "6.1",
+      "title": "Dashboard fidelity (app.html)",
+      "gate": "pass",
+      "commit": "baf43e0",
+      "timestamp": "2026-06-05T09:00:00Z"
+    },
+    {
+      "task": "6.2",
+      "title": "Shared app-shell CSS (app.css)",
+      "gate": "pass",
+      "commit": "9cdee34",
+      "timestamp": "2026-06-05T10:10:00Z"
+    },
+    {
+      "task": "6.3",
+      "title": "Asset-detail fidelity",
+      "gate": "pass",
+      "commit": "bebb578",
+      "timestamp": "2026-06-05T10:25:00Z"
     }
   ]
 }

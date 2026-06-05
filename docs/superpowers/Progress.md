@@ -8,7 +8,7 @@ recommended option on every design fork. Deploy locally + final report at the ve
 Branching: one branch/PR per phase; each plan gets its own spec + plan + tests + reviews.
 
 ## Snapshot
-- **Tests:** 178 passing · Python 3.12 · ROADMAP COMPLETE (12/12)
+- **Tests:** 181 passing · Python 3.12 · Phases 1-5 COMPLETE (12/12) + Phase 6 UI fidelity (3/5)
 - **Merged:** Phases 1Ã¢ÂÂ2 (PRs #1Ã¢ÂÂ#7) + Plan 3.1 app shell (PR #8).
 - **Now building:** Phase 3 (app UI) on `feat/phase3-ui` Ã¢ÂÂ Phase 3 done â integration review + PR next.
 - **Live dashboard (LAN):** http://192.168.50.189:9001/dashboard.html (auto-refresh 5s).
@@ -40,7 +40,24 @@ Branching: one branch/PR per phase; each plan gets its own spec + plan + tests +
 - [x] 5.3 Analysis tools (gold-loan-vs-selling)
 - [x] 5.4 Live market feeds (optional) — graceful-degradation seam
 
+### Phase 6 - UI fidelity (match the mockups)
+- [x] 6.1 Dashboard fidelity (app.html)
+- [x] 6.2 Shared app-shell CSS (static/assets/app.css)
+- [x] 6.3 Asset detail + log-payment fidelity
+- [ ] 6.4 Loan + chit + retirement detail fidelity
+- [ ] 6.5 Holdings + create + settings + analysis fidelity
+
 ## Log (newest first)
+- **6.3 - Asset-detail fidelity** (`feat/phase6-fidelity`). Editorial shell + grid2 panels (KPIs+progress,
+  schedule status-dots, funding stacked-bar, contributors sharebar, members). Log-payment -> slide-over on
+  real /payments. Ledger/projection/proof/linked-liability omitted (no endpoint - honest degradation).
+  Review PASS (spec + K1/K4/K5). 179->181 tests.
+- **6.2 - Shared app.css** (`feat/phase6-fidelity`). Extracted the editorial shell + detail-panel CSS from
+  app.html into static/assets/app.css (one source of truth for all app pages). Visual no-op, audited.
+- **6.1 - Dashboard fidelity** (`feat/phase6-fidelity`). Rebuilt /app to the mockup (sidebar+counts, rich
+  topbar, hero stat cards, grid2 panels) wired to live data; dropped fake RATE; XSS-safe. 179 tests.
+- **Live demo re-seeded:** clean realistic scenario on khata_live.db - Devanahalli plot (Rs 22L, 5/8 paid,
+  62.5%), Gold loan HDFC (taken), S. Mehta (given), Gold 22K holding, 12-member chit, NPS. Live on :5055.
 - **3.5 â Holding detail + sharing** ✓ Holding page + reusable sharing.js panel on all detail pages. Done-gate: value 60000000, member add 201. Phase 3 complete. 116→118 tests.
 - **3.4 Ã¢ÂÂ Loan detail** â (`feat/phase3-ui`). Principal/interest/total cards, schedule, entry modal (disbursement/interest/principal). Done-gate: disbursement â principal 60000000. 115â116 tests.
 - **3.2 Ã¢ÂÂ Create-plan flow** Ã¢ÂÂ (`feat/phase3-ui`). `/create` tabbed form (asset/loan/holding) Ã¢ÂÂ POST
