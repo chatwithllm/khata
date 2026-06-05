@@ -182,3 +182,40 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   rows for now (clickable detail lands with the detail pages).
 - Follow-up (Phase 5.2): the dashboard fetches have no non-401 error handling — a rejected fetch leaves
   cards at "—" and rejects Promise.all silently. Add error UI in the hardening sweep.
+
+## 2026-06-04 — Plan 3.2 (Create-plan flow)
+- `/create` page: one tabbed form (asset/loan/holding) that builds the exact JSON shape each type needs
+  and posts to `POST /api/plans`, redirecting to `/app`. Auth-guarded client-side; installments add/remove
+  builder; rate field reveals only for interest≠none. No backend change. Error `{detail|error}` via
+  textContent; all dynamic rows via createElement (K4). Contract pre-flighted against `api/plans.py` (K5).
+- Now under the web-app-builder harness: `agent-rules.md` (K1–K8) is binding for every task; done-gate
+  requires a real end-to-end verification (booted the app, created all 3 types → 201), not just a green
+  test. `build_status.json` is the live dashboard feed (orchestrator-owned).
+
+## 2026-06-04 — Plan 3.3 (Asset detail + log-payment)
+- `/asset/<id>` page (id from `location.pathname`): total/paid/remaining cards, schedule with status
+  badges, funding bars, contributors — from `asset_state`. Log-payment modal → `/api/plans/<id>/payments`,
+  re-fetch. App-shell rows are now anchors → `/<type>/<id>`. All cells via createElement (K4).
+- INCIDENT: the modal's method/funding-source dropdowns offered values not in the service enums
+  (`card`/`salary`/`chit payout`) → clean 400 (K1) but invalid UX. Fixed to mirror
+  `assets.py METHODS/SOURCES`. **Rule extension:** K5 pre-flight covers ENUMS too — a `<select>`'s option
+  values must equal the service's allowed set, not be guessed.
+
+## 2026-06-04 — Plan 3.4 (Loan detail)
+- `/loan/<id>` page: principal-outstanding / interest-due / total cards, accrued/paid/months-behind/as-of
+  status line, and the monthly-interest schedule — from `loan_state`. One action modal routes by type:
+  disbursement → `/loan/disbursements`; interest/principal → `/loan/entries` (method select shows only
+  for entries). All cells via createElement (K4). Note: the loan-entries route does NOT enforce a method
+  enum (unlike asset payments) — values are free-form there.
+
+## 2026-06-04 — Plan 3.5 (Holding detail + sharing panel)
+- `/holding/<id>` page: value/gain/qty cards, avg-cost + quote status line, Buy/Sell/Set-quote modal →
+  `/holding/{buys,sells,quote}`. Reusable `static/assets/sharing.js` (`mountSharing(planId, box)`) renders
+  the members list and — owner-only — an add-by-email form + per-contributor remove (`/members`
+  endpoints). Mounted on holding/asset/loan detail pages. All DOM via createElement (K4).
+- INCIDENT (plan-internal): the plan's holding URL was built dynamically (`"buy"?"buys":"sells"`) but the
+  plan's own test asserted the literal `/holding/buys` substring → contradiction. Fixed to literal
+  branch URLs (behavior identical). Lesson: when a test asserts a literal substring, the source must
+  contain that literal, not assemble it at runtime.
+- Phase 3 complete: every existing domain (asset/loan/holding) is fully operable in the browser —
+  create, view, log, and share — no curl.

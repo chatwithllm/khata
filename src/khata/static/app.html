@@ -117,7 +117,8 @@
       box.appendChild(e); return;
     }
     for (const p of rows) {
-      const row = document.createElement("div"); row.className = "plan";
+      const row = document.createElement("a"); row.className = "plan";
+      row.href = "/" + p.type + "/" + p.id; row.style.color = "inherit";
       const left = document.createElement("div");
       const nm = document.createElement("div"); nm.className = "nm"; nm.textContent = p.name;
       const meta = document.createElement("div"); meta.className = "meta";

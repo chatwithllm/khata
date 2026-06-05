@@ -60,3 +60,41 @@ def test_app_shell_served(client):
     for needle in ["/api/auth/me", "/api/networth", "/api/dashboard", "/api/plans",
                    "Net worth", "ledger.css", "/holdings", "/features"]:
         assert needle in body
+
+
+def test_create_page_served(client):
+    r = client.get("/create")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["/api/plans", "Asset", "Loan", "Holding", "ledger.css", "/api/auth/me"]:
+        assert needle in body
+
+
+def test_asset_detail_served(client):
+    r = client.get("/asset/1")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["/api/plans", "/payments", "Log payment", "ledger.css"]:
+        assert needle in body
+
+
+def test_loan_detail_served(client):
+    r = client.get("/loan/1")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["/api/plans", "/loan/disbursements", "/loan/entries", "ledger.css"]:
+        assert needle in body
+
+
+def test_holding_detail_served(client):
+    r = client.get("/holding/1")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["/api/plans", "/holding/buys", "/holding/quote", "sharing.js", "ledger.css"]:
+        assert needle in body
+
+
+def test_sharing_js_served_and_mounted(client):
+    assert client.get("/static/assets/sharing.js").status_code == 200
+    for path in ["/asset/1", "/loan/1", "/holding/1"]:
+        assert "sharing.js" in client.get(path).data.decode()

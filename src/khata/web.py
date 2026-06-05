@@ -25,3 +25,23 @@ def features():
 @bp.get("/holdings")
 def holdings():
     return send_from_directory(_static_dir(), "holdings.html")
+
+
+@bp.get("/create")
+def create_plan():
+    return send_from_directory(_static_dir(), "create-plan.html")
+
+
+@bp.get("/asset/<int:plan_id>")
+def asset_detail(plan_id):
+    return send_from_directory(_static_dir(), "asset-detail.html")
+
+
+@bp.get("/loan/<int:plan_id>")
+def loan_detail(plan_id):
+    return send_from_directory(_static_dir(), "loan-detail.html")
+
+
+@bp.get("/holding/<int:plan_id>")
+def holding_detail(plan_id):
+    return send_from_directory(_static_dir(), "holding-detail.html")
