@@ -2,14 +2,14 @@
   "project": "khata",
   "plan": "docs/superpowers/ROADMAP.md \u2014 Phases 3\u20135 (12 plans)",
   "started_at": "2026-06-04T00:00:00Z",
-  "updated_at": "2026-06-05T09:13:36Z",
+  "updated_at": "2026-06-05T09:22:57Z",
   "total_tasks": 12,
-  "tasks_done": 8,
+  "tasks_done": 9,
   "current_task": {
-    "id": "5.1",
-    "title": "Account settings",
+    "id": "5.2",
+    "title": "Hardening sweep",
     "phase": "Phase 5 \u2014 Settings/hardening/analysis",
-    "status": "pending"
+    "status": "in_progress"
   },
   "phases": [
     {
@@ -28,20 +28,13 @@
       "status": "active"
     }
   ],
-  "last_commit": "fda8df6",
-  "last_gate_passed": "Phase 4 shipped (PR #11) + live redeploy; 153 tests",
+  "last_commit": "4373819",
+  "last_gate_passed": "5.1 settings \u2014 set password \u2192 login \u2713, profile rename \u2713",
   "open_issues": 0,
   "incidents": 3,
-  "tests": "153 passed",
+  "tests": "160 passed",
   "python": "3.12",
   "log": [
-    {
-      "task": "3.3",
-      "title": "Asset detail + log-payment",
-      "gate": "passed",
-      "commit": "9d2f1aa",
-      "timestamp": "2026-06-04T22:35:00Z"
-    },
     {
       "task": "3.4",
       "title": "Loan detail",
@@ -76,6 +69,13 @@
       "gate": "passed",
       "commit": "ec6365c",
       "timestamp": "2026-06-05T09:06:36Z"
+    },
+    {
+      "task": "5.1",
+      "title": "Account settings",
+      "gate": "passed",
+      "commit": "4373819",
+      "timestamp": "2026-06-05T09:22:57Z"
     }
   ]
 }
