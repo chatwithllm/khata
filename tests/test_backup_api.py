@@ -29,6 +29,22 @@ def test_backup_requires_auth(client):
     assert client.post("/api/restore", json={"tables": {}}).status_code == 401
 
 
+def test_backup_operator_only(client):
+    # first registered user = operator; a second member is forbidden
+    client.post("/api/auth/register", json={
+        "email": "owner@b.com", "display_name": "Owner", "password": "pw12345"})
+    client.post("/api/auth/logout")
+    client.post("/api/auth/register", json={
+        "email": "member@b.com", "display_name": "Member", "password": "pw12345"})
+    # logged in as the 2nd user (a non-operator)
+    assert client.get("/api/backup").status_code == 403
+    assert client.post("/api/restore", json={"version": 1, "tables": {}}).status_code == 403
+    # the operator can
+    client.post("/api/auth/logout")
+    client.post("/api/auth/login", json={"email": "owner@b.com", "password": "pw12345"})
+    assert client.get("/api/backup").status_code == 200
+
+
 def test_backup_download_and_restore_roundtrip(client):
     _setup(client)
     r = client.get("/api/backup")

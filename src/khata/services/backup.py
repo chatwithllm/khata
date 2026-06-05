@@ -39,6 +39,11 @@ def _ser(v):
 
 
 def _row(obj) -> dict:
+    # NB: this intentionally includes User.password_hash. A whole-instance backup must be
+    # able to recreate working logins on a restored machine (there is no email/reset flow,
+    # so stripping the hash would permanently lock every user out). The hash is a one-way
+    # hash, the CLI raw-.db backup contains the same bytes, and access to this export is
+    # gated to the instance operator (api/backup.py:_require_operator) with 0o600 files.
     cols = inspect(obj.__class__).columns.keys()
     return {c: _ser(getattr(obj, c)) for c in cols}
 
