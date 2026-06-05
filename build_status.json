@@ -1,11 +1,11 @@
 {
   "project": "khata",
-  "phase": 2,
-  "plan": "2B-networth",
-  "tasks_total": 7,
-  "tasks_done": 7,
+  "phase": 3,
+  "plan": "3.1-app-shell",
+  "tasks_total": 2,
+  "tasks_done": 2,
   "last_updated": "2026-06-04",
-  "tests": "112 passed",
+  "tests": "113 passed",
   "python": "3.12",
-  "notes": "Plan 2B complete: net-worth consolidation (owned holdings at market value + loans given=asset/taken=liability) in a per-user base_currency, cross-currency via a manual fx_rates table (directed rate_micro, exact Decimal). Value-what-you-can: unpriced holdings + no-rate currencies surfaced separately, never guessed. New networth blueprint (GET /api/networth, POST /api/base-currency, POST /api/fx-rates) + live holdings.html page at /holdings (XSS-safe DOM rendering). Existing /api/dashboard untouched. Holdings & net-worth milestone complete."
+  "notes": "Phase 3 begun. Plan 3.1 complete: real /app shell (sidebar nav, topbar with greeting + base badge + logout, dashboard cards [net worth / paid / i owe / owed to me], type-filterable plan list) wired to /api/auth/me + /api/networth + /api/dashboard + /api/plans. Client-side auth guard (401→/). XSS-safe DOM rendering. Next: Plan 3.2 (create-plan flow)."
 }

@@ -51,3 +51,12 @@ def test_holdings_page_served(client):
     body = r.data.decode()
     for needle in ["Net worth", "/api/networth", "/api/fx-rates", "ledger.css"]:
         assert needle in body
+
+
+def test_app_shell_served(client):
+    r = client.get("/app")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["/api/auth/me", "/api/networth", "/api/dashboard", "/api/plans",
+                   "Net worth", "ledger.css", "/holdings", "/features"]:
+        assert needle in body
