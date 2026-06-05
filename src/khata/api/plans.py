@@ -4,11 +4,12 @@ from flask import Blueprint, g, jsonify, request
 
 from ..models import Plan, User
 from ..money import format_minor, pct_to_bps, to_micro, to_minor
-from ..services import assets, chits, holdings, loans, sharing
+from ..services import assets, chits, holdings, loans, retirement, sharing
 from ..services.assets import PlanError
 from ..services.loans import LoanError
 from ..services.holdings import HoldingError
 from ..services.chits import ChitError
+from ..services.retirement import RetirementError
 from .auth import current_user
 
 bp = Blueprint("plans", __name__, url_prefix="/api/plans")
@@ -56,6 +57,9 @@ def _summary(plan: Plan) -> dict:
         base.update({"chit_value_minor": plan.chit.chit_value_minor,
                      "n_members": plan.chit.n_members,
                      "commission_bps": plan.chit.commission_bps})
+    elif plan.type == "retirement" and plan.retirement is not None:
+        base.update({"current_age": plan.retirement.current_age,
+                     "retirement_age": plan.retirement.retirement_age})
     else:
         base["total_price_minor"] = plan.asset.total_price_minor if plan.asset else None
     return base
@@ -68,6 +72,8 @@ def _detail(plan: Plan) -> dict:
         state = holdings.holding_state(g.db, plan.holding)
     elif plan.type == "chit":
         state = chits.chit_state(g.db, plan.chit)
+    elif plan.type == "retirement":
+        state = retirement.retirement_state(g.db, plan.retirement)
     else:
         state = assets.asset_state(g.db, plan)
     return {"plan": _summary(plan), "state": state}
@@ -124,6 +130,16 @@ def create():
                 n_members=int(data.get("n_members", 0)),
                 commission_bps=pct_to_bps(data.get("commission", "0")),
                 start_date=date.fromisoformat(data["start_date"]) if data.get("start_date") else date.today())
+        elif ptype == "retirement":
+            plan = retirement.create_retirement_plan(
+                g.db, owner_id=user.id, name=data.get("name", ""), currency=currency,
+                current_age=int(data.get("current_age", 0)),
+                retirement_age=int(data.get("retirement_age", 0)),
+                current_balance_minor=to_minor(data.get("current_balance", "0"), currency),
+                monthly_contribution_minor=to_minor(data.get("monthly_contribution", "0"), currency),
+                employer_match_bps=pct_to_bps(data.get("employer_match", "0")),
+                annual_return_bps=pct_to_bps(data.get("annual_return", "8")),
+                inflation_bps=pct_to_bps(data.get("inflation", "6")))
         else:
             total = to_minor(data.get("total_price", ""), currency)
             plan = assets.create_asset_plan(g.db, owner_id=user.id, name=data.get("name", ""),
@@ -132,7 +148,7 @@ def create():
             if items:
                 assets.set_installments(g.db, plan=plan, items=_parse_items(items, currency))
         g.db.commit()
-    except (PlanError, LoanError, HoldingError, ChitError, ValueError, TypeError) as e:
+    except (PlanError, LoanError, HoldingError, ChitError, RetirementError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(_detail(plan)), 201
@@ -442,3 +458,33 @@ def chit_dividend(plan_id):
     return jsonify(chits.auction_dividend(
         chit_value_minor=plan.chit.chit_value_minor, commission_bps=plan.chit.commission_bps,
         n_members=plan.chit.n_members, winning_bid_minor=bid)), 200
+
+
+@bp.post("/<int:plan_id>/retirement/update")
+def retirement_update(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "retirement":
+        return jsonify(error="not_a_retirement"), 400
+    data = request.get_json(silent=True) or {}
+    fields = {}
+    for src, dst, conv in [
+            ("current_balance", "current_balance_minor", lambda v: to_minor(v, plan.currency)),
+            ("monthly_contribution", "monthly_contribution_minor", lambda v: to_minor(v, plan.currency)),
+            ("employer_match", "employer_match_bps", pct_to_bps),
+            ("annual_return", "annual_return_bps", pct_to_bps),
+            ("inflation", "inflation_bps", pct_to_bps),
+            ("current_age", "current_age", int), ("retirement_age", "retirement_age", int)]:
+        if data.get(src) not in (None, ""):
+            fields[dst] = conv(data.get(src))
+    try:
+        retirement.update_retirement(g.db, plan=plan, **fields)
+        g.db.commit()
+    except (RetirementError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(state=retirement.retirement_state(g.db, plan.retirement)), 200
