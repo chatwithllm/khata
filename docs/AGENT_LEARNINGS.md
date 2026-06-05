@@ -207,3 +207,15 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   disbursement → `/loan/disbursements`; interest/principal → `/loan/entries` (method select shows only
   for entries). All cells via createElement (K4). Note: the loan-entries route does NOT enforce a method
   enum (unlike asset payments) — values are free-form there.
+
+## 2026-06-04 — Plan 3.5 (Holding detail + sharing panel)
+- `/holding/<id>` page: value/gain/qty cards, avg-cost + quote status line, Buy/Sell/Set-quote modal →
+  `/holding/{buys,sells,quote}`. Reusable `static/assets/sharing.js` (`mountSharing(planId, box)`) renders
+  the members list and — owner-only — an add-by-email form + per-contributor remove (`/members`
+  endpoints). Mounted on holding/asset/loan detail pages. All DOM via createElement (K4).
+- INCIDENT (plan-internal): the plan's holding URL was built dynamically (`"buy"?"buys":"sells"`) but the
+  plan's own test asserted the literal `/holding/buys` substring → contradiction. Fixed to literal
+  branch URLs (behavior identical). Lesson: when a test asserts a literal substring, the source must
+  contain that literal, not assemble it at runtime.
+- Phase 3 complete: every existing domain (asset/loan/holding) is fully operable in the browser —
+  create, view, log, and share — no curl.
