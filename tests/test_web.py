@@ -120,3 +120,25 @@ def test_retirement_detail_served(client):
     body = r.data.decode()
     for needle in ["/api/plans", "/retirement/update", "sharing.js", "ledger.css"]:
         assert needle in body
+
+
+def test_settings_page_served(client):
+    r = client.get("/settings")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["/api/auth/password", "/api/auth/profile", "/api/base-currency", "ledger.css"]:
+        assert needle in body
+
+
+def test_analysis_page_served(client):
+    r = client.get("/analysis")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["/api/analysis/hold-vs-sell", "ledger.css"]:
+        assert needle in body
+
+
+def test_holding_detail_has_feed_refresh(client):
+    body = client.get("/holding/1").data.decode()
+    assert "/holding/refresh-quote" in body
+    assert "/api/feed/config" in body

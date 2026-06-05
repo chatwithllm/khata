@@ -105,3 +105,23 @@ def test_google_login_unverified_email_403():
     r = c.post("/api/auth/google", json={"credential": "fake"})
     assert r.status_code == 403
     assert r.get_json()["error"] == "email_unverified"
+
+
+def test_set_and_change_password(client):
+    client.post("/api/auth/register", json={"email": "a@b.com", "display_name": "A", "password": "pw12345"})
+    assert client.post("/api/auth/password", json={"password": "x"}).status_code == 400
+    assert client.post("/api/auth/password", json={"password": "newpw99"}).status_code == 200
+    client.post("/api/auth/logout")
+    assert client.post("/api/auth/login", json={"email": "a@b.com", "password": "newpw99"}).status_code == 200
+
+
+def test_password_requires_auth(client):
+    assert client.post("/api/auth/password", json={"password": "newpw99"}).status_code == 401
+
+
+def test_update_profile_api(client):
+    client.post("/api/auth/register", json={"email": "a@b.com", "display_name": "Old", "password": "pw12345"})
+    r = client.post("/api/auth/profile", json={"display_name": "New Name"})
+    assert r.status_code == 200 and r.get_json()["user"]["display_name"] == "New Name"
+    assert client.post("/api/auth/profile", json={"display_name": "  "}).status_code == 400
+    assert client.get("/api/auth/me").get_json()["user"]["has_password"] is True

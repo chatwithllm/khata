@@ -84,6 +84,15 @@ def test_float_amount_returns_400_not_500(client):
     assert r.status_code == 400
 
 
+def test_malformed_amount_is_400_not_500(client):
+    _register(client, "a@b.com")
+    pid = client.post("/api/plans", json={
+        "name": "P", "currency": "INR", "total_price": "1000"}).get_json()["plan"]["id"]
+    r = client.post(f"/api/plans/{pid}/payments",
+                    json={"amount": "abc", "method": "upi", "funding_source": "savings"})
+    assert r.status_code == 400
+
+
 def test_create_loan_disbursement_payment_and_state(client):
     _register(client)
     r = client.post("/api/plans", json={

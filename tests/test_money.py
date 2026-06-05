@@ -84,3 +84,18 @@ def test_to_micro_rejects_garbage():
         to_micro("")
     with pytest.raises(Exception):
         to_micro("abc")
+
+
+def test_to_minor_rejects_garbage_with_valueerror():
+    import pytest
+    from khata.money import to_minor, to_micro, pct_to_bps
+    with pytest.raises(ValueError):
+        to_minor("abc", "INR")
+    with pytest.raises(ValueError):
+        to_micro("abc")
+    with pytest.raises(ValueError):
+        pct_to_bps("abc")
+    # valid input still parses
+    assert to_minor("12.50", "INR") == 1250
+    assert to_micro("3.5") == 3500000
+    assert pct_to_bps("8.5") == 850

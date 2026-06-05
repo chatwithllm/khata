@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/assets/ledger.css">
+<style>
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+  .topbar .brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:20px}
+  .topbar .glyph{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,var(--primary),var(--primary-deep))}
+  .formcard{max-width:560px;margin:8px auto 40px}
+  .card2{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .card2 h2{font-family:"Fraunces",serif;font-size:20px;margin-bottom:12px}
+  .fld{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+  .fld label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+  .fld input,.fld select{font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .msg{font-size:13px;min-height:18px}
+  .msg.ok{color:var(--pos)} .msg.err{color:var(--neg)}
+  .acts{display:flex;gap:10px;align-items:center;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="/app"><span class="glyph"></span> Khata</a>
+    <a class="link" href="/app">← Back to app</a>
+  </div>
+  <div class="formcard">
+    <h1 style="font-family:'Fraunces',serif;font-weight:600;font-size:28px;margin-bottom:14px">Settings</h1>
+
+    <div class="card2">
+      <h2>Profile</h2>
+      <div class="fld"><label>Display name</label><input id="display_name"></div>
+      <div class="msg" id="pmsg"></div>
+      <div class="acts"><button class="btn" id="saveprofile">Save</button></div>
+    </div>
+
+    <div class="card2">
+      <h2 id="pwtitle">Password</h2>
+      <div class="muted" id="pwhint" style="margin-bottom:8px"></div>
+      <div class="fld"><label>New password</label><input id="password" type="password" placeholder="at least 6 characters"></div>
+      <div class="msg" id="wmsg"></div>
+      <div class="acts"><button class="btn" id="savepw">Save password</button></div>
+    </div>
+
+    <div class="card2">
+      <h2>Currency</h2>
+      <div class="fld"><label>Base currency</label>
+        <select id="base"><option value="INR">INR ₹</option><option value="USD">USD $</option></select>
+      </div>
+      <div class="row2">
+        <div class="fld"><label>FX quote</label>
+          <select id="fxq"><option value="USD">USD</option><option value="INR">INR</option></select>
+        </div>
+        <div class="fld"><label>Rate (1 quote = ? base)</label><input id="fxr" placeholder="83.42"></div>
+      </div>
+      <div class="msg" id="cmsg"></div>
+      <div class="acts"><button class="btn" id="savebase">Set base</button><button class="btn" id="savefx">Set rate</button></div>
+    </div>
+  </div>
+</div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  function show(el, ok, text) { el.className = "msg " + (ok ? "ok" : "err"); el.textContent = text; }
+  async function post(path, body) {
+    const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    return { ok: r.ok, j };
+  }
+
+  async function load() {
+    const me = await fetch("/api/auth/me");
+    if (me.status === 401) { window.location.href = "/"; return; }
+    const u = (await me.json()).user;
+    $("display_name").value = u.display_name || "";
+    $("pwtitle").textContent = u.has_password ? "Change password" : "Set a password";
+    $("pwhint").textContent = u.has_password ? "Update your email/password login." : "Add a password so you can also log in with email + password.";
+    try { const nw = await (await fetch("/api/networth")).json(); $("base").value = nw.base_currency || "INR"; } catch (_) {}
+  }
+
+  $("saveprofile").addEventListener("click", async () => {
+    const { ok, j } = await post("/api/auth/profile", { display_name: $("display_name").value });
+    show($("pmsg"), ok, ok ? "Saved." : (j.detail || j.error || "Failed."));
+    if (ok) load();
+  });
+  $("savepw").addEventListener("click", async () => {
+    const { ok, j } = await post("/api/auth/password", { password: $("password").value });
+    show($("wmsg"), ok, ok ? "Password updated." : (j.detail || j.error || "Failed."));
+    if (ok) { $("password").value = ""; load(); }
+  });
+  $("savebase").addEventListener("click", async () => {
+    const { ok, j } = await post("/api/base-currency", { currency: $("base").value });
+    show($("cmsg"), ok, ok ? "Base currency set." : (j.detail || j.error || "Failed."));
+  });
+  $("savefx").addEventListener("click", async () => {
+    const { ok, j } = await post("/api/fx-rates", { quote: $("fxq").value, rate: $("fxr").value });
+    show($("cmsg"), ok, ok ? "Rate set." : (j.detail || j.error || "Failed."));
+    if (ok) $("fxr").value = "";
+  });
+
+  load();
+</script>
+</body>
+</html>

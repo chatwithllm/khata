@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — Hold vs sell</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/assets/ledger.css">
+<style>
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
+  .topbar .brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:20px}
+  .topbar .glyph{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,var(--primary),var(--primary-deep))}
+  .formcard{max-width:560px;margin:8px auto 40px}
+  .explain{color:var(--ink-faint);font-size:14px;margin-bottom:16px}
+  .card2{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .card2 h2{font-family:"Fraunces",serif;font-size:20px;margin-bottom:12px}
+  .fld{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+  .fld label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+  .fld input{font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .msg{font-size:13px;min-height:18px}
+  .msg.err{color:var(--neg)}
+  .acts{display:flex;gap:10px;align-items:center;margin-top:4px}
+  .resrow{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)}
+  .resrow .k{color:var(--ink-faint);font-size:14px}
+  .resrow .v{font-family:"JetBrains Mono";font-size:15px}
+  .netline{display:flex;align-items:center;justify-content:space-between;padding:14px 0 6px;font-family:"Fraunces",serif;font-size:22px}
+  .netline .v{font-family:"JetBrains Mono"}
+  .netline.hold .v{color:var(--pos)} .netline.sell .v{color:var(--neg)}
+  .verdict{font-size:14px;color:var(--ink-soft);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <a class="brand" href="/app"><span class="glyph"></span> Khata</a>
+    <a class="link" href="/app">← Back to app</a>
+  </div>
+  <div class="formcard">
+    <h1 style="font-family:'Fraunces',serif;font-weight:600;font-size:28px;margin-bottom:6px">Hold vs sell</h1>
+    <div class="explain">Should you keep an appreciating asset and borrow against it, or sell it?</div>
+
+    <div class="card2">
+      <h2>Inputs</h2>
+      <div class="fld"><label>Asset value</label><input id="asset_value" placeholder="10,00,000"></div>
+      <div class="row2">
+        <div class="fld"><label>Appreciation %/yr</label><input id="appreciation" placeholder="10"></div>
+        <div class="fld"><label>Loan interest %/yr</label><input id="interest" placeholder="9"></div>
+      </div>
+      <div class="row2">
+        <div class="fld"><label>Borrow amount</label><input id="borrow" placeholder="6,00,000"></div>
+        <div class="fld"><label>Horizon (months)</label><input id="horizon" type="number" placeholder="18"></div>
+      </div>
+      <div class="msg err" id="emsg"></div>
+      <div class="acts"><button class="btn" id="calc">Calculate</button></div>
+    </div>
+
+    <div class="card2" id="result" style="display:none">
+      <h2>Result</h2>
+      <div id="rows"></div>
+      <div class="netline" id="netline"><span class="k">Net advantage</span><span class="v" id="netval"></span></div>
+      <div class="verdict" id="verdict"></div>
+    </div>
+  </div>
+</div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const SYM = { INR: "₹", USD: "$" };
+
+  function fmtMinor(m, ccy) {
+    if (m === null || m === undefined) return "—";
+    const neg = m < 0, v = Math.abs(m) / 100;
+    return (neg ? "-" : "") + (SYM[ccy] || "₹") + v.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+  }
+
+  function row(label, value) {
+    const r = document.createElement("div");
+    r.className = "resrow";
+    const k = document.createElement("span"); k.className = "k"; k.textContent = label;
+    const v = document.createElement("span"); v.className = "v"; v.textContent = value;
+    r.appendChild(k); r.appendChild(v);
+    return r;
+  }
+
+  async function guard() {
+    const me = await fetch("/api/auth/me");
+    if (me.status === 401) { window.location.href = "/"; return false; }
+    return true;
+  }
+
+  async function calculate() {
+    $("emsg").textContent = "";
+    const qs = new URLSearchParams({
+      asset_value: $("asset_value").value,
+      appreciation: $("appreciation").value,
+      borrow: $("borrow").value,
+      interest: $("interest").value,
+      horizon: $("horizon").value,
+    });
+    const r = await fetch("/api/analysis/hold-vs-sell?" + qs.toString());
+    if (r.status === 401) { window.location.href = "/"; return; }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      $("emsg").textContent = j.detail || j.error || "Could not calculate.";
+      return;
+    }
+    const rows = $("rows");
+    rows.innerHTML = "";
+    rows.appendChild(row("Future value", fmtMinor(j.future_value_minor, "INR")));
+    rows.appendChild(row("Appreciation gain", fmtMinor(j.appreciation_gain_minor, "INR")));
+    rows.appendChild(row("Interest cost", fmtMinor(j.interest_cost_minor, "INR")));
+
+    const net = j.net_hold_advantage_minor;
+    $("netline").className = "netline " + j.verdict;
+    $("netval").textContent = fmtMinor(net, "INR");
+    if (j.verdict === "hold") {
+      $("verdict").textContent = "Holding wins by " + fmtMinor(net, "INR");
+    } else {
+      $("verdict").textContent = "Selling wins by " + fmtMinor(-net, "INR") + " — interest outweighs appreciation";
+    }
+    $("result").style.display = "";
+  }
+
+  $("calc").addEventListener("click", calculate);
+
+  guard();
+</script>
+</body>
+</html>

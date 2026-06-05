@@ -2,13 +2,13 @@
   "project": "khata",
   "plan": "docs/superpowers/ROADMAP.md \u2014 Phases 3\u20135 (12 plans)",
   "started_at": "2026-06-04T00:00:00Z",
-  "updated_at": "2026-06-05T09:06:36Z",
+  "updated_at": "2026-06-05T09:40:57Z",
   "total_tasks": 12,
-  "tasks_done": 8,
+  "tasks_done": 11,
   "current_task": {
-    "id": "4.x",
-    "title": "Phase 4 integration review \u2192 PR (chit+secured+retirement)",
-    "phase": "Phase 4 \u2014 New domains",
+    "id": "5.4",
+    "title": "Live market feeds (optional)",
+    "phase": "Phase 5 \u2014 Settings/hardening/analysis",
     "status": "in_progress"
   },
   "phases": [
@@ -28,34 +28,13 @@
       "status": "active"
     }
   ],
-  "last_commit": "ec6365c",
-  "last_gate_passed": "4.3 retirement \u2014 projection recomputed to the minor unit \u2713 (corpus 1490359449)",
+  "last_commit": "9bfee56",
+  "last_gate_passed": "5.3 analysis \u2014 hold-vs-sell net 8011233 verdict hold \u2713",
   "open_issues": 0,
   "incidents": 3,
-  "tests": "153 passed",
+  "tests": "172 passed",
   "python": "3.12",
   "log": [
-    {
-      "task": "3.3",
-      "title": "Asset detail + log-payment",
-      "gate": "passed",
-      "commit": "9d2f1aa",
-      "timestamp": "2026-06-04T22:35:00Z"
-    },
-    {
-      "task": "3.4",
-      "title": "Loan detail",
-      "gate": "passed",
-      "commit": "db2fb76",
-      "timestamp": "2026-06-04T23:00:00Z"
-    },
-    {
-      "task": "3.5",
-      "title": "Holding detail + sharing \u2014 Phase 3 shipped (PR #9) + LAN deploy",
-      "gate": "passed",
-      "commit": "07ed540",
-      "timestamp": "2026-06-04T23:30:00Z"
-    },
     {
       "task": "4.1",
       "title": "Chit funds (model/service/API/UI, money-reviewed)",
@@ -76,6 +55,27 @@
       "gate": "passed",
       "commit": "ec6365c",
       "timestamp": "2026-06-05T09:06:36Z"
+    },
+    {
+      "task": "5.1",
+      "title": "Account settings",
+      "gate": "passed",
+      "commit": "4373819",
+      "timestamp": "2026-06-05T09:22:57Z"
+    },
+    {
+      "task": "5.2",
+      "title": "Hardening sweep (500\u2192400, holdings guards)",
+      "gate": "passed",
+      "commit": "ee2b234",
+      "timestamp": "2026-06-05T09:33:17Z"
+    },
+    {
+      "task": "5.3",
+      "title": "Analysis tools (hold-vs-sell)",
+      "gate": "passed",
+      "commit": "9bfee56",
+      "timestamp": "2026-06-05T09:40:57Z"
     }
   ]
 }

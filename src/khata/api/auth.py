@@ -3,6 +3,8 @@ from flask import Blueprint, current_app, g, jsonify, request, session
 from ..services.auth import (
     register_user,
     authenticate_user,
+    set_password,
+    update_profile,
     login_with_google,
     EmailTakenError,
     InvalidCredentialsError,
@@ -16,7 +18,8 @@ bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 
 def _user_json(user: User) -> dict:
-    return {"id": user.id, "email": user.email, "display_name": user.display_name}
+    return {"id": user.id, "email": user.email, "display_name": user.display_name,
+            "has_password": bool(user.password_hash)}
 
 
 def current_user():
@@ -69,6 +72,36 @@ def me():
     user = current_user()
     if user is None:
         return jsonify(error="unauthenticated"), 401
+    return jsonify(user=_user_json(user)), 200
+
+
+@bp.post("/password")
+def set_password_route():
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    data = request.get_json(silent=True) or {}
+    try:
+        set_password(g.db, user=user, password=data.get("password", ""))
+        g.db.commit()
+    except AuthError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(ok=True), 200
+
+
+@bp.post("/profile")
+def update_profile_route():
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    data = request.get_json(silent=True) or {}
+    try:
+        update_profile(g.db, user=user, display_name=data.get("display_name", ""))
+        g.db.commit()
+    except AuthError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(user=_user_json(user)), 200
 
 

@@ -49,6 +49,23 @@ def authenticate_user(session: Session, *, email: str, password: str) -> User:
     return user
 
 
+def set_password(session: Session, *, user: User, password: str) -> User:
+    if len(password or "") < 6:
+        raise AuthError("password too short")
+    user.password_hash = hash_password(password)
+    session.flush()
+    return user
+
+
+def update_profile(session: Session, *, user: User, display_name: str) -> User:
+    name = (display_name or "").strip()
+    if not name:
+        raise AuthError("display name required")
+    user.display_name = name
+    session.flush()
+    return user
+
+
 def verify_google_credential(credential: str, client_id: str) -> dict:
     """Verify a Google Identity Services ID token; return the relevant claims.
 

@@ -69,18 +69,18 @@ record the chosen product model explicitly.
 ---
 
 ## Phase 5 — Settings, hardening & advanced
-- [ ] **5.1 Account settings.** Google-created users set a password; edit display name + profile photo;
+- [x] **5.1 Account settings.** Google-created users set a password; edit display name + profile photo;
   base-currency & FX management UI; clears the deferred auth follow-ups.
-- [ ] **5.2 Hardening sweep.** Burn down the `AGENT_LEARNINGS.md` deferred follow-ups: `add_buy`/
+- [x] **5.2 Hardening sweep.** Burn down the `AGENT_LEARNINGS.md` deferred follow-ups: `add_buy`/
   `add_sell` `None`-qty → `ValidationError` guard + holdings edge tests (sell-to-zero, multiple sells,
   quote=0); reconcile the unused `session` arg across `*_state`/`net_worth`; `fmtMicro` null guard;
   expose `loan_state` `as_of`; index `ledger_entries(plan_id, kind)`; type-filter `list_plans`; DB
   `CHECK`/unique constraints (`plans.type`, `installments(plan_id, seq)`); fold net worth into the main
   dashboard or unify the two rollups; `verify_google_credential` transport-error handling.
-- [ ] **5.3 Analysis tools** (`holdings.html` analysis section). Gold-loan-vs-selling decision
+- [x] **5.3 Analysis tools** (`holdings.html` analysis section). Gold-loan-vs-selling decision
   calculator (hold-and-borrow vs sell: appreciation vs interest cost, net outcome) + any other what-if
   views. Pure derived calculators.
-- [ ] **5.4 Live market feeds (optional, last).** Replace manual quotes + FX with an **optional**
+- [x] **5.4 Live market feeds (optional, last).** Replace manual quotes + FX with an **optional**
   market-data integration (spot gold/silver, equity, FX), behind config, manual entry as fallback when
   unconfigured (same graceful-degradation pattern as Google sign-in).
 

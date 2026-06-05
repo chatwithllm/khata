@@ -260,3 +260,40 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   (corpus nominal+real cards) + Update modal pre-filled from state + create Retirement tab.
 - **Phase 4 done:** chit funds + secured loans/collateral + retirement planner — three new domains,
   each backend + UI, money-reviewed. Test suite 127→153.
+
+## 2026-06-05 — Plan 5.1 (Account settings)
+- `/settings` page + `set_password`/`update_profile` endpoints (session-authed, no old-password — so
+  Google-created `password_hash=None` users can add a password and then use email/password login).
+  `_user_json` exposes `has_password` → UI shows "Set" vs "Change". Currency/FX reuse existing endpoints.
+  Sidebar Settings is now a real link. createElement-only.
+
+## 2026-06-05 — Plan 5.2 (Hardening sweep)
+- **Systemic 500→400 fix:** `money.to_minor`/`to_micro`/`pct_to_bps` now catch `decimal.InvalidOperation`
+  → `ValueError`, so a non-numeric amount/rate/quantity on ANY money endpoint returns 400 (the API except
+  tuples already catch ValueError) instead of 500. One central change, app-wide. No-float discipline
+  proven intact (float→TypeError guard runs before the parse; reviewer reconfirmed).
+- Holdings `_add_entry` rejects None quantity/amount with `ValidationError` (was TypeError); edge tests
+  added (sell-to-zero, multiple sells, quote=0 → value 0 not None). `fmtMicro` null-guarded on both
+  holdings pages.
+- Deferred (still logged): unused `session` arg on `*_state`/`net_worth`; `loan_state` `as_of`;
+  `ledger_entries(plan_id,kind)` index; DB CHECK/unique constraints; google transport-error handling.
+
+## 2026-06-05 — Plan 5.3 (Analysis tools)
+- Stateless **hold-vs-sell** decision calculator (`services/analysis.py:hold_vs_sell`): compare keeping an
+  appreciating asset + borrowing against it (paying interest) vs selling. Compound appreciation via
+  `Decimal ** int`, simple interest on the borrow over the horizon; `net_hold_advantage = appreciation_gain
+  − interest_cost`; verdict hold if net>0 else sell. Pure/derived, no float. New `analysis` blueprint
+  (`GET /api/analysis/hold-vs-sell`, auth-gated) + `/analysis` page (verdict green/red). Math constants
+  pre-computed + reviewer-recomputed (₹10L gold/10%/₹6L@9%/18mo → net +₹80,112.33, hold).
+
+## 2026-06-05 — Plan 5.4 (Live market feeds, optional) — ROADMAP COMPLETE
+- Optional live-price seam mirroring Google sign-in's graceful degradation: `KHATA_PRICE_FEED` config flag
+  + injectable `app.config["PRICE_PROVIDER"]` (default `live_price_provider` raises — unwired out of the
+  box) + `GET /api/feed/config {enabled}` + owner-only `POST /holding/refresh-quote` (503 when off, 502 on
+  provider error, else set_quote from the spot). **Unset ⇒ feeds off ⇒ manual quotes only** — zero
+  behavior change by default; a self-hoster supplies a provider to enable. Tested via a stub provider.
+  Holding-detail shows a "Refresh price (live)" button only when configured.
+- **ENTIRE ROADMAP COMPLETE:** Phases 1–5, 12 plans, 178 tests. App fully built — auth (email/Google),
+  sharing, assets, loans (+ secured/collateral), holdings, net worth (+ cross-currency), chit funds,
+  retirement planner, settings, analysis, optional feeds — all operable in the browser, money-reviewed,
+  no float, derived balances, self-hosted.

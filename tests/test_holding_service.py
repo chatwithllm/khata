@@ -112,3 +112,39 @@ def test_invalid_asset_class_rejected(ctx):
     with pytest.raises(ValidationError):
         create_holding_plan(s, owner_id=u.id, name="X", currency="INR",
                             asset_class="crypto", unit="coin")
+
+
+def test_none_quantity_rejected(ctx):
+    s, u = ctx
+    plan = create_holding_plan(s, owner_id=u.id, name="G", currency="INR",
+                               asset_class="gold", unit="gram")
+    with pytest.raises(ValidationError):
+        add_buy(s, plan=plan, user_id=u.id, quantity_micro=None, amount_minor=1000000,
+                occurred_at=_dt(1))
+
+
+def test_sell_to_zero_then_state(ctx):
+    s, u = ctx
+    plan = create_holding_plan(s, owner_id=u.id, name="G", currency="INR",
+                               asset_class="gold", unit="gram")
+    add_buy(s, plan=plan, user_id=u.id, quantity_micro=5_000_000, amount_minor=25000000,
+            occurred_at=_dt(1))
+    add_sell(s, plan=plan, user_id=u.id, quantity_micro=2_000_000, amount_minor=11000000,
+             occurred_at=_dt(2))
+    add_sell(s, plan=plan, user_id=u.id, quantity_micro=3_000_000, amount_minor=16000000,
+             occurred_at=_dt(3))
+    st = holding_state(s, plan.holding)
+    assert st["qty_held_micro"] == 0
+    assert st["cost_of_held_minor"] == 0
+
+
+def test_quote_zero_values_at_zero(ctx):
+    s, u = ctx
+    plan = create_holding_plan(s, owner_id=u.id, name="G", currency="INR",
+                               asset_class="gold", unit="gram")
+    add_buy(s, plan=plan, user_id=u.id, quantity_micro=1_000_000, amount_minor=5000000,
+            occurred_at=_dt(1))
+    set_quote(s, plan=plan, price_minor=0, as_of=_dt(2))
+    st = holding_state(s, plan.holding)
+    assert st["current_value_minor"] == 0           # quoted at 0 → value 0, not None
+    assert st["unrealized_gain_minor"] == 0 - st["cost_of_held_minor"]
