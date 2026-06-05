@@ -46,7 +46,8 @@ def _summary(plan: Plan) -> dict:
             "currency": plan.currency, "status": plan.status}
     if plan.type == "loan" and plan.loan is not None:
         base.update({"direction": plan.loan.direction, "interest_type": plan.loan.interest_type,
-                     "rate_bps": plan.loan.rate_bps, "counterparty": plan.loan.counterparty})
+                     "rate_bps": plan.loan.rate_bps, "counterparty": plan.loan.counterparty,
+                     "secured": plan.loan.secured})
     elif plan.type == "holding" and plan.holding is not None:
         base.update({"asset_class": plan.holding.asset_class, "unit": plan.holding.unit,
                      "symbol": plan.holding.symbol,
@@ -108,6 +109,9 @@ def create():
                 rate_bps=pct_to_bps(data.get("rate", "0")) if interest_type != "none" else 0,
                 start_date=date.fromisoformat(data["start_date"]) if data.get("start_date") else date.today(),
                 tenure_months=data.get("tenure_months"))
+            if data.get("collateral_plan_id"):
+                loans.set_collateral(g.db, plan=plan,
+                                     collateral_plan_id=data.get("collateral_plan_id"))
         elif ptype == "holding":
             plan = holdings.create_holding_plan(
                 g.db, owner_id=user.id, name=data.get("name", ""), currency=currency,
@@ -222,6 +226,26 @@ def loan_disbursement(plan_id):
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(entry=_entry_json(entry, plan),
                    state=loans.loan_state(g.db, plan.loan, as_of=date.today())), 201
+
+
+@bp.post("/<int:plan_id>/loan/collateral")
+def loan_collateral(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "loan":
+        return jsonify(error="not_a_loan"), 400
+    data = request.get_json(silent=True) or {}
+    try:
+        loans.set_collateral(g.db, plan=plan, collateral_plan_id=data.get("collateral_plan_id"))
+        g.db.commit()
+    except (LoanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(state=loans.loan_state(g.db, plan.loan, as_of=date.today())), 200
 
 
 @bp.post("/<int:plan_id>/holding/buys")
