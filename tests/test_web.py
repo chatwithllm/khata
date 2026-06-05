@@ -96,7 +96,16 @@ def test_asset_detail_served(client):
     r = client.get("/asset/1")
     assert r.status_code == 200
     body = r.data.decode()
-    for needle in ["/api/plans", "/payments", "Log payment", "ledger.css"]:
+    for needle in [
+        "/api/plans/",
+        "app.css",
+        "Log payment",
+        "curtog",
+        "Funding",
+        "Contributors",
+        "/payments",
+        "/api/auth/me",
+    ]:
         assert needle in body
 
 
