@@ -62,7 +62,7 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 
 ## 6. Derived state contracts (what `GET /api/plans/<id>` returns as `state`, by type)
 - **asset_state**: total_price_minor, paid_to_date_minor, remaining_minor, overpaid_minor, next_due_seq,
-  installments[{seq, planned_amount_minor, applied_minor, status(paid|partial|due)}], funding_breakdown
+  installments[{seq, planned_amount_minor, applied_minor, status(paid|partial|due), due_date}], funding_breakdown
   [{source, amount_minor, pct}], contributors[{user_id, display_name, paid_minor, pct}], **ledger**
   [{id, kind, direction, amount_minor, created_at, occurred_at, method, funding_source, note, has_proof}].
 - **loan_state**: direction, currency, principal_outstanding_minor, interest_accrued_minor,
@@ -112,6 +112,7 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   balances recompute. Frontend: ✎ edit on each asset-detail ledger row reopens the slide-over pre-filled.
 - **2026-06-05 — Payment date.** Log-payment slide-over has a "Date (when it happened)" field → `occurred_at`
   (distinct from auto `created_at` = when logged). Ledger shows "· logged X" when the two differ.
+- **2026-06-05 — Define/edit a schedule on an existing asset.** Asset-detail schedule panel has **"+ add schedule"** (when ad-hoc) / **"✎ edit schedule"** (when scheduled) → a slide-over with an installment builder (amount + due date, add/remove rows) → `POST /api/plans/<id>/installments` (replaces the schedule; logged payments re-apply since balances are derived). `asset_state.installments` now also carries `due_date` (for pre-fill). So an ad-hoc asset can become scheduled later.
 - **2026-06-05 — Delete ledger entry.** `DELETE /api/plans/<id>/entries/<entry_id>` (owner-only; recomputes derived state). Frontend: a **Delete** action in the asset-detail edit slide-over (shown only when editing, confirm before delete).
 - **2026-06-05 — Ad-hoc (unscheduled) assets.** Assets with no installments now read "X% paid · ad-hoc payments" and the schedule panel shows "No fixed schedule — payments are logged as funds arrive" (instead of "0 of 0 installments"). Valid pattern: pay as funds arrive.
 - **2026-06-05 — Sidebar type filter.** Dashboard sidebar Assets/Chit/Loans/401(k) now link `/app?type=<t>`
@@ -150,6 +151,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Can define/edit installment schedule on an existing asset (POST /installments from the detail page).
 - 2026-06-05 — Ledger entries can be deleted (DELETE /entries); ad-hoc (no-installment) asset copy cleaned up.
 - 2026-06-05 — Dashboard sidebar type items (Assets/Chit/Loans/401k) filter the plan list via ?type.
 - 2026-06-05 — Landing: nav + hero 'Sign in' open the sign-in/create modal in one click (was scroll-then-click).

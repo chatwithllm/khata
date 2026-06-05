@@ -131,7 +131,8 @@ def asset_state(session: Session, plan: Plan) -> dict:
         rows.append({"seq": inst.seq,
                      "planned_amount_minor": inst.planned_amount_minor,
                      "applied_minor": applied,
-                     "status": status})
+                     "status": status,
+                     "due_date": inst.due_date.isoformat() if inst.due_date else None})
 
     by_source: dict[str, int] = {}
     for e in outs:

@@ -128,6 +128,21 @@
   </div>
 </aside>
 
+<!-- installment-schedule editor slide-over -->
+<aside class="over" id="sched-over" aria-hidden="true">
+  <div class="oh">
+    <div class="eyebrow">Schedule</div>
+    <h3>Installment <em>schedule</em></h3>
+    <div class="osub">Define planned installments. Saving replaces the schedule; your logged payments re-apply automatically.</div>
+  </div>
+  <div class="obody">
+    <div id="sched-rows" style="display:flex;flex-direction:column;gap:10px"></div>
+    <button type="button" id="sched-addrow" style="align-self:flex-start;background:none;border:1px dashed var(--line);border-radius:9px;padding:8px 12px;color:var(--primary);font-weight:600;font-size:13px;cursor:pointer">+ Add installment</button>
+    <div class="err" id="sched-err"></div>
+    <div class="acts"><button class="save" id="sched-save">Save schedule</button><span class="cancel" id="sched-cancel">Cancel</span></div>
+  </div>
+</aside>
+
 <script src="/static/assets/sharing.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -276,7 +291,13 @@ function renderSchedule(box, st){
   const insts = st.installments || [];
   const ph=el('div','ph');
   const t=el('div','t','Installment schedule'); t.style.fontSize='16px';
-  ph.append(t, el('div','meta', insts.length ? 'planned vs paid' : 'as funds arrive'));
+  const right=el('div'); right.style.cssText='display:flex;align-items:center;gap:12px';
+  right.append(el('div','meta', insts.length ? 'planned vs paid' : 'as funds arrive'));
+  const edBtn=el('span','proof', insts.length ? '✎ edit schedule' : '+ add schedule'); edBtn.style.cursor='pointer'; edBtn.tabIndex=0; edBtn.setAttribute('role','button');
+  edBtn.addEventListener('click', ()=>openSched(insts));
+  edBtn.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openSched(insts); } });
+  right.append(edBtn);
+  ph.append(t, right);
   box.append(ph);
   const sched=el('div','sched fillrows');
   if(!insts.length){ sched.append(el('div','emptypanel','No fixed schedule — payments are logged as funds arrive.')); box.append(sched); return; }
@@ -487,6 +508,41 @@ function openEdit(lr){ // EDIT existing entry
 }
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
 
+// ── installment-schedule editor (POST /installments replaces the schedule) ──
+function schedRow(amount, dateISO){
+  const row=el('div'); row.className='sched-erow'; row.style.cssText='display:grid;grid-template-columns:1fr 150px 26px;gap:8px;align-items:center';
+  const amt=el('input'); amt.className='s-amt'; amt.placeholder='2,50,000'; amt.inputMode='decimal'; if(amount!=null&&amount!=='') amt.value=amount;
+  const dt=el('input'); dt.className='s-date'; dt.type='date'; if(dateISO) dt.value=dateISO;
+  [amt,dt].forEach(inp=>{ inp.style.cssText='font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)'; });
+  const rm=el('span'); rm.textContent='×'; rm.title='remove'; rm.style.cssText='cursor:pointer;color:var(--ink-faint);font-size:18px;text-align:center';
+  rm.addEventListener('click', ()=>row.remove());
+  row.append(amt, dt, rm);
+  return row;
+}
+function openSched(insts){
+  $('sched-err').textContent='';
+  const box=$('sched-rows'); box.textContent='';
+  if(insts && insts.length){ for(const it of insts){ box.append(schedRow((it.planned_amount_minor||0)/100, (it.due_date||'').slice(0,10))); } }
+  else { box.append(schedRow('', '')); }
+  $('scrim').classList.add('on'); $('sched-over').classList.add('on'); $('sched-over').setAttribute('aria-hidden','false');
+  const first=box.querySelector('.s-amt'); if(first) first.focus();
+}
+function closeSched(){ $('scrim').classList.remove('on'); $('sched-over').classList.remove('on'); $('sched-over').setAttribute('aria-hidden','true'); }
+$('sched-addrow').addEventListener('click', ()=>{ $('sched-rows').append(schedRow('', '')); });
+$('sched-cancel').addEventListener('click', closeSched);
+$('sched-save').addEventListener('click', async ()=>{
+  $('sched-err').textContent='';
+  const items=[];
+  for(const row of $('sched-rows').querySelectorAll('.sched-erow')){
+    const amt=row.querySelector('.s-amt').value.trim();
+    if(amt==='') continue;
+    items.push({ amount: amt, due_date: row.querySelector('.s-date').value || null });
+  }
+  const r = await fetch('/api/plans/'+pid+'/installments', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({installments: items}) });
+  if(r.ok){ closeSched(); boot(); return; }
+  const e = await r.json().catch(()=>({})); $('sched-err').textContent = e.detail || e.error || 'Could not save schedule.';
+});
+
 // ── boot ──
 async function boot(){
   const me = await fetch('/api/auth/me');
@@ -566,8 +622,8 @@ $('curtog').addEventListener('click', async (e)=>{
 // ── log-payment slide-over wiring ──
 $('logbtn').addEventListener('click', openOver);
 $('cancel').addEventListener('click', closeOver);
-$('scrim').addEventListener('click', closeOver);
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeOver(); });
+$('scrim').addEventListener('click', ()=>{ closeOver(); closeSched(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeSched(); } });
 $('save').addEventListener('click', async ()=>{
   $('err').textContent='';
   const occ = $('occurred').value ? $('occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift
