@@ -27,6 +27,13 @@ class LedgerEntry(Base):
     funding_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
     proof_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Contribution-amount agreement (two-party): agreed | pending | countered.
+    # 'pending' = the attributed contributor (logged_by_user_id) must confirm the amount;
+    # 'countered' = they proposed counter_amount_minor and the owner must accept or re-counter.
+    # Self-logged / owner-self entries start 'agreed'. The recorded amount_minor always counts
+    # toward plan totals; this status only flags attribution accuracy.
+    amount_status: Mapped[str] = mapped_column(String(12), nullable=False, server_default="agreed")
+    counter_amount_minor: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     plan: Mapped["Plan"] = relationship(back_populates="ledger_entries")

@@ -170,6 +170,49 @@ def test_member_can_access_and_contribute(client):
     assert any(c["display_name"] == "Priya" for c in st["contributors"])
 
 
+def test_amount_agreement_flow_api(client):
+    # Priya has an account; owner shares + attributes a payment to her.
+    client.post("/api/auth/register", json={
+        "email": "p@b.com", "display_name": "Priya", "password": "pw12345"})
+    client.post("/api/auth/logout")
+    _register(client, "a@b.com")  # owner Arjun
+    pid = client.post("/api/plans", json={
+        "name": "Joint", "currency": "INR", "total_price": "10,00,000"}).get_json()["plan"]["id"]
+    pri_uid = None
+    client.post(f"/api/plans/{pid}/members", json={"email": "p@b.com"})
+    members = client.get(f"/api/plans/{pid}/members").get_json()["members"]
+    pri_uid = next(m["user_id"] for m in members if m["email"] == "p@b.com")
+    # owner logs ₹2L "paid by Priya" → pending her confirmation
+    r = client.post(f"/api/plans/{pid}/payments", json={
+        "amount": "2,00,000", "method": "upi", "funding_source": "savings", "paid_by": pri_uid})
+    assert r.status_code == 201
+    eid = r.get_json()["state"]["ledger"][0]["id"]
+    assert r.get_json()["state"]["ledger"][0]["amount_status"] == "pending"
+    # owner has nothing to confirm (it's Priya's turn)
+    assert client.get("/api/confirmations").get_json()["confirmations"] == []
+
+    # Priya accepts the share, sees the confirmation, counters higher
+    client.post("/api/auth/logout")
+    client.post("/api/auth/login", json={"email": "p@b.com", "password": "pw12345"})
+    client.post(f"/api/invitations/{pid}/accept")
+    confs = client.get("/api/confirmations").get_json()["confirmations"]
+    assert any(c["entry_id"] == eid and c["your_role"] == "contributor" for c in confs)
+    assert client.post(f"/api/plans/{pid}/entries/{eid}/amount",
+                       json={"action": "counter", "amount": "2,50,000"}).status_code == 200
+
+    # owner accepts the counter → recorded amount becomes ₹2.5L, agreed
+    client.post("/api/auth/logout")
+    client.post("/api/auth/login", json={"email": "a@b.com", "password": "pw12345"})
+    confs = client.get("/api/confirmations").get_json()["confirmations"]
+    assert any(c["entry_id"] == eid and c["your_role"] == "owner"
+               and c["counter_amount_minor"] == 25000000 for c in confs)
+    d = client.post(f"/api/plans/{pid}/entries/{eid}/amount", json={"action": "accept"})
+    assert d.status_code == 200
+    row = next(l for l in d.get_json()["state"]["ledger"] if l["id"] == eid)
+    assert row["amount_status"] == "agreed" and row["amount_minor"] == 25000000
+    assert client.get("/api/confirmations").get_json()["confirmations"] == []
+
+
 def test_non_member_forbidden(client):
     _register(client, "a@b.com")
     pid = client.post("/api/plans", json={

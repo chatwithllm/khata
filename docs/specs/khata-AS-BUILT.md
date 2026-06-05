@@ -49,7 +49,11 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   annual_return_bps, inflation_bps, current_age, retirement_age.
 - **ledger_entries** (the heart): id, plan_id, logged_by_user_id, **direction** (in|out), **kind**?,
   amount_minor, quantity_micro?, currency, **occurred_at** (when it happened), method?, funding_source?,
-  proof_ref?, note?, **created_at** (when it was logged). Editable in place (see §7).
+  proof_ref?, note?, **amount_status** (`agreed`|`pending`|`countered`), **counter_amount_minor**?,
+  **created_at** (when it was logged). Editable in place (see §7). `amount_status` drives the two-party
+  contribution-amount agreement (§9): an entry whose attributed contributor (`logged_by_user_id`) differs
+  from whoever recorded it starts `pending`; the recorded `amount_minor` still counts toward all totals —
+  the status only flags attribution accuracy. Migration `b8a2confirm1`.
 - **plan_memberships**: id, plan_id, user_id, role (owner|contributor|…), **status**
   (`invited`|`active`|`declined`), created_at. New shares start `invited`; the plan stays hidden
   from the invitee until they accept (→ `active`). Decline → `declined` (hidden, re-invitable —
@@ -62,13 +66,16 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   `{savings, loan, borrowed, sold_asset, chit_payout, other}` · loan direction `{given, taken}` ·
   interest_type `{none, monthly, yearly}` · loan entry kinds `{interest_payment, principal_repayment}`
   (+ `disbursement` via its own endpoint) · asset_class `{gold, silver, equity, mf, cash, other}` ·
-  chit kinds `{chit_contribution, chit_dividend, chit_prize}` · membership status `{invited, active, declined}`.
+  chit kinds `{chit_contribution, chit_dividend, chit_prize}` · membership status `{invited, active, declined}` ·
+  entry amount_status `{agreed, pending, countered}`.
 
 ## 6. Derived state contracts (what `GET /api/plans/<id>` returns as `state`, by type)
 - **asset_state**: total_price_minor, paid_to_date_minor, remaining_minor, overpaid_minor, next_due_seq,
   installments[{seq, planned_amount_minor, applied_minor, status(paid|partial|due), due_date}], funding_breakdown
-  [{source, amount_minor, pct}], contributors[{user_id, display_name, paid_minor, pct}], **ledger**
-  [{id, kind, direction, amount_minor, created_at, occurred_at, method, funding_source, note, has_proof}].
+  [{source, amount_minor, pct}], contributors[{user_id, display_name, paid_minor, pct, **unconfirmed**}], **ledger**
+  [{id, kind, direction, amount_minor, created_at, occurred_at, method, funding_source, note, has_proof,
+  logged_by_user_id, paid_by_name, **amount_status**, **counter_amount_minor**}]. (loan_state.ledger carries the
+  same amount_status/counter fields.)
 - **loan_state**: direction, currency, principal_outstanding_minor, interest_accrued_minor,
   interest_paid_minor, interest_due_minor, total_minor, as_of, schedule[{month_index, period_start,
   expected_minor, applied_minor, status}], next_due_month, months_behind, secured, collateral|null
@@ -89,7 +96,9 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 **Plans** (`/api/plans*`): GET `""` (list) · GET `/<id>` (`{plan, state}`) · **PATCH `/<id>`** (edit plan / loan terms — owner) · **DELETE `/<id>`** (delete whole plan — owner) · POST `""` (create, dispatches
 on `type`) · POST `/<id>/installments` · POST `/<id>/payments` (asset; accepts **occurred_at**) ·
 **PATCH/DELETE `/<id>/entries/<entry_id>`** (edit / delete a ledger entry — owner-only; edit takes amount/
-occurred_at/method/funding_source/note; both recompute derived state) · POST `/<id>/loan/disbursements` · POST `/<id>/loan/entries`
+occurred_at/method/funding_source/note; both recompute derived state; editing the amount/attribution
+re-opens confirmation) · **POST `/<id>/entries/<entry_id>/amount`** (`{action: confirm|counter|accept, amount?}`
+— the two-party amount-agreement loop; accessible to either side, turn-/role-checked) · POST `/<id>/loan/disbursements` · POST `/<id>/loan/entries`
 · POST `/<id>/loan/collateral` · POST `/<id>/holding/buys|sells|quote|refresh-quote` · POST
 `/<id>/chit/entries` · GET `/<id>/chit/dividend?bid=` · POST `/<id>/retirement/update` · GET/POST
 `/<id>/members` (POST returns `{member:{…, status}}` — invited members start `invited`) ·
@@ -98,6 +107,10 @@ DELETE `/<id>/members/<user_id>`.
 currency, role, shared_by, shared_by_email, invited_at}]}` — the current user's pending shares) ·
 POST `/<plan_id>/accept` (→ membership `active`) · POST `/<plan_id>/decline` (→ `declined`).
 Responding to a non-pending invite → 409; not invited → 404.
+**Confirmations** (`/api/confirmations`): GET → `{confirmations:[{plan_id, entry_id, plan_name, plan_type,
+currency, amount_minor, counter_amount_minor, from_name, your_role(contributor|owner), actions, occurred_at}]}`
+— ledger entries waiting on the current user (pending entries attributed to them, or countered entries on
+plans they own); filtered to plans they can access. The action endpoint is `POST /api/plans/<id>/entries/<eid>/amount`.
 **Net worth / FX** (`/api`): GET networth · GET dashboard (`{net_position_minor, paid_to_date_minor,
 i_owe_minor, owed_to_me_minor, plans:[{id,type,name,currency,role}]}`) · POST base-currency · POST fx-rates.
 **Analysis**: GET `/api/analysis/hold-vs-sell?asset_value&appreciation&borrow&interest&horizon`.
@@ -119,6 +132,22 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-05 — Two-party contribution-amount agreement (per-entry, counter-propose loop).** Phase 2 of
+  consent. When the owner records "₹2,00,000 · paid by Priya", the entry starts `pending` — Priya must
+  confirm or correct it; neither side dictates. Decisions taken: **per-ledger-entry** granularity ·
+  **counter-propose loop** (either side proposes, the other accepts or counters, until both match) ·
+  the interim recorded amount **still counts toward all totals/shares, flagged 'unconfirmed'** (so the
+  dashboard is never silently wrong). State machine on `ledger_entries.amount_status`
+  {`agreed`|`pending`|`countered`} + `counter_amount_minor`: self-/owner-logged → `agreed`; third-party-
+  attributed → `pending`; contributor counter → `countered` (recorded amount untouched until accepted);
+  owner accept → amount becomes the counter, `agreed`; owner re-counter → new amount, back to `pending`.
+  Editing an entry's amount/attribution re-opens confirmation. Service: `assets.respond_amount`,
+  `assets.list_amount_confirmations`, `_amount_status_for`; logging fns take `acting_user_id`. API:
+  `POST /api/plans/<id>/entries/<eid>/amount` (turn/role-checked) + `GET /api/confirmations`. Frontend:
+  dashboard **amber confirmation banner** (Confirm/Propose for the contributor, Accept/Counter for the
+  owner, inline amount input); asset/loan detail ledger rows show a **⚠ unconfirmed / ⇄ counter-proposed**
+  chip; asset contributor breakdown marks unconfirmed people with ⚠. (Chit entries have no paid-by, so
+  always `agreed`.) Completes the user's "both have the option to make the value accurate" ask.
 - **2026-06-05 — Two-party sharing consent (membership invitations).** Adding a user who has an account no
   longer silently grants access. New shares create a membership with status `invited`; the plan stays
   hidden from the invitee (`accessible` = owner-or-`active`) until they respond. The invitee sees a
@@ -128,7 +157,7 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   `GET /api/invitations`, `POST /api/invitations/<plan_id>/accept|decline`. The owner's "Shared with" list
   (sharing.js) shows a **pending** chip for invited members; the paid-by dropdowns mark them "(pending)".
   Data: `plan_memberships.status` + migration `b7a1m3status1`. (Phase 1 of the consent flow; Phase 2 —
-  the invitee accepting/​correcting the **money amount** attributed to them — is still to design.)
+  the invitee accepting/​correcting the **money amount** attributed to them — is the entry above.)
 - **2026-06-05 — Editable ledger.** `PATCH /api/plans/<id>/entries/<entry_id>` (owner-only) edits an
   existing entry's amount/occurred_at/method/funding_source/note; `kind`/`direction` immutable; derived
   balances recompute. Frontend: ✎ edit on each asset-detail ledger row reopens the slide-over pre-filled.
@@ -178,6 +207,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Per-entry contribution-amount agreement: a tagged contributor confirms or counter-proposes the amount attributed to them; owner accepts or re-counters until both agree. `ledger_entries.amount_status`/`counter_amount_minor` + `/api/confirmations` + `POST .../entries/<id>/amount`. Interim amount counts toward totals, flagged unconfirmed.
 - 2026-06-05 — Two-party sharing consent: invited members get a pending-approval banner (Accept/Decline) before the shared plan becomes visible. `plan_memberships.status` + `/api/invitations`.
 - 2026-06-05 — Can tag who paid/contributed each entry (paid_by → contributor shares + audit).
 - 2026-06-05 — Fixed dashboard 'flash' when filtering: widgets hide AND the sidebar highlight is set synchronously (pre-paint) on ?type, so refresh no longer flashes Dashboard→type.

@@ -28,6 +28,14 @@
 .invite .iacts .dec{background:transparent;color:var(--ink-faint)}
 .invite .iacts .dec:hover{border-color:var(--neg);color:var(--neg)}
 .invite .iacts button:disabled{opacity:.5;cursor:default}
+/* amount-confirmation cards reuse .invite; warm amber accent to read as "needs your number" */
+#confirms{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+#confirms:empty{display:none;margin:0}
+.invite.confirm{background:linear-gradient(180deg,color-mix(in srgb,#d98a00 11%,var(--card)),var(--card));border-color:color-mix(in srgb,#d98a00 42%,var(--line))}
+.invite.confirm .ic{background:color-mix(in srgb,#d98a00 20%,transparent);color:#a96a00}
+.invite .iamt{margin-top:6px;display:flex;gap:8px}
+.invite .iamt input{font:inherit;font-size:13px;padding:7px 11px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:150px}
+.invite .iamt button{font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:var(--paper)}
 
 /* stat cards */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
@@ -114,6 +122,8 @@
     <div class="content">
       <!-- pending share invitations (populated by boot) -->
       <div id="invites"></div>
+      <!-- per-entry amount confirmations awaiting this user (populated by boot) -->
+      <div id="confirms"></div>
       <!-- stat row -->
       <div class="stats">
         <div class="stat hero-stat fade"><div class="k">Net position</div><div class="v"><span class="cur" id="nw-cur">₹</span><span id="networth">—</span></div><div class="d up" style="color:var(--accent-dk)">across all plans</div></div>
@@ -498,12 +508,71 @@ async function renderInvites(){
   });
 }
 
+// ── per-entry amount confirmations ──
+function svgIcon(paths){
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width','19');svg.setAttribute('height','19');svg.setAttribute('viewBox','0 0 24 24');
+  svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2');
+  paths.forEach(d=>{const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d',d);svg.appendChild(p);});
+  return svg;
+}
+async function renderConfirms(){
+  const box=$('confirms'); if(!box) return;
+  let cs=[];
+  try{ cs=(await fetch('/api/confirmations').then(r=>r.json())).confirmations||[]; }catch(_){ return; }
+  box.textContent='';
+  cs.forEach(c=>{
+    const card=el('div','invite confirm');
+    const ic=el('div','ic'); ic.appendChild(svgIcon(['M12 1v22','M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6']));
+    const txt=el('div','itxt');
+    const t1=el('div','it1');
+    const cur=PLAN_TYPE_LABEL[c.plan_type]||'plan';
+    if(c.your_role==='contributor'){
+      t1.append(el('b',null,c.from_name||'The owner'),
+        document.createTextNode(' attributed '+fmt(c.amount_minor,c.currency)+' to you'));
+    }else{
+      t1.append(el('b',null,c.from_name||'A contributor'),
+        document.createTextNode(' proposes '+fmt(c.counter_amount_minor,c.currency)+
+          ' (you recorded '+fmt(c.amount_minor,c.currency)+')'));
+    }
+    const t2=el('div','it2','“'+c.plan_name+'” · '+cur+' · needs your confirmation');
+    txt.append(t1,t2);
+
+    const acts=el('div','iacts');
+    const primary=el('button','acc', c.your_role==='owner' ? ('Accept '+fmt(c.counter_amount_minor,c.currency)) : 'Confirm');
+    const counter=el('button','dec', c.your_role==='owner' ? 'Counter' : 'Propose correction');
+    acts.append(primary,counter);
+
+    // inline amount entry for the counter/propose action
+    const amtBox=el('div','iamt'); amtBox.style.display='none'; amtBox.style.flexBasis='100%';
+    const inp=el('input'); inp.placeholder='e.g. 2,50,000';
+    const send=el('button',null,'Send'); amtBox.append(inp,send);
+
+    const post=async(body, btns)=>{
+      btns.forEach(b=>b.disabled=true);
+      try{
+        const r=await fetch('/api/plans/'+c.plan_id+'/entries/'+c.entry_id+'/amount',{
+          method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        if(r.ok){ card.remove(); location.reload(); }
+        else { btns.forEach(b=>b.disabled=false); }
+      }catch(_){ btns.forEach(b=>b.disabled=false); }
+    };
+    primary.addEventListener('click',()=>post({action: c.your_role==='owner'?'accept':'confirm'},[primary,counter]));
+    counter.addEventListener('click',()=>{ amtBox.style.display=amtBox.style.display==='none'?'flex':'none'; inp.focus(); });
+    send.addEventListener('click',()=>{ if(inp.value.trim()) post({action:'counter',amount:inp.value.trim()},[send]); });
+
+    card.append(ic,txt,acts,amtBox);
+    box.appendChild(card);
+  });
+}
+
 // ── boot ──
 async function boot(){
   const me = await fetch('/api/auth/me');
   if(me.status===401){ window.location.href='/'; return; }
   const user=(await me.json()).user;
   renderInvites();
+  renderConfirms();
   const name=user.display_name||'there';
   const h=new Date().getHours();
   const part = h<12?'morning':(h<17?'afternoon':'evening');

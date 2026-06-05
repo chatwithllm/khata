@@ -472,6 +472,14 @@ function renderLedger(box, st){
     const l2r=el('div','l2r');
     if(meta2.pill) l2r.append(el('span','pill '+meta2.pill, meta2.pillText));
     if(it.method) l2r.append(el('span','pill', it.method));
+    if(it.amount_status && it.amount_status!=='agreed'){
+      const isC=it.amount_status==='countered';
+      const chip=el('span','pill', isC?'⇄ counter-proposed':'⚠ unconfirmed');
+      chip.style.background='color-mix(in srgb,#d98a00 16%,transparent)';
+      chip.style.color='#a96a00'; chip.style.borderColor='color-mix(in srgb,#d98a00 38%,transparent)';
+      chip.title=isC?'A correction was proposed — act from the dashboard':'Awaiting the contributor’s confirmation';
+      l2r.append(chip);
+    }
     if(it.has_proof){ l2r.append(el('span','proof','▣ proof')); }
     if(it.id!=null){
       const edit=el('span','proof','✎ edit'); edit.style.cursor='pointer'; edit.tabIndex=0; edit.setAttribute('role','button');

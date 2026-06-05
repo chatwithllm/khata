@@ -105,28 +105,32 @@ def _direction_for(loan_direction: str, kind: str) -> str:
 
 
 def add_disbursement(session: Session, *, plan: Plan, user_id, amount_minor, occurred_at,
-                     note=None) -> LedgerEntry:
+                     note=None, acting_user_id=None) -> LedgerEntry:
     if amount_minor <= 0:
         raise ValidationError("amount must be > 0")
+    from .assets import _amount_status_for
     entry = LedgerEntry(plan_id=plan.id, logged_by_user_id=user_id, kind="disbursement",
                         direction=_direction_for(plan.loan.direction, "disbursement"),
                         amount_minor=amount_minor, currency=plan.currency, occurred_at=occurred_at,
-                        method=None, funding_source=None, note=note)
+                        method=None, funding_source=None, note=note,
+                        amount_status=_amount_status_for(user_id, acting_user_id))
     session.add(entry)
     session.flush()
     return entry
 
 
 def log_loan_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor, occurred_at,
-                   method=None, note=None) -> LedgerEntry:
+                   method=None, note=None, acting_user_id=None) -> LedgerEntry:
     if kind not in LOAN_ENTRY_KINDS:
         raise ValidationError(f"unknown loan entry kind: {kind}")
     if amount_minor <= 0:
         raise ValidationError("amount must be > 0")
+    from .assets import _amount_status_for
     entry = LedgerEntry(plan_id=plan.id, logged_by_user_id=user_id, kind=kind,
                         direction=_direction_for(plan.loan.direction, kind),
                         amount_minor=amount_minor, currency=plan.currency, occurred_at=occurred_at,
-                        method=method, funding_source=None, note=note)
+                        method=method, funding_source=None, note=note,
+                        amount_status=_amount_status_for(user_id, acting_user_id))
     session.add(entry)
     session.flush()
     return entry
@@ -225,7 +229,8 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
          "occurred_at": e.occurred_at.isoformat(), "method": e.method,
          "funding_source": e.funding_source, "note": e.note,
          "has_proof": bool(e.proof_ref),
-         "logged_by_user_id": e.logged_by_user_id, "paid_by_name": _names.get(e.logged_by_user_id)}
+         "logged_by_user_id": e.logged_by_user_id, "paid_by_name": _names.get(e.logged_by_user_id),
+         "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor}
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
     ]
 

@@ -6,6 +6,7 @@ from ..money import SUPPORTED_CURRENCIES
 
 METHODS = {"cash", "upi", "transfer", "cheque"}
 SOURCES = {"savings", "loan", "borrowed", "sold_asset", "chit_payout", "other"}
+AMOUNT_STATUSES = {"agreed", "pending", "countered"}
 
 
 class PlanError(Exception):
@@ -14,6 +15,14 @@ class PlanError(Exception):
 
 class ValidationError(PlanError):
     pass
+
+
+def _amount_status_for(attributed_uid, acting_uid) -> str:
+    """An entry needs the attributed contributor's confirmation when someone OTHER than
+    them recorded the amount on their behalf. Self-logged (or acting unknown) → agreed."""
+    if acting_uid is None or attributed_uid == acting_uid:
+        return "agreed"
+    return "pending"
 
 
 def create_asset_plan(session: Session, *, owner_id, name, currency, total_price_minor) -> Plan:
@@ -48,7 +57,8 @@ def set_installments(session: Session, *, plan: Plan, items) -> None:
 
 
 def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred_at,
-                method, funding_source, direction="out", proof_ref=None, note=None) -> LedgerEntry:
+                method, funding_source, direction="out", proof_ref=None, note=None,
+                acting_user_id=None) -> LedgerEntry:
     if amount_minor <= 0:
         raise ValidationError("amount must be > 0")
     if method not in METHODS:
@@ -59,7 +69,8 @@ def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred
         raise ValidationError("direction must be 'out' or 'in'")
     entry = LedgerEntry(plan_id=plan.id, logged_by_user_id=user_id, direction=direction,
                         amount_minor=amount_minor, currency=plan.currency, occurred_at=occurred_at,
-                        method=method, funding_source=funding_source, proof_ref=proof_ref, note=note)
+                        method=method, funding_source=funding_source, proof_ref=proof_ref, note=note,
+                        amount_status=_amount_status_for(user_id, acting_user_id))
     session.add(entry)
     session.flush()
     return entry
@@ -67,13 +78,20 @@ def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred
 
 def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
                         amount_minor=None, occurred_at=None, method=None,
-                        funding_source=None, note=None, logged_by_user_id=None) -> LedgerEntry:
+                        funding_source=None, note=None, logged_by_user_id=None,
+                        acting_user_id=None) -> LedgerEntry:
     """Edit an existing ledger entry in-place (owner-only at the API layer).
     Only the provided fields change; kind/direction stay immutable. Derived
-    balances recompute on the next *_state call (balances are never stored)."""
+    balances recompute on the next *_state call (balances are never stored).
+
+    Changing the amount or the attributed contributor re-opens confirmation: if the
+    (possibly new) attributed user isn't the one making the edit, the entry returns to
+    'pending' and any prior counter is cleared — a corrected amount needs re-agreement."""
     entry = session.get(LedgerEntry, entry_id)
     if entry is None or entry.plan_id != plan.id:
         raise ValidationError("entry not found")
+    amount_changed = amount_minor is not None and amount_minor != entry.amount_minor
+    attrib_changed = logged_by_user_id is not None and logged_by_user_id != entry.logged_by_user_id
     if amount_minor is not None:
         if amount_minor <= 0:
             raise ValidationError("amount must be > 0")
@@ -92,8 +110,101 @@ def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
         entry.note = note
     if logged_by_user_id is not None:
         entry.logged_by_user_id = logged_by_user_id
+    if amount_changed or attrib_changed:
+        entry.amount_status = _amount_status_for(entry.logged_by_user_id, acting_user_id)
+        entry.counter_amount_minor = None
     session.flush()
     return entry
+
+
+def respond_amount(session: Session, *, plan: Plan, entry_id, actor_uid, action,
+                   amount_minor=None) -> LedgerEntry:
+    """Drive the per-entry amount-agreement loop (see LedgerEntry.amount_status).
+
+    - confirm: the attributed contributor accepts the recorded amount → 'agreed'.
+    - counter: the attributed contributor proposes a different amount → 'countered'
+      (stored in counter_amount_minor; the recorded amount_minor is untouched).
+    - accept:  the owner accepts the contributor's counter → amount_minor = counter,
+      'agreed'.
+    - recounter (action='counter' by the owner while 'countered'): owner sets a new
+      amount_minor and bounces it back to the contributor → 'pending'.
+    """
+    entry = session.get(LedgerEntry, entry_id)
+    if entry is None or entry.plan_id != plan.id:
+        raise ValidationError("entry not found")
+    is_owner = actor_uid == plan.owner_user_id
+    is_attributed = actor_uid == entry.logged_by_user_id
+
+    if action == "confirm":
+        if entry.amount_status != "pending" or not is_attributed:
+            raise ValidationError("nothing to confirm")
+        entry.amount_status = "agreed"
+        entry.counter_amount_minor = None
+    elif action == "accept":
+        if entry.amount_status != "countered" or not is_owner:
+            raise ValidationError("no counter to accept")
+        entry.amount_minor = entry.counter_amount_minor
+        entry.amount_status = "agreed"
+        entry.counter_amount_minor = None
+    elif action == "counter":
+        if amount_minor is None or amount_minor <= 0:
+            raise ValidationError("counter amount must be > 0")
+        if entry.amount_status == "pending" and is_attributed:
+            # Contributor proposes a correction; recorded amount stays until owner accepts.
+            entry.counter_amount_minor = amount_minor
+            entry.amount_status = "countered"
+        elif entry.amount_status == "countered" and is_owner:
+            # Owner re-counters: set the new recorded amount, bounce back to contributor.
+            entry.amount_minor = amount_minor
+            entry.counter_amount_minor = None
+            entry.amount_status = "pending"
+        else:
+            raise ValidationError("not your turn to counter")
+    else:
+        raise ValidationError(f"unknown action: {action}")
+    session.flush()
+    return entry
+
+
+def list_amount_confirmations(session: Session, user_id) -> list[dict]:
+    """Entries across all the user's plans that are waiting on THEM to act:
+    - 'pending' entries attributed to them (they must confirm or counter), and
+    - 'countered' entries on plans they own (they must accept or re-counter).
+    One row per entry, with both amounts + whose turn + what action is theirs."""
+    rows = []
+    pending = session.scalars(
+        select(LedgerEntry).where(
+            LedgerEntry.logged_by_user_id == user_id,
+            LedgerEntry.amount_status == "pending"))
+    for e in pending:
+        plan = session.get(Plan, e.plan_id)
+        if plan is None or plan.owner_user_id == user_id:
+            continue  # owner attributing to self never needs self-confirmation
+        owner = session.get(User, plan.owner_user_id)
+        rows.append({
+            "plan_id": plan.id, "entry_id": e.id, "plan_name": plan.name,
+            "plan_type": plan.type, "currency": plan.currency,
+            "amount_minor": e.amount_minor, "counter_amount_minor": None,
+            "occurred_at": e.occurred_at.isoformat(),
+            "from_name": owner.display_name if owner else None,
+            "your_role": "contributor", "actions": ["confirm", "counter"],
+        })
+    countered = session.scalars(
+        select(LedgerEntry).where(LedgerEntry.amount_status == "countered"))
+    for e in countered:
+        plan = session.get(Plan, e.plan_id)
+        if plan is None or plan.owner_user_id != user_id:
+            continue
+        contrib = session.get(User, e.logged_by_user_id)
+        rows.append({
+            "plan_id": plan.id, "entry_id": e.id, "plan_name": plan.name,
+            "plan_type": plan.type, "currency": plan.currency,
+            "amount_minor": e.amount_minor, "counter_amount_minor": e.counter_amount_minor,
+            "occurred_at": e.occurred_at.isoformat(),
+            "from_name": contrib.display_name if contrib else None,
+            "your_role": "owner", "actions": ["accept", "counter"],
+        })
+    return rows
 
 
 def delete_ledger_entry(session: Session, *, plan: Plan, entry_id) -> None:
@@ -161,15 +272,19 @@ def asset_state(session: Session, plan: Plan) -> dict:
     ]
 
     by_user: dict[int, int] = {}
+    unconfirmed_uids: set[int] = set()
     for e in outs:
         by_user[e.logged_by_user_id] = by_user.get(e.logged_by_user_id, 0) + e.amount_minor
+        if e.amount_status != "agreed":
+            unconfirmed_uids.add(e.logged_by_user_id)
     contributors = []
     for uid, amt in sorted(by_user.items(), key=lambda kv: kv[1], reverse=True):
         user = session.get(User, uid)
         contributors.append({"user_id": uid,
                              "display_name": user.display_name if user else None,
                              "paid_minor": amt,
-                             "pct": round(amt * 100 / paid) if paid else 0})
+                             "pct": round(amt * 100 / paid) if paid else 0,
+                             "unconfirmed": uid in unconfirmed_uids})
 
     # Surface existing ledger_entries rows in the state JSON (mirrors chit_state.ledger).
     # No new model/migration — these rows already exist; we just include them.
@@ -184,7 +299,8 @@ def asset_state(session: Session, plan: Plan) -> dict:
          "occurred_at": e.occurred_at.isoformat(), "method": e.method,
          "funding_source": e.funding_source, "note": e.note,
          "has_proof": bool(e.proof_ref),
-         "logged_by_user_id": e.logged_by_user_id, "paid_by_name": _names.get(e.logged_by_user_id)}
+         "logged_by_user_id": e.logged_by_user_id, "paid_by_name": _names.get(e.logged_by_user_id),
+         "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor}
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
     ]
 

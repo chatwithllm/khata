@@ -389,6 +389,15 @@ function renderLedger(box, st){
     const l2r=el('div','l2r');
     if(lr.method) l2r.append(el('span','pill m', lr.method));
     if(lr.funding_source) l2r.append(el('span','pill f', srcLabel(lr.funding_source)));
+    if(lr.amount_status && lr.amount_status!=='agreed'){
+      const isC=lr.amount_status==='countered';
+      const chip=el('span','pill aconf', isC?'⇄ counter-proposed':'⚠ unconfirmed');
+      chip.style.background='color-mix(in srgb,#d98a00 16%,transparent)';
+      chip.style.color='#a96a00'; chip.style.borderColor='color-mix(in srgb,#d98a00 38%,transparent)';
+      if(isC && lr.counter_amount_minor!=null) chip.title='Proposed: '+sym(BASE)+fmtNum(lr.counter_amount_minor,BASE);
+      else chip.title='Awaiting the contributor’s confirmation — act from the dashboard';
+      l2r.append(chip);
+    }
     if(lr.has_proof) l2r.append(el('span','proof','▣ proof'));
     if(lr.id!=null){
       const edit=el('span','proof','✎ edit'); edit.style.cursor='pointer'; edit.tabIndex=0; edit.setAttribute('role','button');
@@ -482,7 +491,12 @@ function renderContributors(box, st, myUserId){
     const av=el('span','av '+(idx===0?'y':'p')); av.textContent=(name[0]||'?').toUpperCase();
     person.append(av);
     const mid=el('div');
-    mid.append(el('div','nm', (isMe?'You · ':'')+name));
+    const nm=el('div','nm', (isMe?'You · ':'')+name);
+    if(c.unconfirmed){
+      const w=el('span',null,' ⚠'); w.title='Has an amount awaiting confirmation';
+      w.style.color='#a96a00'; nm.append(w);
+    }
+    mid.append(nm);
     person.append(mid);
     const rt=el('div','rt');
     rt.append(amtSpan(c.paid_minor,'a'));

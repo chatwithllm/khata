@@ -275,7 +275,7 @@ def payment(plan_id):
         entry = assets.log_payment(
             g.db, plan=plan, user_id=_payer_uid(plan, data, user.id), amount_minor=amount, occurred_at=occurred,
             method=data.get("method", ""), funding_source=data.get("funding_source", ""),
-            proof_ref=data.get("proof_ref"), note=data.get("note"))
+            proof_ref=data.get("proof_ref"), note=data.get("note"), acting_user_id=user.id)
         g.db.commit()
     except (PlanError, ValueError, TypeError) as e:
         g.db.rollback()
@@ -307,7 +307,7 @@ def update_entry(plan_id, entry_id):
                 fields[k] = data.get(k)
         if "paid_by" in data:
             fields["logged_by_user_id"] = _payer_uid(plan, data, plan.owner_user_id)
-        assets.update_ledger_entry(g.db, plan=plan, entry_id=entry_id, **fields)
+        assets.update_ledger_entry(g.db, plan=plan, entry_id=entry_id, acting_user_id=user.id, **fields)
         g.db.commit()
     except (PlanError, ValueError, TypeError) as e:
         g.db.rollback()
@@ -332,6 +332,31 @@ def delete_entry(plan_id, entry_id):
     return jsonify(_detail(plan)), 200
 
 
+@bp.post("/<int:plan_id>/entries/<int:entry_id>/amount")
+def respond_amount(plan_id, entry_id):
+    """Two-party amount agreement: the attributed contributor confirms/counters, the
+    owner accepts/re-counters. Either side of the negotiation may call (accessible)."""
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _accessible_plan(user, plan_id)
+    if err:
+        return err
+    data = request.get_json(silent=True) or {}
+    action = (data.get("action") or "").lower()
+    amount = None
+    try:
+        if action == "counter":
+            amount = to_minor(data.get("amount", ""), plan.currency)
+        assets.respond_amount(g.db, plan=plan, entry_id=entry_id, actor_uid=user.id,
+                              action=action, amount_minor=amount)
+        g.db.commit()
+    except (PlanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(_detail(plan)), 200
+
+
 @bp.post("/<int:plan_id>/loan/disbursements")
 def loan_disbursement(plan_id):
     user = current_user()
@@ -347,7 +372,8 @@ def loan_disbursement(plan_id):
         entry = loans.add_disbursement(
             g.db, plan=plan, user_id=_payer_uid(plan, data, user.id),
             amount_minor=to_minor(data.get("amount", ""), plan.currency),
-            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"))
+            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"),
+            acting_user_id=user.id)
         g.db.commit()
     except (LoanError, ValueError, TypeError) as e:
         g.db.rollback()
@@ -540,10 +566,10 @@ def loan_entry(plan_id):
     data = request.get_json(silent=True) or {}
     try:
         entry = loans.log_loan_entry(
-            g.db, plan=plan, user_id=user.id, kind=data.get("kind", ""),
+            g.db, plan=plan, user_id=_payer_uid(plan, data, user.id), kind=data.get("kind", ""),
             amount_minor=to_minor(data.get("amount", ""), plan.currency),
             occurred_at=_parse_dt(data.get("occurred_at")),
-            method=data.get("method"), note=data.get("note"))
+            method=data.get("method"), note=data.get("note"), acting_user_id=user.id)
         g.db.commit()
     except (LoanError, ValueError, TypeError) as e:
         g.db.rollback()
