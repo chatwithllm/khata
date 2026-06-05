@@ -12,6 +12,15 @@
 /* ── asset-detail.html-only rules (shell + detail-panel groups live in app.css) ── */
 .emptypanel{padding:30px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px}
 
+/* ledger (page-specific; .pill/.proof reused from app.css) */
+.ledger .lrow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:14px 22px;border-top:1px solid var(--line-2);transition:background .2s}
+.ledger .lrow:hover{background:var(--paper-2)}
+.ledger .l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
+.ledger .amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right}
+.ledger .amt.in{color:var(--pos)} .ledger .amt.out{color:var(--ink)}
+.ledger .l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.ledger .l2r{font-size:11px;color:var(--ink-faint);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+
 /* log-payment slide-over (page-specific) */
 .scrim{position:fixed;inset:0;background:rgba(20,16,12,.45);opacity:0;visibility:hidden;transition:opacity .3s var(--ease),visibility .3s;z-index:40}
 .scrim.on{opacity:1;visibility:visible}
@@ -77,6 +86,8 @@
           <div class="panel fade" id="header-panel"></div>
           <!-- installment schedule -->
           <div class="panel fade d1 fill" id="sched-panel"></div>
+          <!-- ledger (3.1) -->
+          <div class="panel fade d1 fill" id="ledger-panel"></div>
         </div>
 
         <!-- RIGHT RAIL -->
@@ -133,6 +144,13 @@ function fmtNum(minor, ccy){
   const v=minor/100;
   return ccy==='INR'?indGroup(v):usGroup(v);
 }
+
+// ── date/time formatting from ISO occurred_at (real data; no fabrication) ──
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function parseISO(s){ if(!s) return null; const d=new Date(s); return isNaN(d.getTime())?null:d; }
+function fmtDay(d){ return String(d.getDate()).padStart(2,'0')+' '+MONTHS[d.getMonth()]+' '+d.getFullYear(); }
+function fmtTime(d){ return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function fmtMonYr(d){ return MONTHS[d.getMonth()]+' '+d.getFullYear(); }
 
 function el(tag, cls, text){
   const e=document.createElement(tag);
@@ -195,7 +213,59 @@ function renderHeader(box, plan, st){
   const ticks=[25,50,75];
   for(const tk of ticks){ const s=el('span','tick'); s.style.left=tk+'%'; bar.append(s); }
   head.append(bar);
+
+  // 3.6: derived pace banner — computed client-side from real out-direction ledger payments.
+  const paceEl = derivePace(st);
+  if(paceEl) head.append(paceEl);
+
   box.append(head);
+}
+
+// ── 3.6 pace/projection: derive ONLY from real ledger data ──
+function derivePace(st){
+  const outs = (st.ledger||[])
+    .filter(r => r.direction==='out' && (r.amount_minor||0)>0 && parseISO(r.occurred_at))
+    .sort((a,b)=>parseISO(b.occurred_at)-parseISO(a.occurred_at));   // newest first
+  if(outs.length < 2) return null;                                   // need ≥2 real payments
+  const last = outs.slice(0, Math.min(3, outs.length));              // last up to 3 payments
+  const avgAmt = last.reduce((s,r)=>s + (r.amount_minor||0), 0) / last.length;
+  // cadence: avg gap (days) between consecutive payments across the sampled window
+  const dates = last.map(r=>parseISO(r.occurred_at));
+  let gaps=0, gapCount=0;
+  for(let i=0;i<dates.length-1;i++){ gaps += (dates[i]-dates[i+1])/86400000; gapCount++; }
+  const avgGapDays = gapCount ? gaps/gapCount : 0;
+  // monthly pace = avg payment amount scaled by (≈30.44 days / avg cadence)
+  const perMonth = avgGapDays>0 ? avgAmt * (30.44/avgGapDays) : avgAmt;
+
+  const wrap=el('div','pace');
+  // icon
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('fill','none');
+  svg.setAttribute('stroke','currentColor'); svg.setAttribute('stroke-width','2');
+  const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+  p.setAttribute('d','M3 17l6-6 4 4 8-8'); svg.append(p);
+  wrap.append(svg);
+
+  const span=el('span');
+  span.append(document.createTextNode('Recent pace '));
+  const b=el('b');
+  const bs=el('span','symword'); bs.textContent=sym(BASE);
+  const bn=el('span'); bn.textContent=fmtNum(Math.round(perMonth), BASE);
+  b.append(bs,bn,document.createTextNode('/mo'));
+  span.append(b);
+  span.append(document.createTextNode(' · derived from last '+last.length+' payments'));
+
+  // projected finish — only if we have a real remaining + positive monthly pace
+  const rem = st.remaining_minor||0;
+  if(rem>0 && perMonth>0){
+    const monthsLeft = rem / perMonth;
+    const finish=new Date(); finish.setMonth(finish.getMonth()+Math.ceil(monthsLeft));
+    span.append(document.createTextNode(' → projected finish '));
+    const fb=el('b', null, fmtMonYr(finish));
+    span.append(fb);
+  }
+  wrap.append(span);
+  return wrap;
 }
 
 // ── installment schedule ──
@@ -214,7 +284,19 @@ function renderSchedule(box, st){
     const dot=el('span','dot '+dotCls);
     dot.textContent = it.status==='paid'?'✓':(it.status==='partial'?'~':String(it.seq));
     const si=el('div','si');
-    si.append(el('div','nm','Installment #'+it.seq));
+    const nm=el('div','nm');
+    nm.append(document.createTextNode('Installment #'+it.seq));
+    // 3.4: derive a real "short ₹X" badge on partial installments (planned − applied)
+    if(it.status==='partial'){
+      const shortMinor = (it.planned_amount_minor||0) - (it.applied_minor||0);
+      if(shortMinor>0){
+        const badge=el('span','rollbadge'); badge.style.marginLeft='8px';
+        const bs=el('span','symword'); bs.textContent='short '+sym(BASE);
+        const bn=el('span'); bn.textContent=fmtNum(shortMinor, BASE);
+        badge.append(bs,bn); nm.append(badge);
+      }
+    }
+    si.append(nm);
     const statusLabel = it.status==='paid'?'paid in full':(it.status==='partial'?'part-paid':'due');
     si.append(el('div','mt',statusLabel));
     const sv=el('div','sv');
@@ -225,6 +307,47 @@ function renderSchedule(box, st){
     sched.append(srow);
   }
   box.append(sched);
+}
+
+// ── ledger (3.1): list state.ledger newest-first ──
+function renderLedger(box, st){
+  box.textContent='';
+  const rows = st.ledger || [];
+  const ph=el('div','ph');
+  const t=el('div','t','Ledger'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta', rows.length+(rows.length===1?' entry':' entries')));
+  box.append(ph);
+  const ledger=el('div','ledger fillrows');
+  if(!rows.length){ ledger.append(el('div','emptypanel','No ledger entries yet.')); box.append(ledger); return; }
+  // newest first by occurred_at (fallback: keep API order)
+  const sorted = rows.slice().sort((a,b)=>{
+    const da=parseISO(a.occurred_at), db=parseISO(b.occurred_at);
+    if(da&&db) return db-da; if(db) return 1; if(da) return -1; return 0;
+  });
+  for(const lr of sorted){
+    const row=el('div','lrow'); row.tabIndex=0;
+    // l1 — title (note → kind → fallback), via textContent
+    const ttl = lr.note || (lr.kind!=null && lr.kind!=='' ? srcLabel(lr.kind) : 'Payment');
+    row.append(el('div','l1', ttl));
+    // amount — +/− with in/out color
+    const out = lr.direction==='out';
+    const amt=el('div','amt '+(out?'out':'in'));
+    const sgn=el('span','symword'); sgn.textContent=(out?'−':'+')+sym(BASE);
+    const num=el('span'); num.textContent=fmtNum(Math.abs(lr.amount_minor||0), BASE);
+    amt.append(sgn,num);
+    row.append(amt);
+    // l2 — date · time
+    const d=parseISO(lr.occurred_at);
+    row.append(el('div','l2', d ? (fmtDay(d)+' · '+fmtTime(d)) : '—'));
+    // l2r — method + funding_source pills + proof
+    const l2r=el('div','l2r');
+    if(lr.method) l2r.append(el('span','pill m', lr.method));
+    if(lr.funding_source) l2r.append(el('span','pill f', srcLabel(lr.funding_source)));
+    if(lr.has_proof) l2r.append(el('span','proof','▣ proof'));
+    row.append(l2r);
+    ledger.append(row);
+  }
+  box.append(ledger);
 }
 
 // ── funding sources ──
@@ -357,7 +480,22 @@ async function boot(){
   document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));
 
   $('name').textContent = plan.name;
-  $('sub').textContent = 'Assets · '+plan.status+' · '+BASE;
+  // header meta (3.3): "created <date> · joint with <name> · INR" — only real parts.
+  (function(){
+    const parts=['Assets'];
+    const cd = parseISO(plan.created_at);              // created_at may be absent → skip honestly
+    if(cd) parts.push('created '+fmtDay(cd));
+    else if(plan.status) parts.push(plan.status);
+    const cs = st.contributors || [];
+    if(cs.length>1){                                    // joint only if a real 2nd contributor exists
+      const other = cs.find(c => (myUserId==null || c.user_id!==myUserId) && c.display_name);
+      const nm = other && other.display_name;
+      parts.push(nm ? ('joint with '+nm) : 'joint');     // name only if real display_name
+    }
+    parts.push(BASE);
+    // built from text only; names assigned via textContent on the element below
+    $('sub').textContent = parts.join(' · ');
+  })();
 
   // slide-over sub text (built via textContent; name is dynamic)
   let subText = 'against '+plan.name;
@@ -366,6 +504,7 @@ async function boot(){
 
   renderHeader($('header-panel'), plan, st);
   renderSchedule($('sched-panel'), st);
+  renderLedger($('ledger-panel'), st);
   renderFunding($('fund-panel'), st);
   renderContributors($('contrib-panel'), st, myUserId);
   renderMembers($('members-panel'));
