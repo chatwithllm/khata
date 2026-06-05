@@ -43,6 +43,7 @@
       <div class="tab" data-t="loan">Loan</div>
       <div class="tab" data-t="holding">Holding</div>
       <div class="tab" data-t="chit">Chit</div>
+      <div class="tab" data-t="retirement">Retirement</div>
     </div>
 
     <div class="fld"><label>Name</label><input id="name" placeholder="Devanahalli plot"></div>
@@ -104,6 +105,23 @@
       </div>
     </div>
 
+    <!-- Retirement -->
+    <div class="grp" id="g-retirement">
+      <div class="row2">
+        <div class="fld"><label>Current balance</label><input id="r_balance" placeholder="0"></div>
+        <div class="fld"><label>Monthly contribution</label><input id="r_contrib" placeholder="10,000"></div>
+      </div>
+      <div class="row2">
+        <div class="fld"><label>Employer match %</label><input id="r_match" placeholder="0"></div>
+        <div class="fld"><label>Annual return %</label><input id="r_return" placeholder="8"></div>
+      </div>
+      <div class="row2">
+        <div class="fld"><label>Inflation %</label><input id="r_infl" placeholder="6"></div>
+        <div class="fld"><label>Current age</label><input id="r_cage" placeholder="30"></div>
+      </div>
+      <div class="fld"><label>Retirement age</label><input id="r_rage" placeholder="60"></div>
+    </div>
+
     <div class="err" id="err"></div>
     <div class="actions">
       <button class="btn" id="submit">Create plan</button>
@@ -122,7 +140,7 @@
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
     type = t.dataset.t;
     document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === t));
-    ["asset", "loan", "holding", "chit"].forEach((g) => $("g-" + g).classList.toggle("on", g === type));
+    ["asset", "loan", "holding", "chit", "retirement"].forEach((g) => $("g-" + g).classList.toggle("on", g === type));
     $("err").textContent = "";
   }));
 
@@ -159,6 +177,12 @@
       return { type: "chit", name, currency, chit_value: $("chit_value").value,
                n_members: parseInt($("n_members").value, 10), commission: $("commission_c").value,
                start_date: $("start_date_c").value || null };
+    }
+    if (type === "retirement") {
+      return { type: "retirement", name, currency, current_balance: $("r_balance").value,
+               monthly_contribution: $("r_contrib").value, employer_match: $("r_match").value,
+               annual_return: $("r_return").value, inflation: $("r_infl").value,
+               current_age: parseInt($("r_cage").value, 10), retirement_age: parseInt($("r_rage").value, 10) };
     }
     const insts = [...document.querySelectorAll(".inst")].map((r) => ({
       amount: r.querySelector(".i-amt").value, due_date: r.querySelector(".i-due").value || null,
