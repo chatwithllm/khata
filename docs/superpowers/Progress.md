@@ -8,9 +8,9 @@ recommended option on every design fork. Deploy locally + final report at the ve
 Branching: one branch/PR per phase; each plan gets its own spec + plan + tests + reviews.
 
 ## Snapshot
-- **Tests:** 114 passing · **Python:** 3.12
+- **Tests:** 115 passing · **Python:** 3.12
 - **Merged:** Phases 1–2 (PRs #1–#7) + Plan 3.1 app shell (PR #8).
-- **Now building:** Phase 3 (app UI) on `feat/phase3-ui` — 3.2 done, 3.3 next.
+- **Now building:** Phase 3 (app UI) on `feat/phase3-ui` — 3.3 done, 3.4 next.
 - **Live dashboard (LAN):** http://192.168.50.189:9001/dashboard.html (auto-refresh 5s).
 
 ## Progress board
@@ -25,7 +25,7 @@ Branching: one branch/PR per phase; each plan gets its own spec + plan + tests +
 ### Phase 3 — App UI build-out (in progress)
 - [x] 3.1 App shell + dashboard (PR #8, merged)
 - [x] 3.2 Create-plan flow
-- [ ] 3.3 Asset detail + log-payment
+- [x] 3.3 Asset detail + log-payment
 - [ ] 3.4 Loan detail
 - [ ] 3.5 Holding detail + sharing panel
 

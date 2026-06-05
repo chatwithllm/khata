@@ -191,3 +191,12 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
 - Now under the web-app-builder harness: `agent-rules.md` (K1–K8) is binding for every task; done-gate
   requires a real end-to-end verification (booted the app, created all 3 types → 201), not just a green
   test. `build_status.json` is the live dashboard feed (orchestrator-owned).
+
+## 2026-06-04 — Plan 3.3 (Asset detail + log-payment)
+- `/asset/<id>` page (id from `location.pathname`): total/paid/remaining cards, schedule with status
+  badges, funding bars, contributors — from `asset_state`. Log-payment modal → `/api/plans/<id>/payments`,
+  re-fetch. App-shell rows are now anchors → `/<type>/<id>`. All cells via createElement (K4).
+- INCIDENT: the modal's method/funding-source dropdowns offered values not in the service enums
+  (`card`/`salary`/`chit payout`) → clean 400 (K1) but invalid UX. Fixed to mirror
+  `assets.py METHODS/SOURCES`. **Rule extension:** K5 pre-flight covers ENUMS too — a `<select>`'s option
+  values must equal the service's allowed set, not be guessed.
