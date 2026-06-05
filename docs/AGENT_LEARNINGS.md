@@ -113,3 +113,31 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
 - `verify_google_credential` catches only ValueError; a google-auth TransportError (Google
   unreachable during cert fetch) currently propagates as 500 — acceptable (not the user's token), note
   before prod.
+
+## 2026-06-04 — Plan 2A (Holdings foundation)
+- New `holding` plan type via the generic-position model: one `holdings` detail row
+  (asset_class/unit/symbol/purity + manual `current_price_minor`/`price_as_of`) per plan; buys/sells
+  are `ledger_entries` rows (`kind='buy'/'sell'`) carrying the new nullable `quantity_micro`.
+- **Quantities are integer micro-units (×10⁶)** — `money.to_micro`/`format_micro`, rejecting float the
+  same way `to_minor` does. Valuation uses `Decimal` over integer minor/micro units; no float anywhere.
+- `holding_state` derives everything (average-cost basis): qty held, avg cost/unit (minor per WHOLE
+  unit), cost of held, realized gain (proceeds − avg×sold), and — only when a quote is set — current
+  value + unrealized gain (else both null). Oversell (selling more than held) is rejected in `add_sell`.
+- Holding buy/sell append through `plan.ledger_entries` (not bare `session.add`) so a freshly-loaded
+  collection stays consistent when `holding_state` is read between mutations — avoids the stale-
+  collection class of bug seen in Plan 2's `set_installments`.
+- API extends the existing `type`-dispatch (asset|loan|holding) for create + detail; the three holding
+  mutations are owner-only. Dashboard/net_position deliberately untouched — that's Plan 2B.
+- Review caught: the avg-cost convention is minor-units-per-WHOLE-unit (e.g. ₹52,000/g = 5_200_000),
+  not per-micro — a plan-draft test constant was off by ×100 and was corrected. Also fixed a quote
+  test that mixed price scales (₹50,000/g cost vs a ₹600/g quote) to assert a sensible positive gain.
+
+### Deferred follow-ups (Plan 2B / later)
+- `add_buy`/`add_sell` raise `TypeError` (not `ValidationError`) on `quantity_micro=None`; harmless
+  end-to-end (the API catches `TypeError`→400 and `to_micro("")` rejects empty first), but add a
+  `None` guard in `_add_entry` for service-level consistency.
+- Add edge tests: sell-to-zero then re-value, multiple sequential sells, quote=0, and None/0 quantity
+  rejected with `ValidationError`.
+- Roll holdings' `current_value_minor` into `dashboard.net_position` gross assets; cross-currency FX.
+- Build the rich `holdings.html` net-worth UI. Price history + live spot feeds. Dividends/401(k).
+- `holding_state`/`asset_state`/`loan_state` all take an unused `session` arg — reconcile together.

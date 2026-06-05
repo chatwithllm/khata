@@ -1,11 +1,11 @@
 {
   "project": "khata",
-  "phase": 1,
-  "plan": "5-google-auth-features",
-  "tasks_total": 8,
-  "tasks_done": 8,
+  "phase": 2,
+  "plan": "2A-holdings",
+  "tasks_total": 6,
+  "tasks_done": 6,
   "last_updated": "2026-06-04",
-  "tests": "79 passed",
+  "tests": "97 passed",
   "python": "3.12",
-  "notes": "Plan 5 complete: Google sign-in (GIS ID-token, server-verified via google-auth, injected verifier; auto-link by verified email with link-conflict guard, find-by-sub/link/create), GET /api/auth/config + POST /api/auth/google, users.google_sub. Frontend: shared ledger.css, editorial Features & Limitations page, landing login section with conditional Google button. Next: Phase 2 candidates — secured loans/collateral, holdings/net-worth, chit funds, or letting Google users set a password."
+  "notes": "Plan 2A complete: holding plan type (generic position: asset_class+unit+symbol/purity), integer micro-unit quantities (no float), buy/sell as ledger rows (quantity_micro), manual latest-quote valuation, derived average-cost holding_state (qty held, cost of held, current value, realized+unrealized gain). API: create dispatch + /holding/buys, /sells, /quote (owner-only). Dashboard untouched. Next: Plan 2B (net-worth consolidation + cross-currency FX + holdings.html UI)."
 }

@@ -3,10 +3,11 @@ from datetime import date, datetime, timezone
 from flask import Blueprint, g, jsonify, request
 
 from ..models import Plan, User
-from ..money import format_minor, pct_to_bps, to_minor
-from ..services import assets, loans, sharing
+from ..money import format_minor, pct_to_bps, to_micro, to_minor
+from ..services import assets, holdings, loans, sharing
 from ..services.assets import PlanError
 from ..services.loans import LoanError
+from ..services.holdings import HoldingError
 from .auth import current_user
 
 bp = Blueprint("plans", __name__, url_prefix="/api/plans")
@@ -35,6 +36,7 @@ def _entry_json(entry, plan):
             "amount_minor": entry.amount_minor,
             "amount_display": format_minor(entry.amount_minor, plan.currency),
             "occurred_at": entry.occurred_at.isoformat(),
+            "quantity_micro": entry.quantity_micro,
             "method": entry.method, "funding_source": entry.funding_source}
 
 
@@ -44,6 +46,10 @@ def _summary(plan: Plan) -> dict:
     if plan.type == "loan" and plan.loan is not None:
         base.update({"direction": plan.loan.direction, "interest_type": plan.loan.interest_type,
                      "rate_bps": plan.loan.rate_bps, "counterparty": plan.loan.counterparty})
+    elif plan.type == "holding" and plan.holding is not None:
+        base.update({"asset_class": plan.holding.asset_class, "unit": plan.holding.unit,
+                     "symbol": plan.holding.symbol,
+                     "current_price_minor": plan.holding.current_price_minor})
     else:
         base["total_price_minor"] = plan.asset.total_price_minor if plan.asset else None
     return base
@@ -52,6 +58,8 @@ def _summary(plan: Plan) -> dict:
 def _detail(plan: Plan) -> dict:
     if plan.type == "loan":
         state = loans.loan_state(g.db, plan.loan, as_of=date.today())
+    elif plan.type == "holding":
+        state = holdings.holding_state(g.db, plan.holding)
     else:
         state = assets.asset_state(g.db, plan)
     return {"plan": _summary(plan), "state": state}
@@ -93,6 +101,11 @@ def create():
                 rate_bps=pct_to_bps(data.get("rate", "0")) if interest_type != "none" else 0,
                 start_date=date.fromisoformat(data["start_date"]) if data.get("start_date") else date.today(),
                 tenure_months=data.get("tenure_months"))
+        elif ptype == "holding":
+            plan = holdings.create_holding_plan(
+                g.db, owner_id=user.id, name=data.get("name", ""), currency=currency,
+                asset_class=data.get("asset_class", ""), unit=data.get("unit", ""),
+                symbol=data.get("symbol"), purity=data.get("purity"))
         else:
             total = to_minor(data.get("total_price", ""), currency)
             plan = assets.create_asset_plan(g.db, owner_id=user.id, name=data.get("name", ""),
@@ -101,7 +114,7 @@ def create():
             if items:
                 assets.set_installments(g.db, plan=plan, items=_parse_items(items, currency))
         g.db.commit()
-    except (PlanError, LoanError, ValueError, TypeError) as e:
+    except (PlanError, LoanError, HoldingError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(_detail(plan)), 201
@@ -195,6 +208,78 @@ def loan_disbursement(plan_id):
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(entry=_entry_json(entry, plan),
                    state=loans.loan_state(g.db, plan.loan, as_of=date.today())), 201
+
+
+@bp.post("/<int:plan_id>/holding/buys")
+def holding_buy(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "holding":
+        return jsonify(error="not_a_holding"), 400
+    data = request.get_json(silent=True) or {}
+    try:
+        entry = holdings.add_buy(
+            g.db, plan=plan, user_id=user.id,
+            quantity_micro=to_micro(data.get("quantity", "")),
+            amount_minor=to_minor(data.get("amount", ""), plan.currency),
+            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"))
+        g.db.commit()
+    except (HoldingError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(entry=_entry_json(entry, plan),
+                   state=holdings.holding_state(g.db, plan.holding)), 201
+
+
+@bp.post("/<int:plan_id>/holding/sells")
+def holding_sell(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "holding":
+        return jsonify(error="not_a_holding"), 400
+    data = request.get_json(silent=True) or {}
+    try:
+        entry = holdings.add_sell(
+            g.db, plan=plan, user_id=user.id,
+            quantity_micro=to_micro(data.get("quantity", "")),
+            amount_minor=to_minor(data.get("amount", ""), plan.currency),
+            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"))
+        g.db.commit()
+    except (HoldingError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(entry=_entry_json(entry, plan),
+                   state=holdings.holding_state(g.db, plan.holding)), 201
+
+
+@bp.post("/<int:plan_id>/holding/quote")
+def holding_quote(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "holding":
+        return jsonify(error="not_a_holding"), 400
+    data = request.get_json(silent=True) or {}
+    try:
+        holdings.set_quote(g.db, plan=plan,
+                           price_minor=to_minor(data.get("price", ""), plan.currency),
+                           as_of=_parse_dt(data.get("as_of")))
+        g.db.commit()
+    except (HoldingError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(state=holdings.holding_state(g.db, plan.holding)), 200
 
 
 @bp.post("/<int:plan_id>/members")

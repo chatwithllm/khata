@@ -2,6 +2,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 SUPPORTED_CURRENCIES = {"INR", "USD"}
 _EXP = 2  # both INR and USD use 2 minor digits
+_MICRO_EXP = 6  # quantities: integer micro-units (x1_000_000)
 
 
 def _check_currency(currency: str) -> str:
@@ -52,4 +53,25 @@ def format_bps(bps: int) -> str:
     sign = "-" if bps < 0 else ""
     whole, frac = divmod(abs(int(bps)), 100)
     body = f"{whole}.{frac:02d}".rstrip("0").rstrip(".")
+    return f"{sign}{body}"
+
+
+def to_micro(value: "str | int") -> int:
+    """Parse a human quantity ("92.5", 10) into integer micro-units (x1e6). Rejects float."""
+    if isinstance(value, float):
+        raise TypeError("quantities must be str or int, not float (no float)")
+    s = str(value).strip().replace(",", "").replace("_", "")
+    if not s:
+        raise ValueError("empty quantity")
+    d = Decimal(s)
+    if not d.is_finite():
+        raise ValueError(f"non-finite quantity: {s!r}")
+    return int((d * (10 ** _MICRO_EXP)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+
+
+def format_micro(micro: int) -> str:
+    """Integer micro-units -> quantity string (92_500_000 -> '92.5')."""
+    sign = "-" if micro < 0 else ""
+    whole, frac = divmod(abs(int(micro)), 10 ** _MICRO_EXP)
+    body = f"{whole}.{frac:0{_MICRO_EXP}d}".rstrip("0").rstrip(".")
     return f"{sign}{body}"

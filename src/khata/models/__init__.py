@@ -4,3 +4,4 @@ from .plan import Plan, AssetPurchase, Installment  # noqa: F401
 from .ledger import LedgerEntry  # noqa: F401
 from .loan import Loan  # noqa: F401
 from .membership import PlanMembership  # noqa: F401
+from .holding import Holding  # noqa: F401
