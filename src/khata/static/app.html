@@ -126,6 +126,12 @@
 // list renders. (boot() also reasserts this once data loads.)
 (function(){
   const tf = new URLSearchParams(location.search).get('type');
+  // sidebar highlight — set the active item synchronously so it doesn't flash
+  // "Dashboard" (hardcoded in the static HTML) before switching to the type.
+  document.querySelectorAll('.side .nav-i').forEach(n=>n.classList.remove('on'));
+  const active = tf ? document.querySelector('.side .nav-i[data-nav="'+tf+'"]')
+                    : document.querySelector('.side .nav-i[href="/app"]');
+  if(active) active.classList.add('on');
   if(!tf) return;
   const hide = (sel)=>{ const e=document.querySelector(sel); if(e) e.style.display='none'; };
   hide('.stats'); hide('#featured'); hide('#rightcol');
