@@ -108,12 +108,13 @@
 <div class="scrim" id="scrim"></div>
 <aside class="over" id="over" aria-hidden="true">
   <div class="oh">
-    <div class="eyebrow">New entry</div>
-    <h3>Log a <em>payment</em></h3>
+    <div class="eyebrow" id="oeyebrow">New entry</div>
+    <h3 id="otitle">Log a <em>payment</em></h3>
     <div class="osub" id="osub"></div>
   </div>
   <div class="obody">
     <div class="fld"><label for="amount">Amount</label><input id="amount" placeholder="50,000" inputmode="decimal"></div>
+    <div class="fld"><label for="occurred">Date (when it happened)</label><input id="occurred" type="date"></div>
     <div class="fld"><label for="method">Method</label>
       <select id="method"><option value="transfer">Transfer</option><option value="upi">UPI</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select>
     </div>
@@ -336,14 +337,23 @@ function renderLedger(box, st){
     const num=el('span'); num.textContent=fmtNum(Math.abs(lr.amount_minor||0), BASE);
     amt.append(sgn,num);
     row.append(amt);
-    // l2 — date · time
+    // l2 — occurred date · time (+ "logged" date when it differs from occurred)
     const d=parseISO(lr.occurred_at);
-    row.append(el('div','l2', d ? (fmtDay(d)+' · '+fmtTime(d)) : '—'));
-    // l2r — method + funding_source pills + proof
+    let l2txt = d ? (fmtDay(d)+' · '+fmtTime(d)) : '—';
+    const cd=parseISO(lr.created_at);
+    if(cd && d && fmtDay(cd)!==fmtDay(d)) l2txt += ' · logged '+fmtDay(cd);
+    row.append(el('div','l2', l2txt));
+    // l2r — method + funding_source pills + proof + edit
     const l2r=el('div','l2r');
     if(lr.method) l2r.append(el('span','pill m', lr.method));
     if(lr.funding_source) l2r.append(el('span','pill f', srcLabel(lr.funding_source)));
     if(lr.has_proof) l2r.append(el('span','proof','▣ proof'));
+    if(lr.id!=null){
+      const edit=el('span','proof','✎ edit'); edit.style.cursor='pointer'; edit.tabIndex=0; edit.setAttribute('role','button');
+      edit.addEventListener('click', ()=>openEdit(lr));
+      edit.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); openEdit(lr); } });
+      l2r.append(edit);
+    }
     row.append(l2r);
     ledger.append(row);
   }
@@ -454,7 +464,24 @@ function renderMembers(box){
 }
 
 // ── slide-over open/close ──
-function openOver(){ $('err').textContent=''; $('scrim').classList.add('on'); $('over').classList.add('on'); $('over').setAttribute('aria-hidden','false'); $('amount').focus(); }
+let editId=null;
+function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function setTitle(pre, emword){ const h=$('otitle'); h.textContent=pre+' '; const e=el('em'); e.textContent=emword; h.append(e); }
+function showOver(){ $('err').textContent=''; $('scrim').classList.add('on'); $('over').classList.add('on'); $('over').setAttribute('aria-hidden','false'); }
+function openOver(){ // NEW payment
+  editId=null; setTitle('Log a','payment'); $('oeyebrow').textContent='New entry'; $('save').textContent='Save payment';
+  $('amount').value=''; $('note').value=''; $('method').value='transfer'; $('fsource').value='savings'; $('occurred').value=todayISO();
+  showOver(); $('amount').focus();
+}
+function openEdit(lr){ // EDIT existing entry
+  editId=lr.id; setTitle('Edit','entry'); $('oeyebrow').textContent='Edit'; $('save').textContent='Save changes';
+  $('amount').value=(Math.abs(lr.amount_minor||0)/100);
+  $('note').value=lr.note||'';
+  if(lr.method) $('method').value=lr.method;
+  if(lr.funding_source) $('fsource').value=lr.funding_source;
+  $('occurred').value=(lr.occurred_at||'').slice(0,10)||todayISO();
+  showOver(); $('amount').focus();
+}
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
 
 // ── boot ──
@@ -540,13 +567,16 @@ $('scrim').addEventListener('click', closeOver);
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeOver(); });
 $('save').addEventListener('click', async ()=>{
   $('err').textContent='';
+  const occ = $('occurred').value ? $('occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift
   const body = { amount: $('amount').value, method: $('method').value,
-                 funding_source: $('fsource').value, note: $('note').value || null };
-  const r = await fetch('/api/plans/'+pid+'/payments', {
-    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-  if(r.ok){ closeOver(); $('amount').value=''; $('note').value=''; boot(); return; }
+                 funding_source: $('fsource').value, note: $('note').value || null,
+                 occurred_at: occ };
+  const url = editId ? ('/api/plans/'+pid+'/entries/'+editId) : ('/api/plans/'+pid+'/payments');
+  const r = await fetch(url, { method: editId ? 'PATCH' : 'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if(r.ok){ closeOver(); boot(); return; }
   const e = await r.json().catch(()=>({}));
-  $('err').textContent = e.detail || e.error || 'Could not log payment.';
+  $('err').textContent = e.detail || e.error || (editId?'Could not save changes.':'Could not log payment.');
 });
 
 // ── profile photo upload (localStorage, display-only) ──

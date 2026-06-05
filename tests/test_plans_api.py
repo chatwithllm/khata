@@ -197,3 +197,33 @@ def test_dashboard_rollup(client):
 
 def test_dashboard_requires_auth(client):
     assert client.get("/api/dashboard").status_code == 401
+
+
+def test_edit_ledger_entry_and_occurred_at(client):
+    _register(client)
+    pid = client.post("/api/plans", json={
+        "name": "Plot", "currency": "INR", "total_price": "10,00,000",
+        "installments": [{"amount": "5,00,000"}, {"amount": "5,00,000"}]}).get_json()["plan"]["id"]
+    # log a payment with an explicit occurred_at date
+    r = client.post(f"/api/plans/{pid}/payments", json={
+        "amount": "3,00,000", "method": "transfer", "funding_source": "savings",
+        "occurred_at": "2025-03-15T12:00:00"})
+    assert r.status_code == 201
+    e = client.get(f"/api/plans/{pid}").get_json()["state"]["ledger"][0]
+    assert e["occurred_at"].startswith("2025-03-15")
+    assert "id" in e and "created_at" in e          # exposed for edit + "logged" display
+    eid = e["id"]
+    # edit it: change amount + note + date → derived state recomputes
+    r = client.patch(f"/api/plans/{pid}/entries/{eid}", json={
+        "amount": "4,00,000", "note": "corrected", "occurred_at": "2025-04-01T12:00:00"})
+    assert r.status_code == 200
+    st = r.get_json()["state"]
+    assert st["paid_to_date_minor"] == 40000000
+    e = [x for x in st["ledger"] if x["id"] == eid][0]
+    assert e["note"] == "corrected" and e["occurred_at"].startswith("2025-04-01")
+    # bad amount → 400 (no 500); missing entry → 400
+    assert client.patch(f"/api/plans/{pid}/entries/{eid}", json={"amount": "abc"}).status_code == 400
+    assert client.patch(f"/api/plans/{pid}/entries/999999", json={"note": "x"}).status_code == 400
+    # unauthenticated → 401
+    client.post("/api/auth/logout")
+    assert client.patch(f"/api/plans/{pid}/entries/{eid}", json={"note": "x"}).status_code == 401

@@ -65,6 +65,35 @@ def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred
     return entry
 
 
+def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
+                        amount_minor=None, occurred_at=None, method=None,
+                        funding_source=None, note=None) -> LedgerEntry:
+    """Edit an existing ledger entry in-place (owner-only at the API layer).
+    Only the provided fields change; kind/direction stay immutable. Derived
+    balances recompute on the next *_state call (balances are never stored)."""
+    entry = session.get(LedgerEntry, entry_id)
+    if entry is None or entry.plan_id != plan.id:
+        raise ValidationError("entry not found")
+    if amount_minor is not None:
+        if amount_minor <= 0:
+            raise ValidationError("amount must be > 0")
+        entry.amount_minor = amount_minor
+    if occurred_at is not None:
+        entry.occurred_at = occurred_at
+    if method is not None:
+        if method not in METHODS:
+            raise ValidationError(f"unknown method: {method}")
+        entry.method = method
+    if funding_source is not None:
+        if funding_source not in SOURCES:
+            raise ValidationError(f"unknown funding_source: {funding_source}")
+        entry.funding_source = funding_source
+    if note is not None:
+        entry.note = note
+    session.flush()
+    return entry
+
+
 def list_plans(session: Session, owner_id) -> list[Plan]:
     return list(session.scalars(
         select(Plan).where(Plan.owner_user_id == owner_id).order_by(Plan.created_at.desc())))
@@ -117,7 +146,8 @@ def asset_state(session: Session, plan: Plan) -> dict:
     # Surface existing ledger_entries rows in the state JSON (mirrors chit_state.ledger).
     # No new model/migration — these rows already exist; we just include them.
     ledger = [
-        {"kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
+        {"id": e.id, "kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
+         "created_at": e.created_at.isoformat() if e.created_at else None,
          "occurred_at": e.occurred_at.isoformat(), "method": e.method,
          "funding_source": e.funding_source, "note": e.note,
          "has_proof": bool(e.proof_ref)}

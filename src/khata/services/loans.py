@@ -180,7 +180,8 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
     # Surface existing ledger_entries rows in the state JSON (mirrors chit_state.ledger).
     # No new model/migration — these rows already exist; we just include them.
     ledger = [
-        {"kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
+        {"id": e.id, "kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
+         "created_at": e.created_at.isoformat() if e.created_at else None,
          "occurred_at": e.occurred_at.isoformat(), "method": e.method,
          "funding_source": e.funding_source, "note": e.note,
          "has_proof": bool(e.proof_ref)}
