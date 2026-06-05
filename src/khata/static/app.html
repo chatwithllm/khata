@@ -49,6 +49,14 @@
 
 .emptypanel{padding:34px 22px;text-align:center;color:var(--ink-faint)}
 .emptypanel a{color:var(--primary-deep);font-weight:600}
+
+/* asset ledger rows (ported from mockup .ledger; .pill/.proof live in app.css) */
+.ledger .lrow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:13px 22px;border-top:1px solid var(--line-2)}
+.ledger .l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
+.ledger .amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right}
+.ledger .amt.in{color:var(--pos)} .ledger .amt.out{color:var(--ink)}
+.ledger .l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.ledger .l2r{font-size:11px;color:var(--ink-faint);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -66,8 +74,8 @@
     <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
     <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
     <div class="navsec">Records</div>
-    <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
-    <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
+    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</a>
+    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Proofs</a>
     <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
   </aside>
 
@@ -88,7 +96,7 @@
     <div class="content">
       <!-- stat row -->
       <div class="stats">
-        <div class="stat hero-stat fade"><div class="k">Net worth</div><div class="v"><span class="cur" id="nw-cur">₹</span><span id="networth">—</span></div><div class="d up" style="color:var(--accent-dk)">across all plans</div></div>
+        <div class="stat hero-stat fade"><div class="k">Net position</div><div class="v"><span class="cur" id="nw-cur">₹</span><span id="networth">—</span></div><div class="d up" style="color:var(--accent-dk)">across all plans</div></div>
         <div class="stat fade d1"><div class="k">Paid to date</div><div class="v"><span class="cur" id="paid-cur">₹</span><span id="paid">—</span></div><div class="d up">into your asset plans</div></div>
         <div class="stat fade d2"><div class="k">I owe</div><div class="v"><span class="cur" id="iowe-cur">₹</span><span id="iowe">—</span></div><div class="d dn">loans you've taken</div></div>
         <div class="stat fade d3"><div class="k">Owed to me</div><div class="v"><span class="cur" id="owed-cur">₹</span><span id="owed">—</span></div><div class="d up">loans given + chit dividends</div></div>
@@ -170,7 +178,7 @@ function renderFeatured(box, plan, state){
   function amt(minor,label){const d=el('div');const n=el('div','n');n.append(amtSpan(minor));d.append(n,el('div','l',label));return d;}
   amts.append(amt(paid,'Paid'), amt(rem,'Remaining'), amt(total,'Total'));
   head.append(amts);
-  const bar=el('div','bigbar'); const i=el('i'); i.dataset.w=pct; bar.append(i); head.append(bar);
+  const bar=el('div','bigbar'); const i=el('i'); i.dataset.w=pct; i.style.background='linear-gradient(90deg,var(--primary),var(--primary-deep))'; bar.append(i); head.append(bar);
   const row=el('div','row');
   row.append(el('span', null, pct+'% paid · '+paidCount+' of '+insts.length+' installments'));
   row.append(el('span', null, state.next_due_seq?('next due · #'+state.next_due_seq):'all installments cleared'));
@@ -201,6 +209,46 @@ function renderFeatured(box, plan, state){
   }
   if(!insts.length){ sched.append(el('div','emptypanel','No installments scheduled.')); }
   box.append(sched);
+
+  // ── ledger (newest first; real state.ledger rows) ──
+  const ledger = (state.ledger || []).slice().sort((a,b)=>String(b.occurred_at||'').localeCompare(String(a.occurred_at||'')));
+  if(ledger.length){
+    const ph3=el('div','ph'); ph3.style.borderTop='1px solid var(--line)';
+    const t3=el('div','t','Ledger'); t3.style.fontSize='15px';
+    const m3=el('div','meta'); m3.append(document.createTextNode('balance '), amtSpan(rem));
+    ph3.append(t3,m3);
+    box.append(ph3);
+    const led=el('div','ledger');
+    for(const r of ledger){
+      const inn = r.direction==='in';
+      const row=el('div','lrow');
+      row.append(el('div','l1', r.note || r.kind || 'Entry'));
+      const amt=el('div','amt '+(inn?'in':'out'));
+      const sign=el('span'); sign.textContent=inn?'+':'−';
+      amt.append(sign, amtSpan(Math.abs(r.amount_minor)));
+      row.append(amt);
+      row.append(el('div','l2', fmtDate(r.occurred_at)));
+      const l2r=el('div','l2r');
+      if(r.method) l2r.append(el('span','pill', r.method));
+      if(r.funding_source) l2r.append(el('span','pill', String(r.funding_source).replace(/_/g,' ')));
+      if(r.has_proof){ const pf=el('span','proof'); pf.append(document.createTextNode('▣ proof')); l2r.append(pf); }
+      row.append(l2r);
+      led.append(row);
+    }
+    box.append(led);
+  }
+}
+
+// format an ISO occurred_at into "DD Mon · HH:MM"
+function fmtDate(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  if(isNaN(d)) return String(iso);
+  const day=String(d.getDate()).padStart(2,'0');
+  const mon=d.toLocaleString('en-US',{month:'short'});
+  const hh=String(d.getHours()).padStart(2,'0');
+  const mm=String(d.getMinutes()).padStart(2,'0');
+  return day+' '+mon+' · '+hh+':'+mm;
 }
 
 function renderFeaturedEmpty(box){
@@ -300,8 +348,38 @@ function loanGivenPanel(g){
   const R=el('div'); R.style.textAlign='right';
   R.append(el('div', null, 'Interest due')).style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600';
   const rv=el('div','mono'); rv.style.cssText='font-weight:700;font-size:17px;color:var(--primary-deep);margin-top:5px'; rv.append(amtSpan(st.interest_due_minor)); R.append(rv);
+  splitBox.style.borderBottom='1px solid var(--line-2)';
+  splitBox.style.paddingBottom='14px';
   splitBox.append(L,R);
   rows.append(splitBox);
+
+  // tranche rows: disbursement ledger entries (oldest first), couple of them
+  const disb=(st.ledger||[]).filter(r=>r.kind==='disbursement')
+    .sort((a,b)=>String(a.occurred_at||'').localeCompare(String(b.occurred_at||'')));
+  if(disb.length){
+    const tr=el('div'); tr.style.cssText='margin-top:14px;display:grid;gap:9px';
+    disb.forEach((r,i)=>{
+      const line=el('div'); line.style.cssText='display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink-soft)';
+      line.append(el('span', null, '▸ '+(r.note||'Tranche')+' · '+fmtDate(r.occurred_at).split(' · ')[0]));
+      const v=el('span','mono'); v.style.fontWeight='600';
+      if(i>0) v.append(document.createTextNode('+'));
+      v.append(amtSpan(r.amount_minor));
+      line.append(v);
+      tr.append(line);
+    });
+    rows.append(tr);
+  }
+
+  // foot: interest received
+  if(st.interest_paid_minor!==undefined && st.interest_paid_minor!==null){
+    const foot=el('div','chit-foot');
+    foot.style.cssText='border-top:1px solid var(--line-2);margin-top:13px;padding-top:12px';
+    const f1=el('span'); f1.append(document.createTextNode('interest received · '));
+    const b=el('b'); b.append(amtSpan(st.interest_paid_minor)); f1.append(b);
+    foot.append(f1);
+    rows.append(foot);
+  }
+
   p.append(rows);
   return p;
 }
@@ -395,8 +473,9 @@ async function boot(){
     if(dir==='taken') taken.push(d);
     else if(dir==='given') given.push(d);
   }
-  if(taken.length) right.append(liabPanel(taken));
+  // order: chit, then liabilities, then lent (given)
   for(const p of chitPlans){ const d=details[p.id]; if(d) right.append(chitPanel(d)); }
+  if(taken.length) right.append(liabPanel(taken));
   for(const d of given){ right.append(loanGivenPanel(d)); }
   if(!right.children.length){
     const p=el('div','panel fade d3');
