@@ -163,7 +163,7 @@ function fillPaidBy(uid){
   for(const m of MEMBERS){
     const opt=document.createElement('option');
     opt.value=m.user_id;
-    opt.textContent=(m.display_name||m.email||('User '+m.user_id))+(m.user_id===ME_ID?' (you)':'');
+    opt.textContent=(m.display_name||m.email||('User '+m.user_id))+(m.user_id===ME_ID?' (you)':'')+(m.status==='invited'?' (pending)':'');
     sel.append(opt);
   }
   if(uid!=null) sel.value=uid;

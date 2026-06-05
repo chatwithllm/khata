@@ -101,13 +101,14 @@ def _accessible_plan(user, plan_id):
 
 def _payer_uid(plan, data, default_uid):
     """Resolve who actually paid/contributed an entry: an optional `paid_by` user id
-    that must be a member of the plan; defaults to the caller. Lets joint plans attribute
-    each entry to the real contributor (for audit + ownership shares)."""
+    that must be attached to the plan; defaults to the caller. Lets joint plans attribute
+    each entry to the real contributor (for audit + ownership shares). Uses on_plan so an
+    invited-but-not-yet-accepted contributor can still be tagged on entries."""
     pb = data.get("paid_by")
     if pb in (None, ""):
         return default_uid
     uid = int(pb)
-    if not sharing.accessible(g.db, plan=plan, user_id=uid):
+    if not sharing.on_plan(g.db, plan=plan, user_id=uid):
         raise ValueError("paid_by must be a member of this plan")
     return uid
 
@@ -494,7 +495,8 @@ def add_member(plan_id):
         return jsonify(error="invalid", detail=str(e)), 400
     u = g.db.get(User, m.user_id)
     return jsonify(member={"user_id": u.id, "email": u.email,
-                           "display_name": u.display_name, "role": m.role}), 201
+                           "display_name": u.display_name, "role": m.role,
+                           "status": m.status}), 201
 
 
 @bp.get("/<int:plan_id>/members")

@@ -264,7 +264,7 @@ function fillPaidBy(selectEl, uid){
   for(const m of MEMBERS){
     const o=document.createElement('option');
     o.value=String(m.user_id);
-    o.textContent=(m.display_name||m.email||('user '+m.user_id))+(m.user_id===ME_ID?' (you)':'');
+    o.textContent=(m.display_name||m.email||('user '+m.user_id))+(m.user_id===ME_ID?' (you)':'')+(m.status==='invited'?' (pending)':'');
     selectEl.append(o);
   }
   if(uid!==null && uid!==undefined) selectEl.value=String(uid);

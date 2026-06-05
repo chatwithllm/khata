@@ -153,6 +153,12 @@ def test_member_can_access_and_contribute(client):
     client.post("/api/auth/logout")
     client.post("/api/auth/login", json={"email": "b@b.com", "password": "pw12345"})
 
+    # Invited but not yet accepted: the plan is hidden until the member accepts.
+    assert client.get(f"/api/plans/{pid}").status_code == 403
+    invs = client.get("/api/invitations").get_json()["invitations"]
+    assert any(i["plan_id"] == pid and i["shared_by"] == "Arjun" for i in invs)
+    assert client.post(f"/api/invitations/{pid}/accept").status_code == 200
+
     assert client.get(f"/api/plans/{pid}").status_code == 200            # member reads
     assert client.post(f"/api/plans/{pid}/payments", json={
         "amount": "2,00,000", "method": "upi", "funding_source": "savings"}).status_code == 201

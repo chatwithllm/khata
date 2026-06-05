@@ -27,7 +27,19 @@
       row.style.display = "flex"; row.style.alignItems = "center"; row.style.gap = "10px";
       row.style.padding = "8px 0"; row.style.borderBottom = "1px solid var(--line)";
       const nm = el("div");
-      nm.appendChild(el("div", null, m.display_name || m.email));
+      const nameRow = el("div");
+      nameRow.style.display = "flex"; nameRow.style.alignItems = "center"; nameRow.style.gap = "7px";
+      nameRow.appendChild(el("span", null, m.display_name || m.email));
+      if (m.status === "invited") {
+        const pend = el("span", null, "pending");
+        pend.style.fontSize = "10.5px"; pend.style.fontWeight = "700"; pend.style.letterSpacing = ".04em";
+        pend.style.textTransform = "uppercase"; pend.style.padding = "2px 7px"; pend.style.borderRadius = "999px";
+        pend.style.background = "color-mix(in srgb, var(--primary) 18%, transparent)";
+        pend.style.color = "var(--accent-dk)";
+        pend.title = "Invited — awaiting their approval";
+        nameRow.appendChild(pend);
+      }
+      nm.appendChild(nameRow);
       const sub = el("div", "muted", m.email + " · " + m.role); sub.style.fontSize = "12px";
       nm.appendChild(sub);
       row.appendChild(nm);

@@ -12,6 +12,23 @@
 <style>
 /* ── app.html-only rules (shared shell + detail-panel groups live in app.css) ── */
 
+/* pending share invitations banner */
+#invites{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+#invites:empty{display:none;margin:0}
+.invite{background:linear-gradient(180deg,color-mix(in srgb,var(--primary) 9%,var(--card)),var(--card));border:1px solid color-mix(in srgb,var(--primary) 40%,var(--line));border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.invite .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:color-mix(in srgb,var(--primary) 20%,transparent);color:var(--accent-dk);flex:none}
+.invite .itxt{flex:1;min-width:200px}
+.invite .itxt .it1{font-weight:600;font-size:14px}
+.invite .itxt .it1 b{font-weight:700}
+.invite .itxt .it2{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:3px}
+.invite .iacts{display:flex;gap:8px;flex:none}
+.invite .iacts button{font:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:9px;cursor:pointer;border:1px solid var(--line);transition:.15s}
+.invite .iacts .acc{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.invite .iacts .acc:hover{opacity:.88}
+.invite .iacts .dec{background:transparent;color:var(--ink-faint)}
+.invite .iacts .dec:hover{border-color:var(--neg);color:var(--neg)}
+.invite .iacts button:disabled{opacity:.5;cursor:default}
+
 /* stat cards */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 @media(max-width:900px){.stats{grid-template-columns:1fr 1fr}}
@@ -95,6 +112,8 @@
     </div>
 
     <div class="content">
+      <!-- pending share invitations (populated by boot) -->
+      <div id="invites"></div>
       <!-- stat row -->
       <div class="stats">
         <div class="stat hero-stat fade"><div class="k">Net position</div><div class="v"><span class="cur" id="nw-cur">₹</span><span id="networth">—</span></div><div class="d up" style="color:var(--accent-dk)">across all plans</div></div>
@@ -433,11 +452,58 @@ function loanGivenPanel(g){
   return p;
 }
 
+// ── pending share invitations ──
+const PLAN_TYPE_LABEL={asset:'asset plan',loan:'loan',holding:'holding',chit:'chit fund',retirement:'retirement plan'};
+async function renderInvites(){
+  const box=$('invites'); if(!box) return;
+  let invs=[];
+  try{ invs=(await fetch('/api/invitations').then(r=>r.json())).invitations||[]; }catch(_){ return; }
+  box.textContent='';
+  invs.forEach(inv=>{
+    const card=el('div','invite');
+    const ic=el('div','ic'); ic.innerHTML='';
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('width','19');svg.setAttribute('height','19');svg.setAttribute('viewBox','0 0 24 24');
+    svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2');
+    const pa=document.createElementNS('http://www.w3.org/2000/svg','path');
+    pa.setAttribute('d','M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2');svg.appendChild(pa);
+    const ci=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ci.setAttribute('cx','9');ci.setAttribute('cy','7');ci.setAttribute('r','4');svg.appendChild(ci);
+    const p2=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p2.setAttribute('d','M19 8v6M22 11h-6');svg.appendChild(p2);
+    ic.appendChild(svg);
+
+    const txt=el('div','itxt');
+    const t1=el('div','it1');
+    const by=el('b',null,inv.shared_by||inv.shared_by_email||'Someone');
+    t1.append(by, document.createTextNode(' shared a '+(PLAN_TYPE_LABEL[inv.plan_type]||'plan')+' with you'));
+    const t2=el('div','it2', '“'+inv.plan_name+'” · '+(inv.role||'contributor')+' · awaiting your approval');
+    txt.append(t1,t2);
+
+    const acts=el('div','iacts');
+    const acc=el('button','acc','Accept'); const dec=el('button','dec','Decline');
+    const respond=async(accept)=>{
+      acc.disabled=true; dec.disabled=true;
+      try{
+        const r=await fetch('/api/invitations/'+inv.plan_id+'/'+(accept?'accept':'decline'),{method:'POST'});
+        if(r.ok){ card.remove(); if(accept) location.reload(); }
+        else { acc.disabled=false; dec.disabled=false; }
+      }catch(_){ acc.disabled=false; dec.disabled=false; }
+    };
+    acc.addEventListener('click',()=>respond(true));
+    dec.addEventListener('click',()=>respond(false));
+    acts.append(acc,dec);
+    card.append(ic,txt,acts);
+    box.appendChild(card);
+  });
+}
+
 // ── boot ──
 async function boot(){
   const me = await fetch('/api/auth/me');
   if(me.status===401){ window.location.href='/'; return; }
   const user=(await me.json()).user;
+  renderInvites();
   const name=user.display_name||'there';
   const h=new Date().getHours();
   const part = h<12?'morning':(h<17?'afternoon':'evening');

@@ -50,7 +50,11 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 - **ledger_entries** (the heart): id, plan_id, logged_by_user_id, **direction** (in|out), **kind**?,
   amount_minor, quantity_micro?, currency, **occurred_at** (when it happened), method?, funding_source?,
   proof_ref?, note?, **created_at** (when it was logged). Editable in place (see §7).
-- **plan_memberships**: id, plan_id, user_id, role (owner|contributor|…), created_at.
+- **plan_memberships**: id, plan_id, user_id, role (owner|contributor|…), **status**
+  (`invited`|`active`|`declined`), created_at. New shares start `invited`; the plan stays hidden
+  from the invitee until they accept (→ `active`). Decline → `declined` (hidden, re-invitable —
+  re-inviting a declined user resets them to `invited`). Migration `b7a1m3status1`
+  (server_default `active` so pre-existing rows keep working).
 - **fx_rates**: id, base_currency, quote_currency, rate_micro, as_of?.
 
 ## 5. Enums (authoritative)
@@ -58,7 +62,7 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   `{savings, loan, borrowed, sold_asset, chit_payout, other}` · loan direction `{given, taken}` ·
   interest_type `{none, monthly, yearly}` · loan entry kinds `{interest_payment, principal_repayment}`
   (+ `disbursement` via its own endpoint) · asset_class `{gold, silver, equity, mf, cash, other}` ·
-  chit kinds `{chit_contribution, chit_dividend, chit_prize}`.
+  chit kinds `{chit_contribution, chit_dividend, chit_prize}` · membership status `{invited, active, declined}`.
 
 ## 6. Derived state contracts (what `GET /api/plans/<id>` returns as `state`, by type)
 - **asset_state**: total_price_minor, paid_to_date_minor, remaining_minor, overpaid_minor, next_due_seq,
@@ -88,14 +92,22 @@ on `type`) · POST `/<id>/installments` · POST `/<id>/payments` (asset; accepts
 occurred_at/method/funding_source/note; both recompute derived state) · POST `/<id>/loan/disbursements` · POST `/<id>/loan/entries`
 · POST `/<id>/loan/collateral` · POST `/<id>/holding/buys|sells|quote|refresh-quote` · POST
 `/<id>/chit/entries` · GET `/<id>/chit/dividend?bid=` · POST `/<id>/retirement/update` · GET/POST
-`/<id>/members` · DELETE `/<id>/members/<user_id>`.
+`/<id>/members` (POST returns `{member:{…, status}}` — invited members start `invited`) ·
+DELETE `/<id>/members/<user_id>`.
+**Invitations** (`/api/invitations*`): GET `""` (`{invitations:[{plan_id, plan_name, plan_type,
+currency, role, shared_by, shared_by_email, invited_at}]}` — the current user's pending shares) ·
+POST `/<plan_id>/accept` (→ membership `active`) · POST `/<plan_id>/decline` (→ `declined`).
+Responding to a non-pending invite → 409; not invited → 404.
 **Net worth / FX** (`/api`): GET networth · GET dashboard (`{net_position_minor, paid_to_date_minor,
 i_owe_minor, owed_to_me_minor, plans:[{id,type,name,currency,role}]}`) · POST base-currency · POST fx-rates.
 **Analysis**: GET `/api/analysis/hold-vs-sell?asset_value&appreciation&borrow&interest&horizon`.
 **Feed** (optional): GET `/api/feed/config` (`{enabled}`).
 
-**Authorization:** mutations are **owner-only** (`_owned_plan`); reads are owner-or-shared
-(`_accessible_plan`). Unauthenticated → 401; not found → 404; not yours → 403. Pattern: validate → mutate →
+**Authorization:** mutations are **owner-only** (`_owned_plan`); reads are owner-or-**active**-member
+(`_accessible_plan` → `sharing.accessible`, which now requires status `active`, so an invited member
+can't view the plan until they accept). `paid_by` tagging uses the looser `sharing.on_plan` (owner or
+any non-declined membership) so an invited-but-not-yet-accepted contributor can still be attributed on
+entries. Unauthenticated → 401; not found → 404; not yours → 403. Pattern: validate → mutate →
 `commit` on success / `rollback` on error.
 
 ## 8. Pages / routes (static, client-rendered; auth guard `/api/auth/me` 401→`/`)
@@ -107,6 +119,16 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-05 — Two-party sharing consent (membership invitations).** Adding a user who has an account no
+  longer silently grants access. New shares create a membership with status `invited`; the plan stays
+  hidden from the invitee (`accessible` = owner-or-`active`) until they respond. The invitee sees a
+  **pending-shares banner** on the dashboard ("X shared a <type> with you · 'Plan' · awaiting your approval")
+  with **Accept** / **Decline**. Accept → `active` (plan now in their `/api/plans` + dashboard, page reloads
+  to surface it); Decline → `declined` (hidden; re-invitable — re-adding resets to `invited`). Endpoints:
+  `GET /api/invitations`, `POST /api/invitations/<plan_id>/accept|decline`. The owner's "Shared with" list
+  (sharing.js) shows a **pending** chip for invited members; the paid-by dropdowns mark them "(pending)".
+  Data: `plan_memberships.status` + migration `b7a1m3status1`. (Phase 1 of the consent flow; Phase 2 —
+  the invitee accepting/​correcting the **money amount** attributed to them — is still to design.)
 - **2026-06-05 — Editable ledger.** `PATCH /api/plans/<id>/entries/<entry_id>` (owner-only) edits an
   existing entry's amount/occurred_at/method/funding_source/note; `kind`/`direction` immutable; derived
   balances recompute. Frontend: ✎ edit on each asset-detail ledger row reopens the slide-over pre-filled.
@@ -156,6 +178,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Two-party sharing consent: invited members get a pending-approval banner (Accept/Decline) before the shared plan becomes visible. `plan_memberships.status` + `/api/invitations`.
 - 2026-06-05 — Can tag who paid/contributed each entry (paid_by → contributor shares + audit).
 - 2026-06-05 — Fixed dashboard 'flash' when filtering: widgets hide AND the sidebar highlight is set synchronously (pre-paint) on ?type, so refresh no longer flashes Dashboard→type.
 - 2026-06-05 — Sidebar type links now carry ?type on ALL pages (was one-click only from the dashboard; two clicks from detail pages).

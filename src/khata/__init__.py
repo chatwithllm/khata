@@ -46,6 +46,9 @@ def create_app(config: Config | None = None) -> Flask:
     from .api.plans import bp as plans_bp
     app.register_blueprint(plans_bp)
 
+    from .api.invitations import bp as invitations_bp
+    app.register_blueprint(invitations_bp)
+
     from .api.dashboard import bp as dashboard_bp
     app.register_blueprint(dashboard_bp)
 
