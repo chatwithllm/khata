@@ -29,7 +29,7 @@ loans (given/taken, derived interest) · holdings (avg-cost, quotes) · net wort
 Turn the remaining mockups into real pages wired to the **already-built** APIs. Lowest ambiguity,
 highest usability payoff; little new backend. Shared `ledger.css` + a real app shell.
 
-- [ ] **3.1 App shell + dashboard** (`app.html`). Real `/app`: sidebar nav, client-side auth guard
+- [x] **3.1 App shell + dashboard** (`app.html`). Real `/app`: sidebar nav, client-side auth guard
   (`GET /api/auth/me`, redirect to `/` on 401), overview from `GET /api/dashboard` + `GET /api/networth`,
   plan list from `GET /api/plans`, currency/base toggle, profile + logout. Foundation every other
   Phase-3 page mounts into.

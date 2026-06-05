@@ -168,3 +168,17 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   unused `session` arg in places — reconcile when an as-of report view is built.
 - Add a null guard to `fmtMicro` in holdings.html (symmetry with fmtMinor). Carry the 2A follow-ups
   (None-qty ValidationError guard, holdings edge tests).
+
+## 2026-06-04 — Plan 3.1 (App shell + dashboard)
+- Real `/app` shell replaces the placeholder: sidebar + topbar + dashboard cards + a client-side
+  type-filterable plan list, all wired to the existing read APIs (`/api/auth/me`, `/api/networth`,
+  `/api/dashboard`, `/api/plans`). No backend changes — Phase 3 is wiring mockups to built APIs.
+- Auth guard is client-side (`GET /api/auth/me`, 401→`/`), consistent with the static-page pattern;
+  pages stay static, no server templating. Parallel `Promise.all` fetch for the three dashboards.
+- All dynamic rows are built with `createElement`+`textContent` (XSS-safe) per the Plan-2B lesson.
+- App-shell CSS (sidebar/topbar/cards/rows) lives inline in `app.html`; tokens + grain come from
+  `ledger.css`. When 3.2–3.5 add more app pages, consider promoting the shell CSS into a shared sheet.
+- The "New plan" button + plan-row detail links point at routes that Plans 3.2–3.5 add; informational
+  rows for now (clickable detail lands with the detail pages).
+- Follow-up (Phase 5.2): the dashboard fetches have no non-401 error handling — a rejected fetch leaves
+  cards at "—" and rejects Promise.all silently. Add error UI in the hardening sweep.
