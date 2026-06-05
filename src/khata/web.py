@@ -60,3 +60,8 @@ def retirement_detail(plan_id):
 @bp.get("/settings")
 def settings():
     return send_from_directory(_static_dir(), "settings.html")
+
+
+@bp.get("/analysis")
+def analysis():
+    return send_from_directory(_static_dir(), "analysis.html")

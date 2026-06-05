@@ -128,3 +128,11 @@ def test_settings_page_served(client):
     body = r.data.decode()
     for needle in ["/api/auth/password", "/api/auth/profile", "/api/base-currency", "ledger.css"]:
         assert needle in body
+
+
+def test_analysis_page_served(client):
+    r = client.get("/analysis")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["/api/analysis/hold-vs-sell", "ledger.css"]:
+        assert needle in body
