@@ -48,7 +48,9 @@ def _summary(plan: Plan) -> dict:
     if plan.type == "loan" and plan.loan is not None:
         base.update({"direction": plan.loan.direction, "interest_type": plan.loan.interest_type,
                      "rate_bps": plan.loan.rate_bps, "counterparty": plan.loan.counterparty,
-                     "secured": plan.loan.secured})
+                     "secured": plan.loan.secured,
+                     "start_date": plan.loan.start_date.isoformat() if plan.loan.start_date else None,
+                     "tenure_months": plan.loan.tenure_months})
     elif plan.type == "holding" and plan.holding is not None:
         base.update({"asset_class": plan.holding.asset_class, "unit": plan.holding.unit,
                      "symbol": plan.holding.symbol,
@@ -172,6 +174,57 @@ def detail(plan_id):
     if err:
         return err
     return jsonify(_detail(plan)), 200
+
+
+@bp.patch("/<int:plan_id>")
+def update_plan(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner-only
+    if err:
+        return err
+    data = request.get_json(silent=True) or {}
+    try:
+        if plan.type == "loan":
+            kw = {}
+            if "name" in data:
+                kw["name"] = data.get("name")
+            for k in ("direction", "counterparty", "interest_type"):
+                if k in data:
+                    kw[k] = data.get(k)
+            if "rate" in data:
+                kw["rate_bps"] = pct_to_bps(data.get("rate", "0"))
+            if "start_date" in data:
+                kw["start_date"] = date.fromisoformat(data["start_date"]) if data.get("start_date") else None
+            if "tenure_months" in data:
+                kw["tenure_months"] = int(data["tenure_months"]) if data.get("tenure_months") not in (None, "") else None
+            loans.update_loan_terms(g.db, plan=plan, **kw)
+        else:
+            if "name" in data and (data.get("name") or "").strip():
+                plan.name = data.get("name").strip()
+        g.db.commit()
+    except (LoanError, PlanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(_detail(plan)), 200
+
+
+@bp.delete("/<int:plan_id>")
+def delete_plan_route(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner-only
+    if err:
+        return err
+    try:
+        assets.delete_plan(g.db, plan=plan)
+        g.db.commit()
+    except (PlanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(ok=True), 200
 
 
 @bp.post("/<int:plan_id>/installments")

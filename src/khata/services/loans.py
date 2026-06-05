@@ -63,6 +63,41 @@ def set_collateral(session: Session, *, plan: Plan, collateral_plan_id):
     return loan
 
 
+def update_loan_terms(session: Session, *, plan: Plan, name=None, direction=None,
+                      counterparty=None, interest_type=None, rate_bps=None,
+                      start_date=None, tenure_months=None) -> Loan:
+    """Edit a loan plan's terms in place (owner-only at the API layer). Principal is NOT
+    here — it's recorded as disbursements. Only provided fields change."""
+    loan = plan.loan
+    if name is not None:
+        n = (name or "").strip()
+        if n:
+            plan.name = n
+    if direction is not None:
+        if direction not in DIRECTIONS:
+            raise ValidationError(f"unknown direction: {direction}")
+        loan.direction = direction
+    if interest_type is not None:
+        if interest_type not in INTEREST_TYPES:
+            raise ValidationError(f"unknown interest_type: {interest_type}")
+        loan.interest_type = interest_type
+        if interest_type == "none":
+            loan.rate_bps = 0
+    if rate_bps is not None:
+        if rate_bps < 0:
+            raise ValidationError("rate must be >= 0")
+        if loan.interest_type != "none":
+            loan.rate_bps = rate_bps
+    if counterparty is not None:
+        loan.counterparty = counterparty or None
+    if start_date is not None:
+        loan.start_date = start_date
+    if tenure_months is not None:
+        loan.tenure_months = tenure_months
+    session.flush()
+    return loan
+
+
 def _direction_for(loan_direction: str, kind: str) -> str:
     if loan_direction == "taken":
         return "in" if kind == "disbursement" else "out"

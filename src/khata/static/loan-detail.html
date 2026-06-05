@@ -83,6 +83,17 @@
 .acts .save:hover{transform:translateY(-2px)}
 .acts .cancel{font-weight:600;font-size:14px;color:var(--ink-faint);cursor:pointer}
 .acts .cancel:hover{color:var(--ink)}
+/* plan-level actions in the loan header (.ph) */
+.planacts{position:absolute;top:0;right:0;display:flex;gap:14px;align-items:center}
+.planacts .planedit,.planacts .plandel{font-size:12px;font-weight:600;cursor:pointer;user-select:none}
+.planacts .planedit{color:var(--primary-deep)}
+.planacts .planedit:hover{text-decoration:underline}
+.planacts .plandel{color:var(--ink-faint)}
+.planacts .plandel:hover{color:var(--neg)}
+.ph{position:relative}
+/* delete-loan button inside the terms slide-over */
+.acts .delloan{margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600;font-size:14px}
+.acts .delloan:hover{text-decoration:underline}
 /* pledge picker list */
 .plist{display:flex;flex-direction:column;gap:8px}
 .pledgerow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--card)}
@@ -192,6 +203,30 @@
   </div>
 </aside>
 
+<!-- edit-terms (plan-level) slide-over (reuses #scrim) -->
+<aside class="over" id="terms-over" aria-hidden="true">
+  <div class="oh">
+    <div class="eyebrow">Edit loan</div>
+    <h3>Edit loan <em>terms</em></h3>
+    <div class="osub" id="terms-osub"></div>
+  </div>
+  <div class="obody">
+    <div class="fld"><label for="t-name">Plan name</label><input id="t-name" placeholder="Loan name"></div>
+    <div class="fld"><label for="t-direction">Direction</label>
+      <select id="t-direction"><option value="taken">Taken (borrowed)</option><option value="given">Given (lent)</option></select>
+    </div>
+    <div class="fld"><label for="t-counterparty">Counterparty</label><input id="t-counterparty" placeholder="Name"></div>
+    <div class="fld"><label for="t-interest">Interest</label>
+      <select id="t-interest"><option value="none">Interest-free</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select>
+    </div>
+    <div class="fld"><label for="t-rate">Rate %</label><input id="t-rate" placeholder="8.5" inputmode="decimal"></div>
+    <div class="fld"><label for="t-start">Start date</label><input id="t-start" type="date"></div>
+    <div class="fld"><label for="t-tenure">Tenure (months)</label><input id="t-tenure" type="number" min="0" placeholder="12"></div>
+    <div class="err" id="terms-err"></div>
+    <div class="acts"><button class="save" id="terms-save">Save changes</button><span class="cancel" id="terms-cancel">Cancel</span><span class="delloan" id="terms-del">Delete loan</span></div>
+  </div>
+</aside>
+
 <!-- pledge-collateral slide-over -->
 <div class="scrim" id="pscrim"></div>
 <aside class="over" id="pover" aria-hidden="true">
@@ -267,7 +302,18 @@ function renderHeader(box, plan, st){
   const nm=el('span'); nm.textContent=plan.name; t.append(nm);
   const metaBits=[dirWord(st.direction)];
   if(plan.counterparty) metaBits.push(plan.counterparty);
-  ph.append(t, el('div','meta', metaBits.join(' · ')));
+  // plan-level actions (edit terms / delete loan) — right-aligned in the header
+  const acts=el('div','planacts');
+  const editLnk=el('span','planedit','✎ Edit');
+  editLnk.tabIndex=0; editLnk.setAttribute('role','button'); editLnk.title='Edit loan terms';
+  editLnk.addEventListener('click', openTerms);
+  editLnk.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); openTerms(); } });
+  const delLnk=el('span','plandel','Delete');
+  delLnk.tabIndex=0; delLnk.setAttribute('role','button'); delLnk.title='Delete this loan';
+  delLnk.addEventListener('click', deleteLoan);
+  delLnk.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); deleteLoan(); } });
+  acts.append(editLnk, delLnk);
+  ph.append(t, el('div','meta', metaBits.join(' · ')), acts);
   box.append(ph);
 
   const kpis=el('div','kpis');
@@ -595,6 +641,33 @@ function openEdit(it){
 }
 function closeEdit(){ $('scrim').classList.remove('on'); $('edit-over').classList.remove('on'); $('edit-over').setAttribute('aria-hidden','true'); }
 
+// ── edit-terms slide-over open/close (PATCH/DELETE the whole loan plan) ──
+function openTerms(){
+  if(!DATA) return;
+  const plan=DATA.plan;
+  $('terms-err').textContent='';
+  $('terms-osub').textContent='against '+(plan.name||'this loan');
+  $('t-name').value = plan.name || '';
+  $('t-direction').value = plan.direction || 'taken';
+  $('t-counterparty').value = plan.counterparty || '';
+  $('t-interest').value = (plan.interest_type || 'none');
+  $('t-rate').value = (plan.rate_bps!==null && plan.rate_bps!==undefined) ? (plan.rate_bps/100) : '';
+  $('t-start').value = plan.start_date ? String(plan.start_date).slice(0,10) : '';
+  $('t-tenure').value = (plan.tenure_months!==null && plan.tenure_months!==undefined) ? plan.tenure_months : '';
+  $('scrim').classList.add('on'); $('terms-over').classList.add('on'); $('terms-over').setAttribute('aria-hidden','false'); $('t-name').focus();
+}
+function closeTerms(){ $('scrim').classList.remove('on'); $('terms-over').classList.remove('on'); $('terms-over').setAttribute('aria-hidden','true'); }
+
+// ── delete the whole loan plan ──
+async function deleteLoan(){
+  if(!confirm('Delete this loan and all its entries? This cannot be undone.')) return;
+  const r = await fetch('/api/plans/'+pid, { method:'DELETE' });
+  if(r.ok){ window.location.href='/app'; return; }
+  const e = await r.json().catch(()=>({}));
+  $('terms-err').textContent = e.detail || e.error || 'Could not delete this loan.';
+  alert(e.detail || e.error || 'Could not delete this loan.');
+}
+
 // ── boot ──
 async function boot(){
   const me = await fetch('/api/auth/me');
@@ -656,11 +729,32 @@ $('etype').addEventListener('change', ()=>{
 });
 $('addbtn').addEventListener('click', openOver);
 $('cancel').addEventListener('click', closeOver);
-$('scrim').addEventListener('click', ()=>{ closeOver(); closeEdit(); });
+$('scrim').addEventListener('click', ()=>{ closeOver(); closeEdit(); closeTerms(); });
 $('edit-cancel').addEventListener('click', closeEdit);
+$('terms-cancel').addEventListener('click', closeTerms);
 $('pcancel').addEventListener('click', closePledge);
 $('pscrim').addEventListener('click', closePledge);
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeEdit(); closePledge(); } });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeEdit(); closeTerms(); closePledge(); } });
+
+// ── edit-terms slide-over: PATCH (save loan terms) / DELETE (delete loan) ──
+$('terms-save').addEventListener('click', async ()=>{
+  $('terms-err').textContent='';
+  const body = {
+    name: $('t-name').value,
+    direction: $('t-direction').value,
+    counterparty: $('t-counterparty').value,
+    interest_type: $('t-interest').value,
+    rate: $('t-rate').value,
+    start_date: $('t-start').value,
+  };
+  const tenure = $('t-tenure').value;
+  if(tenure!=='' && tenure!==null && tenure!==undefined) body.tenure_months = parseInt(tenure, 10);
+  const r = await fetch('/api/plans/'+pid, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if(r.ok){ closeTerms(); boot(); return; }
+  const e = await r.json().catch(()=>({}));
+  $('terms-err').textContent = e.detail || e.error || 'Could not save loan terms.';
+});
+$('terms-del').addEventListener('click', deleteLoan);
 
 // ── edit slide-over: PATCH (save changes) / DELETE (delete entry) ──
 $('edit-save').addEventListener('click', async ()=>{

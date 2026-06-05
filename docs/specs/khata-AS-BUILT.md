@@ -82,7 +82,7 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 ## 7. API surface (all endpoints)
 **Auth** (`/api/auth/*`): POST register · login · logout · google · password · profile · GET config
 (`{google_client_id}`) · me (`{user:{id,email,display_name,has_password}}`).
-**Plans** (`/api/plans*`): GET `""` (list) · GET `/<id>` (`{plan, state}`) · POST `""` (create, dispatches
+**Plans** (`/api/plans*`): GET `""` (list) · GET `/<id>` (`{plan, state}`) · **PATCH `/<id>`** (edit plan / loan terms — owner) · **DELETE `/<id>`** (delete whole plan — owner) · POST `""` (create, dispatches
 on `type`) · POST `/<id>/installments` · POST `/<id>/payments` (asset; accepts **occurred_at**) ·
 **PATCH/DELETE `/<id>/entries/<entry_id>`** (edit / delete a ledger entry — owner-only; edit takes amount/
 occurred_at/method/funding_source/note; both recompute derived state) · POST `/<id>/loan/disbursements` · POST `/<id>/loan/entries`
@@ -112,6 +112,7 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   balances recompute. Frontend: ✎ edit on each asset-detail ledger row reopens the slide-over pre-filled.
 - **2026-06-05 — Payment date.** Log-payment slide-over has a "Date (when it happened)" field → `occurred_at`
   (distinct from auto `created_at` = when logged). Ledger shows "· logged X" when the two differ.
+- **2026-06-05 — Edit / delete a whole plan.** `PATCH /api/plans/<id>` edits a plan (loan terms: name/direction/counterparty/interest_type/rate/start_date/tenure; other types: name) and `DELETE /api/plans/<id>` removes the whole plan + all its entries (owner-only, cascades). Frontend: loan-detail header has **✎ Edit** (terms slide-over → PATCH) and **Delete** (confirm → DELETE → /app). Loan summary now exposes start_date + tenure_months for pre-fill. (Before this, plan terms couldn't be corrected and plans couldn't be deleted.)
 - **2026-06-05 — Loan create asks for Principal.** The create-plan loan step now has a required **Principal (amount borrowed/lent)** field. On submit it creates the loan plan then logs the opening amount via `POST /loan/disbursements` (dated the start date) — so the loan has its principal immediately and interest/outstanding compute. (Khata models principal as dated disbursements → later top-ups/tranches still work.) Was a real flaw: loans were created with ₹0 and nothing could be calculated.
 - **2026-06-05 — Edit/Delete on loan & chit ledgers** (same as asset): ✎ edit per row → slide-over → PATCH/DELETE /entries/<id>. chit_state.ledger now carries id+created_at.
 - **2026-06-05 — Sidebar type = focused list.** Picking Assets/Chit/Loans/401(k) now shows a clean **list of only that type** (hides the stat cards, featured panel, and Liabilities/Lent) — each row links to its detail page (where edit/delete live). Dashboard (no filter) still shows the full layout. Fixes the confusion of the filtered dashboard looking like an 'asset page' with a no-edit ledger.
@@ -154,6 +155,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Can edit a loan's terms + delete a whole plan (PATCH/DELETE /api/plans/<id>).
 - 2026-06-05 — Loan create form now captures Principal (logs opening disbursement).
 - 2026-06-05 — Edit/Delete on loan & chit ledgers; sidebar type shows a focused list (not the full dashboard).
 - 2026-06-05 — Can define/edit installment schedule on an existing asset (POST /installments from the detail page).

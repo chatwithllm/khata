@@ -245,3 +245,24 @@ def test_delete_ledger_entry(client):
     assert client.delete(f"/api/plans/{pid}/entries/{eid}").status_code == 400
     client.post("/api/auth/logout")
     assert client.delete(f"/api/plans/{pid}/entries/1").status_code == 401
+
+
+def test_edit_loan_terms_and_delete_plan(client):
+    _register(client)
+    pid = client.post("/api/plans", json={
+        "type": "loan", "name": "Old name", "currency": "INR", "direction": "taken",
+        "counterparty": "HDFC", "interest_type": "yearly", "rate": "8.5",
+        "start_date": "2025-01-15"}).get_json()["plan"]["id"]
+    # edit terms
+    r = client.patch(f"/api/plans/{pid}", json={"name": "New name", "counterparty": "ICICI", "rate": "10"})
+    assert r.status_code == 200
+    d = client.get(f"/api/plans/{pid}").get_json()["plan"]
+    assert d["name"] == "New name" and d["counterparty"] == "ICICI" and d["rate_bps"] == 1000
+    # bad interest_type → 400
+    assert client.patch(f"/api/plans/{pid}", json={"interest_type": "weird"}).status_code == 400
+    # delete the whole plan
+    assert client.delete(f"/api/plans/{pid}").status_code == 200
+    assert client.get(f"/api/plans/{pid}").status_code == 404
+    # unauth → 401
+    client.post("/api/auth/logout")
+    assert client.delete(f"/api/plans/{pid}").status_code == 401

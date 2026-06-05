@@ -104,6 +104,21 @@ def delete_ledger_entry(session: Session, *, plan: Plan, entry_id) -> None:
     session.flush()
 
 
+def delete_plan(session: Session, *, plan: Plan) -> None:
+    """Delete a whole plan and everything under it (any type). Children are removed
+    explicitly so it's correct regardless of relationship cascade config; the 1:1
+    type sub-row (asset/loan/…) goes via the Plan relationship cascade."""
+    for e in list(plan.ledger_entries):
+        session.delete(e)
+    for i in list(plan.installments):
+        session.delete(i)
+    for m in list(plan.memberships):
+        session.delete(m)
+    session.flush()
+    session.delete(plan)
+    session.flush()
+
+
 def list_plans(session: Session, owner_id) -> list[Plan]:
     return list(session.scalars(
         select(Plan).where(Plan.owner_user_id == owner_id).order_by(Plan.created_at.desc())))
