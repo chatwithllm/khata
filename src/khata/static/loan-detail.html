@@ -11,6 +11,37 @@
 <style>
 /* ── loan-detail.html-only rules (shell + detail-panel groups live in app.css) ── */
 .emptypanel{padding:30px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px}
+
+/* at-a-glance fact panel (mockup .factcard/.frow) */
+.glance{padding:6px 0}
+.glance .frow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 22px;border-top:1px solid var(--line-2);font-size:13.5px}
+.glance .frow:first-child{border-top:none}
+.glance .fk{color:var(--ink-faint)}
+.glance .fv{font-family:"JetBrains Mono";font-weight:600;text-align:right}
+.glance .fv .approx{color:var(--ink-faint);font-weight:500;margin-left:5px;font-size:11.5px}
+
+/* ledger (mockup .ledger) */
+.ledger{padding:2px 0}
+.ledger .lrow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:13px 22px 13px 26px;border-top:1px solid var(--line-2);position:relative}
+.ledger .lrow:first-child{border-top:none}
+.ledger .lrow::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--line)}
+.ledger .lrow.t-disb::before{background:var(--accent)}
+.ledger .lrow.t-int::before{background:var(--primary)}
+.ledger .lrow.t-prn::before{background:var(--ink)}
+.ledger .l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
+.ledger .amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right;white-space:nowrap}
+.ledger .amt.in{color:var(--pos)}
+.ledger .amt.out{color:var(--ink)}
+.ledger .l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.ledger .l2r{font-size:11px;color:var(--ink-faint);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.ledger .pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);text-transform:capitalize}
+.ledger .pill.k-int{border-color:transparent;background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary-deep)}
+.ledger .pill.k-prn{border-color:transparent;background:color-mix(in srgb,var(--ink) 12%,transparent);color:var(--ink)}
+.ledger .pill.k-disb{border-color:transparent;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.ledger .proof{font-size:10px;color:var(--primary-deep);font-weight:600;display:inline-flex;gap:3px;align-items:center}
+
+/* capped/scrolling schedule body (tenure can be long) */
+.sched.capscroll{max-height:340px;overflow-y:auto}
 .notepanel{padding:18px 22px;color:var(--ink-soft);font-size:13.5px;font-family:"JetBrains Mono"}
 .terms{padding:6px 0}
 .terms .trow{display:flex;justify-content:space-between;align-items:center;padding:11px 22px;border-top:1px solid var(--line-2);font-size:13.5px}
@@ -99,14 +130,18 @@
         <div class="stack fillcol">
           <!-- header KPIs + progress -->
           <div class="panel fade" id="header-panel"></div>
-          <!-- release tracker (schedule) -->
-          <div class="panel fade d1 fill" id="sched-panel"></div>
+          <!-- ledger (transactions) -->
+          <div class="panel fade d1" id="ledger-panel"></div>
+          <!-- repayment schedule (formerly "Release tracker") -->
+          <div class="panel fade d2 fill" id="sched-panel"></div>
         </div>
 
         <!-- RIGHT RAIL -->
         <div class="stack fillcol">
+          <!-- at-a-glance (real/derived loan terms) -->
+          <div class="panel fade d2" id="glance-panel"></div>
           <!-- collateral (only if secured/collateral) -->
-          <div class="panel fade d2" id="coll-panel" style="display:none"></div>
+          <div class="panel fade d3" id="coll-panel" style="display:none"></div>
           <!-- loan terms -->
           <div class="panel fade d3" id="terms-panel"></div>
           <!-- members (sharing) -->
@@ -227,8 +262,8 @@ function renderHeader(box, plan, st){
   }
   kpis.append(
     kpi('rem','Principal outstanding',st.principal_outstanding_minor),
-    kpi('','Interest due',st.interest_due_minor),
-    kpi('','Total owed',st.total_minor));
+    kpi('','Interest paid to date',st.interest_paid_minor),
+    kpi('','Next interest due',st.interest_due_minor));
   box.append(kpis);
 
   // ── progress bar ──
@@ -261,20 +296,119 @@ function renderHeader(box, plan, st){
   box.append(head);
 }
 
-// ── release tracker (interest schedule) ──
+// ── at-a-glance (real + derived loan facts) ──
+function renderGlance(box, plan, st){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','At a glance'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','loan structure'));
+  box.append(ph);
+  const body=el('div','glance');
+  // a fact row whose value is plain text
+  function frow(k, v){
+    const r=el('div','frow');
+    r.append(el('span','fk',k));
+    const fv=el('span','fv'); fv.textContent=v; r.append(fv);
+    body.append(r);
+  }
+  // a fact row whose value is a currency amount (+ optional approx tag)
+  function frowAmt(k, minor, approx){
+    const r=el('div','frow');
+    r.append(el('span','fk',k));
+    const fv=el('span','fv'); fv.append(amtSpan(minor));
+    if(approx){ fv.append(el('span','approx','approx')); }
+    r.append(fv);
+    body.append(r);
+  }
+  // Structure = interest_type (humanized, e.g. "yearly interest")
+  const itype=plan.interest_type;
+  if(itype && itype!=='none'){ frow('Structure', itype+' interest'); }
+  else { frow('Structure', 'interest-free'); }
+  // Rate = rate_bps/100 + "%/yr"
+  if(plan.rate_bps!==null && plan.rate_bps!==undefined && itype && itype!=='none'){
+    frow('Rate', (plan.rate_bps/100)+'%/yr');
+  }
+  // Monthly interest ≈ principal × rate / 1200 (derived, labelled approx)
+  const po=st.principal_outstanding_minor;
+  if(po!==null && po!==undefined && plan.rate_bps && itype && itype!=='none'){
+    const monthlyMinor=Math.round(po*plan.rate_bps/120000); // (minor × bps/10000)/12
+    frowAmt('Monthly interest', monthlyMinor, true);
+  }
+  // Principal = principal_outstanding_minor
+  frowAmt('Principal', po, false);
+  // Security = secured ? collateral.name : "unsecured"
+  if(st.secured && st.collateral && st.collateral.name){ frow('Security', st.collateral.name); }
+  else if(st.secured){ frow('Security', 'secured'); }
+  else { frow('Security', 'unsecured'); }
+  box.append(body);
+}
+
+// ── ledger (transaction history, newest first) ──
+const LEDGER_KIND={
+  disbursement:{label:'Disbursement', cls:'t-disb', pill:'k-disb', pillText:'disbursement'},
+  interest_payment:{label:'Interest payment', cls:'t-int', pill:'k-int', pillText:'interest'},
+  principal_repayment:{label:'Principal prepayment', cls:'t-prn', pill:'k-prn', pillText:'principal'},
+};
+// "2025-05-20T10:00:00" -> "20 May · 10:00"
+function fmtLedgerDate(iso){
+  if(!iso) return '';
+  const s=String(iso);
+  const tIdx=s.indexOf('T');
+  const datePart=tIdx>=0?s.slice(0,tIdx):s;
+  const out=fmtDate(datePart);
+  if(tIdx>=0){
+    const time=s.slice(tIdx+1,tIdx+6); // HH:MM
+    if(/^\d{2}:\d{2}$/.test(time)) return out+' · '+time;
+  }
+  return out;
+}
+function renderLedger(box, st){
+  box.textContent='';
+  const rows=(st.ledger||[]).slice(); // already newest-first from API; copy defensively
+  const ph=el('div','ph');
+  const t=el('div','t','Ledger'); t.style.fontSize='16px';
+  const meta=el('div','meta');
+  meta.append(document.createTextNode('balance '), amtSpan(st.total_minor));
+  ph.append(t, meta);
+  box.append(ph);
+  if(!rows.length){ box.append(el('div','emptypanel','No entries yet.')); return; }
+  const led=el('div','ledger');
+  for(const it of rows){
+    const meta2=LEDGER_KIND[it.kind] || {label:(it.kind||'entry'), cls:'', pill:'', pillText:(it.kind||'entry')};
+    const lrow=el('div','lrow'+(meta2.cls?' '+meta2.cls:''));
+    lrow.append(el('div','l1', meta2.label));
+    // amount: in=positive/green, out=negative/ink
+    const isIn=it.direction==='in';
+    const amt=el('div','amt '+(isIn?'in':'out'));
+    const signed = isIn ? Math.abs(it.amount_minor) : -Math.abs(it.amount_minor);
+    amt.append(amtSpan(signed));
+    lrow.append(amt);
+    lrow.append(el('div','l2', fmtLedgerDate(it.occurred_at)));
+    const l2r=el('div','l2r');
+    if(meta2.pill) l2r.append(el('span','pill '+meta2.pill, meta2.pillText));
+    if(it.method) l2r.append(el('span','pill', it.method));
+    if(it.has_proof){ l2r.append(el('span','proof','▣ proof')); }
+    lrow.append(l2r);
+    led.append(lrow);
+  }
+  box.append(led);
+}
+
+// ── repayment schedule (interest schedule across the loan tenure) ──
 function renderSchedule(box, st){
   box.textContent='';
   const rows = st.schedule || [];
   const ph=el('div','ph');
-  const t=el('div','t','Release tracker'); t.style.fontSize='16px';
-  let metaText='interest schedule';
+  const t=el('div','t','Repayment schedule'); t.style.fontSize='16px';
+  let metaText=rows.length ? (rows.length+' interest periods') : 'interest schedule';
   if((st.months_behind||0)>0){
     metaText=st.months_behind+' behind';
     if(st.next_due_month!==null && st.next_due_month!==undefined) metaText+=' · next due month '+st.next_due_month;
   }
   ph.append(t, el('div','meta', metaText));
   box.append(ph);
-  const sched=el('div','sched fillrows');
+  // Tenure can run long (16+ months here) — cap height & scroll past ~7 rows.
+  const sched=el('div','sched fillrows'+(rows.length>7?' capscroll':''));
   if(!rows.length){ sched.append(el('div','emptypanel','No interest schedule (interest-free or not yet accruing).')); box.append(sched); return; }
   for(const it of rows){
     const status=it.status||'due';
@@ -450,7 +584,9 @@ async function boot(){
   $('osub').textContent = 'against '+plan.name;
 
   renderHeader($('header-panel'), plan, st);
+  renderLedger($('ledger-panel'), st);
   renderSchedule($('sched-panel'), st);
+  renderGlance($('glance-panel'), plan, st);
   renderCollateral($('coll-panel'), st);
   renderTerms($('terms-panel'), plan, st);
   renderMembers($('members-panel'));
