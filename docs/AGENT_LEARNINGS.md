@@ -232,3 +232,18 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
 - DEFERRED (Phase 5.2): `money.to_minor("abc")` raises `decimal.InvalidOperation` (an ArithmeticError,
   NOT ValueError), so a malformed numeric string → 500 across ALL money endpoints. Fix centrally in
   money.py (catch InvalidOperation → ValueError) so every endpoint returns 400.
+
+## 2026-06-05 — Plan 4.2 (Secured loans / collateral)
+- `loans` gains `secured` (bool, server_default false) + `collateral_plan_id` (FK→plans). A loan pledges
+  one same-currency, same-owner holding. `set_collateral` validates (holding/owner/currency); `loan_state`
+  derives `collateral={plan_id,name,asset_class,currency,value_minor,ltv_pct}` where
+  ltv_pct=round(principal_outstanding×100/value) (Decimal, HALF_UP, null if unquoted). Net worth untouched
+  (collateral is informational — the holding is already an asset, the loan a liability).
+- INCIDENT (plan didn't anticipate): the 2nd FK loans→plans (collateral_plan_id) caused
+  `AmbiguousForeignKeysError` on the Plan.loan/Loan.plan relationship → pinned `foreign_keys` on both
+  sides. Also batch-mode rejected the unnamed FK constraint → gave it `fk_loans_collateral_plan_id_plans`.
+  Both caught by running the real upgrade. **Rule:** a second FK between the same two tables requires
+  explicit `foreign_keys=` on existing relationships; name FK constraints for SQLite batch mode.
+- API: create accepts inline `collateral_plan_id` (atomic — a bad id rolls back the whole loan create);
+  `POST /loan/collateral` link/unlink (owner-only). UI: loan-detail Collateral section with an LTV badge
+  (green<60 / amber 60–80 / red>80) + a pledge modal listing same-currency holdings. createElement-only.
