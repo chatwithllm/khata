@@ -1,3 +1,5 @@
+import calendar
+from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
 from sqlalchemy.orm import Session
@@ -6,6 +8,13 @@ from ..models import Plan, Chit, LedgerEntry
 from ..money import SUPPORTED_CURRENCIES
 
 CHIT_KINDS = {"chit_contribution", "chit_dividend", "chit_prize"}
+
+
+def _month_add(d: date, n: int) -> date:
+    m = d.month - 1 + n
+    y = d.year + m // 12
+    mo = m % 12 + 1
+    return date(y, mo, min(d.day, calendar.monthrange(y, mo)[1]))
 
 
 class ChitError(Exception):
@@ -61,14 +70,41 @@ def auction_dividend(*, chit_value_minor, commission_bps, n_members, winning_bid
             "dividend_per_member_minor": per_member, "prize_minor": chit_value_minor - winning_bid_minor}
 
 
-def chit_state(session: Session, chit: Chit) -> dict:
+def chit_state(session: Session, chit: Chit, as_of: date | None = None) -> dict:
     plan = chit.plan
+    as_of = as_of or date.today()
     def total(kind): return sum(e.amount_minor for e in plan.ledger_entries if e.kind == kind)
     contributed = total("chit_contribution")
     dividends = total("chit_dividend")
     prize = total("chit_prize")
     subscription = _round(Decimal(chit.chit_value_minor) / chit.n_members) if chit.n_members else 0
     months_recorded = sum(1 for e in plan.ledger_entries if e.kind == "chit_contribution")
+
+    # A chit runs n_members months (one auction/month) from start_date. Each recorded
+    # contribution covers one month in order (matching the "X of N rounds" semantics);
+    # remaining months are 'due' if their month has arrived, else 'upcoming'.
+    n = chit.n_members or 0
+    schedule = []
+    next_due_month = None
+    next_due_date = None
+    months_behind = 0
+    for m in range(n):
+        period_start = _month_add(chit.start_date, m)
+        if m < months_recorded:
+            status = "paid"
+        elif period_start <= as_of:
+            status = "due"
+            months_behind += 1
+        else:
+            status = "upcoming"
+        if status != "paid" and next_due_month is None:
+            next_due_month = m
+            next_due_date = period_start.isoformat()
+        schedule.append({"month_index": m, "period_start": period_start.isoformat(),
+                         "expected_minor": subscription,
+                         "applied_minor": subscription if status == "paid" else 0,
+                         "status": status})
+
     ledger = [{"id": e.id, "kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
                "created_at": e.created_at.isoformat() if e.created_at else None,
                "occurred_at": e.occurred_at.isoformat(), "note": e.note}
@@ -80,5 +116,8 @@ def chit_state(session: Session, chit: Chit) -> dict:
         "total_contributed_minor": contributed, "total_dividends_minor": dividends,
         "prize_received_minor": prize, "net_contributed_minor": contributed - dividends,
         "net_position_minor": prize + dividends - contributed, "won": prize > 0,
-        "months_recorded": months_recorded, "ledger": ledger,
+        "months_recorded": months_recorded,
+        "schedule": schedule, "next_due_month": next_due_month, "next_due_date": next_due_date,
+        "months_behind": months_behind, "term_months": n,
+        "ledger": ledger,
     }

@@ -204,6 +204,8 @@
           <div class="panel fade" id="header-panel"></div>
           <!-- auction rounds -->
           <div class="panel fade d1" id="rounds-panel"></div>
+          <!-- contribution schedule (month-by-month, derived) -->
+          <div class="panel fade d1" id="schedule-panel"></div>
           <!-- ledger -->
           <div class="panel fade d2 fill" id="ledger-panel"></div>
         </div>
@@ -475,6 +477,56 @@ function renderRounds(box, st){
     tbody.append(tr);
   }
   tbl.append(tbody); tw.append(tbl); box.append(tw);
+}
+
+// ── contribution schedule (month-by-month; derived from start_date + n_members) ──
+function monthYr(iso){ const p=(iso||'').split('-'); return p.length>=2 ? (MONTHS[parseInt(p[1],10)-1]||'?')+' '+p[0] : '—'; }
+function renderSchedule(box, st){
+  box.textContent='';
+  const sch=st.schedule||[];
+  const ph=el('div','ph');
+  const t=el('div','t','Contribution schedule'); t.style.fontSize='16px';
+  const paid=sch.filter(r=>r.status==='paid').length;
+  ph.append(t, el('div','meta', paid+' of '+(st.term_months||sch.length)+' months paid'));
+  box.append(ph);
+  if(!sch.length){ box.append(el('div','emptypanel','No schedule.')); return; }
+
+  // Next-due / overdue banner
+  if(st.next_due_month!=null){
+    const due=el('div'); due.style.cssText='display:flex;align-items:center;gap:10px;margin:14px 22px 4px;padding:11px 14px;border-radius:11px;font-size:13px;font-weight:600';
+    const behind=st.months_behind||0;
+    if(behind>0){
+      due.style.background='color-mix(in srgb,var(--neg) 12%,transparent)'; due.style.color='var(--neg)';
+      due.append(document.createTextNode('⚠ '+behind+' month'+(behind>1?'s':'')+' overdue · next due '+monthYr(st.next_due_date)));
+    } else {
+      due.style.background='color-mix(in srgb,var(--primary) 14%,transparent)'; due.style.color='var(--accent-dk)';
+      due.append(document.createTextNode('Next due · '+monthYr(st.next_due_date)));
+    }
+    box.append(due);
+  } else {
+    const done=el('div'); done.style.cssText='margin:14px 22px 4px;padding:11px 14px;border-radius:11px;font-size:13px;font-weight:600;background:color-mix(in srgb,var(--pos) 12%,transparent);color:var(--pos)';
+    done.append(document.createTextNode('✓ All '+sch.length+' months recorded'));
+    box.append(done);
+  }
+
+  const grid=el('div'); grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;padding:12px 22px 20px';
+  sch.forEach(r=>{
+    const cell=el('div'); cell.style.cssText='border:1px solid var(--line);border-radius:10px;padding:9px 10px;display:flex;flex-direction:column;gap:3px';
+    const top=el('div'); top.style.cssText='display:flex;align-items:center;justify-content:space-between';
+    const mo=el('span', null, monthYr(r.period_start)); mo.style.cssText='font-size:11.5px;font-weight:600';
+    const dot=el('span'); dot.style.cssText='width:9px;height:9px;border-radius:50%;flex:none';
+    let col='var(--paper-2)', title='upcoming';
+    if(r.status==='paid'){ col='var(--pos)'; title='paid'; }
+    else if(r.status==='due'){ col='var(--neg)'; title='due'; }
+    dot.style.background=col; dot.title=title;
+    top.append(mo,dot);
+    const am=el('div'); am.style.cssText='font-family:"JetBrains Mono";font-size:11px;color:var(--ink-faint)';
+    am.append(el('span','symword',sym(BASE)), document.createTextNode(fmtNum(r.expected_minor,BASE)));
+    cell.append(top, am);
+    if(r.status!=='paid'){ cell.style.opacity = r.status==='due' ? '1' : '.6'; }
+    grid.append(cell);
+  });
+  box.append(grid);
 }
 
 // ── my position breakdown ──
@@ -777,6 +829,7 @@ async function boot(){
 
   renderHeader($('header-panel'), plan, st, isOwner);
   renderRounds($('rounds-panel'), st);
+  renderSchedule($('schedule-panel'), st);
   renderLedger($('ledger-panel'), st);
   renderPosition($('position-panel'), st);
   renderChart($('chart-panel'), st);

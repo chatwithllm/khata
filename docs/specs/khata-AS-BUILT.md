@@ -83,9 +83,13 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 - **holding_state**: asset_class, unit, symbol, purity, currency, qty_held_micro, avg_cost_per_unit_minor,
   cost_of_held_minor, current_price_minor, price_as_of, current_value_minor, unrealized_gain_minor,
   realized_gain_minor, proceeds_minor.
-- **chit_state**: currency, chit_value_minor, n_members, commission_bps, subscription_minor,
+- **chit_state**(chit, as_of=today): currency, chit_value_minor, n_members, commission_bps, subscription_minor,
   total_contributed_minor, total_dividends_minor, prize_received_minor, net_contributed_minor,
-  net_position_minor, won, months_recorded, ledger[{id?, kind, direction, amount_minor, occurred_at, note}].
+  net_position_minor, won, months_recorded, **term_months**, **schedule**[{month_index, period_start,
+  expected_minor(=subscription), applied_minor, status(paid|due|upcoming)}], **next_due_month**,
+  **next_due_date**, **months_behind**, ledger[{id?, kind, direction, amount_minor, occurred_at, note}].
+  Schedule = n_members months from start_date; month `m` is `paid` if `m < months_recorded` (one
+  contribution = one month), else `due` if its month has arrived else `upcoming`.
 - **retirement_state**: currency, current_balance_minor, monthly_contribution_minor, employer_match_bps,
   annual_return_bps, inflation_bps, current_age, retirement_age, months_to_retirement,
   effective_monthly_minor, total_contributions_minor, projected_corpus_minor, projected_corpus_real_minor.
@@ -132,6 +136,15 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-05 — Chit monthly contribution schedule + next-due.** A chit runs `n_members` months (one
+  auction/month) from `start_date` — now surfaced as a month-by-month schedule (no schema change; derived in
+  `chit_state`). Each recorded contribution covers one month in order; remaining months are `due` (arrived) or
+  `upcoming` (future). `chit_state` gains `schedule`, `term_months`, `next_due_month`, `next_due_date`,
+  `months_behind` (+ an optional `as_of` param for testing). Frontend: chit-detail **Contribution schedule**
+  panel — a 12-cell month grid (green=paid, red=due, faint=upcoming) with a "Next due · <month>" banner that
+  turns red "⚠ N months overdue" when behind. (How the user uses chit: solo member, or operating a
+  spouse/family member's own account — single-owner either way, so chit deliberately has **no** paid-by /
+  amount-confirmation flow. Win/return projection deferred to a follow-up.)
 - **2026-06-05 — Two-party contribution-amount agreement (per-entry, counter-propose loop).** Phase 2 of
   consent. When the owner records "₹2,00,000 · paid by Priya", the entry starts `pending` — Priya must
   confirm or correct it; neither side dictates. Decisions taken: **per-ledger-entry** granularity ·
@@ -207,6 +220,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Chit monthly contribution schedule + next-due reminder (chit_state.schedule/next_due_date/months_behind; chit-detail month-grid panel). Derived, no schema change.
 - 2026-06-05 — Per-entry contribution-amount agreement: a tagged contributor confirms or counter-proposes the amount attributed to them; owner accepts or re-counters until both agree. `ledger_entries.amount_status`/`counter_amount_minor` + `/api/confirmations` + `POST .../entries/<id>/amount`. Interim amount counts toward totals, flagged unconfirmed.
 - 2026-06-05 — Two-party sharing consent: invited members get a pending-approval banner (Accept/Decline) before the shared plan becomes visible. `plan_memberships.status` + `/api/invitations`.
 - 2026-06-05 — Can tag who paid/contributed each entry (paid_by → contributor shares + audit).
