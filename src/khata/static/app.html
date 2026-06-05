@@ -469,6 +469,17 @@ async function boot(){
   else { const dash=document.querySelector('.side .nav-i[href="/app"]'); if(dash) dash.classList.add('on'); }
   const ptitle=$('plans-title'); if(ptitle) ptitle.textContent = typeFilter ? (TLABEL[typeFilter]||'Plans') : 'Your plans';
   const pmeta=$('plans-meta'); pmeta.textContent = shown.length+(shown.length===1?' plan':' plans');
+  // Focused list view when a type is picked: hide the dashboard widgets (stat cards,
+  // featured panel, liabilities/lent) so it's a clean list, not "the dashboard".
+  if(typeFilter){
+    const stats=document.querySelector('.stats'); if(stats) stats.style.display='none';
+    if($('featured')) $('featured').style.display='none';
+    if($('rightcol')) $('rightcol').style.display='none';
+    const g=document.querySelector('.grid2'); if(g) g.style.gridTemplateColumns='1fr';
+    const pl=$('plans') && $('plans').closest('.panel'); if(pl) pl.style.marginTop='0';
+    // greeting sub reflects the view
+    const sub=$('sub'); if(sub) sub.textContent = (TLABEL[typeFilter]||'Plans')+' · '+shown.length+(shown.length===1?' plan':' plans');
+  }
   const plist=$('plans');
   if(!shown.length){
     const e=el('div','emptypanel');
