@@ -7,161 +7,406 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/assets/ledger.css">
+<link rel="stylesheet" href="/static/assets/app.css">
 <style>
-  .nw{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:18px 0}
-  .nw .card .k{font-size:12px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.1em;font-weight:700}
-  .nw .card .v{font-family:"Fraunces",serif;font-size:28px;margin-top:6px}
-  table.hold{width:100%;border-collapse:collapse;margin-top:8px}
-  table.hold th,table.hold td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
-  table.hold th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint)}
-  .flag{display:inline-block;font-size:11px;font-family:"JetBrains Mono";color:var(--accent);font-weight:700}
-  .ctl{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0 20px}
-  .ctl input,.ctl select{font-family:inherit;font-size:14px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
-  .warn{color:var(--neg);font-size:13px;min-height:18px}
+/* ── holdings.html-only rules (shell + KPI groups live in app.css) ── */
+.emptypanel{padding:30px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px}
+
+/* net-worth equation readout */
+.nwbody{padding:22px}
+.nweq{display:flex;align-items:stretch;gap:0;border:1px solid var(--line-2);border-radius:12px;overflow:hidden}
+.nweq .seg{flex:1;padding:13px 14px;text-align:center}
+.nweq .seg+.seg{border-left:1px solid var(--line-2)}
+.nweq .op{display:flex;align-items:center;padding:0 6px;font-family:"Fraunces",serif;font-size:20px;color:var(--ink-faint)}
+.nweq .sl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:700}
+.nweq .sv{font-family:"JetBrains Mono";font-weight:700;font-size:17px;margin-top:5px}
+.nweq .sv.own{color:var(--pos)} .nweq .sv.owe{color:var(--neg)} .nweq .sv.net{color:var(--ink)}
+
+/* holdings table */
+.htbl{width:100%;border-collapse:collapse}
+.htbl th,.htbl td{text-align:left;padding:12px 22px;border-top:1px solid var(--line-2);font-size:13.5px;vertical-align:middle}
+.htbl thead th{border-top:none;border-bottom:1px solid var(--line);font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700;padding:14px 22px}
+.htbl tbody tr{transition:background .2s}
+.htbl tbody tr:hover{background:var(--paper-2);cursor:pointer}
+.htbl td.num{font-family:"JetBrains Mono";font-weight:600;text-align:right;white-space:nowrap}
+.htbl .hnm{font-weight:600;font-size:14px}
+.htbl .hac{font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:2px;text-transform:capitalize}
+.gn.up{color:var(--pos)} .gn.dn{color:var(--neg)} .gn.flat{color:var(--ink-faint)}
+.flag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:5px;font-family:"JetBrains Mono";background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.qcell input{font-family:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:104px;transition:border-color .2s}
+.qcell input:focus{outline:none;border-color:var(--primary)}
+
+/* fx + currency controls */
+.ctlbody{padding:20px 22px;display:flex;flex-direction:column;gap:16px}
+.ctlrow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+.fld input,.fld select{font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);transition:border-color .2s}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--primary)}
+.fld input{width:120px}
+.setbtn{font-weight:600;font-size:14px;padding:9px 16px;border-radius:9px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;box-shadow:0 8px 18px -10px var(--primary);transition:transform .2s}
+.setbtn:hover{transform:translateY(-2px)}
+.callout{margin-top:4px;padding:13px 15px;border:1px solid var(--line-2);border-radius:11px;background:var(--paper-2);font-size:12.5px;color:var(--ink-soft);font-family:"JetBrains Mono";line-height:1.6}
+.callout.empty{color:var(--ink-faint)}
+.err{color:var(--neg);font-size:13px;min-height:18px}
+.manualcap{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <nav class="nav">
-    <a class="brand" href="/"><span class="glyph"></span> Khata</a>
-    <div><a class="link" href="/features">Features</a><a class="link" href="/app">Open app</a></div>
-  </nav>
+<div class="app">
+  <!-- sidebar -->
+  <aside class="side">
+    <a class="brand" href="/app"><span class="glyph"></span> Khata</a>
+    <a class="newplan" href="/create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
+    <div class="navsec">Overview</div>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
+    <a class="nav-i on" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
+    <div class="navsec">Money plans</div>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <div class="navsec">Records</div>
+    <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
+    <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
+    <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+  </aside>
 
-  <header class="hero" style="padding:32px 0 8px">
-    <h1>Holdings &amp; net worth</h1>
-    <p>Your positions and loans, consolidated into one figure in your base currency.</p>
-  </header>
+  <!-- main -->
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>Holdings &amp; net worth</h1>
+        <div class="sub" id="sub">consolidated into one figure in your base currency</div>
+      </div>
+      <div class="top-right">
+        <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="INR"><span class="cs">₹</span> INR</button><button data-set="USD"><span class="cs">$</span> USD</button></div>
+        <a class="addbtn" href="/create"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
+        <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init" id="ava-init"></span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
+      </div>
+    </div>
 
-  <section class="nw" id="nw">
-    <div class="card"><div class="k">Assets</div><div class="v mono" id="assets">—</div></div>
-    <div class="card"><div class="k">Liabilities</div><div class="v mono" id="liabilities">—</div></div>
-    <div class="card"><div class="k">Net worth</div><div class="v mono" id="net">—</div></div>
-  </section>
+    <div class="content">
+      <div class="grid2">
+        <!-- LEFT MAIN -->
+        <div class="stack">
+          <!-- net worth hero -->
+          <div class="panel fade" id="nw-panel"></div>
+          <!-- holdings table -->
+          <div class="panel fade d1" id="hold-panel"></div>
+        </div>
 
-  <div class="warn" id="callout"></div>
-
-  <div class="ctl">
-    <label class="muted">Base
-      <select id="base"><option value="INR">INR ₹</option><option value="USD">USD $</option></select>
-    </label>
-    <label class="muted">FX 1
-      <select id="fxq"><option value="USD">USD</option><option value="INR">INR</option></select>
-      =
-      <input id="fxr" placeholder="83.42" style="width:90px">
-      <span id="fxbase">base</span>
-    </label>
-    <button class="btn" id="setfx">Set rate</button>
-    <span class="warn" id="err"></span>
-  </div>
-
-  <table class="hold">
-    <thead><tr><th>Holding</th><th>Qty</th><th>Value</th><th>Gain</th><th>In base</th><th>Quote</th></tr></thead>
-    <tbody id="rows"></tbody>
-  </table>
+        <!-- RIGHT RAIL -->
+        <div class="stack">
+          <!-- currency + fx controls -->
+          <div class="panel fade d2" id="ctl-panel"></div>
+        </div>
+      </div>
+    </div>
+  </main>
 </div>
 
 <script>
-  const $ = (id) => document.getElementById(id);
-  const SYM = { INR: "₹", USD: "$" };
+const $ = (id) => document.getElementById(id);
+let BASE = "INR";
 
-  function fmtMinor(m, ccy) {
-    if (m === null || m === undefined) return "—";
-    const neg = m < 0; const v = Math.abs(m) / 100;
-    return (neg ? "-" : "") + (SYM[ccy] || "") + v.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+// ── currency formatting (real amounts; native columns in their own ccy, base columns in BASE) ──
+function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
+function usGroup(n){return Math.round(n).toLocaleString('en-US');}
+function sym(ccy){return ccy==='INR'?'₹':(ccy==='USD'?'$':'');}
+// grouped number string (sign included), no symbol — INR uses lakh grouping, else US
+function fmtNum(minor, ccy){
+  if(minor===null||minor===undefined) return '—';
+  const v=minor/100;
+  return ccy==='INR'?indGroup(v):usGroup(v);
+}
+
+function el(tag, cls, text){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined && text!==null) e.textContent=text;
+  return e;
+}
+// an amount cell = <symbol><number>, all textContent (K4) — ccy defaults to BASE
+function amtSpan(minor, ccy, cls){
+  ccy = ccy || BASE;
+  const wrap=document.createElement('span');
+  if(cls) wrap.className=cls;
+  if(minor===null||minor===undefined){ wrap.textContent='—'; return wrap; }
+  const neg=minor<0;
+  const s=el('span','symword',(neg?'-':'')+sym(ccy));
+  const n=el('span',null,fmtNum(Math.abs(minor), ccy));
+  wrap.append(s,n);
+  return wrap;
+}
+// quantity micro → grouped number (e.g. 92500000 → "92.5")
+function fmtMicro(q){
+  if(q===null||q===undefined) return '—';
+  const v=q/1e6;
+  // keep up to 3 decimals, strip trailing zeros
+  return v.toLocaleString('en-IN',{maximumFractionDigits:3});
+}
+
+// ── net worth hero panel ──
+function renderNetWorth(box, d){
+  box.textContent='';
+  const ph=el('div','ph');
+  ph.append(el('div','t','Net worth'), el('div','meta','assets − liabilities = net'));
+  box.append(ph);
+
+  // KPI strip (app.css .kpis/.kpi)
+  const kpis=el('div','kpis');
+  function kpi(cls,label,minor){
+    const k=el('div','kpi'+(cls?' '+cls:''));
+    k.append(el('div','l',label));
+    const n=el('div','n'); n.append(amtSpan(minor)); k.append(n);
+    return k;
   }
-  function fmtMicro(q) { if (q === null || q === undefined) return "—"; return (q / 1e6).toLocaleString("en-IN"); }
+  kpis.append(
+    kpi('paid','Assets', d.assets_minor),
+    kpi('rem','Liabilities', d.liabilities_minor),
+    kpi('','Net worth', d.net_worth_minor));
+  box.append(kpis);
 
-  async function load() {
-    const r = await fetch("/api/networth");
-    if (r.status === 401) { window.location.href = "/"; return; }
-    const d = await r.json();
-    const base = d.base_currency;
-    $("base").value = base;
-    $("fxbase").textContent = base;
-    $("assets").textContent = fmtMinor(d.assets_minor, base);
-    $("liabilities").textContent = fmtMinor(d.liabilities_minor, base);
-    $("net").textContent = fmtMinor(d.net_worth_minor, base);
+  // equation readout (assets − liabilities = net) — all real
+  const body=el('div','nwbody');
+  const eq=el('div','nweq');
+  function seg(cls,label,minor){
+    const s=el('div','seg');
+    s.append(el('div','sl',label));
+    const v=el('div','sv '+cls); v.append(amtSpan(minor)); s.append(v);
+    return s;
+  }
+  eq.append(seg('own','Assets', d.assets_minor));
+  eq.append(el('div','op','−'));
+  eq.append(seg('owe','Liabilities', d.liabilities_minor));
+  eq.append(el('div','op','='));
+  eq.append(seg('net','Net', d.net_worth_minor));
+  body.append(eq);
+  box.append(body);
+}
 
-    const bits = [];
-    if (d.unpriced.length) bits.push(d.unpriced.length + " unpriced holding(s)");
-    for (const [ccy, b] of Object.entries(d.unconverted)) {
-      bits.push("unconverted " + ccy + ": " + fmtMinor(b.assets_minor, ccy) + " assets / " + fmtMinor(b.liabilities_minor, ccy) + " liab (set an FX rate)");
+// ── holdings table panel ──
+function renderHoldings(box, d){
+  box.textContent='';
+  const rows = d.holdings || [];
+  const ph=el('div','ph');
+  ph.append(el('div','t','Holdings'), el('div','meta', rows.length+(rows.length===1?' position':' positions')));
+  box.append(ph);
+
+  if(!rows.length){
+    const e=el('div','emptypanel');
+    e.append(document.createTextNode('No holdings yet — '));
+    const a=el('a'); a.href='/create'; a.textContent='create one'; a.style.color='var(--primary-deep)'; a.style.fontWeight='600';
+    e.append(a);
+    box.append(e);
+    return;
+  }
+
+  const tbl=el('table','htbl');
+  const thead=el('thead'); const htr=el('tr');
+  ['Holding','Qty','Value','Gain','In base','Quote'].forEach((h,i)=>{
+    const th=el('th',null,h);
+    if(i>=1 && i<=4) th.style.textAlign='right';
+    htr.append(th);
+  });
+  thead.append(htr); tbl.append(thead);
+
+  const tbody=el('tbody');
+  for(const h of rows){
+    const tr=el('tr');
+    tr.addEventListener('click', ()=>{ window.location.href='/holding/'+h.id; });
+
+    // name + asset class
+    const nameTd=el('td');
+    nameTd.append(el('div','hnm', h.name));
+    nameTd.append(el('div','hac', h.asset_class));
+    tr.append(nameTd);
+
+    // qty
+    tr.append(el('td','num', fmtMicro(h.qty_held_micro)));
+
+    // current value (native ccy)
+    const valTd=el('td','num'); valTd.append(amtSpan(h.current_value_minor, h.currency)); tr.append(valTd);
+
+    // unrealized gain (native ccy), color by sign
+    const gainTd=el('td','num');
+    const g=h.unrealized_gain_minor;
+    const gnCls = (g===null||g===undefined)?'flat':(g>0?'up':(g<0?'dn':'flat'));
+    const gnWrap=amtSpan(g, h.currency, 'gn '+gnCls);
+    if((g||0)>0){ gnWrap.insertBefore(document.createTextNode('+'), gnWrap.firstChild); }
+    gainTd.append(gnWrap);
+    tr.append(gainTd);
+
+    // in-base — converted (already in BASE) or honest flag when null
+    const baseTd=el('td','num');
+    if(h.value_in_base_minor===null || h.value_in_base_minor===undefined){
+      baseTd.append(el('span','flag', h.priced ? 'no rate' : 'unpriced'));
+    } else {
+      baseTd.append(amtSpan(h.value_in_base_minor, BASE));
     }
-    $("callout").textContent = bits.join(" · ");
+    tr.append(baseTd);
 
-    $("rows").innerHTML = "";
-    for (const h of d.holdings) {
-      const tr = document.createElement("tr");
-      // Build cells via DOM + textContent (never innerHTML) so user-controlled
-      // strings (name, asset_class) can't inject markup — XSS-safe.
-      const cell = (txt, mono) => {
-        const td = document.createElement("td");
-        if (mono) td.className = "mono";
-        td.textContent = txt;
-        return td;
-      };
-      const nameTd = document.createElement("td");
-      nameTd.textContent = h.name + " ";
-      const ac = document.createElement("span");
-      ac.className = "muted";
-      ac.textContent = h.asset_class;
-      nameTd.appendChild(ac);
-
-      const baseTd = document.createElement("td");
-      baseTd.className = "mono";
-      if (h.value_in_base_minor === null) {
-        const flag = document.createElement("span");
-        flag.className = "flag";
-        flag.textContent = h.priced ? "no rate" : "unpriced";
-        baseTd.appendChild(flag);
-      } else {
-        baseTd.textContent = fmtMinor(h.value_in_base_minor, base);
-      }
-
-      const qTd = document.createElement("td");
-      const qi = document.createElement("input");
-      qi.className = "q";
-      qi.dataset.id = h.id;
-      qi.placeholder = "price/unit";
-      qi.style.width = "96px";
-      qTd.appendChild(qi);
-
-      tr.append(
-        nameTd,
-        cell(fmtMicro(h.qty_held_micro), true),
-        cell(fmtMinor(h.current_value_minor, h.currency), true),
-        cell(fmtMinor(h.unrealized_gain_minor, h.currency), true),
-        baseTd,
-        qTd,
-      );
-      $("rows").appendChild(tr);
-    }
-    document.querySelectorAll("input.q").forEach((el) => {
-      el.addEventListener("keydown", async (e) => {
-        if (e.key !== "Enter") return;
-        await post("/api/plans/" + el.dataset.id + "/holding/quote", { price: el.value });
-        load();
-      });
+    // inline quote input (Enter → POST quote, then reload). Don't bubble to row nav.
+    const qTd=el('td','qcell');
+    const qi=el('input');
+    qi.placeholder='price/unit';
+    qi.dataset.id=h.id;
+    qi.addEventListener('click', (e)=>e.stopPropagation());
+    qi.addEventListener('keydown', async (e)=>{
+      e.stopPropagation();
+      if(e.key!=='Enter') return;
+      const ok=await post('/api/plans/'+qi.dataset.id+'/holding/quote', { price: qi.value });
+      if(ok) load();
     });
+    qTd.append(qi);
+    tr.append(qTd);
+
+    tbody.append(tr);
   }
+  tbl.append(tbody);
+  box.append(tbl);
+}
 
-  async function post(path, body) {
-    $("err").textContent = "";
-    const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify(body) });
-    if (!r.ok) { const e = await r.json().catch(() => ({})); $("err").textContent = e.detail || e.error || "Failed"; }
-    return r.ok;
+// ── currency + FX controls panel ──
+function renderControls(box, d, feedEnabled){
+  box.textContent='';
+  const ph=el('div','ph');
+  ph.append(el('div','t','Currency & FX'), el('div','meta','base + manual rates'));
+  box.append(ph);
+
+  const body=el('div','ctlbody');
+
+  // base currency
+  const r1=el('div','ctlrow');
+  const baseFld=el('div','fld');
+  baseFld.append(el('label',null,'Base currency'));
+  const baseSel=el('select'); baseSel.id='base';
+  [['INR','INR ₹'],['USD','USD $']].forEach(([v,t])=>{ const o=el('option',null,t); o.value=v; baseSel.append(o); });
+  baseSel.value=BASE;
+  baseSel.addEventListener('change', async ()=>{
+    if(await post('/api/base-currency', { currency: baseSel.value })) location.reload();
+  });
+  baseFld.append(baseSel);
+  r1.append(baseFld);
+  body.append(r1);
+
+  // fx rate: 1 <quote> = <rate> BASE
+  const r2=el('div','ctlrow');
+  const qFld=el('div','fld');
+  qFld.append(el('label',null,'FX — 1 of'));
+  const fxq=el('select'); fxq.id='fxq';
+  [['USD','USD'],['INR','INR']].forEach(([v,t])=>{ const o=el('option',null,t); o.value=v; fxq.append(o); });
+  qFld.append(fxq);
+  r2.append(qFld);
+
+  const rFld=el('div','fld');
+  const rl=el('label'); rl.append(document.createTextNode('= rate in '));
+  const bb=el('b'); bb.textContent=BASE; rl.append(bb);
+  rFld.append(rl);
+  const fxr=el('input'); fxr.id='fxr'; fxr.placeholder='83.42'; fxr.inputMode='decimal';
+  rFld.append(fxr);
+  r2.append(rFld);
+
+  const setBtn=el('button','setbtn','Set rate');
+  setBtn.addEventListener('click', async ()=>{
+    if(await post('/api/fx-rates', { quote: fxq.value, rate: fxr.value })){ fxr.value=''; load(); }
+  });
+  r2.append(setBtn);
+  body.append(r2);
+
+  const errEl=el('div','err',''); errEl.id='err'; body.append(errEl);
+
+  // honest callout: unpriced count + unconverted per-currency balances
+  const callout=el('div','callout');
+  const bits=[];
+  const unpriced=d.unpriced||[];
+  if(unpriced.length) bits.push(unpriced.length+' unpriced holding'+(unpriced.length===1?'':'s')+' — set a quote to value');
+  const unconv=d.unconverted||{};
+  for(const [ccy,b] of Object.entries(unconv)){
+    bits.push('Unconverted '+ccy+': '+sym(ccy)+fmtNum(b.assets_minor,ccy)+' assets / '+sym(ccy)+fmtNum(b.liabilities_minor,ccy)+' liab — set a '+ccy+' rate');
   }
+  if(!bits.length){
+    callout.classList.add('empty');
+    callout.textContent='Everything priced and converted into '+BASE+'.';
+  } else {
+    bits.forEach((t,i)=>{ if(i) callout.append(el('br')); callout.append(document.createTextNode(t)); });
+  }
+  body.append(callout);
 
-  $("base").addEventListener("change", async () => {
-    if (await post("/api/base-currency", { currency: $("base").value })) load();
-  });
-  $("setfx").addEventListener("click", async () => {
-    if (await post("/api/fx-rates", { quote: $("fxq").value, rate: $("fxr").value })) { $("fxr").value = ""; load(); }
-  });
+  // live-feed gating — only show "live" affordance hint when the feed is enabled.
+  // The mockup's decorative spot-price ticker is NOT rendered: those market numbers
+  // are data we don't have. When disabled (default), state honestly that quotes are manual.
+  const cap=el('div','manualcap');
+  cap.textContent = feedEnabled
+    ? 'Live feed enabled — quotes can refresh from the market feed.'
+    : 'Quotes are entered manually (no live market feed).';
+  body.append(cap);
 
-  load();
+  box.append(body);
+}
+
+// ── POST helper ──
+async function post(path, payload){
+  const errEl=$('err');
+  if(errEl) errEl.textContent='';
+  const r=await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+  if(r.status===401){ window.location.href='/'; return false; }
+  if(!r.ok){
+    const e=await r.json().catch(()=>({}));
+    if(errEl) errEl.textContent = e.detail || e.error || 'Failed.';
+  }
+  return r.ok;
+}
+
+// ── boot/load ──
+async function load(){
+  const me = await fetch('/api/auth/me');
+  if(me.status===401){ window.location.href='/'; return; }
+  const user=(await me.json()).user;
+  $('ava-init').textContent=((user.display_name||'?')[0]||'?').toUpperCase();
+
+  const r = await fetch('/api/networth');
+  if(r.status===401){ window.location.href='/'; return; }
+  const d = await r.json();
+
+  BASE = d.base_currency || 'INR';
+  document.documentElement.dataset.cur = BASE.toLowerCase();
+  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));
+
+  // live-feed config gate (default disabled → no decorative ticker)
+  let feedEnabled=false;
+  try{ const fc=await fetch('/api/feed/config'); if(fc.ok){ feedEnabled = (await fc.json()).enabled===true; } }catch(e){}
+
+  renderNetWorth($('nw-panel'), d);
+  renderHoldings($('hold-panel'), d);
+  renderControls($('ctl-panel'), d, feedEnabled);
+
+  // sidebar live counts from /api/plans
+  try{
+    const plansResp = await fetch('/api/plans').then(x=>x.json());
+    const plans = plansResp.plans || [];
+    const by=(t)=>plans.filter(p=>p.type===t).length||'';
+    $('ct-asset').textContent=by('asset');
+    $('ct-chit').textContent=by('chit');
+    $('ct-loan').textContent=by('loan');
+    $('ct-retirement').textContent=by('retirement');
+  }catch(e){}
+}
+
+// ── currency toggle: real base-currency switch + reload ──
+$('curtog').addEventListener('click', async (e)=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const target=b.dataset.set;
+  if(target===BASE) return;
+  await fetch('/api/base-currency',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({currency:target})});
+  location.reload();
+});
+
+// ── profile photo upload (localStorage, display-only) ──
+(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
+
+load();
 </script>
 </body>
 </html>
