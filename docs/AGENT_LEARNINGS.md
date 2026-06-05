@@ -141,3 +141,30 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
 - Roll holdings' `current_value_minor` into `dashboard.net_position` gross assets; cross-currency FX.
 - Build the rich `holdings.html` net-worth UI. Price history + live spot feeds. Dividends/401(k).
 - `holding_state`/`asset_state`/`loan_state` all take an unused `session` arg — reconcile together.
+
+## 2026-06-04 — Plan 2B (Net-worth consolidation + cross-currency)
+- `User.base_currency` (default INR) + a global `fx_rates` table (directed `(base,quote)` →
+  `rate_micro`, base units per 1 quote unit ×10⁶). `services/fx.py`: `convert` (exact Decimal),
+  `get_rate` (identity for base==quote, None on miss), `set_rate` (upsert, validates pair + positivity).
+- `services/networth.net_worth` consolidates OWNED plans only: holdings at market `current_value`
+  (asset), loan given = asset, loan taken = liability; asset-purchase plans excluded. Each valued
+  amount is converted to base if a rate exists, else added to an `unconverted[ccy]` bucket. Unquoted
+  holdings → `unpriced[]`. Nothing guessed (the "value-what-you-can" rule). The money-flow invariant —
+  base totals can never include unconverted/unpriced — is enforced structurally (one `_apply` helper).
+- New `networth` blueprint hosts `/api/networth` + `/api/base-currency` + `/api/fx-rates` (the FX rate
+  is set from the caller's current base to a quote; parsed via `to_micro`, so float is rejected).
+- `holdings.html` at `/holdings` renders the live consolidation (assets/liabilities/net, unpriced +
+  unconverted callouts, per-holding inline quote). Review + the automated security scan caught a
+  stored-XSS in the row rendering (holding name/asset_class via innerHTML) — fixed to build cells via
+  createElement + textContent. Lesson: never innerHTML user-controlled strings; the editorial pages'
+  static markup is fine, but any list rendered from API data must use DOM/textContent.
+- The existing `/api/dashboard` (`net_position`) was deliberately left untouched — net worth is a
+  separate, holdings-aware endpoint.
+
+### Deferred follow-ups
+- Gold-loan-vs-selling analysis; live spot/FX feeds; holdings in shared plans; asset-purchase net-worth
+  treatment; fold net worth into the main dashboard.
+- `net_worth`/`*_state` use `as_of=date.today()` (non-deterministic across day boundaries) and take an
+  unused `session` arg in places — reconcile when an as-of report view is built.
+- Add a null guard to `fmtMicro` in holdings.html (symmetry with fmtMinor). Carry the 2A follow-ups
+  (None-qty ValidationError guard, holdings edge tests).

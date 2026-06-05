@@ -1,11 +1,11 @@
 {
   "project": "khata",
   "phase": 2,
-  "plan": "2A-holdings",
-  "tasks_total": 6,
-  "tasks_done": 6,
+  "plan": "2B-networth",
+  "tasks_total": 7,
+  "tasks_done": 7,
   "last_updated": "2026-06-04",
-  "tests": "97 passed",
+  "tests": "112 passed",
   "python": "3.12",
-  "notes": "Plan 2A complete: holding plan type (generic position: asset_class+unit+symbol/purity), integer micro-unit quantities (no float), buy/sell as ledger rows (quantity_micro), manual latest-quote valuation, derived average-cost holding_state (qty held, cost of held, current value, realized+unrealized gain). API: create dispatch + /holding/buys, /sells, /quote (owner-only). Dashboard untouched. Next: Plan 2B (net-worth consolidation + cross-currency FX + holdings.html UI)."
+  "notes": "Plan 2B complete: net-worth consolidation (owned holdings at market value + loans given=asset/taken=liability) in a per-user base_currency, cross-currency via a manual fx_rates table (directed rate_micro, exact Decimal). Value-what-you-can: unpriced holdings + no-rate currencies surfaced separately, never guessed. New networth blueprint (GET /api/networth, POST /api/base-currency, POST /api/fx-rates) + live holdings.html page at /holdings (XSS-safe DOM rendering). Existing /api/dashboard untouched. Holdings & net-worth milestone complete."
 }

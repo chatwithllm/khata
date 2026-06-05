@@ -43,3 +43,11 @@ def test_landing_has_login_and_google_hook(client):
     assert "/api/auth/config" in body      # decides whether to show Google button
     assert "/api/auth/google" in body
     assert "ledger.css" in body
+
+
+def test_holdings_page_served(client):
+    r = client.get("/holdings")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["Net worth", "/api/networth", "/api/fx-rates", "ledger.css"]:
+        assert needle in body

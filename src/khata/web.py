@@ -20,3 +20,8 @@ def app_shell():
 @bp.get("/features")
 def features():
     return send_from_directory(_static_dir(), "features.html")
+
+
+@bp.get("/holdings")
+def holdings():
+    return send_from_directory(_static_dir(), "holdings.html")
