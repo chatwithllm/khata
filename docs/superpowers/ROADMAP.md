@@ -38,7 +38,7 @@ highest usability payoff; little new backend. Shared `ledger.css` + a real app s
 - [x] **3.3 Asset detail + log-payment** (`asset-detail.html`, `log-payment.html`). Schedule,
   roll-forward, funding breakdown, contributors, payment log; wired to detail + `installments` +
   `payments`. Log-payment as a shared modal.
-- [ ] **3.4 Loan detail** (`loan-detail.html`). `loan_state` (principal/interest/schedule),
+- [x] **3.4 Loan detail** (`loan-detail.html`). `loan_state` (principal/interest/schedule),
   disbursements + interest/principal entries; wired to the loan endpoints.
 - [ ] **3.5 Holding detail + sharing panel.** Per-holding page (buy/sell/quote, position history) +
   a reusable members panel (add/remove via `POST/GET/DELETE /api/plans/<id>/members`) surfaced on every

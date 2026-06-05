@@ -200,3 +200,10 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   (`card`/`salary`/`chit payout`) → clean 400 (K1) but invalid UX. Fixed to mirror
   `assets.py METHODS/SOURCES`. **Rule extension:** K5 pre-flight covers ENUMS too — a `<select>`'s option
   values must equal the service's allowed set, not be guessed.
+
+## 2026-06-04 — Plan 3.4 (Loan detail)
+- `/loan/<id>` page: principal-outstanding / interest-due / total cards, accrued/paid/months-behind/as-of
+  status line, and the monthly-interest schedule — from `loan_state`. One action modal routes by type:
+  disbursement → `/loan/disbursements`; interest/principal → `/loan/entries` (method select shows only
+  for entries). All cells via createElement (K4). Note: the loan-entries route does NOT enforce a method
+  enum (unlike asset payments) — values are free-form there.
