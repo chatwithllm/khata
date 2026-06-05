@@ -64,11 +64,12 @@ def test_quote_sets_value_and_unrealized(ctx):
     plan = _gold(s, u)
     add_buy(s, plan=plan, user_id=u.id, quantity_micro=10_000_000, amount_minor=50000000,
             occurred_at=_dt(1))
-    set_quote(s, plan=plan, price_minor=60000, as_of=_dt(3))   # 600/g spot
+    # bought 10 g for ₹5,00,000 (avg ₹50,000/g); spot now ₹60,000/g
+    set_quote(s, plan=plan, price_minor=6000000, as_of=_dt(3))
     s.commit()
     st = holding_state(s, plan.holding)
-    assert st["current_value_minor"] == 60000 * 10        # 600,000
-    assert st["unrealized_gain_minor"] == 60000 * 10 - 50000000  # 100,000
+    assert st["current_value_minor"] == 60000000          # ₹6,00,000 = 60,000/g × 10 g
+    assert st["unrealized_gain_minor"] == 10000000         # +₹1,00,000 over cost of held
 
 
 def test_sell_reduces_qty_and_realized_gain(ctx):
