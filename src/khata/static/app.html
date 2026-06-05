@@ -69,10 +69,10 @@
     <a class="nav-i on" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
     <a class="nav-i" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
     <div class="navsec">Money plans</div>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <a class="nav-i" href="/app?type=asset" data-nav="asset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i" href="/app?type=chit" data-nav="chit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app?type=loan" data-nav="loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app?type=retirement" data-nav="retirement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
     <div class="navsec">Records</div>
     <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</a>
     <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Proofs</a>
@@ -108,7 +108,7 @@
         <div>
           <div class="panel fade d2" id="featured"></div>
           <div class="panel plist fade d3" style="margin-top:22px">
-            <div class="ph"><div class="t" style="font-size:16px">Your plans</div><div class="meta" id="plans-meta"></div></div>
+            <div class="ph"><div class="t" id="plans-title" style="font-size:16px">Your plans</div><div class="meta" id="plans-meta"></div></div>
             <div id="plans"></div>
           </div>
         </div>
@@ -459,16 +459,24 @@ async function boot(){
   $('ct-loan').textContent=by('loan');
   $('ct-retirement').textContent=by('retirement');
 
-  // "your plans" list
-  const pmeta=$('plans-meta'); pmeta.textContent=plans.length+(plans.length===1?' plan':' plans');
+  // "your plans" list — filtered by ?type=<asset|chit|loan|retirement> from the sidebar
+  const typeFilter = new URLSearchParams(location.search).get('type');
+  const TLABEL = {asset:'Assets', chit:'Chit funds', loan:'Loans', retirement:'401(k)'};
+  const shown = typeFilter ? plans.filter(p=>p.type===typeFilter) : plans;
+  // highlight the active sidebar item (Dashboard when no filter)
+  document.querySelectorAll('.side .nav-i').forEach(n=>n.classList.remove('on'));
+  if(typeFilter){ const navEl=document.querySelector('.side .nav-i[data-nav="'+typeFilter+'"]'); if(navEl) navEl.classList.add('on'); }
+  else { const dash=document.querySelector('.side .nav-i[href="/app"]'); if(dash) dash.classList.add('on'); }
+  const ptitle=$('plans-title'); if(ptitle) ptitle.textContent = typeFilter ? (TLABEL[typeFilter]||'Plans') : 'Your plans';
+  const pmeta=$('plans-meta'); pmeta.textContent = shown.length+(shown.length===1?' plan':' plans');
   const plist=$('plans');
-  if(!plans.length){
+  if(!shown.length){
     const e=el('div','emptypanel');
-    e.append(document.createTextNode('No plans yet — '));
+    e.append(document.createTextNode(typeFilter ? ('No '+(TLABEL[typeFilter]||'plans').toLowerCase()+' yet — ') : 'No plans yet — '));
     const a=el('a'); a.href='/create'; a.textContent='create one'; e.append(a);
     plist.append(e);
   } else {
-    for(const p of plans){
+    for(const p of shown){
       const row=document.createElement('a'); row.className='prow'; row.href='/'+p.type+'/'+p.id;
       const left=el('div');
       const l1=el('div','l1'); l1.append(el('span','tag '+p.type, p.type), document.createTextNode(' '));
@@ -479,6 +487,7 @@ async function boot(){
       plist.append(row);
     }
   }
+  if(typeFilter){ const panel=plist.closest('.panel'); if(panel) panel.scrollIntoView({behavior:'smooth', block:'center'}); }
 
   // featured asset
   const assets = plans.filter(p=>p.type==='asset');

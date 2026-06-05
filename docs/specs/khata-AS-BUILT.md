@@ -112,6 +112,9 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   balances recompute. Frontend: ✎ edit on each asset-detail ledger row reopens the slide-over pre-filled.
 - **2026-06-05 — Payment date.** Log-payment slide-over has a "Date (when it happened)" field → `occurred_at`
   (distinct from auto `created_at` = when logged). Ledger shows "· logged X" when the two differ.
+- **2026-06-05 — Sidebar type filter.** Dashboard sidebar Assets/Chit/Loans/401(k) now link `/app?type=<t>`
+  → the "Your plans" list filters to that type, the nav item highlights, the panel relabels, and it scrolls
+  into view (were all dead `href=/app`). Holdings still → `/holdings`.
 - **2026-06-05 — Log out.** **Every app page's** sidebar has a **Log out** item → `POST /api/auth/logout` then
   redirect `/` (the rich dashboard had shipped without one). Endpoint already existed.
 - **2026-06-05 — `ledger` exposed in asset/loan state** (was chit-only); entries carry `id` + `created_at`.
@@ -145,6 +148,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Dashboard sidebar type items (Assets/Chit/Loans/401k) filter the plan list via ?type.
 - 2026-06-05 — Landing: nav + hero 'Sign in' open the sign-in/create modal in one click (was scroll-then-click).
 - 2026-06-05 — Added Log out to every app page's sidebar (dashboard + 9 detail/tool pages).
 - 2026-06-05 — Created this as-built spec. Recorded: editable ledger (PATCH /entries), payment occurred_at
