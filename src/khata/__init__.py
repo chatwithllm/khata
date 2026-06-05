@@ -52,6 +52,9 @@ def create_app(config: Config | None = None) -> Flask:
     from .api.confirmations import bp as confirmations_bp
     app.register_blueprint(confirmations_bp)
 
+    from .api.backup import bp as backup_bp
+    app.register_blueprint(backup_bp)
+
     from .api.dashboard import bp as dashboard_bp
     app.register_blueprint(dashboard_bp)
 

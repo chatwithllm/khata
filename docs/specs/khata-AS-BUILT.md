@@ -119,6 +119,10 @@ plans they own); filtered to plans they can access. The action endpoint is `POST
 i_owe_minor, owed_to_me_minor, plans:[{id,type,name,currency,role}]}`) · POST base-currency · POST fx-rates.
 **Analysis**: GET `/api/analysis/hold-vs-sell?asset_value&appreciation&borrow&interest&horizon`.
 **Feed** (optional): GET `/api/feed/config` (`{enabled}`).
+**Backup** (`/api`): GET `/backup` → whole-instance JSON snapshot of every table, as a file download
+(`khata-backup-<date>.json`, `no-store`) · POST `/restore` (multipart `file` or raw JSON body) → MERGE the
+backup in (users matched by email, plans+children inserted fresh with remapped FKs), auto-saving a
+pre-restore snapshot first; returns `{ok, stats, pre_restore_saved}`. Both authenticated.
 
 **Authorization:** mutations are **owner-only** (`_owned_plan`); reads are owner-or-**active**-member
 (`_accessible_plan` → `sharing.accessible`, which now requires status `active`, so an invited member
@@ -136,6 +140,17 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-05 — Whole-instance backup & restore (data portability).** "Your data is yours" — two paths,
+  both shipping. (1) **In-app JSON**: `GET /api/backup` downloads a single versioned snapshot of every table
+  (`services/backup.export_all` — generic over the mapper, robust to schema changes); `POST /api/restore`
+  **merges** an uploaded backup (`import_merge`): users matched by email (existing reused, missing created),
+  all plans + 1:1 sub-rows + installments + ledger_entries + memberships + fx inserted fresh with FKs
+  remapped to the target instance's ids (loan collateral refs remapped too; fx deduped by base/quote/as_of).
+  Merge = adds-on-top (re-importing duplicates plans — warned in the UI); a pre-restore snapshot is auto-saved
+  server-side to `backups/` first. Settings → **Data** panel: "Download backup" + "Restore from file"
+  (confirm + stats). (2) **CLI raw-SQLite** (`scripts/backup.sh` / `restore.sh`): exact byte snapshot via
+  SQLite online `.backup`, restore = file REPLACE (integrity-checked, typed confirm, saves a pre-restore copy).
+  Decisions: whole-instance scope · both mechanisms · JSON=merge / CLI=replace (a file swap can't merge).
 - **2026-06-05 — Chit monthly contribution schedule + next-due.** A chit runs `n_members` months (one
   auction/month) from `start_date` — now surfaced as a month-by-month schedule (no schema change; derived in
   `chit_state`). Each recorded contribution covers one month in order; remaining months are `due` (arrived) or
@@ -207,6 +222,10 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   `host=0.0.0.0`, a real `KHATA_SECRET_KEY`, persistent `KHATA_DATABASE_URL=sqlite:///<file>.db`.
 - Schema: `alembic upgrade head` (single linear head). Migrations: batch mode; `server_default` for new
   NOT NULL on existing tables; round-trip verified.
+- **Backup/restore**: in-app (Settings → Data) downloads/uploads a whole-instance JSON; or operator CLI
+  `scripts/backup.sh [DB] [DEST]` (online SQLite `.backup`, safe while live) + `scripts/restore.sh BACKUP [DB]`
+  (file replace; stop the app first). Auto-saved snapshots land in `<db_dir>/backups/` (gitignored). Back up
+  `khata_app.db` regularly — it's the only source of truth.
 - **Canonical local instance** (current): port **5057**, code from the `feat/landing-page` worktree,
   data in `khata_app.db`, secret persisted in `.env.app`, restart via `run-app.sh`. HTML is `no-store`
   (always fresh); static edits live on reload; Python edits need a restart. **Not yet** a reboot-surviving
@@ -220,6 +239,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Whole-instance backup & restore: in-app JSON download/upload (merge by email + FK remap, pre-restore auto-save) + CLI raw-SQLite backup.sh/restore.sh (replace). `GET /api/backup`, `POST /api/restore`, Settings → Data panel.
 - 2026-06-05 — Chit monthly contribution schedule + next-due reminder (chit_state.schedule/next_due_date/months_behind; chit-detail month-grid panel). Derived, no schema change.
 - 2026-06-05 — Per-entry contribution-amount agreement: a tagged contributor confirms or counter-proposes the amount attributed to them; owner accepts or re-counters until both agree. `ledger_entries.amount_status`/`counter_amount_minor` + `/api/confirmations` + `POST .../entries/<id>/amount`. Interim amount counts toward totals, flagged unconfirmed.
 - 2026-06-05 — Two-party sharing consent: invited members get a pending-approval banner (Accept/Decline) before the shared plan becomes visible. `plan_memberships.status` + `/api/invitations`.
