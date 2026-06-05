@@ -124,7 +124,7 @@
     </div>
     <div class="fld"><label for="note">Note (optional)</label><input id="note" placeholder=""></div>
     <div class="err" id="err"></div>
-    <div class="acts"><button class="save" id="save">Save payment</button><span class="cancel" id="cancel">Cancel</span></div>
+    <div class="acts"><button class="save" id="save">Save payment</button><span class="cancel" id="cancel">Cancel</span><span class="del" id="del-entry" style="display:none;margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
   </div>
 </aside>
 
@@ -208,7 +208,7 @@ function renderHeader(box, plan, st){
   const head=el('div','planhead');
   const row=el('div','row');
   row.append(el('span', null, 'Progress'));
-  row.append(el('span', null, pct+'% paid · '+paidCount+' of '+insts.length+' installments'));
+  row.append(el('span', null, insts.length ? (pct+'% paid · '+paidCount+' of '+insts.length+' installments') : (pct+'% paid · ad-hoc payments')));
   head.append(row);
   const bar=el('div','bigbar'); const i=el('i'); i.dataset.w=pct;
   bar.append(i);
@@ -276,10 +276,10 @@ function renderSchedule(box, st){
   const insts = st.installments || [];
   const ph=el('div','ph');
   const t=el('div','t','Installment schedule'); t.style.fontSize='16px';
-  ph.append(t, el('div','meta','planned vs paid'));
+  ph.append(t, el('div','meta', insts.length ? 'planned vs paid' : 'as funds arrive'));
   box.append(ph);
   const sched=el('div','sched fillrows');
-  if(!insts.length){ sched.append(el('div','emptypanel','No schedule set.')); box.append(sched); return; }
+  if(!insts.length){ sched.append(el('div','emptypanel','No fixed schedule — payments are logged as funds arrive.')); box.append(sched); return; }
   for(const it of insts){
     const dotCls = it.status==='paid'?'paid':(it.status==='partial'?'part':'due');
     const srow=el('div','srow');
@@ -472,6 +472,7 @@ function showOver(){ $('err').textContent=''; $('scrim').classList.add('on'); $(
 function openOver(){ // NEW payment
   editId=null; setTitle('Log a','payment'); $('oeyebrow').textContent='New entry'; $('save').textContent='Save payment';
   $('amount').value=''; $('note').value=''; $('method').value='transfer'; $('fsource').value='savings'; $('occurred').value=todayISO();
+  $('del-entry').style.display='none';   // no delete when logging a new entry
   showOver(); $('amount').focus();
 }
 function openEdit(lr){ // EDIT existing entry
@@ -481,6 +482,7 @@ function openEdit(lr){ // EDIT existing entry
   if(lr.method) $('method').value=lr.method;
   if(lr.funding_source) $('fsource').value=lr.funding_source;
   $('occurred').value=(lr.occurred_at||'').slice(0,10)||todayISO();
+  $('del-entry').style.display='inline';  // delete available when editing
   showOver(); $('amount').focus();
 }
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
@@ -578,6 +580,15 @@ $('save').addEventListener('click', async ()=>{
   if(r.ok){ closeOver(); boot(); return; }
   const e = await r.json().catch(()=>({}));
   $('err').textContent = e.detail || e.error || (editId?'Could not save changes.':'Could not log payment.');
+});
+$('del-entry').addEventListener('click', async ()=>{
+  if(!editId) return;
+  if(!confirm('Delete this entry? This cannot be undone.')) return;
+  $('err').textContent='';
+  const r = await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'DELETE' });
+  if(r.ok){ closeOver(); boot(); return; }
+  const e = await r.json().catch(()=>({}));
+  $('err').textContent = e.detail || e.error || 'Could not delete.';
 });
 
 // ── profile photo upload (localStorage, display-only) ──

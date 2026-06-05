@@ -84,8 +84,8 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 (`{google_client_id}`) · me (`{user:{id,email,display_name,has_password}}`).
 **Plans** (`/api/plans*`): GET `""` (list) · GET `/<id>` (`{plan, state}`) · POST `""` (create, dispatches
 on `type`) · POST `/<id>/installments` · POST `/<id>/payments` (asset; accepts **occurred_at**) ·
-**PATCH `/<id>/entries/<entry_id>`** (edit a ledger entry — owner-only; amount/occurred_at/method/
-funding_source/note; recomputes derived state) · POST `/<id>/loan/disbursements` · POST `/<id>/loan/entries`
+**PATCH/DELETE `/<id>/entries/<entry_id>`** (edit / delete a ledger entry — owner-only; edit takes amount/
+occurred_at/method/funding_source/note; both recompute derived state) · POST `/<id>/loan/disbursements` · POST `/<id>/loan/entries`
 · POST `/<id>/loan/collateral` · POST `/<id>/holding/buys|sells|quote|refresh-quote` · POST
 `/<id>/chit/entries` · GET `/<id>/chit/dividend?bid=` · POST `/<id>/retirement/update` · GET/POST
 `/<id>/members` · DELETE `/<id>/members/<user_id>`.
@@ -112,6 +112,8 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   balances recompute. Frontend: ✎ edit on each asset-detail ledger row reopens the slide-over pre-filled.
 - **2026-06-05 — Payment date.** Log-payment slide-over has a "Date (when it happened)" field → `occurred_at`
   (distinct from auto `created_at` = when logged). Ledger shows "· logged X" when the two differ.
+- **2026-06-05 — Delete ledger entry.** `DELETE /api/plans/<id>/entries/<entry_id>` (owner-only; recomputes derived state). Frontend: a **Delete** action in the asset-detail edit slide-over (shown only when editing, confirm before delete).
+- **2026-06-05 — Ad-hoc (unscheduled) assets.** Assets with no installments now read "X% paid · ad-hoc payments" and the schedule panel shows "No fixed schedule — payments are logged as funds arrive" (instead of "0 of 0 installments"). Valid pattern: pay as funds arrive.
 - **2026-06-05 — Sidebar type filter.** Dashboard sidebar Assets/Chit/Loans/401(k) now link `/app?type=<t>`
   → the "Your plans" list filters to that type, the nav item highlights, the panel relabels, and it scrolls
   into view (were all dead `href=/app`). Holdings still → `/holdings`.
@@ -148,6 +150,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Ledger entries can be deleted (DELETE /entries); ad-hoc (no-installment) asset copy cleaned up.
 - 2026-06-05 — Dashboard sidebar type items (Assets/Chit/Loans/401k) filter the plan list via ?type.
 - 2026-06-05 — Landing: nav + hero 'Sign in' open the sign-in/create modal in one click (was scroll-then-click).
 - 2026-06-05 — Added Log out to every app page's sidebar (dashboard + 9 detail/tool pages).

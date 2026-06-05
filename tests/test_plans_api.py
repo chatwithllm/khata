@@ -227,3 +227,21 @@ def test_edit_ledger_entry_and_occurred_at(client):
     # unauthenticated → 401
     client.post("/api/auth/logout")
     assert client.patch(f"/api/plans/{pid}/entries/{eid}", json={"note": "x"}).status_code == 401
+
+
+def test_delete_ledger_entry(client):
+    _register(client)
+    pid = client.post("/api/plans", json={
+        "name": "Plot", "currency": "INR", "total_price": "10,00,000"}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{pid}/payments", json={
+        "amount": "3,00,000", "method": "cash", "funding_source": "savings"})
+    eid = client.get(f"/api/plans/{pid}").get_json()["state"]["ledger"][0]["id"]
+    # delete → derived paid recomputes to 0, ledger empty
+    r = client.delete(f"/api/plans/{pid}/entries/{eid}")
+    assert r.status_code == 200
+    st = r.get_json()["state"]
+    assert st["paid_to_date_minor"] == 0 and st["ledger"] == []
+    # already gone → 400; unauth → 401
+    assert client.delete(f"/api/plans/{pid}/entries/{eid}").status_code == 400
+    client.post("/api/auth/logout")
+    assert client.delete(f"/api/plans/{pid}/entries/1").status_code == 401

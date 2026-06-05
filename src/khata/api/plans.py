@@ -246,6 +246,23 @@ def update_entry(plan_id, entry_id):
     return jsonify(_detail(plan)), 200
 
 
+@bp.delete("/<int:plan_id>/entries/<int:entry_id>")
+def delete_entry(plan_id, entry_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner-only
+    if err:
+        return err
+    try:
+        assets.delete_ledger_entry(g.db, plan=plan, entry_id=entry_id)
+        g.db.commit()
+    except (PlanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(_detail(plan)), 200
+
+
 @bp.post("/<int:plan_id>/loan/disbursements")
 def loan_disbursement(plan_id):
     user = current_user()

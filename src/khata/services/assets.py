@@ -94,6 +94,16 @@ def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
     return entry
 
 
+def delete_ledger_entry(session: Session, *, plan: Plan, entry_id) -> None:
+    """Delete a ledger entry (owner-only at the API layer). Derived balances recompute
+    on the next *_state call."""
+    entry = session.get(LedgerEntry, entry_id)
+    if entry is None or entry.plan_id != plan.id:
+        raise ValidationError("entry not found")
+    session.delete(entry)
+    session.flush()
+
+
 def list_plans(session: Session, owner_id) -> list[Plan]:
     return list(session.scalars(
         select(Plan).where(Plan.owner_user_id == owner_id).order_by(Plan.created_at.desc())))
