@@ -7,199 +7,321 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/assets/ledger.css">
+<link rel="stylesheet" href="/static/assets/app.css">
 <style>
-  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
-  .topbar .brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:20px}
-  .topbar .glyph{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,var(--primary),var(--primary-deep))}
-  .formcard{max-width:560px;margin:8px auto 40px}
-  .tabs{display:flex;gap:8px;margin:6px 0 18px}
-  .tab{flex:1;text-align:center;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px;cursor:pointer;font-weight:600;color:var(--ink-soft)}
-  .tab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-  .fld{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
-  .fld label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
-  .fld input,.fld select{font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
-  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .grp{display:none} .grp.on{display:block}
-  .inst{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:7px}
-  .lnk{color:var(--primary);font-weight:600;cursor:pointer;font-size:13px}
-  .err{color:var(--neg);font-size:13px;min-height:18px;margin:4px 0}
-  .actions{display:flex;gap:12px;align-items:center;margin-top:10px}
+/* ── create-plan.html-only rules (shell lives in app.css) ── */
+.formcard{max-width:640px}
+.intro{font-size:13.5px;color:var(--ink-faint);font-family:"JetBrains Mono";margin:-2px 0 18px}
+
+/* type tabs */
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin:4px 0 22px}
+@media(max-width:680px){.tabs{grid-template-columns:repeat(2,1fr)}}
+.tab{position:relative;border:1.5px solid var(--line);background:var(--paper);border-radius:13px;padding:13px 11px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:7px;font-family:inherit;transition:transform .2s var(--ease),border-color .2s,background .2s,box-shadow .2s}
+.tab:hover{transform:translateY(-2px);border-color:var(--primary)}
+.tab:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.tab .ico{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--paper-2);color:var(--primary-deep);transition:.2s}
+.tab .ico svg{width:18px;height:18px}
+.tab .nm{font-weight:700;font-size:13.5px;color:var(--ink)}
+.tab.on{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 7%,var(--card));box-shadow:0 0 0 1.5px var(--primary)}
+.tab.on .ico{background:linear-gradient(145deg,var(--primary),var(--primary-deep));color:#fff}
+
+/* fields */
+.fld{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.fld label{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+.fld input,.fld select{font-family:"Hanken Grotesk",sans-serif;font-size:14.5px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);transition:.18s;width:100%}
+.fld input.mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--glow)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:560px){.row2{grid-template-columns:1fr}}
+.grp{display:none}.grp.on{display:block}
+.seclbl{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700;margin:2px 0 9px}
+
+/* installments builder */
+.inst{display:grid;grid-template-columns:1fr 1fr auto;gap:9px;margin-bottom:8px;align-items:center}
+.insthead{display:grid;grid-template-columns:1fr 1fr auto;gap:9px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:700;margin-bottom:6px}
+.instx{width:34px;height:38px;border-radius:9px;border:1.5px solid var(--line);background:var(--paper-2);color:var(--ink-soft);cursor:pointer;display:grid;place-items:center;font-size:15px;transition:.2s}
+.instx:hover{background:var(--neg);color:#fff;border-color:transparent}
+.lnk{display:inline-block;color:var(--primary-deep);font-weight:600;cursor:pointer;font-size:13px;margin-top:2px}
+.lnk:hover{text-decoration:underline}
+
+.err{color:var(--neg);font-size:13px;min-height:18px;margin:6px 0;font-family:"JetBrains Mono"}
+.actions{display:flex;gap:14px;align-items:center;margin-top:14px}
+.actions .createbtn{font-weight:600;font-size:14.5px;padding:11px 22px;border-radius:11px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:transform .2s,box-shadow .2s}
+.actions .createbtn:hover{transform:translateY(-2px);box-shadow:0 12px 24px -14px rgba(20,16,12,.7)}
+.actions .createbtn svg{width:15px;height:15px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="topbar">
+<div class="app">
+  <!-- sidebar -->
+  <aside class="side">
     <a class="brand" href="/app"><span class="glyph"></span> Khata</a>
-    <a class="link" href="/app">← Back to app</a>
-  </div>
+    <a class="newplan on" href="/create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
+    <div class="navsec">Overview</div>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
+    <a class="nav-i" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
+    <div class="navsec">Money plans</div>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <div class="navsec">Records</div>
+    <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
+    <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
+    <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+  </aside>
 
-  <div class="formcard">
-    <h1 style="font-family:'Fraunces',serif;font-weight:600;font-size:28px;margin-bottom:6px">New plan</h1>
-    <p class="muted" style="margin-bottom:14px">Track a purchase, a loan, or a holding.</p>
-
-    <div class="tabs">
-      <div class="tab on" data-t="asset">Asset</div>
-      <div class="tab" data-t="loan">Loan</div>
-      <div class="tab" data-t="holding">Holding</div>
-      <div class="tab" data-t="chit">Chit</div>
-      <div class="tab" data-t="retirement">Retirement</div>
+  <!-- main -->
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>New plan</h1>
+        <div class="sub">track a purchase, loan, holding, chit or 401(k)</div>
+      </div>
+      <div class="top-right">
+        <a class="addbtn" href="/app"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l-6 6 6 6" transform="rotate(180 12 12)"/></svg> Back to app</a>
+        <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init" id="ava-init"></span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
+      </div>
     </div>
 
-    <div class="fld"><label>Name</label><input id="name" placeholder="Devanahalli plot"></div>
-    <div class="fld"><label>Currency</label>
-      <select id="currency"><option value="INR">INR ₹</option><option value="USD">USD $</option></select>
-    </div>
+    <div class="content">
+      <div class="panel fade formcard">
+        <div class="ph"><div class="t">Create a plan</div><div class="meta">one honest ledger per plan</div></div>
+        <div style="padding:24px 26px 28px">
+          <p class="intro">Pick a plan type — Khata keeps the ledger, you pick the shape.</p>
 
-    <!-- Asset -->
-    <div class="grp on" id="g-asset">
-      <div class="fld"><label>Total price</label><input id="total_price" placeholder="20,00,000"></div>
-      <label class="lbl" style="font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700">Installments (optional)</label>
-      <div id="insts"></div>
-      <span class="lnk" id="addinst">+ Add installment</span>
-    </div>
+          <!-- type tabs -->
+          <div class="tabs" id="tabs">
+            <button class="tab on" type="button" data-t="asset">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg></span>
+              <span class="nm">Asset</span>
+            </button>
+            <button class="tab" type="button" data-t="loan">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg></span>
+              <span class="nm">Loan</span>
+            </button>
+            <button class="tab" type="button" data-t="holding">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l5-5 4 4 8-8M21 8v5h-5"/></svg></span>
+              <span class="nm">Holding</span>
+            </button>
+            <button class="tab" type="button" data-t="chit">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+              <span class="nm">Chit</span>
+            </button>
+            <button class="tab" type="button" data-t="retirement">
+              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg></span>
+              <span class="nm">401(k)</span>
+            </button>
+          </div>
 
-    <!-- Loan -->
-    <div class="grp" id="g-loan">
-      <div class="row2">
-        <div class="fld"><label>Direction</label>
-          <select id="direction"><option value="taken">I borrowed (taken)</option><option value="given">I lent (given)</option></select>
+          <!-- shared fields -->
+          <div class="fld"><label>Name</label><input id="name" placeholder="Devanahalli plot"></div>
+          <div class="fld"><label>Currency</label>
+            <select id="currency"><option value="INR">INR ₹</option><option value="USD">USD $</option></select>
+          </div>
+
+          <!-- Asset -->
+          <div class="grp on" id="g-asset">
+            <div class="fld"><label>Total price</label><input id="total_price" class="mono" placeholder="20,00,000"></div>
+            <p class="seclbl">Installments (optional)</p>
+            <div class="insthead"><span>Amount</span><span>Due date</span><span></span></div>
+            <div id="insts"></div>
+            <span class="lnk" id="addinst">+ Add installment</span>
+          </div>
+
+          <!-- Loan -->
+          <div class="grp" id="g-loan">
+            <div class="row2">
+              <div class="fld"><label>Direction</label>
+                <select id="direction"><option value="taken">I borrowed (taken)</option><option value="given">I lent (given)</option></select>
+              </div>
+              <div class="fld"><label>Counterparty</label><input id="counterparty" placeholder="HDFC / Priya"></div>
+            </div>
+            <div class="row2">
+              <div class="fld"><label>Interest</label>
+                <select id="interest_type"><option value="none">None</option><option value="monthly">Per month</option><option value="yearly">Per year</option></select>
+              </div>
+              <div class="fld" id="ratefld" style="display:none"><label>Rate %</label><input id="rate" class="mono" placeholder="8.5"></div>
+            </div>
+            <div class="row2">
+              <div class="fld"><label>Start date</label><input id="start_date" type="date"></div>
+              <div class="fld"><label>Tenure (months)</label><input id="tenure_months" class="mono" placeholder="optional"></div>
+            </div>
+          </div>
+
+          <!-- Holding -->
+          <div class="grp" id="g-holding">
+            <div class="row2">
+              <div class="fld"><label>Asset class</label>
+                <select id="asset_class">
+                  <option value="gold">gold</option><option value="silver">silver</option>
+                  <option value="equity">equity</option><option value="mf">mf</option>
+                  <option value="cash">cash</option><option value="other">other</option>
+                </select>
+              </div>
+              <div class="fld"><label>Unit</label><input id="unit" placeholder="gram / share / unit"></div>
+            </div>
+            <div class="row2">
+              <div class="fld"><label>Symbol</label><input id="symbol" placeholder="HDFC (optional)"></div>
+              <div class="fld"><label>Purity</label><input id="purity" placeholder="22K (optional)"></div>
+            </div>
+          </div>
+
+          <!-- Chit -->
+          <div class="grp" id="g-chit">
+            <div class="row2">
+              <div class="fld"><label>Chit value</label><input id="chit_value" class="mono" placeholder="10,00,000"></div>
+              <div class="fld"><label>Members</label><input id="n_members" class="mono" type="number" placeholder="20"></div>
+            </div>
+            <div class="row2">
+              <div class="fld"><label>Commission %</label><input id="commission_c" class="mono" placeholder="5"></div>
+              <div class="fld"><label>Start date</label><input id="start_date_c" type="date"></div>
+            </div>
+          </div>
+
+          <!-- Retirement / 401(k) -->
+          <div class="grp" id="g-retirement">
+            <div class="row2">
+              <div class="fld"><label>Current balance</label><input id="r_balance" class="mono" placeholder="0"></div>
+              <div class="fld"><label>Monthly contribution</label><input id="r_contrib" class="mono" placeholder="10,000"></div>
+            </div>
+            <div class="row2">
+              <div class="fld"><label>Employer match %</label><input id="r_match" class="mono" placeholder="0"></div>
+              <div class="fld"><label>Annual return %</label><input id="r_return" class="mono" placeholder="8"></div>
+            </div>
+            <div class="row2">
+              <div class="fld"><label>Inflation %</label><input id="r_infl" class="mono" placeholder="6"></div>
+              <div class="fld"><label>Current age</label><input id="r_cage" class="mono" type="number" placeholder="30"></div>
+            </div>
+            <div class="fld"><label>Retirement age</label><input id="r_rage" class="mono" type="number" placeholder="60"></div>
+          </div>
+
+          <div class="err" id="err"></div>
+          <div class="actions">
+            <button class="createbtn" id="submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Create plan</button>
+            <a class="link" href="/app" style="color:var(--ink-soft);font-weight:600">Cancel</a>
+          </div>
         </div>
-        <div class="fld"><label>Counterparty</label><input id="counterparty" placeholder="HDFC / Priya"></div>
-      </div>
-      <div class="row2">
-        <div class="fld"><label>Interest</label>
-          <select id="interest_type"><option value="none">None</option><option value="monthly">Per month</option><option value="yearly">Per year</option></select>
-        </div>
-        <div class="fld" id="ratefld" style="display:none"><label>Rate %</label><input id="rate" placeholder="8.5"></div>
-      </div>
-      <div class="row2">
-        <div class="fld"><label>Start date</label><input id="start_date" type="date"></div>
-        <div class="fld"><label>Tenure (months)</label><input id="tenure_months" placeholder="optional"></div>
       </div>
     </div>
-
-    <!-- Holding -->
-    <div class="grp" id="g-holding">
-      <div class="row2">
-        <div class="fld"><label>Asset class</label>
-          <select id="asset_class"><option>gold</option><option>silver</option><option>equity</option><option>mf</option><option>cash</option><option>other</option></select>
-        </div>
-        <div class="fld"><label>Unit</label><input id="unit" placeholder="gram / share / unit"></div>
-      </div>
-      <div class="row2">
-        <div class="fld"><label>Symbol</label><input id="symbol" placeholder="HDFC (optional)"></div>
-        <div class="fld"><label>Purity</label><input id="purity" placeholder="22K (optional)"></div>
-      </div>
-    </div>
-
-    <!-- Chit -->
-    <div class="grp" id="g-chit">
-      <div class="row2">
-        <div class="fld"><label>Chit value</label><input id="chit_value" placeholder="10,00,000"></div>
-        <div class="fld"><label>Members</label><input id="n_members" type="number" placeholder="20"></div>
-      </div>
-      <div class="row2">
-        <div class="fld"><label>Commission %</label><input id="commission_c" placeholder="5"></div>
-        <div class="fld"><label>Start date</label><input id="start_date_c" type="date"></div>
-      </div>
-    </div>
-
-    <!-- Retirement -->
-    <div class="grp" id="g-retirement">
-      <div class="row2">
-        <div class="fld"><label>Current balance</label><input id="r_balance" placeholder="0"></div>
-        <div class="fld"><label>Monthly contribution</label><input id="r_contrib" placeholder="10,000"></div>
-      </div>
-      <div class="row2">
-        <div class="fld"><label>Employer match %</label><input id="r_match" placeholder="0"></div>
-        <div class="fld"><label>Annual return %</label><input id="r_return" placeholder="8"></div>
-      </div>
-      <div class="row2">
-        <div class="fld"><label>Inflation %</label><input id="r_infl" placeholder="6"></div>
-        <div class="fld"><label>Current age</label><input id="r_cage" placeholder="30"></div>
-      </div>
-      <div class="fld"><label>Retirement age</label><input id="r_rage" placeholder="60"></div>
-    </div>
-
-    <div class="err" id="err"></div>
-    <div class="actions">
-      <button class="btn" id="submit">Create plan</button>
-      <a class="link" href="/app">Cancel</a>
-    </div>
-  </div>
+  </main>
 </div>
 
 <script>
-  const $ = (id) => document.getElementById(id);
-  let type = "asset";
+const $ = (id) => document.getElementById(id);
+let type = "asset";
 
-  // auth guard
-  (async () => { if ((await fetch("/api/auth/me")).status === 401) window.location.href = "/"; })();
+// ── auth guard (K4): GET /api/auth/me, 401 → / ──
+async function guard(){
+  const me = await fetch("/api/auth/me");
+  if(me.status === 401){ window.location.href = "/"; return null; }
+  const user = (await me.json()).user;
+  $("ava-init").textContent = ((user.display_name || "?")[0] || "?").toUpperCase();
+  return user;
+}
 
-  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
-    type = t.dataset.t;
-    document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === t));
-    ["asset", "loan", "holding", "chit", "retirement"].forEach((g) => $("g-" + g).classList.toggle("on", g === type));
-    $("err").textContent = "";
-  }));
+// ── sidebar live counts from /api/plans ──
+async function loadCounts(){
+  try{
+    const plansResp = await fetch("/api/plans").then(x => x.json());
+    const plans = plansResp.plans || [];
+    const by = (t) => plans.filter(p => p.type === t).length || "";
+    $("ct-asset").textContent = by("asset");
+    $("ct-chit").textContent = by("chit");
+    $("ct-loan").textContent = by("loan");
+    $("ct-retirement").textContent = by("retirement");
+  }catch(e){}
+}
 
-  $("interest_type").addEventListener("change", () => {
-    $("ratefld").style.display = $("interest_type").value === "none" ? "none" : "block";
-  });
+// ── tab switching ──
+const TYPES = ["asset", "loan", "holding", "chit", "retirement"];
+document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
+  type = t.dataset.t;
+  document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === t));
+  TYPES.forEach((g) => $("g-" + g).classList.toggle("on", g === type));
+  $("err").textContent = "";
+}));
 
-  function addInst(amount, due) {
-    const row = document.createElement("div"); row.className = "inst";
-    const a = document.createElement("input"); a.placeholder = "amount"; a.className = "i-amt"; a.value = amount || "";
-    const d = document.createElement("input"); d.type = "date"; d.className = "i-due"; if (due) d.value = due;
-    const x = document.createElement("span"); x.className = "lnk"; x.textContent = "✕";
-    x.addEventListener("click", () => row.remove());
-    row.append(a, d, x); $("insts").appendChild(row);
-  }
-  $("addinst").addEventListener("click", () => addInst());
+$("interest_type").addEventListener("change", () => {
+  $("ratefld").style.display = $("interest_type").value === "none" ? "none" : "block";
+});
 
-  function payload() {
-    const name = $("name").value, currency = $("currency").value;
-    if (type === "loan") {
-      const it = $("interest_type").value;
-      const p = { type: "loan", name, currency, direction: $("direction").value,
-                  counterparty: $("counterparty").value || null, interest_type: it,
-                  start_date: $("start_date").value || null };
-      if (it !== "none") p.rate = $("rate").value;
-      if ($("tenure_months").value) p.tenure_months = parseInt($("tenure_months").value, 10);
-      return p;
-    }
-    if (type === "holding") {
-      return { type: "holding", name, currency, asset_class: $("asset_class").value,
-               unit: $("unit").value, symbol: $("symbol").value || null, purity: $("purity").value || null };
-    }
-    if (type === "chit") {
-      return { type: "chit", name, currency, chit_value: $("chit_value").value,
-               n_members: parseInt($("n_members").value, 10), commission: $("commission_c").value,
-               start_date: $("start_date_c").value || null };
-    }
-    if (type === "retirement") {
-      return { type: "retirement", name, currency, current_balance: $("r_balance").value,
-               monthly_contribution: $("r_contrib").value, employer_match: $("r_match").value,
-               annual_return: $("r_return").value, inflation: $("r_infl").value,
-               current_age: parseInt($("r_cage").value, 10), retirement_age: parseInt($("r_rage").value, 10) };
-    }
-    const insts = [...document.querySelectorAll(".inst")].map((r) => ({
-      amount: r.querySelector(".i-amt").value, due_date: r.querySelector(".i-due").value || null,
-    })).filter((i) => i.amount);
-    const p = { name, currency, total_price: $("total_price").value };
-    if (insts.length) p.installments = insts;
+// ── installments builder (K4: createElement, no innerHTML) ──
+function addInst(amount, due){
+  const row = document.createElement("div"); row.className = "inst";
+  const a = document.createElement("input"); a.placeholder = "amount"; a.className = "i-amt mono"; a.value = amount || "";
+  const d = document.createElement("input"); d.type = "date"; d.className = "i-due"; if(due) d.value = due;
+  const x = document.createElement("button"); x.type = "button"; x.className = "instx"; x.textContent = "×";
+  x.addEventListener("click", () => row.remove());
+  row.append(a, d, x); $("insts").appendChild(row);
+}
+$("addinst").addEventListener("click", () => addInst());
+
+// ── build the active tab's payload — exact create() keys; money/qty/rate stay text (K1) ──
+function payload(){
+  const name = $("name").value, currency = $("currency").value;
+  if(type === "loan"){
+    const it = $("interest_type").value;
+    const p = { type: "loan", name, currency, direction: $("direction").value,
+                counterparty: $("counterparty").value || null, interest_type: it,
+                start_date: $("start_date").value || null };
+    if(it !== "none") p.rate = $("rate").value;
+    if($("tenure_months").value) p.tenure_months = parseInt($("tenure_months").value, 10);
     return p;
   }
+  if(type === "holding"){
+    return { type: "holding", name, currency, asset_class: $("asset_class").value,
+             unit: $("unit").value, symbol: $("symbol").value || null, purity: $("purity").value || null };
+  }
+  if(type === "chit"){
+    return { type: "chit", name, currency, chit_value: $("chit_value").value,
+             n_members: parseInt($("n_members").value, 10), commission: $("commission_c").value,
+             start_date: $("start_date_c").value || null };
+  }
+  if(type === "retirement"){
+    return { type: "retirement", name, currency, current_balance: $("r_balance").value,
+             monthly_contribution: $("r_contrib").value, employer_match: $("r_match").value,
+             annual_return: $("r_return").value, inflation: $("r_infl").value,
+             current_age: parseInt($("r_cage").value, 10), retirement_age: parseInt($("r_rage").value, 10) };
+  }
+  // asset (default)
+  const insts = [...document.querySelectorAll(".inst")].map((r) => ({
+    amount: r.querySelector(".i-amt").value, due_date: r.querySelector(".i-due").value || null,
+  })).filter((i) => i.amount);
+  const p = { type: "asset", name, currency, total_price: $("total_price").value };
+  if(insts.length) p.installments = insts;
+  return p;
+}
 
-  $("submit").addEventListener("click", async () => {
-    $("err").textContent = "";
-    const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" },
-                                          body: JSON.stringify(payload()) });
-    if (r.ok) { window.location.href = "/app"; return; }
-    const e = await r.json().catch(() => ({}));
-    $("err").textContent = (e.detail || e.error || "Could not create the plan.");
-  });
+// ── type → detail route ──
+const ROUTE = { asset: "/asset/", loan: "/loan/", holding: "/holding/",
+                chit: "/chit/", retirement: "/retirement/" };
+
+$("submit").addEventListener("click", async () => {
+  $("err").textContent = "";
+  const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify(payload()) });
+  if(r.status === 401){ window.location.href = "/"; return; }
+  if(r.ok){
+    const d = await r.json().catch(() => ({}));
+    const plan = d.plan || {};
+    const route = ROUTE[plan.type] || "/app";
+    window.location.href = (plan.id != null && ROUTE[plan.type]) ? route + plan.id : "/app";
+    return;
+  }
+  const e = await r.json().catch(() => ({}));
+  $("err").textContent = (e.detail || e.error || "Could not create the plan.");
+});
+
+// ── profile photo upload (localStorage, display-only) ──
+(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
+
+// ── boot ──
+(async () => {
+  const user = await guard();
+  if(!user) return;
+  loadCounts();
+})();
 </script>
 </body>
 </html>
