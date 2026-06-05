@@ -277,3 +277,11 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   holdings pages.
 - Deferred (still logged): unused `session` arg on `*_state`/`net_worth`; `loan_state` `as_of`;
   `ledger_entries(plan_id,kind)` index; DB CHECK/unique constraints; google transport-error handling.
+
+## 2026-06-05 — Plan 5.3 (Analysis tools)
+- Stateless **hold-vs-sell** decision calculator (`services/analysis.py:hold_vs_sell`): compare keeping an
+  appreciating asset + borrowing against it (paying interest) vs selling. Compound appreciation via
+  `Decimal ** int`, simple interest on the borrow over the horizon; `net_hold_advantage = appreciation_gain
+  − interest_cost`; verdict hold if net>0 else sell. Pure/derived, no float. New `analysis` blueprint
+  (`GET /api/analysis/hold-vs-sell`, auth-gated) + `/analysis` page (verdict green/red). Math constants
+  pre-computed + reviewer-recomputed (₹10L gold/10%/₹6L@9%/18mo → net +₹80,112.33, hold).

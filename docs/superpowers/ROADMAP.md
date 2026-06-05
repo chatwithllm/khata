@@ -77,7 +77,7 @@ record the chosen product model explicitly.
   expose `loan_state` `as_of`; index `ledger_entries(plan_id, kind)`; type-filter `list_plans`; DB
   `CHECK`/unique constraints (`plans.type`, `installments(plan_id, seq)`); fold net worth into the main
   dashboard or unify the two rollups; `verify_google_credential` transport-error handling.
-- [ ] **5.3 Analysis tools** (`holdings.html` analysis section). Gold-loan-vs-selling decision
+- [x] **5.3 Analysis tools** (`holdings.html` analysis section). Gold-loan-vs-selling decision
   calculator (hold-and-borrow vs sell: appreciation vs interest cost, net outcome) + any other what-if
   views. Pure derived calculators.
 - [ ] **5.4 Live market feeds (optional, last).** Replace manual quotes + FX with an **optional**
