@@ -1,26 +1,233 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-cur="inr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Khata — your money, your ledger</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/assets/ledger.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Khata — money the way you actually pay it</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,600;9..144,1,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/assets/ledger.css">
 </head>
-<body>
-<div class="wrap">
-  <nav class="nav">
-    <a class="brand" href="/"><span class="glyph"></span> Khata</a>
-    <div><a class="link" href="/features">Features</a><a class="link" href="/app">Open app</a></div>
-  </nav>
+<body class="landing">
 
-  <section class="hero" style="display:grid;grid-template-columns:1.2fr .8fr;gap:48px;align-items:center">
-    <div class="reveal">
-      <h1>Your money,<br>your ledger,<br>your machine.</h1>
-      <p>A privacy-first, self-hosted ledger for money plans and net worth — INR-native, multi-currency, exact to the paise. <a class="tlink" href="/features">See features &amp; limits →</a></p>
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-inner">
+    <a href="/" class="brand">
+      <span class="glyph"></span>
+      Khata
+      <small>money plans</small>
+    </a>
+    <div class="nav-links">
+      <a href="#problem">Why</a>
+      <a href="#plans">What it tracks</a>
+      <a href="#how">How</a>
     </div>
+    <div class="nav-right">
+      <div class="curtog" id="curtog" title="Primary currency">
+        <button data-set="inr" class="on">₹ INR</button>
+        <button data-set="usd">$ USD</button>
+      </div>
+      <span class="nav-div"></span>
+      <a href="#start" class="btn-nav">Sign in →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header id="top">
+  <div class="hero-grid wrap">
+    <div class="reveal">
+      <span class="eyebrow"><span class="dot"></span> Self-hosted · Multi-currency</span>
+      <h1>Money the way <em>you actually</em> pay it.</h1>
+      <p class="lede">Buying an asset in pieces as funds arrive? Running or joining a chit fund? Track every rupee — paid, owed, and owed to you — with proof, on your own hardware.</p>
+      <div class="cta-row">
+        <a href="#start" class="btn-dark">Sign in</a>
+        <a href="#how" class="btn-alt">See how it works</a>
+      </div>
+      <p class="cta-note"><b>✓</b> Google sign-in or a local password. Nothing leaves your machine.</p>
+    </div>
+    <div class="dash-preview reveal">
+      <div class="dash-top">
+        <div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:4px">Net position · all plans</div>
+          <div class="netnum"><small>₹</small>18,40,000</div>
+        </div>
+        <span class="chip">▲ on track</span>
+      </div>
+      <div class="plan-row">
+        <div class="plan-head">
+          <div><span class="tag asset">Asset</span><span class="name">Devanahalli plot</span></div>
+          <div class="amt">₹12.40L / ₹20L</div>
+        </div>
+        <div class="bar"><i class="asset-fill" style="width:62%"></i></div>
+        <div class="plan-meta"><span>62% paid</span><span>next 1,50,000 · Jun 18</span></div>
+      </div>
+      <div class="plan-row">
+        <div class="plan-head">
+          <div><span class="tag chit">Chit</span><span class="name">12-member auction</span></div>
+          <div class="amt">round 5 / 12</div>
+        </div>
+        <div class="bar"><i class="chit-fill" style="width:42%"></i></div>
+        <div class="plan-meta"><span>+18,400 dividends</span><span>my turn · round 9</span></div>
+      </div>
+      <div class="plan-row" style="border-bottom:none">
+        <div class="plan-head">
+          <div><span class="tag loan">Loan</span><span class="name">Borrowed — R. Kumar</span></div>
+          <div class="amt" style="color:var(--neg)">₹3.10L left</div>
+        </div>
+        <div class="bar"><i class="loan-fill" style="width:38%"></i></div>
+        <div class="plan-meta"><span>repaid 1,90,000</span><span>of 5,00,000</span></div>
+      </div>
+    </div>
+  </div>
+  <!-- strip below hero -->
+  <div style="background:var(--paper-2);border-top:1px solid var(--line);margin-top:60px;padding:18px 0">
+    <div class="sec-wrap" style="display:flex;gap:32px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft)">
+      <span>🔒 Privacy-first — your data stays yours</span>
+      <span>📒 One ledger, single source of truth</span>
+      <span>💱 Multi-currency · ₹ &amp; $ · installments &amp; chits</span>
+    </div>
+  </div>
+</header>
+
+<!-- THE GAP -->
+<section id="problem" class="problem">
+  <div class="sec-wrap">
+    <div class="sec-eyebrow">The gap</div>
+    <h2>Budgeting apps assume you pay <em>in full, on time, to a bank.</em></h2>
+    <p class="sec-lede">Real life here isn't that. You pay an asset in irregular chunks — cash, a transfer, a loan, a sold asset, a chit payout. You sit in chit funds where the math of pots, bids, dividends and commission never fits a spreadsheet.</p>
+    <blockquote>"So it all lives in your head — until it doesn't."</blockquote>
+  </div>
+</section>
+
+<!-- WHAT IT TRACKS -->
+<section id="plans">
+  <div class="sec-wrap">
+    <div class="sec-eyebrow">What it tracks</div>
+    <h2>Two kinds of money plans, <em>one honest ledger.</em></h2>
+    <p class="sec-lede">Every balance is computed from what you actually recorded — never a stale number you have to trust.</p>
+    <div class="plan-cards">
+      <div class="plan-card reveal">
+        <div class="plan-card-icon asset">🏠</div>
+        <div class="card-sub">Asset purchase</div>
+        <h3>Pay it in pieces.</h3>
+        <p>Set the price, sketch a plan, pay when funds arrive. The plan adapts to reality.</p>
+        <ul>
+          <li>Installment schedule with <strong>roll-forward</strong> — a short payment carries to the next, original plan kept.</li>
+          <li>Each payment tagged: cash / transfer, and its funding source.</li>
+          <li>Borrowed to pay? The debt becomes a tracked liability with its own repayment ledger.</li>
+          <li>Attach the receipt, screenshot, or chat — timestamped proof.</li>
+        </ul>
+      </div>
+      <div class="plan-card reveal">
+        <div class="plan-card-icon chit">🔄</div>
+        <div class="card-sub">Chit fund · Chitti</div>
+        <h3>Know your real position.</h3>
+        <p>Member or organizer. Pure rotating or auction. The chit math, done for you.</p>
+        <ul>
+          <li>Pick your role — <strong>member, organizer, or both</strong> — per chit.</li>
+          <li>Track contributions, who took the pot, bids &amp; dividends, commission.</li>
+          <li>See your true profit or loss, round by round, not a vague feeling.</li>
+          <li>A chit payout can fund an asset payment — plans connect.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SINGLE SOURCE OF TRUTH -->
+<section class="truth">
+  <div class="sec-wrap">
+    <div class="truth-grid">
+      <div>
+        <div class="sec-eyebrow">Single source of truth</div>
+        <h2>Every rupee, <em>traceable.</em></h2>
+        <p class="sec-lede">Method, source, exact timestamp, and proof — on every transaction. Attach the screenshot or the chat where the deal was struck. Balances recompute themselves.</p>
+      </div>
+      <div class="ledger-card reveal">
+        <div class="ledger-head">
+          <span>Ledger · Devanahalli plot</span>
+          <span>balance ₹7.60L</span>
+        </div>
+        <div class="ledger-row">
+          <div class="lr-left">
+            <div class="lr-title">Installment #4</div>
+            <div class="lr-meta">04 Jun · 11:24 IST</div>
+          </div>
+          <div class="lr-right">
+            <div class="lr-amt neg">−1,50,000</div>
+            <div class="lr-tags"><span class="ledger-tag">Transfer</span><span class="ledger-tag">▣ proof</span></div>
+          </div>
+        </div>
+        <div class="ledger-row">
+          <div class="lr-left">
+            <div class="lr-title">From chit payout</div>
+            <div class="lr-meta">28 May · 18:02 IST</div>
+          </div>
+          <div class="lr-right">
+            <div class="lr-amt pos">+2,00,000</div>
+            <div class="lr-tags"><span class="ledger-tag">Chit · Round 4</span><span class="ledger-tag">▣ proof</span></div>
+          </div>
+        </div>
+        <div class="ledger-row">
+          <div class="lr-left">
+            <div class="lr-title">Installment #3 <span style="font-size:11px;color:var(--ink-faint)">· short, rolled fwd</span></div>
+            <div class="lr-meta">12 May · 09:40 IST</div>
+          </div>
+          <div class="lr-right">
+            <div class="lr-amt neg">−90,000</div>
+            <div class="lr-tags"><span class="ledger-tag">Cash</span><span class="ledger-tag">▣ proof</span></div>
+          </div>
+        </div>
+        <div class="ledger-row">
+          <div class="lr-left">
+            <div class="lr-title">Borrowed — R. Kumar</div>
+            <div class="lr-meta">02 May · 14:15 IST</div>
+          </div>
+          <div class="lr-right">
+            <div class="lr-amt pos">+5,00,000</div>
+            <div class="lr-tags"><span class="ledger-tag">Liability</span><span class="ledger-tag">▣ proof</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="sec-wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Three steps. <em>Then it just adds up.</em></h2>
+    <div class="step-cards">
+      <div class="step-card reveal">
+        <div class="step-num">01</div>
+        <h3>Create a plan</h3>
+        <p>An asset to buy, or a chit you've joined or run. Set the terms and currency once.</p>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-num">02</div>
+        <h3>Log money as it moves</h3>
+        <p>Amount, method, source, timestamp — and a screenshot for proof. Seconds.</p>
+      </div>
+      <div class="step-card reveal">
+        <div class="step-num">03</div>
+        <h3>Open the dashboard</h3>
+        <p>Paid, remaining, owed, and your net — across every plan, always live.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA / FINALE — embeds the real sign-in form (auth logic unchanged) -->
+<section id="start" class="finale">
+  <div class="sec-wrap" style="text-align:center">
+    <div class="sec-eyebrow" style="justify-content:center;display:flex">Your true position</div>
+    <div class="finale-num">₹18,40,000</div>
+    <p style="font-size:16px;color:color-mix(in srgb,var(--paper) 65%,transparent);max-width:48ch;margin:0 auto 32px;line-height:1.6">One number that's hard to get right by hand — across every asset and every chit, what you owe, what you're owed, where you net out.</p>
+    <h2 style="color:var(--paper)">Take control of how <em>you actually pay.</em></h2>
 
     <div class="card reveal" id="auth">
       <div class="authrow">
@@ -41,16 +248,43 @@
         </div>
       </div>
     </div>
-  </section>
 
-  <footer class="foot">
-    <span>Khata — your money, your ledger, your machine.</span>
-    <span><a class="link" href="/features">Features</a></span>
-  </footer>
-</div>
+    <div class="finale-tags">Self-hosted · Privacy-first · Multi-currency</div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-foot">
+  <div class="foot-inner">
+    <a href="/" class="foot-brand">Khata</a>
+    <p>Working name · a private money-plans ledger</p>
+    <p>Installments &amp; chits · ₹ / $</p>
+  </div>
+</footer>
 
 <script>
   const $ = (id) => document.getElementById(id);
+
+  // Sticky nav shadow
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 10));
+
+  // Currency toggle (flips the palette via data-cur, like the rest of the app)
+  const curtog = document.getElementById('curtog');
+  curtog.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-set]');
+    if (!btn) return;
+    curtog.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === btn));
+    document.documentElement.dataset.cur = btn.dataset.set;
+  });
+
+  // Reveal on scroll
+  const io = new IntersectionObserver((es) => {
+    es.forEach((x) => { if (x.isIntersecting) { x.target.classList.add('in'); io.unobserve(x.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+  // ── Auth (logic preserved verbatim from the prior sign-in page) ──
   let mode = "login";  // or "register"
 
   $("toggle").addEventListener("click", () => {
@@ -110,11 +344,6 @@
       google_not_configured: "Google sign-in isn't enabled here.",
     })[e.error] || "Google sign-in failed.";
   }
-
-  const io = new IntersectionObserver((es) => {
-    es.forEach((x) => { if (x.isIntersecting) { x.target.classList.add("in"); io.unobserve(x.target); } });
-  }, { threshold: .12 });
-  document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
 </script>
 </body>
 </html>
