@@ -36,6 +36,64 @@
 .qcell input{font-family:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:104px;transition:border-color .2s}
 .qcell input:focus{outline:none;border-color:var(--primary)}
 
+/* asset-class icon/letter (mockup .ic) */
+.acic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-family:"Fraunces",serif;font-weight:600;font-size:13px;flex:none}
+.acic.gold{background:linear-gradient(145deg,#E7B23B,#C8881C);color:#3a2606}
+.acic.silver{background:linear-gradient(145deg,#D7DCE0,#A9B2BA);color:#2a3138}
+.acic.equity{background:linear-gradient(145deg,var(--accent),var(--primary-deep));color:#fff}
+.acic.cash{background:linear-gradient(145deg,var(--pos-soft),var(--pos));color:#fff}
+.acic.other{background:var(--paper-2);color:var(--ink-soft)}
+.hcell{display:flex;align-items:center;gap:11px}
+
+/* gross-assets total row (mockup .foot) */
+.htbl tfoot td{border-top:1px solid var(--line);background:var(--paper-2);padding:14px 22px}
+.htbl tfoot .fl{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:700}
+.htbl tfoot .fv{font-family:"Fraunces",serif;font-weight:600;font-size:20px;text-align:right}
+
+/* net-worth composition: stacked bar + legend (mockup .nw .barwrap/.split) */
+.compbody{padding:20px 22px;border-top:1px solid var(--line-2)}
+.compbar{height:11px;border-radius:6px;background:var(--paper-2);overflow:hidden;display:flex}
+.compbar i{height:100%;display:block;transition:width .9s var(--ease)}
+.complegend{display:grid;gap:9px;margin-top:16px}
+.complegend .sr{display:flex;align-items:center;justify-content:space-between;font-size:13px}
+.complegend .sr .lbl{display:flex;align-items:center;gap:9px;color:var(--ink-soft)}
+.complegend .sr .dt{width:9px;height:9px;border-radius:3px;flex:none}
+.complegend .sr .pct{font-family:"JetBrains Mono";font-size:11px;color:var(--ink-faint);margin-left:4px}
+.complegend .sr .amt{font-family:"JetBrains Mono";font-weight:700;font-size:13.5px}
+
+/* hold-vs-sell decision panel (mockup .decide/.dcols) */
+.hvsbody{padding:20px 22px}
+.hvsform{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:6px}
+@media(max-width:560px){.hvsform{grid-template-columns:repeat(2,1fr)}}
+.hvsform .fld input{width:100%}
+.hvsbtnrow{display:flex;align-items:center;gap:14px;margin:14px 0 4px}
+.hvserr{color:var(--neg);font-size:12.5px;min-height:16px}
+.dcols{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line-2);border-radius:12px;overflow:hidden;margin-top:18px}
+@media(max-width:560px){.dcols{grid-template-columns:1fr}}
+.dcol{padding:18px 20px}
+.dcol.win{background:color-mix(in srgb,var(--pos) 7%,transparent);position:relative}
+.dcol+.dcol{border-left:1px solid var(--line-2)}
+@media(max-width:560px){.dcol+.dcol{border-left:none;border-top:1px solid var(--line-2)}}
+.dcol .dh{font-family:"Fraunces",serif;font-weight:600;font-size:15px}
+.dcol .dsub{font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:3px}
+.dline{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-top:1px solid var(--line-2);font-size:13px;margin-top:4px}
+.dline:first-of-type{margin-top:12px}
+.dline .dl{color:var(--ink-soft)}
+.dline .dv{font-family:"JetBrains Mono";font-weight:700;font-size:13.5px}
+.dline .dv.pos{color:var(--pos)} .dline .dv.neg{color:var(--neg)}
+.dline.net{border-top:1.5px solid var(--ink);margin-top:8px}
+.dline.net .dl{font-weight:700;color:var(--ink)}
+.dline.net .dv{font-size:15px}
+.wintag{position:absolute;top:12px;right:16px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:20px;background:var(--pos);color:#fff}
+.verdict{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 20px;border-radius:12px;margin-top:16px;background:var(--ink);color:var(--paper);flex-wrap:wrap}
+.verdict .vt{font-size:11.5px;color:color-mix(in srgb,var(--paper) 62%,transparent);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.verdict .chip{display:inline-flex;align-items:center;gap:9px;font-family:"Fraunces",serif;font-weight:600;font-size:17px;margin-top:3px}
+.verdict .chip .dot2{width:8px;height:8px;border-radius:50%;background:var(--pos-soft);box-shadow:0 0 10px var(--pos-soft)}
+.verdict.sell .chip .dot2{background:var(--neg);box-shadow:0 0 10px var(--neg)}
+.verdict .chip b{color:var(--pos-soft)}
+.verdict.sell .chip b{color:var(--neg)}
+.verdict .note{font-size:11px;color:color-mix(in srgb,var(--paper) 55%,transparent);font-family:"JetBrains Mono"}
+
 /* fx + currency controls */
 .ctlbody{padding:20px 22px;display:flex;flex-direction:column;gap:16px}
 .ctlrow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
@@ -81,7 +139,7 @@
       </div>
       <div class="top-right">
         <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="INR"><span class="cs">₹</span> INR</button><button data-set="USD"><span class="cs">$</span> USD</button></div>
-        <a class="addbtn" href="/create"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
+        <a class="addbtn" href="/create"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Log payment</a>
         <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init" id="ava-init"></span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
       </div>
     </div>
@@ -98,10 +156,15 @@
 
         <!-- RIGHT RAIL -->
         <div class="stack">
+          <!-- net-worth composition (stacked bar + legend) -->
+          <div class="panel fade d2" id="comp-panel"></div>
           <!-- currency + fx controls -->
-          <div class="panel fade d2" id="ctl-panel"></div>
+          <div class="panel fade d3" id="ctl-panel"></div>
         </div>
       </div>
+
+      <!-- hold vs sell analysis (full-width) -->
+      <div class="panel fade d4" id="hvs-panel" style="margin-top:22px"></div>
     </div>
   </main>
 </div>
@@ -217,10 +280,15 @@ function renderHoldings(box, d){
     const tr=el('tr');
     tr.addEventListener('click', ()=>{ window.location.href='/holding/'+h.id; });
 
-    // name + asset class
+    // name + asset class (with class icon/letter)
     const nameTd=el('td');
-    nameTd.append(el('div','hnm', h.name));
-    nameTd.append(el('div','hac', h.asset_class));
+    const cell=el('div','hcell');
+    cell.append(acIcon(h.asset_class));
+    const txt=el('div');
+    txt.append(el('div','hnm', h.name));
+    txt.append(el('div','hac', h.asset_class));
+    cell.append(txt);
+    nameTd.append(cell);
     tr.append(nameTd);
 
     // qty
@@ -265,7 +333,25 @@ function renderHoldings(box, d){
     tbody.append(tr);
   }
   tbl.append(tbody);
+
+  // Gross assets total row (5.5) — uses assets_minor from /api/networth
+  const tfoot=el('tfoot');
+  const ftr=el('tr');
+  const flTd=el('td','fl','Gross assets'); flTd.colSpan=2; ftr.append(flTd);
+  const fvTd=el('td','fv'); fvTd.colSpan=4; fvTd.append(amtSpan(d.assets_minor, BASE)); ftr.append(fvTd);
+  tfoot.append(ftr); tbl.append(tfoot);
+
   box.append(tbl);
+}
+
+// asset-class icon/letter — short Fraunces label per class (mockup .ic)
+function acIcon(ac){
+  const cls=(ac||'other').toLowerCase();
+  const known={gold:'gold',silver:'silver',equity:'equity',cash:'cash'};
+  const letters={gold:'Au',silver:'Ag',equity:'Eq',cash:'₹'};
+  const key=known[cls]?cls:'other';
+  const txt=letters[cls] || (ac?ac[0].toUpperCase():'?');
+  return el('span','acic '+key, txt);
 }
 
 // ── currency + FX controls panel ──
@@ -346,6 +432,189 @@ function renderControls(box, d, feedEnabled){
   box.append(body);
 }
 
+// ── net-worth composition panel (5.3) ──
+// Client-side derived from real data: one segment per holding's value_in_base_minor
+// (fallback to current_value_minor when no base rate), plus a Liabilities segment
+// computed as liabilities_minor. Percentages are honest, over (assets + liabilities).
+const SEG_COLORS=['var(--primary)','var(--accent)','var(--pos)','var(--accent-dk)','var(--primary-deep)','var(--pos-soft)','var(--ink-faint)'];
+function renderComposition(box, d){
+  box.textContent='';
+  const ph=el('div','ph');
+  ph.append(el('div','t','Composition'), el('div','meta','assets + liabilities'));
+  box.append(ph);
+
+  const holds=d.holdings||[];
+  // build segments from real holding values (base-converted when available)
+  const segs=[];
+  holds.forEach((h,i)=>{
+    const v = (h.value_in_base_minor!==null && h.value_in_base_minor!==undefined)
+      ? h.value_in_base_minor : h.current_value_minor;
+    if(v===null || v===undefined) return;            // skip values we don't have
+    segs.push({ label:h.name, minor:v, color:SEG_COLORS[i%SEG_COLORS.length], neg:false });
+  });
+  const liab=d.liabilities_minor||0;
+  if(liab>0) segs.push({ label:'Liabilities', minor:liab, color:'var(--neg)', neg:true });
+
+  if(!segs.length){
+    const e=el('div','emptypanel','Nothing to compose yet.');
+    box.append(e); return;
+  }
+
+  const total=segs.reduce((s,x)=>s+x.minor,0);
+  const body=el('div','compbody');
+
+  // stacked bar
+  const bar=el('div','compbar');
+  segs.forEach(s=>{
+    const i=el('i'); i.style.background=s.color; i.style.width='0';
+    i.dataset.w = total? (s.minor/total*100) : 0;
+    bar.append(i);
+  });
+  body.append(bar);
+
+  // legend with honest derived percentages
+  const legend=el('div','complegend');
+  segs.forEach(s=>{
+    const sr=el('div','sr');
+    const lbl=el('div','lbl');
+    const dt=el('span','dt'); dt.style.background=s.color; lbl.append(dt);
+    lbl.append(document.createTextNode(s.label));
+    const pct=el('span','pct', total? (s.minor/total*100).toFixed(1)+'%':'—');
+    lbl.append(pct);
+    sr.append(lbl);
+    const amt=el('div','amt');
+    if(s.neg){ amt.append(document.createTextNode('−')); amt.style.color='var(--neg)'; }
+    amt.append(amtSpan(s.minor, BASE));
+    sr.append(amt);
+    legend.append(sr);
+  });
+  body.append(legend);
+  box.append(body);
+
+  // animate widths after paint
+  requestAnimationFrame(()=>{ bar.querySelectorAll('i').forEach(i=>{ i.style.width=i.dataset.w+'%'; }); });
+}
+
+// ── hold vs sell analysis panel (5.4) — wired to /api/analysis/hold-vs-sell ──
+function renderHoldVsSell(box, d){
+  box.textContent='';
+  const ph=el('div','ph');
+  ph.append(el('div','t','Hold vs sell'), el('div','meta','borrow against an asset, or sell it'));
+  box.append(ph);
+
+  const body=el('div','hvsbody');
+
+  // seed inputs from real data: largest priced holding + real liabilities
+  const holds=(d.holdings||[]).slice().sort((a,b)=>(b.current_value_minor||0)-(a.current_value_minor||0));
+  const top=holds[0];
+  const seedAsset = top ? (top.current_value_minor/100) : '';
+  const seedBorrow = d.liabilities_minor ? (d.liabilities_minor/100) : '';
+
+  const form=el('div','hvsform');
+  function field(label,id,val,ph2){
+    const f=el('div','fld');
+    f.append(el('label',null,label));
+    const inp=el('input'); inp.id=id; inp.inputMode='decimal'; inp.placeholder=ph2;
+    if(val!=='' && val!==undefined && val!==null) inp.value=val;
+    f.append(inp);
+    return f;
+  }
+  form.append(
+    field('Asset value ('+sym(BASE)+')','hvs-asset', seedAsset, '625140'),
+    field('Appreciation % / yr','hvs-appr', '8', '8'),
+    field('Borrow amount ('+sym(BASE)+')','hvs-borrow', seedBorrow, '431164'),
+    field('Interest % / yr','hvs-int', '8.5', '8.5'),
+    field('Horizon (months)','hvs-horizon', '18', '18'));
+  body.append(form);
+
+  const btnRow=el('div','hvsbtnrow');
+  const btn=el('button','setbtn','Analyse');
+  btnRow.append(btn);
+  const errEl=el('div','hvserr',''); btnRow.append(errEl);
+  body.append(btnRow);
+
+  const out=el('div'); out.id='hvs-out'; body.append(out);
+  box.append(body);
+
+  async function run(){
+    errEl.textContent='';
+    const av=parseFloat($('hvs-asset').value);
+    const ap=parseFloat($('hvs-appr').value);
+    const bo=parseFloat($('hvs-borrow').value);
+    const it=parseFloat($('hvs-int').value);
+    const ho=parseInt($('hvs-horizon').value,10);
+    if([av,ap,bo,it].some(x=>isNaN(x)) || isNaN(ho)){ errEl.textContent='Fill all fields with numbers.'; return; }
+    const qs=new URLSearchParams({
+      asset_value:String(Math.round(av*100)),
+      appreciation:String(ap),
+      borrow:String(Math.round(bo*100)),
+      interest:String(it),
+      horizon:String(ho)
+    });
+    const r=await fetch('/api/analysis/hold-vs-sell?'+qs.toString());
+    if(r.status===401){ window.location.href='/'; return; }
+    if(!r.ok){ const e=await r.json().catch(()=>({})); errEl.textContent=e.detail||e.error||'Analysis failed.'; return; }
+    const res=await r.json();
+    renderHvsResult(out, res, ho);
+  }
+  btn.addEventListener('click', run);
+  run(); // initial computation from seeded inputs
+}
+
+function renderHvsResult(out, r, horizon){
+  out.textContent='';
+  const adv=r.net_hold_advantage_minor||0;
+  const holdWins=(r.verdict==='hold') || adv>0;
+
+  const cols=el('div','dcols');
+
+  // Hold & borrowed
+  const c1=el('div','dcol'+(holdWins?' win':''));
+  if(holdWins){ c1.append(el('span','wintag','recommended')); }
+  c1.append(el('div','dh','Hold & borrowed'));
+  c1.append(el('div','dsub','kept the asset · borrowed against it'));
+  c1.append(dline('Asset value today', r.asset_value_minor, null));
+  c1.append(dline('Appreciation ('+horizon+' mo)', r.appreciation_gain_minor, 'pos', '+'));
+  c1.append(dline('Interest cost', r.interest_cost_minor, 'neg', '−'));
+  c1.append(dline('Future value', r.future_value_minor, null, '', true));
+
+  // Sold instead — mirror framing
+  const c2=el('div','dcol'+(holdWins?'':' win'));
+  if(!holdWins){ c2.append(el('span','wintag','recommended')); }
+  c2.append(el('div','dh','Sold instead'));
+  c2.append(el('div','dsub','sold now · no loan, no upside'));
+  c2.append(dline('Cash from sale', r.asset_value_minor, null));
+  c2.append(dline('Appreciation forgone', r.appreciation_gain_minor, 'neg', '−'));
+  c2.append(dline('Interest saved', r.interest_cost_minor, 'pos', '+'));
+  c2.append(dline('Net outcome vs hold', adv, holdWins?'neg':'pos', holdWins?'−':'+', true));
+
+  cols.append(c1, c2);
+  out.append(cols);
+
+  // verdict bar (real verdict + real net advantage)
+  const v=el('div','verdict'+(holdWins?'':' sell'));
+  const left=el('div');
+  left.append(el('div','vt','Verdict'));
+  const chip=el('div','chip');
+  chip.append(el('span','dot2'));
+  chip.append(document.createTextNode(holdWins?'Holding wins by ':'Selling wins by '));
+  const b=el('b'); b.append(amtSpan(Math.abs(adv), BASE)); chip.append(b);
+  left.append(chip);
+  v.append(left);
+  v.append(el('div','note','net hold advantage = appreciation gain − interest cost'));
+  out.append(v);
+}
+
+function dline(label, minor, cls, sign, isNet){
+  const r=el('div','dline'+(isNet?' net':''));
+  r.append(el('span','dl',label));
+  const dv=el('span','dv'+(cls?' '+cls:''));
+  if(sign) dv.append(document.createTextNode(sign));
+  dv.append(amtSpan(Math.abs(minor), BASE));
+  r.append(dv);
+  return r;
+}
+
 // ── POST helper ──
 async function post(path, payload){
   const errEl=$('err');
@@ -380,7 +649,9 @@ async function load(){
 
   renderNetWorth($('nw-panel'), d);
   renderHoldings($('hold-panel'), d);
+  renderComposition($('comp-panel'), d);
   renderControls($('ctl-panel'), d, feedEnabled);
+  renderHoldVsSell($('hvs-panel'), d);
 
   // sidebar live counts from /api/plans
   try{
