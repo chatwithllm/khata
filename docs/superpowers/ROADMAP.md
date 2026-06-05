@@ -53,7 +53,7 @@ highest usability payoff; little new backend. Shared `ledger.css` + a real app s
 Each adds a new plan type / capability the same way Plans 2–3 were built. Higher ambiguity — specs will
 record the chosen product model explicitly.
 
-- [ ] **4.1 Chit funds** (`chit-detail.html`). New `chit` plan type: members, monthly contributions,
+- [x] **4.1 Chit funds** (`chit-detail.html`). New `chit` plan type: members, monthly contributions,
   payout mechanism (default: monthly **auction**, lowest-bid-wins, dividend split among members — to be
   fixed in the spec), derived per-member ledger + pot/payout state. Reuses the plan/membership spine.
   Backend + UI.

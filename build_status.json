@@ -2,26 +2,25 @@
   "project": "khata",
   "plan": "docs/superpowers/ROADMAP.md — Phases 3–5 (12 plans)",
   "started_at": "2026-06-04T00:00:00Z",
-  "updated_at": "2026-06-05T02:55:51Z",
+  "updated_at": "2026-06-05T03:18:30Z",
   "total_tasks": 12,
-  "tasks_done": 5,
-  "current_task": { "id": "4.1", "title": "Chit funds (backend + UI)", "phase": "Phase 4 — New domains", "status": "in_progress" },
+  "tasks_done": 6,
+  "current_task": { "id": "4.2", "title": "Secured loans / collateral", "phase": "Phase 4 — New domains", "status": "pending" },
   "phases": [
     { "name": "Phase 3 — App UI build-out (DONE, PR #9)", "task_range": "3.1–3.5", "status": "done" },
-    { "name": "Phase 4 — New domains (chit/secured/retirement)", "task_range": "4.1–4.3", "status": "active" },
+    { "name": "Phase 4 — New domains (chit ✓ / secured / retirement)", "task_range": "4.1–4.3", "status": "active" },
     { "name": "Phase 5 — Settings · hardening · analysis · feeds", "task_range": "5.1–5.4", "status": "pending" }
   ],
-  "last_commit": "b09be5b",
-  "last_gate_passed": "Phase 3 integration review ✓ + live LAN deploy (app on :5055, dashboard on :9001)",
+  "last_commit": "6af53e6",
+  "last_gate_passed": "4.1 chit funds — money review ✓ + end-to-end (dividend 250000, bid-guard 400)",
   "open_issues": 0,
   "incidents": 2,
-  "tests": "118 passed",
+  "tests": "127 passed",
   "python": "3.12",
   "log": [
-    { "task": "3.1", "title": "App shell + dashboard", "gate": "passed", "commit": "bed3516", "timestamp": "2026-06-04T21:30:00Z" },
-    { "task": "3.2", "title": "Create-plan flow", "gate": "passed", "commit": "c79d3e7", "timestamp": "2026-06-04T22:10:00Z" },
     { "task": "3.3", "title": "Asset detail + log-payment", "gate": "passed", "commit": "9d2f1aa", "timestamp": "2026-06-04T22:35:00Z" },
     { "task": "3.4", "title": "Loan detail", "gate": "passed", "commit": "db2fb76", "timestamp": "2026-06-04T23:00:00Z" },
-    { "task": "3.5", "title": "Holding detail + sharing — Phase 3 shipped (PR #9) + LAN deploy", "gate": "passed", "commit": "b09be5b", "timestamp": "2026-06-05T02:55:51Z" }
+    { "task": "3.5", "title": "Holding detail + sharing — Phase 3 shipped (PR #9) + LAN deploy", "gate": "passed", "commit": "07ed540", "timestamp": "2026-06-04T23:30:00Z" },
+    { "task": "4.1", "title": "Chit funds (model/service/API/UI, money-reviewed)", "gate": "passed", "commit": "6af53e6", "timestamp": "2026-06-05T03:18:30Z" }
   ]
 }
