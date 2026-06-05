@@ -93,16 +93,48 @@
     $("rows").innerHTML = "";
     for (const h of d.holdings) {
       const tr = document.createElement("tr");
-      const inbase = h.value_in_base_minor === null
-        ? (h.priced ? '<span class="flag">no rate</span>' : '<span class="flag">unpriced</span>')
-        : fmtMinor(h.value_in_base_minor, base);
-      tr.innerHTML =
-        "<td>" + h.name + " <span class='muted'>" + h.asset_class + "</span></td>" +
-        "<td class='mono'>" + fmtMicro(h.qty_held_micro) + "</td>" +
-        "<td class='mono'>" + fmtMinor(h.current_value_minor, h.currency) + "</td>" +
-        "<td class='mono'>" + fmtMinor(h.unrealized_gain_minor, h.currency) + "</td>" +
-        "<td class='mono'>" + inbase + "</td>" +
-        "<td><input data-id='" + h.id + "' class='q' placeholder='price/unit' style='width:96px'></td>";
+      // Build cells via DOM + textContent (never innerHTML) so user-controlled
+      // strings (name, asset_class) can't inject markup — XSS-safe.
+      const cell = (txt, mono) => {
+        const td = document.createElement("td");
+        if (mono) td.className = "mono";
+        td.textContent = txt;
+        return td;
+      };
+      const nameTd = document.createElement("td");
+      nameTd.textContent = h.name + " ";
+      const ac = document.createElement("span");
+      ac.className = "muted";
+      ac.textContent = h.asset_class;
+      nameTd.appendChild(ac);
+
+      const baseTd = document.createElement("td");
+      baseTd.className = "mono";
+      if (h.value_in_base_minor === null) {
+        const flag = document.createElement("span");
+        flag.className = "flag";
+        flag.textContent = h.priced ? "no rate" : "unpriced";
+        baseTd.appendChild(flag);
+      } else {
+        baseTd.textContent = fmtMinor(h.value_in_base_minor, base);
+      }
+
+      const qTd = document.createElement("td");
+      const qi = document.createElement("input");
+      qi.className = "q";
+      qi.dataset.id = h.id;
+      qi.placeholder = "price/unit";
+      qi.style.width = "96px";
+      qTd.appendChild(qi);
+
+      tr.append(
+        nameTd,
+        cell(fmtMicro(h.qty_held_micro), true),
+        cell(fmtMinor(h.current_value_minor, h.currency), true),
+        cell(fmtMinor(h.unrealized_gain_minor, h.currency), true),
+        baseTd,
+        qTd,
+      );
       $("rows").appendChild(tr);
     }
     document.querySelectorAll("input.q").forEach((el) => {
