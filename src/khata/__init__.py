@@ -49,4 +49,7 @@ def create_app(config: Config | None = None) -> Flask:
     from .api.networth import bp as networth_bp
     app.register_blueprint(networth_bp)
 
+    from .api.analysis import bp as analysis_bp
+    app.register_blueprint(analysis_bp)
+
     return app
