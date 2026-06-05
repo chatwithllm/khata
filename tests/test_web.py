@@ -158,7 +158,8 @@ def test_retirement_detail_served(client):
     r = client.get("/retirement/1")
     assert r.status_code == 200
     body = r.data.decode()
-    for needle in ["/api/plans", "/retirement/update", "sharing.js", "ledger.css"]:
+    for needle in ["/api/plans", "app.css", "/retirement/update", "corpus",
+                   "/api/auth/me", "sharing.js"]:
         assert needle in body
 
 
