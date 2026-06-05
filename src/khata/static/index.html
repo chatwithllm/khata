@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,600;9..144,1,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/assets/ledger.css?v=2">
+  <link rel="stylesheet" href="/static/assets/ledger.css?v=3">
 </head>
 <body class="landing">
 
@@ -288,18 +288,21 @@
     document.documentElement.dataset.cur = btn.dataset.set;
   });
 
-  // Reveal on scroll
+  // Reveal on scroll. When the hero dashboard-preview reveals, grow its bars
+  // from 0 → data-w% AFTER the card has faded in, so the transition is visible.
   const io = new IntersectionObserver((es) => {
-    es.forEach((x) => { if (x.isIntersecting) { x.target.classList.add('in'); io.unobserve(x.target); } });
+    es.forEach((x) => {
+      if (!x.isIntersecting) return;
+      x.target.classList.add('in');
+      io.unobserve(x.target);
+      const bars = x.target.querySelectorAll('.bar i[data-w]');
+      if (!bars.length) return;
+      bars.forEach((b) => { b.style.width = '0%'; });   // ensure 0 start
+      void x.target.offsetWidth;                          // commit the 0-width paint
+      setTimeout(() => bars.forEach((b) => { b.style.width = b.dataset.w + '%'; }), 350);
+    });
   }, { threshold: 0.1 });
   document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
-
-  // Grow the hero dashboard-preview bars from 0 → their data-w% on load.
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    document.querySelectorAll('.dash-preview .bar i[data-w]').forEach((b) => {
-      b.style.width = b.dataset.w + '%';
-    });
-  }));
 
   // ── Sign-in modal (opened by the finale CTAs) ──
   const modal = $("signin-modal");
