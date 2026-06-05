@@ -98,3 +98,11 @@ def test_sharing_js_served_and_mounted(client):
     assert client.get("/static/assets/sharing.js").status_code == 200
     for path in ["/asset/1", "/loan/1", "/holding/1"]:
         assert "sharing.js" in client.get(path).data.decode()
+
+
+def test_chit_detail_served(client):
+    r = client.get("/chit/1")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["/api/plans", "/chit/entries", "/chit/dividend", "sharing.js", "ledger.css"]:
+        assert needle in body

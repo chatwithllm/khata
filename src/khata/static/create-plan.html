@@ -42,6 +42,7 @@
       <div class="tab on" data-t="asset">Asset</div>
       <div class="tab" data-t="loan">Loan</div>
       <div class="tab" data-t="holding">Holding</div>
+      <div class="tab" data-t="chit">Chit</div>
     </div>
 
     <div class="fld"><label>Name</label><input id="name" placeholder="Devanahalli plot"></div>
@@ -91,6 +92,18 @@
       </div>
     </div>
 
+    <!-- Chit -->
+    <div class="grp" id="g-chit">
+      <div class="row2">
+        <div class="fld"><label>Chit value</label><input id="chit_value" placeholder="10,00,000"></div>
+        <div class="fld"><label>Members</label><input id="n_members" type="number" placeholder="20"></div>
+      </div>
+      <div class="row2">
+        <div class="fld"><label>Commission %</label><input id="commission_c" placeholder="5"></div>
+        <div class="fld"><label>Start date</label><input id="start_date_c" type="date"></div>
+      </div>
+    </div>
+
     <div class="err" id="err"></div>
     <div class="actions">
       <button class="btn" id="submit">Create plan</button>
@@ -109,7 +122,7 @@
   document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
     type = t.dataset.t;
     document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === t));
-    ["asset", "loan", "holding"].forEach((g) => $("g-" + g).classList.toggle("on", g === type));
+    ["asset", "loan", "holding", "chit"].forEach((g) => $("g-" + g).classList.toggle("on", g === type));
     $("err").textContent = "";
   }));
 
@@ -141,6 +154,11 @@
     if (type === "holding") {
       return { type: "holding", name, currency, asset_class: $("asset_class").value,
                unit: $("unit").value, symbol: $("symbol").value || null, purity: $("purity").value || null };
+    }
+    if (type === "chit") {
+      return { type: "chit", name, currency, chit_value: $("chit_value").value,
+               n_members: parseInt($("n_members").value, 10), commission: $("commission_c").value,
+               start_date: $("start_date_c").value || null };
     }
     const insts = [...document.querySelectorAll(".inst")].map((r) => ({
       amount: r.querySelector(".i-amt").value, due_date: r.querySelector(".i-due").value || null,
