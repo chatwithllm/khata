@@ -225,7 +225,7 @@ a{color:inherit;text-decoration:none}
 .landing .dash-preview .sheen::before{content:"";position:absolute;top:-10%;left:-70%;width:42%;height:120%;
   background:linear-gradient(100deg,transparent 25%,color-mix(in srgb,var(--primary) 16%,transparent) 50%,transparent 75%);transform:skewX(-16deg);animation:landsweep 9s ease-in-out 2s infinite}
 /* bars grow from 0 → data-w% (JS sets width on load) */
-.landing .dash-preview .bar i{width:0;transition:width 1.3s var(--ease) .4s,background .6s;will-change:width}
+.landing .dash-preview .bar i{width:0;transition:width 1.4s var(--ease),background .6s;will-change:width}
 .landing .bar i[data-w]{width:0}
 /* plan-row hover tint */
 .landing .plan-row{transition:background .2s}
