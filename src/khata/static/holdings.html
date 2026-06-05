@@ -70,7 +70,7 @@
     const neg = m < 0; const v = Math.abs(m) / 100;
     return (neg ? "-" : "") + (SYM[ccy] || "") + v.toLocaleString("en-IN", { minimumFractionDigits: 2 });
   }
-  function fmtMicro(q) { return (q / 1e6).toLocaleString("en-IN"); }
+  function fmtMicro(q) { if (q === null || q === undefined) return "—"; return (q / 1e6).toLocaleString("en-IN"); }
 
   async function load() {
     const r = await fetch("/api/networth");
