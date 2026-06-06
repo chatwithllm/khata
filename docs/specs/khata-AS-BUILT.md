@@ -332,6 +332,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-06 — Landing page mobile cleanup: nav reduced to brand + Sign in (section anchors + currency toggle desktop-only), section padding 94px→52px on phones, hero min-height dropped, type scaled, grids stack. Professional on iPhone-class widths.
 - 2026-06-06 — Responsive: off-canvas sidebar drawer + hamburger (nav.js), responsive topbar/padding, stacked KPIs/stats on phones, loans interest column hidden on phones. App usable on tablet + mobile.
 - 2026-06-06 — Cross-currency funding link: a contribution funded by a loan in a DIFFERENT currency now renders in its own currency on the loan's "Deployed into" (per-currency totals, no nonsensical cross-currency sum; row flags the currency). `loan_state.deployed[].currency` + `deployed_totals`.
 - 2026-06-06 — A plan contributor can now edit/delete their OWN ledger entries (was owner-only → 403 'forbidden' for a member editing their contribution). Owner still required to re-attribute an entry to someone else. Missing entry now → 404 (was 400).
