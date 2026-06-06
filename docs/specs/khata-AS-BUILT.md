@@ -332,6 +332,20 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-06 — QA hardening pass (multi-currency + correctness). Currency: `fx.get_rate`
+  inverse-rate fallback + `GET /api/fx-rates`; `dashboard.net_position` and the dashboard
+  UI convert each plan to base and surface an `unconverted` per-currency bucket (net
+  position no longer reads "$0" when no rate is set — it shows the real ₹ figure with a
+  "set a rate" nudge); `amtSpan` renders every amount in its OWN currency (no ₹-as-$
+  mislabelling); FX editor defaults the quote to the non-base currency and lists existing
+  rates. Correctness: `money.py` returns 400 (not 500) on overflow/`1e1000`; loan glance
+  monthly interest ÷10000 for monthly-rate loans (was 12× low); holdings hold-vs-sell no
+  longer double-scales 100×; `_emi` rounds up so the schedule never overshoots tenure;
+  inline-gold loans report `secured` and render the Collateral panel (LTV bar). UX:
+  inert currency toggle hidden on detail pages; asset/retirement show a not-found card
+  (not a silent bounce); backup/restore panel operator-only (`/api/auth/me.is_operator`);
+  create-plan rejects empty name / unknown type. Deferred: per-round chit prize→"your pay"
+  (needs a per-round taker model) and the ₹-fractional chit subscription display.
 - 2026-06-06 — Merged `main` into `feat/phase6-fidelity` to reconcile two parallel UI tracks that diverged at e36509d (Phase 5). Both rewrote the same static screens from the same mockups; file-by-file comparison showed `main` (the feature track) is a superset of the phase6 fidelity pass on the identical editorial design system — phase6 carried no render function `main` lacked — so `main` is canonical for every screen. Backend merged clean. One phase6-correct fix kept: app.html `renderFeatured` no longer dumps the whole asset ledger inline on the dashboard (it stacked into an endless wall on mobile); the per-asset ledger lives on /asset/:id. Restored real Records nav (Features/Analysis). 227 tests pass; all reconciled routes verified zero JS throws (jsdom).
 - 2026-06-06 — Mobile dashboard fixes: Net-position hero card was blank on narrow screens (decorative ::after radial painted over the text → gave it z-index above the radial); loans-list interest column now actually hides on phones (was beaten by inline display:flex → !important); topbar hides the currency toggle on phones so 'Log payment' fits without wrapping.
 - 2026-06-06 — Landing page mobile cleanup: nav reduced to brand + Sign in (section anchors + currency toggle desktop-only), section padding 94px→52px on phones, hero min-height dropped, type scaled, grids stack. Professional on iPhone-class widths.
