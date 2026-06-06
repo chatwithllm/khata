@@ -544,7 +544,86 @@ function _po_field(id, label, ph, suffix){
   if(suffix==='mo'){ const ms=el('span',null,'months'); ms.style.color='var(--ink-faint)'; ms.style.fontSize='12px'; wrap.append(ms); }
   f.append(l,wrap); return f;
 }
-let _poTimer=null;
+let _poTimer=null, _poBaseline=null;
+const _PONS='http://www.w3.org/2000/svg';
+function _svg(tag, attrs){ const e=document.createElementNS(_PONS, tag); for(const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+// Amortization chart: stacked principal+interest bars per month + a declining balance line.
+// Redraws for a scenario (fewer months) keeping the ORIGINAL term as x-extent so the saved
+// months show as an empty shaded region on the right.
+function drawAmortChart(chartEl, schedule, accelerated){
+  if(!chartEl) return;
+  chartEl.textContent='';
+  const sched=schedule||[];
+  if(!sched.length){ return; }
+  const full=(_poBaseline && _poBaseline.months) || sched.length;
+  const principal=(_poBaseline && _poBaseline.principal) || (sched[0].balance_minor + sched[0].principal_minor);
+  const W=1000, H=300, PADL=62, PADR=14, PADT=14, PADB=26;
+  const plotW=W-PADL-PADR, plotH=H-PADT-PADB, top=PADT+plotH;
+  const slot=plotW/full, bw=Math.min(slot*0.6, 26);
+  // Scale bars to the RECURRING payment, not a one-time lump spike (use 2nd-highest so a
+  // single lump month doesn't crush every other bar). Spike bars get clamped + marked.
+  const paysDesc=sched.map(r=>r.payment_minor).sort((a,b)=>b-a);
+  const scaleRef=(paysDesc.length>1 ? paysDesc[1] : paysDesc[0]) || 1;
+  const pw=Math.pow(10, Math.floor(Math.log10(scaleRef))), niceMax=(Math.ceil(scaleRef/(pw/2))*(pw/2)) || scaleRef;
+  const yBal=v=>PADT+plotH*(1 - Math.max(0,v)/principal);
+  const xc=i=>PADL + slot*i + slot/2;
+
+  const svg=_svg('svg',{viewBox:'0 0 '+W+' '+H, preserveAspectRatio:'none'});
+  svg.style.cssText='width:100%;height:200px;display:block;overflow:visible';
+  function txt(x,y,s,anchor,size,color){ const t=_svg('text',{x:x,y:y,'text-anchor':anchor||'middle','font-size':size||11,fill:color||'var(--ink-faint)','font-family':'JetBrains Mono'}); t.textContent=s; return t; }
+
+  [0,0.5,1].forEach(f=>{ const y=PADT+plotH*(1-f);
+    svg.append(_svg('line',{x1:PADL,y1:y,x2:W-PADR,y2:y,stroke:'var(--line-2)','stroke-width':1,'vector-effect':'non-scaling-stroke'}));
+    svg.append(txt(PADL-9, y+4, sym(BASE)+fmtNum(Math.round(niceMax*f),BASE), 'end', 11));
+  });
+
+  // saved region (when accelerated and the term shrank)
+  if(accelerated && full>sched.length){
+    const xcut=PADL + slot*sched.length;
+    svg.append(_svg('rect',{x:xcut,y:PADT,width:(W-PADR)-xcut,height:plotH,fill:'var(--pos)',opacity:'0.09'}));
+    svg.append(_svg('line',{x1:xcut,y1:PADT,x2:xcut,y2:top,stroke:'var(--pos)','stroke-width':1.5,'stroke-dasharray':'4 3','vector-effect':'non-scaling-stroke'}));
+    svg.append(txt((xcut+(W-PADR))/2, PADT+15, (full-sched.length)+' mo saved','middle',13,'var(--pos)'));
+  }
+
+  // bars: principal (dark) bottom + interest (amber) on top; clamp a lump-spike to the top
+  const bars=[];
+  sched.forEach((r,idx)=>{
+    const x=PADL + slot*idx + (slot-bw)/2;
+    let pH=plotH*(r.principal_minor/niceMax), iH=plotH*(r.interest_minor/niceMax);
+    const spike = (pH+iH) > plotH;
+    if(spike){ const k=plotH/(pH+iH); pH*=k; iH*=k; }   // clamp, keep principal/interest ratio
+    const pr=_svg('rect',{x:x,y:top-pH,width:bw,height:pH,fill:'var(--ink)',rx:1});
+    const ir=_svg('rect',{x:x,y:top-pH-iH,width:bw,height:iH,fill:'#d98a00',rx:1});
+    bars.push(pr,ir); svg.append(pr,ir);
+    if(spike){   // a one-time lump landed this month — mark it
+      svg.append(txt(x+bw/2, top-pH-iH-5, '▲','middle',11,'var(--primary-deep)'));
+      svg.append(txt(x+bw/2, top-pH-iH-16, 'lump','middle',10,'var(--primary-deep)'));
+    }
+  });
+
+  // balance line
+  let d='M '+PADL+' '+yBal(principal).toFixed(1);
+  sched.forEach((r,idx)=>{ d+=' L '+xc(idx).toFixed(1)+' '+yBal(r.balance_minor).toFixed(1); });
+  const bl=_svg('path',{d:d,fill:'none',stroke:'var(--primary-deep)','stroke-width':2.4,'stroke-linejoin':'round','stroke-linecap':'round','vector-effect':'non-scaling-stroke'});
+  svg.append(bl);
+
+  // x labels
+  const xl=[1]; if(full>=6) xl.push(Math.round(full/2)); xl.push(full);
+  [...new Set(xl)].forEach(mn=>{ const i=mn-1; if(i<0||i>=full) return; svg.append(txt(PADL+slot*i+slot/2, H-8, String(mn),'middle',10)); });
+
+  chartEl.append(svg);
+
+  // entrance animation (transform-box:fill-box keeps the grow anchored to each bar's base)
+  requestAnimationFrame(()=>{
+    bars.forEach((b,i)=>{
+      b.style.transformBox='fill-box'; b.style.transformOrigin='bottom'; b.style.transform='scaleY(0)';
+      b.style.transition='transform .55s cubic-bezier(.22,1,.36,1) '+(Math.min(i,48)*0.01)+'s';
+      requestAnimationFrame(()=>{ b.style.transform='scaleY(1)'; });
+    });
+    let len=0; try{ len=bl.getTotalLength?bl.getTotalLength():0; }catch(e){ len=0; }
+    if(len>0){ bl.style.strokeDasharray=len; bl.style.strokeDashoffset=len; bl.style.transition='stroke-dashoffset 1s cubic-bezier(.22,1,.36,1) .25s'; requestAnimationFrame(()=>{ bl.style.strokeDashoffset='0'; }); }
+  });
+}
 async function renderPayoff(box, plan){
   box.textContent='';
   const ph=el('div','ph');
@@ -592,6 +671,18 @@ async function renderPayoff(box, plan){
     stat('Debt-free by', el('span',null,fmtMonthYear(b.payoff_date)), 'at this pace'));
   body.append(sumWrap);
 
+  // ── amortization chart (monthly payment = principal + interest, with balance line) ──
+  _poBaseline = {schedule: data.schedule, months: b.months, principal: data.principal_minor};
+  const chartTitle=el('div'); chartTitle.style.cssText='display:flex;align-items:center;justify-content:space-between;margin:2px 0 8px;flex-wrap:wrap;gap:8px';
+  const ct=el('div',null,'Payments that close the loan'); ct.style.cssText='font-weight:600;font-size:13.5px';
+  const legend=el('div'); legend.style.cssText='display:flex;gap:14px;font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"';
+  const lg=(c,txt)=>{ const s=el('span'); s.style.cssText='display:inline-flex;align-items:center;gap:5px'; const d=el('span'); d.style.cssText='width:9px;height:9px;border-radius:2px;background:'+c; s.append(d, document.createTextNode(txt)); return s; };
+  legend.append(lg('var(--ink)','principal'), lg('#d98a00','interest'), lg('var(--primary-deep)','balance'));
+  chartTitle.append(ct, legend);
+  body.append(chartTitle);
+  const chart=el('div'); chart.id='po-chart';
+  body.append(chart);
+
   // ── what-if controls ──
   const ctlTitle=el('div',null,'What if you pay more?'); ctlTitle.style.cssText='font-weight:600;font-size:13.5px;margin:4px 0 12px';
   body.append(ctlTitle);
@@ -615,6 +706,7 @@ async function updatePayoffScenario(){
   const target=($('po-target').value||'').trim();
   res.textContent='';
   if(!extra && !lump && !target){
+    if(_poBaseline) drawAmortChart($('po-chart'), _poBaseline.schedule, false);   // back to baseline
     const hint=el('div',null,'Enter an extra amount, a lump sum, or a target month to see how much time and interest you’d save.');
     hint.style.cssText='font-size:12.5px;color:var(--ink-faint);line-height:1.5'; res.append(hint); return;
   }
@@ -626,7 +718,12 @@ async function updatePayoffScenario(){
   try{ data=await fetch('/api/plans/'+pid+'/loan/amortization?'+qs.join('&')).then(r=>r.json()); }
   catch(e){ return; }
   const s=data.scenario;
-  if(!s || s.diverges){ res.append(el('div','emptypanel','That doesn’t cover the monthly interest — try a larger amount.')); return; }
+  if(!s || s.diverges){
+    if(_poBaseline) drawAmortChart($('po-chart'), _poBaseline.schedule, false);
+    res.append(el('div','emptypanel','That doesn’t cover the monthly interest — try a larger amount.')); return;
+  }
+  // redraw the chart for the accelerated plan (fewer months → saved region shows)
+  if(s.schedule && s.schedule.length) drawAmortChart($('po-chart'), s.schedule, true);
 
   const card=el('div'); card.style.cssText='background:color-mix(in srgb,var(--pos) 9%,var(--card));border:1px solid color-mix(in srgb,var(--pos) 35%,var(--line));border-radius:13px;padding:16px 18px';
   // headline: pay off in X (saving N months)

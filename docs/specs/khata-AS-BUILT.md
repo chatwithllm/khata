@@ -152,10 +152,15 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   chosen): **extra ₹/month**, **one-time lump sum**, **target payoff month** (→ required payment).
   `GET /api/plans/<id>/loan/amortization?extra=&lump=&lump_month=&target_months=`. UI: 4 baseline stat cards
   (monthly payment, term, total interest, debt-free-by) + three inputs that debounce-refetch and render a
-  green "Debt-free N months sooner · save ₹X interest" card. Needs a tenure (prompts "Set term" → opens the
-  edit-terms slide-over); diverging payments (< monthly interest) are flagged. **Framing:** a forward
-  PROJECTION, labelled "projection · not the ledger" — Khata loans actually accrue interest + take manual
-  principal repayments; this answers "what if I amortised it instead." (Closes the §10 EMI/amortization defer.)
+  green "Debt-free N months sooner · save ₹X interest" card, plus an **animated amortization chart**: per-month
+  bars split principal (dark) + interest (amber) with a declining **balance line** (the endpoint returns the
+  baseline AND scenario `schedule`). The chart redraws on every what-if — bars scale to the recurring payment
+  (a one-time lump spike is clamped + marked "▲ lump", never crushes the others), the term shrinks, and the
+  saved months show as a shaded "N mo saved" region on the right (x-extent stays the original term). Needs a
+  tenure (prompts "Set term" → opens the edit-terms slide-over); diverging payments (< monthly interest) are
+  flagged. **Framing:** a forward PROJECTION, labelled "projection · not the ledger" — Khata loans actually
+  accrue interest + take manual principal repayments; this answers "what if I amortised it instead." (Closes
+  the §10 EMI/amortization defer.)
 - **2026-06-05 — Profile pictures (crop tool, server-side) + avatars across the asset page.** Replaced the
   old per-browser localStorage avatar hack with a real **server-side photo per user** (`users.avatar`, a
   cropped 256px JPEG data URL): so every member sees each contributor's face, and photos travel with backups.
@@ -282,7 +287,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
-- 2026-06-05 — Loan repayment projection: loan-detail "Repayment plan" panel — EMI/total-interest/payoff baseline + extra-per-month / lump-sum / target-month what-ifs showing months & interest saved. `GET /api/plans/<id>/loan/amortization`, `loans.amortize` (integer math, tested).
+- 2026-06-05 — Loan repayment projection: loan-detail "Repayment plan" panel — EMI/total-interest/payoff baseline + extra-per-month / lump-sum / target-month what-ifs showing months & interest saved, plus an animated amortization chart (principal+interest bars + balance line) that redraws per scenario with a "N mo saved" region. `GET /api/plans/<id>/loan/amortization` (returns baseline + scenario schedules), `loans.amortize` (integer math, tested).
 - 2026-06-05 — Avatars everywhere: topbar on every page loads the server avatar (purges stale localStorage that leaked a prior account's photo across logins — reported bug); "Shared with" member lists show avatars (`list_members.avatar`).
 - 2026-06-05 — Asset ledger: each row shows its share of the plan total as a quiet "X% of total" line under the amount (right-aligned, muted; "<1% of total" for tiny entries). Client-side, no API change.
 - 2026-06-05 — Profile pictures: server-side `users.avatar` + crop tool (drag/zoom) in Settings; contributor tiles + ledger rows show avatars (hover reveals full photo); contributors share bar redesigned (no cramped labels); ledger edit moved to a single header toggle (was per-row). `POST /api/auth/avatar`, asset_state avatar fields, migration c9a3avatar01. Also fixed a TZ-flaky secured-loan test (explicit occurred_at).
