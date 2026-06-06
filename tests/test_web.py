@@ -59,7 +59,7 @@ def test_app_shell_served(client):
     assert r.status_code == 200
     body = r.data.decode()
     for needle in ["/api/auth/me", "/api/networth", "/api/dashboard", "/api/plans",
-                   "Net position", "ledger.css", "/holdings", "Proofs"]:
+                   "Net position", "ledger.css", "/holdings", "Analysis"]:
         assert needle in body
 
 

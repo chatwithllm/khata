@@ -77,14 +77,6 @@
 
 .emptypanel{padding:34px 22px;text-align:center;color:var(--ink-faint)}
 .emptypanel a{color:var(--primary-deep);font-weight:600}
-
-/* asset ledger rows (ported from mockup .ledger; .pill/.proof live in app.css) */
-.ledger .lrow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:13px 22px;border-top:1px solid var(--line-2)}
-.ledger .l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
-.ledger .amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right}
-.ledger .amt.in{color:var(--pos)} .ledger .amt.out{color:var(--ink)}
-.ledger .l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
-.ledger .l2r{font-size:11px;color:var(--ink-faint);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -102,8 +94,8 @@
     <a class="nav-i" href="/app?type=loan" data-nav="loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
     <a class="nav-i" href="/app?type=retirement" data-nav="retirement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
     <div class="navsec">Records</div>
-    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</a>
-    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Proofs</a>
+    <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
+    <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
     <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
     <a class="nav-i" id="logout-link" href="#" style="color:var(--neg)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log out</a>
   </aside>
@@ -286,34 +278,8 @@ function renderFeatured(box, plan, state){
   }
   if(!insts.length){ sched.append(el('div','emptypanel','No installments scheduled.')); }
   box.append(sched);
-
-  // ── ledger (newest first; real state.ledger rows) ──
-  const ledger = (state.ledger || []).slice().sort((a,b)=>String(b.occurred_at||'').localeCompare(String(a.occurred_at||'')));
-  if(ledger.length){
-    const ph3=el('div','ph'); ph3.style.borderTop='1px solid var(--line)';
-    const t3=el('div','t','Ledger'); t3.style.fontSize='15px';
-    const m3=el('div','meta'); m3.append(document.createTextNode('balance '), amtSpan(rem));
-    ph3.append(t3,m3);
-    box.append(ph3);
-    const led=el('div','ledger');
-    for(const r of ledger){
-      const inn = r.direction==='in';
-      const row=el('div','lrow');
-      row.append(el('div','l1', r.note || r.kind || 'Entry'));
-      const amt=el('div','amt '+(inn?'in':'out'));
-      const sign=el('span'); sign.textContent=inn?'+':'−';
-      amt.append(sign, amtSpan(Math.abs(r.amount_minor)));
-      row.append(amt);
-      row.append(el('div','l2', fmtDate(r.occurred_at)));
-      const l2r=el('div','l2r');
-      if(r.method) l2r.append(el('span','pill', r.method));
-      if(r.funding_source) l2r.append(el('span','pill', String(r.funding_source).replace(/_/g,' ')));
-      if(r.has_proof){ const pf=el('span','proof'); pf.append(document.createTextNode('▣ proof')); l2r.append(pf); }
-      row.append(l2r);
-      led.append(row);
-    }
-    box.append(led);
-  }
+  // NOTE: the per-asset ledger lives on the asset detail page (/asset/:id), not the
+  // dashboard — rendering every row here stacked into an endless wall on mobile.
 }
 
 // format an ISO occurred_at into "DD Mon · HH:MM"

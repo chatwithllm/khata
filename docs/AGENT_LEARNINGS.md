@@ -297,3 +297,40 @@ Append-only log. Each entry: date · what happened · the rule it produced (if a
   sharing, assets, loans (+ secured/collateral), holdings, net worth (+ cross-currency), chit funds,
   retirement planner, settings, analysis, optional feeds — all operable in the browser, money-reviewed,
   no float, derived balances, self-hosted.
+
+## Phase 6 — UI fidelity (match the editorial mockups)
+- **6.1 Dashboard fidelity:** rebuilt `app.html` to `docs/mockups/app.html` (sidebar+counts, rich topbar,
+  hero stat cards, grid2 panels) wired to live data. Dropped the mockup's fake `RATE=83` INR→USD —
+  amounts render in the user's real base currency (Indian grouping for INR, en-US for USD); curtog switches
+  the real base via `POST /api/base-currency` + reload. XSS-safe (createElement+textContent, zero innerHTML).
+- **6.2 Shared shell CSS:** extracted the inlined editorial shell + detail-panel CSS from app.html into
+  `static/assets/app.css` (one source of truth for sidebar/topbar/panels/kpis/sched/fund/contrib, consumed
+  by app.html + all detail pages). Verified a visual no-op via selector before/after audit. `ledger.css`
+  remains the landing/marketing stylesheet; the app shell now uses `app.css`.
+- **6.3 Asset-detail fidelity:** ported `asset-detail.html` to the editorial shell + grid2 panels (KPIs+
+  progress, installment schedule with status dots, funding-sources stacked bar, contributors sharebar,
+  members/sharing). Log-payment became a slide-over reusing the real `POST /payments` with the exact
+  METHODS/SOURCES enums. **Honest degradation:** omitted the mockup's ledger panel, projection sparkline,
+  linked-liability, and proof gallery — no backend endpoint exposes that data, so render nothing rather than
+  fabricate. Schedule `.mt` shows status text (paid in full / part-paid / due), not fabricated dates/badges.
+- **6.4 Loan/Chit/Retirement detail fidelity:** ported all three detail pages to the editorial shell + grid2
+  panels wired to live `loan_state`/`chit_state`/`retirement_state`. Loan: KPIs + release tracker (real
+  schedule w/ period dates) + conditional collateral/LTV + terms; raw entry-ledger omitted (no GET). Chit:
+  KPIs + rounds strip (aggregate `won` only — per-round winners NOT tracked, so no per-cell star) + my
+  position + REAL ledger (chit_state exposes it) + terms + roster; net-position chart drawn from cumulative
+  ledger (real). Retirement: KPIs + projection (growth curve replicates the backend compound formula exactly,
+  displays server corpus figures) + contribution split (segments incl. opening balance sum to corpus) +
+  editable assumptions → /retirement/update; 401(k)-loan offset planner omitted (no model). Adversarial
+  review caught two issues, both fixed: chit per-round win-star (fabricated which round won) removed;
+  retirement split total base made honest. **Follow-up for 6.5:** the chit dividend/auction-what-if
+  calculator (GET /chit/dividend) was dropped from the fidelity port — endpoint still live; restore as a
+  compact slide-over so it isn't an orphaned endpoint.
+- **6.5 Holdings/Create/Settings/Analysis fidelity + Phase 6 finale:** holdings ported to editorial shell
+  (net-worth KPIs + holdings table + manual-quote inputs + FX controls); the mockup's "Live spot prices"
+  ticker is decorative market data we don't have → gated on /api/feed/config (off by default → omitted, never
+  fabricated). create-plan reskinned with all FIVE plan types creatable, every dropdown/payload key verified
+  against create() + service enums (ASSET_CLASSES, DIRECTIONS, INTEREST_TYPES, SUPPORTED_CURRENCIES) — on 201
+  redirects to the new plan's detail route. holding-detail/settings/analysis given shell consistency. Restored
+  the chit auction-what-if calculator (GET /chit/dividend) as a panel so the live endpoint isn't orphaned.
+  Adversarial review PASS, no defects. Phase 6 (UI fidelity) COMPLETE — the whole app now matches the
+  editorial mockups, wired to live data, XSS-safe, with honest degradation wherever the backend lacks data.
