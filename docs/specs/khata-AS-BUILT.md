@@ -106,7 +106,8 @@ on `type`) · POST `/<id>/installments` · POST `/<id>/payments` (asset; accepts
 occurred_at/method/funding_source/note; both recompute derived state; editing the amount/attribution
 re-opens confirmation) · **POST `/<id>/entries/<entry_id>/amount`** (`{action: confirm|counter|accept, amount?}`
 — the two-party amount-agreement loop; accessible to either side, turn-/role-checked) · POST `/<id>/loan/disbursements` · POST `/<id>/loan/entries`
-· POST `/<id>/loan/collateral` · POST `/<id>/holding/buys|sells|quote|refresh-quote` · POST
+· POST `/<id>/loan/collateral` · **GET `/<id>/loan/amortization?extra=&lump=&lump_month=&target_months=`**
+(repayment projection: EMI + baseline + optional what-if scenario — months/interest saved) · POST `/<id>/holding/buys|sells|quote|refresh-quote` · POST
 `/<id>/chit/entries` · GET `/<id>/chit/dividend?bid=` · POST `/<id>/retirement/update` · GET/POST
 `/<id>/members` (POST returns `{member:{…, status}}` — invited members start `invited`) ·
 DELETE `/<id>/members/<user_id>`.
@@ -143,6 +144,18 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-05 — Loan repayment projection (amortization + payoff what-ifs).** A "Repayment plan" panel on
+  loan-detail that projects a fixed-EMI repayment of the **current outstanding** over the loan's tenure, then
+  lets you model paying it off faster. Pure integer-minor math, server-side + tested (`loans.amortize` +
+  `_simulate`/`_emi`/`_monthly_rate`): EMI = P·mr/(1−(1+mr)⁻ⁿ); month-by-month simulation gives total
+  interest, payoff date, and (for a what-if) months-saved + interest-saved vs baseline. Three what-ifs (all
+  chosen): **extra ₹/month**, **one-time lump sum**, **target payoff month** (→ required payment).
+  `GET /api/plans/<id>/loan/amortization?extra=&lump=&lump_month=&target_months=`. UI: 4 baseline stat cards
+  (monthly payment, term, total interest, debt-free-by) + three inputs that debounce-refetch and render a
+  green "Debt-free N months sooner · save ₹X interest" card. Needs a tenure (prompts "Set term" → opens the
+  edit-terms slide-over); diverging payments (< monthly interest) are flagged. **Framing:** a forward
+  PROJECTION, labelled "projection · not the ledger" — Khata loans actually accrue interest + take manual
+  principal repayments; this answers "what if I amortised it instead." (Closes the §10 EMI/amortization defer.)
 - **2026-06-05 — Profile pictures (crop tool, server-side) + avatars across the asset page.** Replaced the
   old per-browser localStorage avatar hack with a real **server-side photo per user** (`users.avatar`, a
   cropped 256px JPEG data URL): so every member sees each contributor's face, and photos travel with backups.
@@ -238,7 +251,8 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 ## 10. Deviations / deferred vs the intent brief (so a rebuild knows what's NOT there)
 - **Retirement** built as **INR NPS compound projector**, not the brief's **US 401(k)** (IRS limits,
   paycheck deferral, employer match, true-up). US 401(k) = new plan type + model — not built.
-- **Loan EMI/bullet** comparison + amortization — not built (needs a compute endpoint).
+- **Loan amortization projection** — BUILT (see §9 "Loan repayment projection"): EMI + extra/lump/target
+  what-ifs. (A side-by-side EMI-vs-bullet *comparison* view is still not built.)
 - **Roll-forward installments** — partial: greedy fill + derived "short ₹X" badge; no preserved-original.
 - **Collateral** — holding-reference + derived LTV only; no standalone records / type / lender / LTV-cap /
   pledge→release lifecycle.
@@ -268,6 +282,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Loan repayment projection: loan-detail "Repayment plan" panel — EMI/total-interest/payoff baseline + extra-per-month / lump-sum / target-month what-ifs showing months & interest saved. `GET /api/plans/<id>/loan/amortization`, `loans.amortize` (integer math, tested).
 - 2026-06-05 — Avatars everywhere: topbar on every page loads the server avatar (purges stale localStorage that leaked a prior account's photo across logins — reported bug); "Shared with" member lists show avatars (`list_members.avatar`).
 - 2026-06-05 — Asset ledger: each row shows its share of the plan total as a quiet "X% of total" line under the amount (right-aligned, muted; "<1% of total" for tiny entries). Client-side, no API change.
 - 2026-06-05 — Profile pictures: server-side `users.avatar` + crop tool (drag/zoom) in Settings; contributor tiles + ledger rows show avatars (hover reveals full photo); contributors share bar redesigned (no cramped labels); ledger edit moved to a single header toggle (was per-row). `POST /api/auth/avatar`, asset_state avatar fields, migration c9a3avatar01. Also fixed a TZ-flaky secured-loan test (explicit occurred_at).

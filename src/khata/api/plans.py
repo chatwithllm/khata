@@ -382,6 +382,33 @@ def loan_disbursement(plan_id):
                    state=loans.loan_state(g.db, plan.loan, as_of=date.today())), 201
 
 
+@bp.get("/<int:plan_id>/loan/amortization")
+def loan_amortization(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _accessible_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "loan":
+        return jsonify(error="not_a_loan"), 400
+    loan = plan.loan
+    st = loans.loan_state(g.db, loan, as_of=date.today())
+    args = request.args
+    try:
+        extra = to_minor(args.get("extra"), plan.currency) if args.get("extra") else 0
+        lump = to_minor(args.get("lump"), plan.currency) if args.get("lump") else 0
+        lump_month = int(args.get("lump_month")) if args.get("lump_month") else 1
+        target = int(args.get("target_months")) if args.get("target_months") else None
+    except (ValueError, TypeError) as e:
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(loans.amortize(
+        principal_minor=st["principal_outstanding_minor"], rate_bps=loan.rate_bps,
+        interest_type=loan.interest_type, tenure_months=loan.tenure_months,
+        currency=plan.currency, extra_monthly_minor=extra, lump_minor=lump,
+        lump_month=lump_month, target_months=target)), 200
+
+
 @bp.post("/<int:plan_id>/loan/collateral")
 def loan_collateral(plan_id):
     user = current_user()

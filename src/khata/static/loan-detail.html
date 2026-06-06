@@ -145,6 +145,8 @@
           <div class="panel fade d1" id="ledger-panel"></div>
           <!-- repayment schedule (formerly "Release tracker") -->
           <div class="panel fade d2 fill" id="sched-panel"></div>
+          <!-- payoff projection (amortization + extra-payment what-ifs) -->
+          <div class="panel fade d2 fill" id="payoff-panel"></div>
         </div>
 
         <!-- RIGHT RAIL -->
@@ -528,6 +530,124 @@ function renderSchedule(box, st){
   box.append(sched);
 }
 
+// ── payoff projection (amortization + extra-payment what-ifs) ──
+function _po_amt(minor){ const s=el('span'); const a=el('span','symword'); a.textContent=sym(BASE); const n=el('span'); n.textContent=fmtNum(Math.abs(minor||0),BASE); s.append(a,n); return s; }
+function _po_field(id, label, ph, suffix){
+  const f=el('div'); f.style.cssText='display:flex;flex-direction:column;gap:5px';
+  const l=el('label',null,label); l.setAttribute('for',id);
+  l.style.cssText='font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:700';
+  const wrap=el('div'); wrap.style.cssText='display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:9px;padding:0 10px;background:var(--card)';
+  if(suffix==='amt'){ const cs=el('span',null,sym(BASE)); cs.style.color='var(--ink-faint)'; wrap.append(cs); }
+  const inp=el('input'); inp.id=id; inp.placeholder=ph; inp.inputMode='numeric'; inp.autocomplete='off';
+  inp.style.cssText='border:none;outline:none;background:transparent;font:inherit;font-size:14px;padding:9px 0;width:100%;color:var(--ink)';
+  wrap.append(inp);
+  if(suffix==='mo'){ const ms=el('span',null,'months'); ms.style.color='var(--ink-faint)'; ms.style.fontSize='12px'; wrap.append(ms); }
+  f.append(l,wrap); return f;
+}
+let _poTimer=null;
+async function renderPayoff(box, plan){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Repayment plan'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','projection · not the ledger'));
+  box.append(ph);
+  const body=el('div'); body.id='po-body'; body.style.padding='18px 22px';
+  body.append(el('div',null,'Loading…'));
+  box.append(body);
+
+  let data;
+  try{ data=await fetch('/api/plans/'+pid+'/loan/amortization').then(r=>r.json()); }
+  catch(e){ body.textContent=''; body.append(el('div','emptypanel','Could not load projection.')); return; }
+  body.textContent='';
+
+  if(!data.available){
+    const m=el('div','emptypanel');
+    if(data.reason==='needs_tenure'){
+      m.append(document.createTextNode('Set a loan term (tenure) to project monthly payments and payoff. '));
+      const link=el('span',null,'Set term'); link.style.cssText='color:var(--primary-deep);font-weight:600;cursor:pointer';
+      link.addEventListener('click', ()=>{ if(typeof openTerms==='function') openTerms(); });
+      m.append(link);
+    } else {
+      m.textContent='Log the principal (a disbursement) to project repayments.';
+    }
+    body.append(m); return;
+  }
+
+  // ── baseline summary ──
+  const b=data.baseline;
+  const sumWrap=el('div'); sumWrap.style.cssText='display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:18px';
+  const stat=(label, node, sub)=>{
+    const c=el('div'); c.style.cssText='background:var(--paper-2);border:1px solid var(--line-2);border-radius:12px;padding:13px 15px';
+    const lab=el('div',null,label); lab.style.cssText='font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:700';
+    const v=el('div'); v.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:18px;margin-top:6px'; v.append(node);
+    c.append(lab, v);
+    if(sub){ const s=el('div',null,sub); s.style.cssText='font-size:11px;color:var(--ink-faint);margin-top:3px;font-family:"JetBrains Mono"'; c.append(s); }
+    return c;
+  };
+  const emiNode=_po_amt(data.emi_minor); const emiV=el('span'); emiV.append(emiNode, document.createTextNode('/mo'));
+  sumWrap.append(
+    stat('Monthly payment', emiV, 'principal + interest'),
+    stat('Term', el('span',null,b.months+' months'), 'on '+data.tenure_months+'-mo tenure'),
+    stat('Total interest', _po_amt(b.total_interest_minor), 'over the full term'),
+    stat('Debt-free by', el('span',null,fmtMonthYear(b.payoff_date)), 'at this pace'));
+  body.append(sumWrap);
+
+  // ── what-if controls ──
+  const ctlTitle=el('div',null,'What if you pay more?'); ctlTitle.style.cssText='font-weight:600;font-size:13.5px;margin:4px 0 12px';
+  body.append(ctlTitle);
+  const grid=el('div'); grid.style.cssText='display:grid;grid-template-columns:repeat(3,1fr);gap:12px';
+  grid.append(_po_field('po-extra','Extra / month','500','amt'),
+              _po_field('po-lump','One-time lump','50,000','amt'),
+              _po_field('po-target','Target payoff','12','mo'));
+  body.append(grid);
+  const res=el('div'); res.id='po-results'; res.style.cssText='margin-top:16px';
+  body.append(res);
+
+  const onInput=()=>{ if(_poTimer) clearTimeout(_poTimer); _poTimer=setTimeout(updatePayoffScenario, 320); };
+  ['po-extra','po-lump','po-target'].forEach(id=>$(id).addEventListener('input', onInput));
+  updatePayoffScenario();   // initial empty state
+}
+
+async function updatePayoffScenario(){
+  const res=$('po-results'); if(!res) return;
+  const extra=($('po-extra').value||'').trim();
+  const lump=($('po-lump').value||'').trim();
+  const target=($('po-target').value||'').trim();
+  res.textContent='';
+  if(!extra && !lump && !target){
+    const hint=el('div',null,'Enter an extra amount, a lump sum, or a target month to see how much time and interest you’d save.');
+    hint.style.cssText='font-size:12.5px;color:var(--ink-faint);line-height:1.5'; res.append(hint); return;
+  }
+  const qs=[];
+  if(extra) qs.push('extra='+encodeURIComponent(extra));
+  if(lump) qs.push('lump='+encodeURIComponent(lump));
+  if(target) qs.push('target_months='+encodeURIComponent(target));
+  let data;
+  try{ data=await fetch('/api/plans/'+pid+'/loan/amortization?'+qs.join('&')).then(r=>r.json()); }
+  catch(e){ return; }
+  const s=data.scenario;
+  if(!s || s.diverges){ res.append(el('div','emptypanel','That doesn’t cover the monthly interest — try a larger amount.')); return; }
+
+  const card=el('div'); card.style.cssText='background:color-mix(in srgb,var(--pos) 9%,var(--card));border:1px solid color-mix(in srgb,var(--pos) 35%,var(--line));border-radius:13px;padding:16px 18px';
+  // headline: pay off in X (saving N months)
+  const head=el('div'); head.style.cssText='display:flex;align-items:baseline;gap:8px;flex-wrap:wrap';
+  const big=el('span'); big.style.cssText='font-family:"Fraunces",serif;font-weight:600;font-size:24px;color:var(--pos-dk,var(--pos))';
+  big.textContent='Debt-free '+ (s.months_saved>0 ? s.months_saved+' month'+(s.months_saved===1?'':'s')+' sooner' : 'in '+s.months+' months');
+  head.append(big);
+  card.append(head);
+  const line=el('div'); line.style.cssText='font-size:13px;color:var(--ink-soft);margin-top:6px;font-family:"JetBrains Mono"';
+  line.append(document.createTextNode('Payoff '+fmtMonthYear(s.payoff_date)+' ('+s.months+' months) · '));
+  if(s.required_payment_minor){ line.append(document.createTextNode('pay ')); line.append(_po_amt(s.required_payment_minor)); line.append(document.createTextNode('/mo')); }
+  else { line.append(document.createTextNode('in '+s.months+' payments')); }
+  card.append(line);
+  // savings highlight
+  const save=el('div'); save.style.cssText='display:flex;align-items:baseline;gap:7px;margin-top:12px;font-size:14px';
+  const sv=el('span'); sv.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:18px;color:var(--pos-dk,var(--pos))'; sv.append(_po_amt(s.interest_saved_minor));
+  save.append(el('span',null,'You save '), sv, el('span',null,' in interest'));
+  card.append(save);
+  res.append(card);
+}
+
 // ── collateral panel (only when secured/collateral) ──
 function renderCollateral(box, st){
   box.textContent='';
@@ -741,6 +861,7 @@ async function boot(){
   renderHeader($('header-panel'), plan, st);
   renderLedger($('ledger-panel'), st);
   renderSchedule($('sched-panel'), st);
+  renderPayoff($('payoff-panel'), plan);
   renderGlance($('glance-panel'), plan, st);
   renderCollateral($('coll-panel'), st);
   renderTerms($('terms-panel'), plan, st);
