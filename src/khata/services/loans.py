@@ -440,13 +440,19 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
     # (an asset contribution paid out of this loan, etc.). Cross-plan provenance.
     deployed = []
     deployed_total = 0
+    _dep_by_ccy = {}
     for e in session.scalars(select(LedgerEntry).where(LedgerEntry.funding_plan_id == plan.id)):
         tp = session.get(Plan, e.plan_id)
         deployed.append({"plan_id": e.plan_id, "plan_name": tp.name if tp else None,
                          "plan_type": tp.type if tp else None, "amount_minor": e.amount_minor,
-                         "occurred_at": e.occurred_at.isoformat()})
-        deployed_total += e.amount_minor
+                         "currency": e.currency, "occurred_at": e.occurred_at.isoformat()})
+        _dep_by_ccy[e.currency] = _dep_by_ccy.get(e.currency, 0) + e.amount_minor
+        if e.currency == plan.currency:
+            deployed_total += e.amount_minor      # same-currency total only (back-compat)
     deployed.sort(key=lambda r: r["occurred_at"], reverse=True)
+    # per-currency totals — money in different currencies can't be summed
+    deployed_totals = [{"currency": c, "total_minor": t} for c, t in
+                       sorted(_dep_by_ccy.items(), key=lambda kv: -kv[1])]
 
     # Surface existing ledger_entries rows in the state JSON (mirrors chit_state.ledger).
     # No new model/migration — these rows already exist; we just include them.
@@ -483,5 +489,6 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
         "gold_collateral": gold_collateral,
         "deployed": deployed,
         "deployed_total_minor": deployed_total,
+        "deployed_totals": deployed_totals,
         "ledger": ledger,
     }

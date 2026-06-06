@@ -1008,6 +1008,8 @@ function renderTerms(box, plan, st){
   box.append(body);
 }
 
+// format an amount in ITS OWN currency (deployed money may be a different currency than the loan)
+function fmtCcy(minor, ccy){ return sym(ccy)+fmtNum(Math.abs(minor||0), ccy); }
 // ── deployed into: where this borrowed money went (cross-plan funding link) ──
 function renderDeployed(box, st){
   box.textContent='';
@@ -1016,18 +1018,23 @@ function renderDeployed(box, st){
   box.style.display='';
   const ph=el('div','ph'); const t=el('div','t','Deployed into'); t.style.fontSize='16px';
   ph.append(t, el('div','meta','where it went')); box.append(ph);
-  const head=el('div'); head.style.cssText='display:flex;justify-content:space-between;align-items:baseline;padding:14px 22px;border-bottom:1px solid var(--line-2)';
-  const hl=el('span',null,'Put to work'); hl.style.cssText='font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:700';
-  const hv=el('span'); hv.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:15px'; hv.append(amtSpan(st.deployed_total_minor));
+  const head=el('div'); head.style.cssText='display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:14px 22px;border-bottom:1px solid var(--line-2)';
+  const hl=el('span',null,'Put to work'); hl.style.cssText='font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:700;flex:none';
+  // per-currency total (can't sum across currencies); render each, joined by " + "
+  const totals=(st.deployed_totals && st.deployed_totals.length) ? st.deployed_totals : [];
+  const hv=el('span',null, totals.length ? totals.map(x=>fmtCcy(x.total_minor, x.currency)).join('  +  ') : '—');
+  hv.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:15px;text-align:right';
   head.append(hl,hv); box.append(head);
   for(const d of dep){
     const r=document.createElement('a'); r.href='/'+(d.plan_type||'asset')+'/'+d.plan_id;
     r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 22px;border-top:1px solid var(--line-2);text-decoration:none;color:inherit';
     const lf=el('div');
     const nm=el('div',null,d.plan_name||'plan'); nm.style.cssText='font-weight:600;font-size:14px'; lf.append(nm);
-    const dt=el('div',null,(d.plan_type||'')+' · '+fmtDate((d.occurred_at||'').slice(0,10))); dt.style.cssText='font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"'; lf.append(dt);
+    let sub=(d.plan_type||'')+' · '+fmtDate((d.occurred_at||'').slice(0,10));
+    if(d.currency && d.currency!==BASE) sub+=' · '+d.currency;   // flag a different currency
+    const dt=el('div',null,sub); dt.style.cssText='font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"'; lf.append(dt);
     const rt=el('div'); rt.style.cssText='display:flex;align-items:center;gap:8px';
-    const av=el('div'); av.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px'; av.append(amtSpan(d.amount_minor));
+    const av=el('div',null, fmtCcy(d.amount_minor, d.currency||BASE)); av.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px';
     const arr=el('span',null,'→'); arr.style.color='var(--ink-faint)';
     rt.append(av, arr);
     r.append(lf, rt); box.append(r);

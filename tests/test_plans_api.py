@@ -434,3 +434,20 @@ def test_contributor_can_edit_own_entry_not_others(client):
     # member edits the OWNER's entry → forbidden
     assert client.patch(f"/api/plans/{pid}/entries/{owner_entry}", json={"note": "x"}).status_code == 403
     assert client.delete(f"/api/plans/{pid}/entries/{owner_entry}").status_code == 403
+
+
+def test_funding_link_cross_currency(client):
+    _register(client)
+    # USD loan funds an INR asset contribution
+    lid = client.post("/api/plans", json={
+        "type": "loan", "name": "401k Loan", "currency": "USD", "direction": "taken",
+        "interest_type": "yearly", "rate": "7.5", "start_date": "2026-01-01", "tenure_months": 24}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{lid}/loan/disbursements", json={"amount": "35,000", "occurred_at": "2026-01-01T00:00:00"})
+    aid = client.post("/api/plans", json={"name": "1 Acre", "currency": "INR", "total_price": "1,75,00,000"}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{aid}/payments", json={
+        "amount": "10,00,000", "method": "transfer", "funding_source": "loan", "funding_plan_id": lid})
+    st = client.get(f"/api/plans/{lid}").get_json()["state"]
+    # the deployed money stays in ITS currency (INR), not summed into the USD loan
+    assert st["deployed"][0]["currency"] == "INR" and st["deployed"][0]["amount_minor"] == 100000000
+    assert st["deployed_totals"] == [{"currency": "INR", "total_minor": 100000000}]
+    assert st["deployed_total_minor"] == 0   # nothing in the loan's own (USD) currency
