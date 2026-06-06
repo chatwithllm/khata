@@ -946,6 +946,31 @@ function renderCollateral(box, st){
   ph.append(t, el('div','meta','pledged security'));
   box.append(ph);
 
+  // Inline collateral (e.g. a gold loan: weight/value/LTV entered on the loan itself).
+  if(!st.collateral && st.gold_collateral){
+    const g=st.gold_collateral;
+    const body=el('div','coll');
+    const ctop=el('div','ctop');
+    const left=el('div');
+    left.append(el('div','cname','Gold'));
+    const wt = g.qty_micro!=null ? (g.qty_micro/1e6) : null;
+    const desc = (wt!=null ? (wt.toLocaleString('en-US',{maximumFractionDigits:3})+' '+(g.unit||'g')) : 'pledged');
+    left.append(el('div','cclass', desc));
+    ctop.append(left);
+    const val=el('div','cval'); val.append(amtSpan(g.value_minor)); ctop.append(val);
+    body.append(ctop);
+    const ltv = (g.ltv_pct===null||g.ltv_pct===undefined) ? null : g.ltv_pct;
+    const ltvrow=el('div','ltvrow');
+    ltvrow.append(el('span', null, 'Loan-to-value'));
+    const lv=el('span'); const b=el('b'); b.textContent=(ltv===null?'—':ltv+'%');
+    if(ltv!==null && ltv>100) b.style.color='var(--neg)';
+    lv.append(b); ltvrow.append(lv);
+    body.append(ltvrow);
+    const prog=el('div','miniprog'); const pi=el('i'); pi.dataset.w=(ltv===null?0:Math.min(100,ltv)); prog.append(pi);
+    body.append(prog);
+    box.append(body);
+    return;
+  }
   if(!st.collateral){
     // secured but nothing linked
     box.append(el('div','notepanel','secured · no collateral linked'));

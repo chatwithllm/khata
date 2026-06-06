@@ -417,7 +417,9 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
 
     interest_due = max(0, interest_accrued - interest_paid)
 
-    secured = bool(loan.secured)
+    # A recorded inline collateral value means the loan is secured even if the legacy
+    # `secured` flag was never set (loans created before that flag was wired up).
+    secured = bool(loan.secured or loan.collateral_value_minor)
     collateral = None
     if loan.collateral_plan_id is not None:
         from . import holdings
