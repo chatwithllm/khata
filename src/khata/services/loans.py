@@ -2,6 +2,7 @@ import calendar
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import Plan, Loan, LedgerEntry, User
@@ -435,6 +436,18 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
             "value_minor": gval, "ltv_pct": gltv,
         }
 
+    # Where the borrowed money went: payments on OTHER plans funded by this loan
+    # (an asset contribution paid out of this loan, etc.). Cross-plan provenance.
+    deployed = []
+    deployed_total = 0
+    for e in session.scalars(select(LedgerEntry).where(LedgerEntry.funding_plan_id == plan.id)):
+        tp = session.get(Plan, e.plan_id)
+        deployed.append({"plan_id": e.plan_id, "plan_name": tp.name if tp else None,
+                         "plan_type": tp.type if tp else None, "amount_minor": e.amount_minor,
+                         "occurred_at": e.occurred_at.isoformat()})
+        deployed_total += e.amount_minor
+    deployed.sort(key=lambda r: r["occurred_at"], reverse=True)
+
     # Surface existing ledger_entries rows in the state JSON (mirrors chit_state.ledger).
     # No new model/migration — these rows already exist; we just include them.
     _names = {}
@@ -468,5 +481,7 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
         "secured": secured,
         "collateral": collateral,
         "gold_collateral": gold_collateral,
+        "deployed": deployed,
+        "deployed_total_minor": deployed_total,
         "ledger": ledger,
     }

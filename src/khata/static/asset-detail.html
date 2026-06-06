@@ -124,6 +124,9 @@
       <select id="fsource"><option value="savings">Savings</option><option value="loan">Loan</option><option value="borrowed">Borrowed</option><option value="sold_asset">Sold asset</option><option value="chit_payout">Chit payout</option><option value="other">Other</option></select>
     </div>
     <div class="fld" id="paidby-fld" style="display:none"><label for="paid-by">Paid by · contributor</label><select id="paid-by"></select></div>
+    <div class="fld" id="fundplan-fld" style="display:none"><label for="fundplan">From which loan</label><select id="fundplan"></select>
+      <div class="hint" style="font-size:11.5px;color:var(--ink-faint)">Links this contribution to the loan it came from — the loan then shows it was deployed here.</div>
+    </div>
     <div class="fld"><label for="note">Note (optional)</label><input id="note" placeholder=""></div>
     <div class="err" id="err"></div>
     <div class="acts"><button class="save" id="save">Save payment</button><span class="cancel" id="cancel">Cancel</span><span class="del" id="del-entry" style="display:none;margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
@@ -154,6 +157,23 @@ let nextDueSeq = null;
 let planName = "";
 let ME_ID = null;        // current user id (from /api/auth/me)
 let MEMBERS = [];        // plan members [{user_id, email, display_name, role}]
+let LOANS = [];          // the user's loan plans — for the "funded from which loan" picker
+
+// ── "From which loan" field: shown when funding source is a loan/borrowed ──
+function fundSrcIsLoan(){ const v=$('fsource').value; return v==='loan'||v==='borrowed'; }
+function fillFundPlan(selectedId){
+  const fld=$('fundplan-fld'), sel=$('fundplan');
+  if(!fundSrcIsLoan() || !LOANS.length){ fld.style.display='none'; return; }
+  fld.style.display='flex';
+  sel.textContent='';
+  const none=document.createElement('option'); none.value=''; none.textContent='— not linked —'; sel.append(none);
+  for(const lp of LOANS){
+    const o=document.createElement('option'); o.value=String(lp.id);
+    o.textContent=lp.name+(lp.counterparty?(' · '+lp.counterparty):'');
+    sel.append(o);
+  }
+  sel.value = (selectedId!=null) ? String(selectedId) : '';
+}
 
 // ── "Paid by · contributor" field: hide for solo plans, else rebuild + select uid ──
 function fillPaidBy(uid){
@@ -416,6 +436,15 @@ function renderLedger(box, st){
     const l2r=el('div','l2r');
     if(lr.method) l2r.append(el('span','pill m', lr.method));
     if(lr.funding_source) l2r.append(el('span','pill f', srcLabel(lr.funding_source)));
+    // provenance link: this payment came from a specific loan → jump to it
+    if(lr.funding_plan_id && lr.funding_plan_name){
+      const link=el('a','pill', '↗ '+lr.funding_plan_name);
+      link.href='/'+(lr.funding_plan_type||'loan')+'/'+lr.funding_plan_id;
+      link.title='Funded by this loan — open it';
+      link.style.cssText='text-decoration:none;color:var(--accent-dk);border-color:color-mix(in srgb,var(--primary) 38%,transparent)';
+      link.addEventListener('click', e=>e.stopPropagation());   // don't trigger row edit-mode
+      l2r.append(link);
+    }
     if(lr.amount_status && lr.amount_status!=='agreed'){
       const isC=lr.amount_status==='countered';
       const chip=el('span','pill aconf', isC?'⇄ counter-proposed':'⚠ unconfirmed');
@@ -567,6 +596,7 @@ function openOver(){ // NEW payment
   $('amount').value=''; $('note').value=''; $('method').value='transfer'; $('fsource').value='savings'; $('occurred').value=todayISO();
   $('del-entry').style.display='none';   // no delete when logging a new entry
   fillPaidBy(ME_ID);                      // default contributor = current user
+  fillFundPlan(null);
   showOver(); $('amount').focus();
 }
 function openEdit(lr){ // EDIT existing entry
@@ -578,6 +608,7 @@ function openEdit(lr){ // EDIT existing entry
   $('occurred').value=(lr.occurred_at||'').slice(0,10)||todayISO();
   $('del-entry').style.display='inline';  // delete available when editing
   fillPaidBy(lr.logged_by_user_id);       // preselect the entry's existing contributor
+  fillFundPlan(lr.funding_plan_id);       // preselect the source loan (if any)
   showOver(); $('amount').focus();
 }
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
@@ -674,10 +705,11 @@ async function boot(){
   renderContributors($('contrib-panel'), st, myUserId);
   renderMembers($('members-panel'));
 
-  // sidebar counts from /api/plans
+  // sidebar counts from /api/plans (+ stash loan plans for the "from which loan" picker)
   try{
     const plansResp = await fetch('/api/plans').then(x=>x.json());
     const plans = plansResp.plans || [];
+    LOANS = plans.filter(p=>p.type==='loan');
     const by=(t)=>plans.filter(p=>p.type===t).length||'';
     $('ct-asset').textContent=by('asset');
     $('ct-chit').textContent=by('chit');
@@ -700,6 +732,7 @@ $('curtog').addEventListener('click', async (e)=>{
 
 // ── log-payment slide-over wiring ──
 $('logbtn').addEventListener('click', openOver);
+$('fsource').addEventListener('change', ()=>fillFundPlan($('fundplan')?$('fundplan').value:null));
 $('cancel').addEventListener('click', closeOver);
 $('scrim').addEventListener('click', ()=>{ closeOver(); closeSched(); });
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeSched(); } });
@@ -710,6 +743,9 @@ $('save').addEventListener('click', async ()=>{
                  funding_source: $('fsource').value, note: $('note').value || null,
                  occurred_at: occ };
   if($('paidby-fld').style.display!=='none') body.paid_by = $('paid-by').value;  // contributor tag (shared plans)
+  // funding-from-loan link: set when the loan picker is shown; clear it on edit otherwise
+  if($('fundplan-fld').style.display!=='none') body.funding_plan_id = $('fundplan').value || null;
+  else if(editId) body.funding_plan_id = null;
   const url = editId ? ('/api/plans/'+pid+'/entries/'+editId) : ('/api/plans/'+pid+'/payments');
   const r = await fetch(url, { method: editId ? 'PATCH' : 'POST',
     headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });

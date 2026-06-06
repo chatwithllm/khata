@@ -27,6 +27,10 @@ class LedgerEntry(Base):
     funding_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
     proof_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Provenance link: when this payment was funded by another plan (e.g. an asset
+    # contribution paid out of a loan), point to that source plan. Records the money's
+    # chain (loan → asset contribution) without double-counting in either plan's totals.
+    funding_plan_id: Mapped[int | None] = mapped_column(ForeignKey("plans.id"), nullable=True)
     # Contribution-amount agreement (two-party): agreed | pending | countered.
     # 'pending' = the attributed contributor (logged_by_user_id) must confirm the amount;
     # 'countered' = they proposed counter_amount_minor and the owner must accept or re-counter.
@@ -36,4 +40,4 @@ class LedgerEntry(Base):
     counter_amount_minor: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    plan: Mapped["Plan"] = relationship(back_populates="ledger_entries")
+    plan: Mapped["Plan"] = relationship(back_populates="ledger_entries", foreign_keys=[plan_id])
