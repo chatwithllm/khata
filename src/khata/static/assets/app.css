@@ -222,10 +222,8 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
   .top h1{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .top .sub{display:none}
   .top-right{gap:8px}
-  .addbtn{padding:8px 12px;font-size:13px}
-  .curtog button{width:50px;height:30px;font-size:11.5px}
-  .curtog .slide{width:50px;height:30px}
-  html[data-cur="usd"] .curtog .slide{transform:translateX(50px)}
+  .top .curtog{display:none}          /* declutter — base currency lives in Settings; theme persists */
+  .addbtn{padding:8px 12px;font-size:13px;white-space:nowrap}
   .kpis{grid-template-columns:1fr}
   .kpi{border-right:none;border-bottom:1px solid var(--line)}
   .kpi:last-child{border-bottom:none}

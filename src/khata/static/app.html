@@ -41,8 +41,9 @@
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 @media(max-width:900px){.stats{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.stats{grid-template-columns:1fr}.stat .v{font-size:26px}}
-/* loans list: drop the secondary interest/mo column on phones (outstanding stays) */
-@media(max-width:560px){.pr-icol{display:none}}
+/* loans list: drop the secondary interest/mo column on phones (outstanding stays).
+   !important to beat the inline display:flex set on the column. */
+@media(max-width:560px){.pr-icol{display:none!important}}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:.6s}
 .stat .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;display:flex;align-items:center;gap:7px}
 .stat .v{font-family:"Fraunces",serif;font-weight:600;font-size:30px;letter-spacing:-.02em;margin-top:8px;line-height:1}
@@ -52,7 +53,8 @@
 .stat.hero-stat{background:var(--ink);color:var(--paper)}
 .stat.hero-stat .k{color:color-mix(in srgb,var(--paper) 60%,transparent)}
 .stat.hero-stat .v .cur{color:var(--accent-dk)}
-.stat.hero-stat::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0,color-mix(in srgb,var(--primary) 34%,transparent),transparent 60%)}
+.stat.hero-stat::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0,color-mix(in srgb,var(--primary) 34%,transparent),transparent 60%);z-index:0}
+.stat .k,.stat .v,.stat .d{position:relative;z-index:1}   /* keep content above the decorative radial */
 
 /* compact "your plans" list (replaces mockup raw ledger — no combined-ledger endpoint) */
 .plist .prow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:13px 22px;border-top:1px solid var(--line-2);align-items:center}
