@@ -193,6 +193,74 @@ def _simulate(principal_minor: int, mr: Decimal, payment_minor: int,
             "total_paid_minor": principal_minor + total_int, "schedule": sched}
 
 
+def _apr_bps(net_received_minor: int, payment_minor: int, n: int) -> int | None:
+    """Effective annual rate (bps) that equates the cash you actually RECEIVE (principal −
+    upfront fee) to the EMI stream — i.e. the true cost of the loan including the fee.
+    Monthly IRR via bisection, then annualised. Float math (this is a derived rate, not
+    money). Returns None if it can't be solved."""
+    if net_received_minor <= 0 or payment_minor <= 0 or n <= 0:
+        return None
+    net = float(net_received_minor)
+    pay = float(payment_minor)
+
+    def pv(i: float) -> float:
+        return pay * n if i == 0 else pay * (1 - (1 + i) ** (-n)) / i
+
+    if pv(0.0) <= net:           # payments don't even cover the cash received → ~0% (or free)
+        return 0
+    lo, hi = 0.0, 1.0            # monthly rate bracket (0%..100%/mo)
+    for _ in range(100):
+        mid = (lo + hi) / 2
+        if pv(mid) > net:
+            lo = mid
+        else:
+            hi = mid
+    i = (lo + hi) / 2
+    return int(round(((1 + i) ** 12 - 1) * 10000))
+
+
+def compare_offers(*, principal_minor: int, currency: str, offers: list) -> dict:
+    """Compare loan offers on a like-for-like principal. Each offer:
+    {label, rate_bps, interest_type, tenure_months, fee_bps?, fee_minor?, principal_minor?}.
+    Returns a row per offer with EMI, total interest, upfront fee, TOTAL COST (interest +
+    fee), and EFFECTIVE APR (fee-inclusive) — the honest shop-around numbers. The cheapest
+    by total cost is flagged `best`, with `vs_first_*` deltas against the first row (the
+    user's current loan)."""
+    rows = []
+    for o in offers:
+        P = int(o.get("principal_minor") or principal_minor)
+        n = int(o.get("tenure_months") or 0)
+        rate_bps = int(o.get("rate_bps") or 0)
+        it = o.get("interest_type") or "yearly"
+        fee = int(o.get("fee_minor") or 0) + int(round(P * int(o.get("fee_bps") or 0) / 10000))
+        if P <= 0 or n <= 0:
+            rows.append({"label": o.get("label"), "available": False,
+                         "rate_bps": rate_bps, "interest_type": it, "tenure_months": n,
+                         "fee_minor": fee})
+            continue
+        mr = _monthly_rate(it, rate_bps)
+        emi = _emi(P, mr, n)
+        sim = _simulate(P, mr, emi)
+        ti = sim["total_interest_minor"] if sim else 0
+        rows.append({
+            "label": o.get("label"), "available": True, "principal_minor": P,
+            "rate_bps": rate_bps, "interest_type": it, "tenure_months": n,
+            "fee_minor": fee, "emi_minor": emi, "total_interest_minor": ti,
+            "total_cost_minor": ti + fee, "net_received_minor": P - fee,
+            "apr_bps": _apr_bps(P - fee, emi, n),
+        })
+    avail = [r for r in rows if r.get("available")]
+    best = min(avail, key=lambda r: r["total_cost_minor"]) if avail else None
+    first = rows[0] if rows and rows[0].get("available") else None
+    for r in rows:
+        r["best"] = (r is best)
+        if r.get("available") and first is not None:
+            r["vs_first_cost_minor"] = r["total_cost_minor"] - first["total_cost_minor"]
+            if first.get("apr_bps") is not None and r.get("apr_bps") is not None:
+                r["vs_first_apr_bps"] = r["apr_bps"] - first["apr_bps"]
+    return {"currency": currency, "rows": rows}
+
+
 def amortize(*, principal_minor: int, rate_bps: int, interest_type: str, tenure_months,
              currency: str, extra_monthly_minor: int = 0, lump_minor: int = 0,
              lump_month: int = 1, target_months=None, as_of: date | None = None) -> dict:

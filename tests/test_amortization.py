@@ -126,3 +126,58 @@ def test_amortization_needs_tenure(client):
     client.post(f"/api/plans/{pid}/loan/disbursements", json={"amount": "1,00,000", "occurred_at": "2026-01-01T00:00:00"})
     j = client.get(f"/api/plans/{pid}/loan/amortization").get_json()
     assert j["available"] is False and j["reason"] == "needs_tenure"
+
+
+# ── lender comparison ──
+from khata.services.loans import compare_offers, _apr_bps
+
+
+def test_apr_includes_fee():
+    # no fee → APR ≈ effective annual of the nominal monthly rate
+    no_fee = _apr_bps(3500000, 157499, 24)        # net == principal
+    # with a fee you receive less for the same payments → higher APR
+    with_fee = _apr_bps(3500000 - 105000, 157499, 24)
+    assert with_fee > no_fee
+
+
+def test_compare_ranks_by_total_cost():
+    offers = [
+        {"label": "Your current loan", "rate_bps": 750, "interest_type": "yearly", "tenure_months": 24, "fee_minor": 0},
+        {"label": "BofA", "rate_bps": 600, "interest_type": "yearly", "tenure_months": 24, "fee_bps": 100},   # 6% + 1% fee
+        {"label": "Prosper", "rate_bps": 900, "interest_type": "yearly", "tenure_months": 24, "fee_bps": 500}, # 9% + 5% fee
+    ]
+    res = compare_offers(principal_minor=3500000, currency="INR", offers=offers)
+    rows = res["rows"]
+    assert len(rows) == 3
+    for r in rows:
+        assert r["available"] and r["emi_minor"] > 0 and r["apr_bps"] is not None
+        assert r["total_cost_minor"] == r["total_interest_minor"] + r["fee_minor"]
+    # BofA (low rate + low fee) should be cheapest and flagged best
+    bofa = next(r for r in rows if r["label"] == "BofA")
+    assert bofa["best"] is True
+    assert sum(1 for r in rows if r["best"]) == 1
+    # APR reflects the fee: Prosper's APR clearly above its 9% nominal
+    prosper = next(r for r in rows if r["label"] == "Prosper")
+    assert prosper["apr_bps"] > 900
+    # deltas vs the first row (current loan)
+    assert bofa["vs_first_cost_minor"] < 0          # cheaper than current
+
+
+def test_compare_handles_missing_tenure():
+    offers = [{"label": "No term", "rate_bps": 700, "interest_type": "yearly", "tenure_months": 0}]
+    res = compare_offers(principal_minor=3500000, currency="INR", offers=offers)
+    assert res["rows"][0]["available"] is False
+
+
+# ── compare endpoint ──
+def test_compare_endpoint(client):
+    pid = _loan_with_principal(client)
+    r = client.post(f"/api/plans/{pid}/loan/compare", json={"offers": [
+        {"label": "BofA", "rate": "6", "tenure_months": 24, "fee_pct": "1"},
+        {"label": "Prosper", "rate": "9", "tenure_months": 24, "fee_pct": "5"},
+    ]})
+    assert r.status_code == 200
+    rows = r.get_json()["rows"]
+    assert len(rows) == 3                            # current + 2 offers
+    assert rows[0]["label"]                          # current loan first
+    assert any(x["best"] for x in rows)

@@ -107,7 +107,10 @@ occurred_at/method/funding_source/note; both recompute derived state; editing th
 re-opens confirmation) · **POST `/<id>/entries/<entry_id>/amount`** (`{action: confirm|counter|accept, amount?}`
 — the two-party amount-agreement loop; accessible to either side, turn-/role-checked) · POST `/<id>/loan/disbursements` · POST `/<id>/loan/entries`
 · POST `/<id>/loan/collateral` · **GET `/<id>/loan/amortization?extra=&lump=&lump_month=&target_months=`**
-(repayment projection: EMI + baseline + optional what-if scenario — months/interest saved) · POST `/<id>/holding/buys|sells|quote|refresh-quote` · POST
+(repayment projection: EMI + baseline + optional what-if scenario — months/interest saved) · **POST
+`/<id>/loan/compare`** (`{amount?, offers:[{label, rate, interest_type?, tenure_months?, fee_pct?, fee_amount?}]}`
+→ shop-around comparison vs the current loan: EMI, total interest, fee, total cost, effective APR per offer,
+cheapest flagged) · POST `/<id>/holding/buys|sells|quote|refresh-quote` · POST
 `/<id>/chit/entries` · GET `/<id>/chit/dividend?bid=` · POST `/<id>/retirement/update` · GET/POST
 `/<id>/members` (POST returns `{member:{…, status}}` — invited members start `invited`) ·
 DELETE `/<id>/members/<user_id>`.
@@ -144,6 +147,15 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-05 — Loan shop-around comparison (true cost vs other lenders).** A "Compare lenders" panel on
+  loan-detail that pits the current loan against user-entered offers (e.g. BofA, Prosper) on a like-for-like
+  principal. Financial-advisor framing: ranks by **total cost** (interest + upfront fee) and **effective APR**
+  — the APR is fee-inclusive (`_apr_bps` = monthly IRR equating principal−fee to the EMI stream, annualised),
+  so a low headline rate with a big origination fee is exposed (e.g. 9% nominal + 5% fee → 15.1% APR).
+  `loans.compare_offers` + `POST /api/plans/<id>/loan/compare`. UI: a metrics×lenders table (rate, term,
+  upfront fee, monthly payment, total interest, **total cost**, **effective APR**) with the cheapest column
+  green-tinted + "✓ best" and a "vs your loan · save ₹X / +₹Y" row; an add-offer form (lender, rate %, term,
+  fee %). Offers are client-side/exploratory (not persisted). Tested (`test_amortization.py`).
 - **2026-06-05 — Loan repayment projection (amortization + payoff what-ifs).** A "Repayment plan" panel on
   loan-detail that projects a fixed-EMI repayment of the **current outstanding** over the loan's tenure, then
   lets you model paying it off faster. Pure integer-minor math, server-side + tested (`loans.amortize` +
@@ -287,6 +299,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Loan shop-around comparison: loan-detail "Compare lenders" panel — current loan vs user offers ranked by total cost + fee-inclusive effective APR (exposes low-rate/high-fee loans). `loans.compare_offers`, `_apr_bps` (IRR), `POST /api/plans/<id>/loan/compare`.
 - 2026-06-05 — Loan repayment projection: loan-detail "Repayment plan" panel — EMI/total-interest/payoff baseline + extra-per-month / lump-sum / target-month what-ifs showing months & interest saved, plus an animated amortization chart (principal+interest bars + balance line) that redraws per scenario with a "N mo saved" region. `GET /api/plans/<id>/loan/amortization` (returns baseline + scenario schedules), `loans.amortize` (integer math, tested).
 - 2026-06-05 — Avatars everywhere: topbar on every page loads the server avatar (purges stale localStorage that leaked a prior account's photo across logins — reported bug); "Shared with" member lists show avatars (`list_members.avatar`).
 - 2026-06-05 — Asset ledger: each row shows its share of the plan total as a quiet "X% of total" line under the amount (right-aligned, muted; "<1% of total" for tiny entries). Client-side, no API change.
