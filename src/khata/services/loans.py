@@ -250,6 +250,7 @@ def amortize(*, principal_minor: int, rate_bps: int, interest_type: str, tenure_
             "interest_saved_minor": max(0, base["total_interest_minor"] - sim["total_interest_minor"]),
             "total_paid_minor": sim["total_paid_minor"],
             "payoff_date": _month_add(as_of, sim["months"]).isoformat(),
+            "schedule": sim["schedule"][:120],
         }
     elif target_months or (extra_monthly_minor or 0) > 0 or (lump_minor or 0) > 0:
         out["scenario"] = {"diverges": True}     # payment can't cover interest
