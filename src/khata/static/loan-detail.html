@@ -445,10 +445,13 @@ function renderGlance(box, plan, st){
   if(plan.rate_bps!==null && plan.rate_bps!==undefined && itype && itype!=='none'){
     frow('Rate', (plan.rate_bps/100)+'%'+(plan.interest_type==='monthly'?'/mo':'/yr'));
   }
-  // Monthly interest ≈ principal × rate / 1200 (derived, labelled approx)
+  // Monthly interest = principal × monthly rate. For a monthly-rate loan the bps IS
+  // the monthly rate (÷10000); for a yearly-rate loan divide the annual by 12 (÷120000).
   const po=st.principal_outstanding_minor;
   if(po!==null && po!==undefined && plan.rate_bps && itype && itype!=='none'){
-    const monthlyMinor=Math.round(po*plan.rate_bps/120000); // (minor × bps/10000)/12
+    const monthlyMinor = itype==='monthly'
+      ? Math.round(po*plan.rate_bps/10000)
+      : Math.round(po*plan.rate_bps/120000);
     frowAmt('Monthly interest', monthlyMinor, true);
   }
   // Principal = principal_outstanding_minor

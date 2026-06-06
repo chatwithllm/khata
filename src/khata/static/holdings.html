@@ -545,10 +545,12 @@ function renderHoldVsSell(box, d){
     const it=parseFloat($('hvs-int').value);
     const ho=parseInt($('hvs-horizon').value,10);
     if([av,ap,bo,it].some(x=>isNaN(x)) || isNaN(ho)){ errEl.textContent='Fill all fields with numbers.'; return; }
+    // send raw major amounts — the API's to_minor scales to minor units (×100).
+    // (pre-multiplying here AND server-side double-scaled the value 100×.)
     const qs=new URLSearchParams({
-      asset_value:String(Math.round(av*100)),
+      asset_value:$('hvs-asset').value.trim(),
       appreciation:String(ap),
-      borrow:String(Math.round(bo*100)),
+      borrow:$('hvs-borrow').value.trim(),
       interest:String(it),
       horizon:String(ho)
     });

@@ -183,14 +183,17 @@ function fmt(minor, ccy){
   return (neg?'-':'')+sym(ccy)+n;
 }
 
-// helper: an amount cell = <symbol><number>, all textContent (K4)
-function amtSpan(minor, cls){
+// helper: an amount cell = <symbol><number>, all textContent (K4).
+// ccy is the amount's OWN currency (a plan's amount renders in ₹ even when the
+// dashboard base is $ — we never relabel a rupee figure with a dollar sign).
+function amtSpan(minor, ccy, cls){
+  ccy = ccy || BASE;
   const wrap=document.createElement('span');
   if(cls) wrap.className=cls;
   if(minor===null||minor===undefined){ wrap.textContent='—'; return wrap; }
   const neg=minor<0;
-  const s=document.createElement('span'); s.className='symword'; s.textContent=(neg?'-':'')+sym(BASE);
-  const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(minor), BASE);
+  const s=document.createElement('span'); s.className='symword'; s.textContent=(neg?'-':'')+sym(ccy);
+  const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(minor), ccy);
   wrap.append(s,n);
   return wrap;
 }
@@ -244,9 +247,10 @@ function renderFeatured(box, plan, state){
   const insts = state.installments || [];
   const paidCount = insts.filter(i=>i.status==='paid').length;
 
+  const ccy=plan.currency;
   const head=el('div','planhead');
   const amts=el('div','amts');
-  function amt(minor,label){const d=el('div');const n=el('div','n');n.append(amtSpan(minor));d.append(n,el('div','l',label));return d;}
+  function amt(minor,label){const d=el('div');const n=el('div','n');n.append(amtSpan(minor,ccy));d.append(n,el('div','l',label));return d;}
   amts.append(amt(paid,'Paid'), amt(rem,'Remaining'), amt(total,'Total'));
   head.append(amts);
   const bar=el('div','bigbar'); const i=el('i'); i.dataset.w=pct; i.style.background='linear-gradient(90deg,var(--primary),var(--primary-deep))'; bar.append(i); head.append(bar);
@@ -272,8 +276,8 @@ function renderFeatured(box, plan, state){
     const statusLabel = it.status==='paid'?'paid in full':(it.status==='partial'?'part paid':'due');
     si.append(el('div','mt',statusLabel));
     const sv=el('div','sv');
-    const pa=el('div','pa'); pa.append(amtSpan(it.applied_minor)); if(it.status==='due') pa.style.color='var(--ink-faint)';
-    const pl=el('div','pl'); pl.append(document.createTextNode('planned '), amtSpan(it.planned_amount_minor));
+    const pa=el('div','pa'); pa.append(amtSpan(it.applied_minor,ccy)); if(it.status==='due') pa.style.color='var(--ink-faint)';
+    const pl=el('div','pl'); pl.append(document.createTextNode('planned '), amtSpan(it.planned_amount_minor,ccy));
     sv.append(pa,pl);
     srow.append(dot,si,sv);
     sched.append(srow);
@@ -299,7 +303,7 @@ function fmtDate(iso){
 // ── stat card #2 "Paid to date" month-delta subtitle ──
 // derives a REAL "most recent month with out-payments" figure from the featured
 // asset ledger; labels it with that month's actual name (not "this month").
-function setPaidMonthDelta(ledger){
+function setPaidMonthDelta(ledger, ccy){
   const sub=$('paid-d');
   if(!sub || !Array.isArray(ledger)) return;
   const outs=ledger.filter(r=>r && r.direction==='out' && r.occurred_at && r.amount_minor!=null);
@@ -317,7 +321,7 @@ function setPaidMonthDelta(ledger){
   const monthName=new Date(Number(y), Number(m)-1, 1).toLocaleString('en-US',{month:'long'});
   sub.textContent='';
   sub.append(document.createTextNode('▲ '));
-  sub.append(amtSpan(sum));
+  sub.append(amtSpan(sum, ccy));
   sub.append(document.createTextNode(' · '+monthName+' '+y));
   sub.classList.add('up');
 }
@@ -352,7 +356,7 @@ function liabPanel(loans){
     const frac = total ? Math.min(100, Math.round(idue*100/total)) : 0;
     const mp=el('div','miniprog'); const mi=el('i'); mi.dataset.w=frac; mp.append(mi); left.append(mp);
     const rt=el('div','rt');
-    rt.append(amtSpan(st.total_minor,'a'));
+    rt.append(amtSpan(st.total_minor, x.plan.currency, 'a'));
     const l=el('div','l'); l.append(document.createTextNode('outstanding')); rt.append(l);
     row.append(left,rt);
     p.append(row);
@@ -362,6 +366,7 @@ function liabPanel(loans){
 
 function chitPanel(c){
   const st=c.state;
+  const ccy=c.plan.currency;
   const p=el('div','panel fade d3');
   const ph=el('div','ph');
   const t=el('div','t'); t.append(el('span','tag chit','Chit'), document.createTextNode(' '));
@@ -378,10 +383,10 @@ function chitPanel(c){
   const pos=el('div','posbox');
   const posL=el('div');
   posL.append(el('div','pl','My net position'));
-  const pv=el('div','pv'); pv.append(amtSpan(st.net_position_minor)); posL.append(pv);
+  const pv=el('div','pv'); pv.append(amtSpan(st.net_position_minor,ccy)); posL.append(pv);
   const side=el('div','side2');
   side.append(document.createTextNode('contribution '));
-  side.append(amtSpan(st.subscription_minor));
+  side.append(amtSpan(st.subscription_minor,ccy));
   side.append(document.createTextNode('/mo'));
   pos.append(posL, side);
   body.append(pos);
@@ -399,7 +404,7 @@ function chitPanel(c){
   }
   body.append(rounds);
   const foot=el('div','chit-foot');
-  const f1=el('span'); f1.append(document.createTextNode('dividends earned · ')); const b=el('b'); b.append(amtSpan(st.total_dividends_minor)); f1.append(b);
+  const f1=el('span'); f1.append(document.createTextNode('dividends earned · ')); const b=el('b'); b.append(amtSpan(st.total_dividends_minor,ccy)); f1.append(b);
   const f2=el('span', null, rec+' of '+n+' rounds recorded');
   foot.append(f1,f2);
   body.append(foot);
@@ -409,6 +414,7 @@ function chitPanel(c){
 
 function loanGivenPanel(g){
   const st=g.state;
+  const ccy=g.plan.currency;
   const p=el('div','panel fade d4 fill');
   const ph=el('div','ph');
   const t=el('div','t'); t.append(el('span','tag chit','Lent'), document.createTextNode(' '));
@@ -421,10 +427,10 @@ function loanGivenPanel(g){
   const splitBox=el('div'); splitBox.style.cssText='display:flex;justify-content:space-between;align-items:flex-end';
   const L=el('div');
   const lLbl=el('div', null, 'Principal outstanding'); lLbl.style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600'; L.append(lLbl);
-  const lv=el('div'); lv.style.cssText='font-family:Fraunces,serif;font-weight:600;font-size:28px;color:var(--pos);line-height:1;margin-top:5px'; lv.append(amtSpan(st.principal_outstanding_minor)); L.append(lv);
+  const lv=el('div'); lv.style.cssText='font-family:Fraunces,serif;font-weight:600;font-size:28px;color:var(--pos);line-height:1;margin-top:5px'; lv.append(amtSpan(st.principal_outstanding_minor,ccy)); L.append(lv);
   const R=el('div'); R.style.textAlign='right';
   const rLbl=el('div', null, 'Interest due'); rLbl.style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600'; R.append(rLbl);
-  const rv=el('div','mono'); rv.style.cssText='font-weight:700;font-size:17px;color:var(--primary-deep);margin-top:5px'; rv.append(amtSpan(st.interest_due_minor)); R.append(rv);
+  const rv=el('div','mono'); rv.style.cssText='font-weight:700;font-size:17px;color:var(--primary-deep);margin-top:5px'; rv.append(amtSpan(st.interest_due_minor,ccy)); R.append(rv);
   splitBox.style.borderBottom='1px solid var(--line-2)';
   splitBox.style.paddingBottom='14px';
   splitBox.append(L,R);
@@ -440,7 +446,7 @@ function loanGivenPanel(g){
       line.append(el('span', null, '▸ '+(r.note||'Tranche')+' · '+fmtDate(r.occurred_at).split(' · ')[0]));
       const v=el('span','mono'); v.style.fontWeight='600';
       if(i>0) v.append(document.createTextNode('+'));
-      v.append(amtSpan(r.amount_minor));
+      v.append(amtSpan(r.amount_minor,ccy));
       line.append(v);
       tr.append(line);
     });
@@ -452,7 +458,7 @@ function loanGivenPanel(g){
     const foot=el('div','chit-foot');
     foot.style.cssText='border-top:1px solid var(--line-2);margin-top:13px;padding-top:12px';
     const f1=el('span'); f1.append(document.createTextNode('interest received · '));
-    const b=el('b'); b.append(amtSpan(st.interest_paid_minor)); f1.append(b);
+    const b=el('b'); b.append(amtSpan(st.interest_paid_minor,ccy)); f1.append(b);
     foot.append(f1);
     rows.append(foot);
   }
@@ -592,16 +598,38 @@ async function boot(){
   document.documentElement.dataset.cur = BASE.toLowerCase();
   // currency toggle highlight
   document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));
-  document.querySelectorAll('.stat .cur').forEach(c=>c.textContent=sym(BASE));
 
   const plans = plansResp.plans || [];
   $('sub').textContent = new Date().toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'}) + ' · ' + plans.length + ' active plans';
 
-  // stat cards
-  $('networth').textContent = fmtNum(nw.net_worth_minor, BASE);
-  $('paid').textContent = fmtNum(dash.paid_to_date_minor, BASE);
-  $('iowe').textContent = fmtNum(dash.i_owe_minor, BASE);
-  $('owed').textContent = fmtNum(dash.owed_to_me_minor, BASE);
+  // stat cards — show the base-converted total; any amount with no fx rate is shown
+  // in its OWN currency (never relabelled with the base symbol, never silently $0).
+  // setStat(numberId, currencySymId, baseMinor, extras=[{ccy,minor}])
+  function setStat(numId, curId, baseMinor, extras){
+    const parts=[];
+    if(baseMinor || !extras.length) parts.push({ccy:BASE, minor:baseMinor||0});
+    for(const e of extras){ if(e.minor) parts.push(e); }
+    if(!parts.length) parts.push({ccy:BASE, minor:0});
+    const prim=parts[0];
+    if($(curId)) $(curId).textContent=sym(prim.ccy);
+    $(numId).textContent=fmtNum(prim.minor, prim.ccy);
+    if(parts.length>1){
+      const more=el('span'); more.style.cssText='font-size:13px;color:var(--ink-faint);font-weight:500;margin-left:7px';
+      more.textContent='+ '+parts.slice(1).map(p=>sym(p.ccy)+fmtNum(p.minor,p.ccy)).join(' + ');
+      $(numId).appendChild(more);
+    }
+  }
+  const nwExtra = Object.entries(nw.unconverted||{}).map(([c,v])=>({ccy:c, minor:(v.assets_minor||0)-(v.liabilities_minor||0)}));
+  const dExtra  = (k)=>Object.entries(dash.unconverted||{}).map(([c,v])=>({ccy:c, minor:v[k]||0}));
+  setStat('networth','nw-cur', nw.net_worth_minor, nwExtra);
+  setStat('paid','paid-cur', dash.paid_to_date_minor, dExtra('paid_to_date_minor'));
+  setStat('iowe','iowe-cur', dash.i_owe_minor, dExtra('i_owe_minor'));
+  setStat('owed','owed-cur', dash.owed_to_me_minor, dExtra('owed_to_me_minor'));
+  // hint when something couldn't be converted to base
+  if(nwExtra.length || Object.keys(dash.unconverted||{}).length){
+    const d=document.querySelector('.stat.hero-stat .d');
+    if(d){ d.textContent='no '+BASE+' rate yet — set one in Settings'; d.style.color='var(--accent-dk)'; }
+  }
 
   // sidebar counts
   const by=(t)=>plans.filter(p=>p.type===t).length||'';
@@ -776,7 +804,7 @@ async function boot(){
     try{
       const d=await fetch('/api/plans/'+assets[0].id).then(r=>r.json());
       renderFeatured(featBox, d.plan, d.state);
-      try{ setPaidMonthDelta(d.state && d.state.ledger); }
+      try{ setPaidMonthDelta(d.state && d.state.ledger, d.plan && d.plan.currency); }
       catch(err){ console.error('paid month-delta failed', err); }
     }catch(e){ renderFeaturedEmpty(featBox); }
   } else {
