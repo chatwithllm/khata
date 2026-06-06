@@ -213,7 +213,7 @@ function planMeta(p){
     if(p.kind && LOAN_KIND_SHORT[p.kind]) parts.push(LOAN_KIND_SHORT[p.kind]);
     if(p.counterparty) parts.push((p.direction==='given'?'to ':'from ')+p.counterparty);
     else if(p.direction) parts.push(p.direction==='given'?'lent out':'borrowed');
-    if(p.rate_bps && p.interest_type && p.interest_type!=='none') parts.push((p.rate_bps/100)+'%/yr');
+    if(p.rate_bps && p.interest_type && p.interest_type!=='none') parts.push((p.rate_bps/100)+'%'+(p.interest_type==='monthly'?'/mo':'/yr'));
   } else if(p.type==='holding'){
     if(p.asset_class) parts.push(p.asset_class);
     if(p.symbol) parts.push(p.symbol);
