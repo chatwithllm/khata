@@ -239,3 +239,31 @@ a{color:inherit;text-decoration:none}
   .landing .livedot,.landing .eyebrow .dot,.landing .dash-preview::before,.landing .dash-preview .sheen::before{animation:none}
   .landing .dash-preview .bar i{transition:none}
 }
+
+/* ── landing: mobile / small-tablet cleanup (≤640px) ── */
+@media(max-width:640px){
+  /* nav: declutter to brand + Sign in (section anchors + currency toggle are desktop-only) */
+  .landing .nav-inner{height:54px;padding:0 18px}
+  .landing .nav-links{display:none}
+  .landing .curtog,.landing .nav-div{display:none}
+  .landing .brand small{display:none}
+  .landing .btn-nav{padding:8px 15px}
+  /* section rhythm: 94px → 52px so sections aren't oceans of whitespace on a phone */
+  .landing section{padding:52px 0}
+  .landing header{padding:40px 0 0}
+  .landing .hero-grid{min-height:auto;gap:30px;padding:0 18px}
+  .landing .sec-wrap,.landing .wrap{padding:0 18px}
+  .landing header h1{font-size:clamp(31px,8.5vw,40px);margin-bottom:16px}
+  .landing section h2{font-size:clamp(25px,7vw,34px)}
+  .landing .sec-lede{font-size:15.5px;margin-bottom:30px}
+  .landing .hero-strip{gap:14px 20px;padding:22px 0}
+  .landing .problem blockquote{margin-top:24px;padding-left:16px;font-size:19px}
+  .landing .truth-grid{gap:32px}
+  .landing .finale .finale-num{font-size:clamp(40px,13vw,58px)}
+  .landing .finale h2{margin-bottom:24px}
+  .landing .feat{padding:24px 0;gap:16px}
+}
+@media(max-width:380px){
+  .landing .cta-row{flex-wrap:wrap;gap:10px}
+  .landing header h1{font-size:30px}
+}
