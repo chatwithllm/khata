@@ -243,6 +243,19 @@
     <div class="fld"><label for="t-rate">Rate %</label><input id="t-rate" placeholder="8.5" inputmode="decimal"></div>
     <div class="fld"><label for="t-start">Start date</label><input id="t-start" type="date"></div>
     <div class="fld"><label for="t-tenure">Tenure (months)</label><input id="t-tenure" type="number" min="0" placeholder="12"></div>
+    <!-- gold collateral (shown only for a gold loan) -->
+    <div id="t-gold" hidden style="padding:14px 16px;border:1px solid var(--line);border-radius:13px;background:color-mix(in srgb,#d98a00 6%,transparent);display:flex;flex-direction:column;gap:12px">
+      <div style="font-weight:600;font-size:13px">Gold pledged (collateral)</div>
+      <div class="fld"><label for="t-gold-weight">Weight</label>
+        <div style="display:flex;gap:8px"><input id="t-gold-weight" placeholder="25" inputmode="decimal" style="flex:1">
+          <select id="t-gold-unit" style="width:120px"><option value="gram">grams</option><option value="ounce">troy oz</option></select></div>
+      </div>
+      <div class="fld"><label for="t-gold-rate">Rate at loan time</label>
+        <div style="display:flex;gap:8px"><input id="t-gold-rate" placeholder="9,300" inputmode="decimal" style="flex:1">
+          <select id="t-gold-basis" style="width:120px"><option value="per_gram">per gram</option><option value="per_10gram">per 10 g</option><option value="per_ounce">per troy oz</option></select></div>
+      </div>
+      <div class="fld"><label for="t-gold-value">Market value at loan time</label><input id="t-gold-value" placeholder="2,32,500" inputmode="decimal"></div>
+    </div>
     <div class="err" id="terms-err"></div>
     <div class="acts"><button class="save" id="terms-save">Save changes</button><span class="cancel" id="terms-cancel">Cancel</span><span class="delloan" id="terms-del">Delete loan</span></div>
   </div>
@@ -443,6 +456,24 @@ function renderGlance(box, plan, st){
   else if(st.secured){ frow('Security', 'secured'); }
   else if(LOAN_KIND_SEC[plan.kind]){ frow('Security', 'secured · '+LOAN_KIND_SEC[plan.kind]); }
   else { frow('Security', 'unsecured'); }
+  // inline gold collateral details + loan-to-value (the lender's key ratio)
+  const gc=st.gold_collateral;
+  if(gc){
+    if(gc.qty_micro){ frow('Gold pledged', (gc.qty_micro/1e6)+' '+(gc.unit==='ounce'?'troy oz':'g')); }
+    if(gc.rate_minor){
+      const bl=gc.rate_basis==='per_10gram'?'10 g':(gc.rate_basis==='per_ounce'?'oz':'g');
+      frow('Rate at loan time', sym(BASE)+fmtNum(gc.rate_minor,BASE)+' / '+bl);
+    }
+    if(gc.value_minor){ frowAmt('Collateral value', gc.value_minor); }
+    if(gc.ltv_pct!=null){
+      const r=el('div','frow');
+      r.append(el('span','fk','Loan-to-value'));
+      const fv=el('span','fv'); fv.textContent=gc.ltv_pct+'%';
+      // colour the LTV: gold loans typically cap ~75%; flag high
+      if(gc.ltv_pct>75) fv.style.color='var(--neg)'; else if(gc.ltv_pct<=60) fv.style.color='var(--pos)';
+      r.append(fv); body.append(r);
+    }
+  }
   box.append(body);
 }
 const LOAN_KIND_LABEL={personal:'Personal',gold:'Gold loan',home:'Home / mortgage',vehicle:'Vehicle / auto',education:'Education',business:'Business',other:'Other'};
@@ -1035,6 +1066,24 @@ function openEdit(it){
 function closeEdit(){ $('scrim').classList.remove('on'); $('edit-over').classList.remove('on'); $('edit-over').setAttribute('aria-hidden','true'); }
 
 // ── edit-terms slide-over open/close (PATCH/DELETE the whole loan plan) ──
+// gold collateral in the edit-terms slide-over: toggle + auto-value
+const T_GRAMS_PER_OZ=31.1035;
+let _tGoldTouched=false;
+function toggleTGold(){ const g=$('t-gold'); if(g) g.hidden = $('t-kind').value!=='gold'; }
+function recomputeTGold(){
+  if(_tGoldTouched) return;
+  const w=parseFloat(($('t-gold-weight').value||'').replace(/[, ]/g,''))||0;
+  const r=parseFloat(($('t-gold-rate').value||'').replace(/[, ]/g,''))||0;
+  if(!w||!r) return;
+  const grams=$('t-gold-unit').value==='ounce'?w*T_GRAMS_PER_OZ:w;
+  const b=$('t-gold-basis').value;
+  let v; if(b==='per_gram')v=grams*r; else if(b==='per_10gram')v=grams/10*r; else v=(grams/T_GRAMS_PER_OZ)*r;
+  $('t-gold-value').value=Math.round(v).toLocaleString('en-IN');
+}
+$('t-kind').addEventListener('change', toggleTGold);
+['t-gold-weight','t-gold-rate','t-gold-unit','t-gold-basis'].forEach(id=>$(id).addEventListener('input', recomputeTGold));
+$('t-gold-value').addEventListener('input', ()=>{ _tGoldTouched = $('t-gold-value').value.trim()!==''; });
+
 function openTerms(){
   if(!DATA) return;
   const plan=DATA.plan;
@@ -1043,6 +1092,14 @@ function openTerms(){
   $('t-name').value = plan.name || '';
   $('t-direction').value = plan.direction || 'taken';
   $('t-kind').value = plan.kind || 'personal';
+  // gold collateral prefill (stored as micro/minor)
+  _tGoldTouched = !!plan.collateral_value_minor;
+  $('t-gold-weight').value = plan.collateral_qty_micro ? (plan.collateral_qty_micro/1e6) : '';
+  $('t-gold-unit').value = plan.collateral_unit || 'gram';
+  $('t-gold-rate').value = plan.collateral_rate_minor ? (plan.collateral_rate_minor/100) : '';
+  $('t-gold-basis').value = plan.collateral_rate_basis || 'per_gram';
+  $('t-gold-value').value = plan.collateral_value_minor ? (plan.collateral_value_minor/100) : '';
+  toggleTGold();
   $('t-counterparty').value = plan.counterparty || '';
   $('t-interest').value = (plan.interest_type || 'none');
   $('t-rate').value = (plan.rate_bps!==null && plan.rate_bps!==undefined) ? (plan.rate_bps/100) : '';
@@ -1157,6 +1214,13 @@ $('terms-save').addEventListener('click', async ()=>{
   };
   const tenure = $('t-tenure').value;
   if(tenure!=='' && tenure!==null && tenure!==undefined) body.tenure_months = parseInt(tenure, 10);
+  if($('t-kind').value === 'gold'){
+    if($('t-gold-weight').value) body.gold_weight = $('t-gold-weight').value;
+    body.gold_unit = $('t-gold-unit').value;
+    if($('t-gold-rate').value) body.gold_rate = $('t-gold-rate').value;
+    body.gold_rate_basis = $('t-gold-basis').value;
+    if($('t-gold-value').value) body.gold_value = $('t-gold-value').value;
+  }
   const r = await fetch('/api/plans/'+pid, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   if(!r.ok){ const e = await r.json().catch(()=>({})); $('terms-err').textContent = e.detail || e.error || 'Could not save loan terms.'; return; }
   // Principal → disbursement: create the opening one if none, or update the single existing one.

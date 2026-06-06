@@ -46,7 +46,10 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 - **loans**: plan_id, direction (given|taken), **kind** (personal|gold|home|vehicle|education|business|other —
   the loan category; default personal; migration `ca4loankind01`), counterparty?, interest_type
   (none|monthly|yearly), rate_bps, basis, repayment, start_date, tenure_months?, secured (bool),
-  collateral_plan_id? (FK→plans).
+  collateral_plan_id? (FK→plans). **Inline collateral** (e.g. gold loan): collateral_qty_micro?
+  (weight ×1e6), collateral_unit? (gram|ounce), collateral_rate_minor? (price at loan time),
+  collateral_rate_basis? (per_gram|per_10gram|per_ounce), collateral_value_minor? (market value → drives LTV).
+  Migration `cb5goldcoll01`.
 - **holdings**: plan_id, asset_class, unit, symbol?, purity?, current_price_minor?, price_as_of?.
 - **chits**: plan_id, chit_value_minor, n_members, commission_bps, start_date.
 - **retirements**: plan_id, current_balance_minor, monthly_contribution_minor, employer_match_bps,
@@ -149,6 +152,14 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-06 — Gold-loan collateral details + loan-to-value.** When the loan kind is gold, create-plan and
+  edit-terms reveal a **Gold pledged** block: weight (grams / troy oz), the rate at loan time (per gram /
+  per 10 g / per troy oz), and market value (auto-filled = weight × rate, editable). Stored inline on the loan
+  (`collateral_qty_micro/unit/rate_minor/rate_basis/value_minor`, migration `cb5goldcoll01`; set/cleared via
+  `_apply_collateral`, cleared automatically when the kind moves off gold). loan-detail "At a glance" shows
+  Gold pledged / Rate at loan time / Collateral value / **Loan-to-value** (= principal_outstanding ÷ value,
+  in `loan_state.gold_collateral`; colour-flagged — red >75%, green ≤60%). `_gold_collateral` parses the
+  `gold_*` body fields. So a gold loan now records exactly what's pledged and surfaces the lender's key ratio.
 - **2026-06-06 — Loan category (kind) — meaningful collateral, not just "unsecured".** A loan now carries a
   `kind` (personal | gold | home | vehicle | education | business | other), picked in the create-plan loan
   step and editable in the edit-terms slide-over. loan-detail "At a glance" shows a **Type** row, and the
@@ -309,6 +320,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-06 — Gold-loan collateral: weight/rate/market-value inputs on create + edit (shown for kind=gold, value auto-computed), shown in loan-detail glance with loan-to-value. `loans.collateral_*` cols + migration `cb5goldcoll01`, `loan_state.gold_collateral`.
 - 2026-06-06 — Loan category (`loans.kind`: personal/gold/home/vehicle/education/business/other), picked at create + editable. loan-detail shows a Type row and a meaningful Security line (gold→"secured · gold" etc.) instead of bare "unsecured". Migration `ca4loankind01`.
 - 2026-06-05 — Loan shop-around comparison: loan-detail "Compare lenders" panel — current loan vs user offers ranked by total cost + fee-inclusive effective APR (exposes low-rate/high-fee loans). `loans.compare_offers`, `_apr_bps` (IRR), `POST /api/plans/<id>/loan/compare`.
 - 2026-06-05 — Loan repayment projection: loan-detail "Repayment plan" panel — EMI/total-interest/payoff baseline + extra-per-month / lump-sum / target-month what-ifs showing months & interest saved, plus an animated amortization chart (principal+interest bars + balance line) that redraws per scenario with a "N mo saved" region. `GET /api/plans/<id>/loan/amortization` (returns baseline + scenario schedules), `loans.amortize` (integer math, tested).

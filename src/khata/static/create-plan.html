@@ -291,6 +291,24 @@
             <div class="fld"><label>Start date</label><input class="inp" id="start_date" type="date"></div>
             <div class="fld"><label>Tenure (months)</label><input class="inp mono" id="tenure_months" placeholder="optional"></div>
           </div>
+          <!-- gold collateral (shown only for a gold loan) -->
+          <div id="gold-coll" hidden style="margin-top:6px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,#d98a00 6%,transparent)">
+            <div style="font-weight:600;font-size:13px;margin-bottom:10px">Gold pledged (collateral)</div>
+            <div class="frow">
+              <div class="fld"><label>Weight</label><input class="inp mono" id="gold_weight" placeholder="25" inputmode="decimal"></div>
+              <div class="fld"><label>Unit</label>
+                <select class="inp" id="gold_unit"><option value="gram">grams</option><option value="ounce">troy oz</option></select>
+              </div>
+            </div>
+            <div class="frow">
+              <div class="fld"><label>Rate at loan time</label><input class="inp mono" id="gold_rate" placeholder="9,300" inputmode="decimal"></div>
+              <div class="fld"><label>Rate basis</label>
+                <select class="inp" id="gold_rate_basis"><option value="per_gram">per gram</option><option value="per_10gram">per 10 g</option><option value="per_ounce">per troy oz</option></select>
+              </div>
+            </div>
+            <div class="fld"><label>Market value at loan time</label><input class="inp mono" id="gold_value" placeholder="2,32,500" inputmode="decimal"></div>
+            <div style="font-size:11.5px;color:var(--ink-faint);margin-top:8px;font-family:'JetBrains Mono'">Auto-filled from weight × rate; edit if you have an appraised value. Drives loan-to-value.</div>
+          </div>
         </div>
 
         <!-- Holding -->
@@ -467,6 +485,27 @@ document.querySelectorAll(".tcard").forEach((t) => t.addEventListener("click", (
 $("interest_type").addEventListener("change", () => {
   $("ratefld").hidden = $("interest_type").value === "none";
 });
+
+// ── loan: gold collateral block shows only for a gold loan; value auto-fills ──
+const GRAMS_PER_OZ = 31.1035;
+let goldValueTouched = false;
+function toggleGold(){ $("gold-coll").hidden = $("loan_kind").value !== "gold"; }
+function recomputeGoldValue(){
+  if(goldValueTouched) return;
+  const w = numClean($("gold_weight").value), r = numClean($("gold_rate").value);
+  if(!w || !r){ return; }
+  const grams = $("gold_unit").value === "ounce" ? w * GRAMS_PER_OZ : w;
+  const basis = $("gold_rate_basis").value;
+  let val;
+  if(basis === "per_gram") val = grams * r;
+  else if(basis === "per_10gram") val = grams / 10 * r;
+  else val = (grams / GRAMS_PER_OZ) * r;        // per troy oz
+  $("gold_value").value = Math.round(val).toLocaleString("en-IN");
+}
+$("loan_kind").addEventListener("change", toggleGold);
+["gold_weight","gold_rate","gold_unit","gold_rate_basis"].forEach(id => $(id).addEventListener("input", recomputeGoldValue));
+$("gold_value").addEventListener("input", () => { goldValueTouched = $("gold_value").value.trim() !== ""; });
+toggleGold();
 
 // ── chit: UI-only Variant / Role segments + contribution preview ──
 document.querySelectorAll("#c_variant, #c_role").forEach((seg) => {
@@ -646,6 +685,13 @@ function payload(){
                 loan_kind: $("loan_kind").value,
                 start_date: $("start_date").value || null };
     if(it !== "none") p.rate = $("rate").value;
+    if($("loan_kind").value === "gold"){
+      if($("gold_weight").value) p.gold_weight = $("gold_weight").value;
+      p.gold_unit = $("gold_unit").value;
+      if($("gold_rate").value) p.gold_rate = $("gold_rate").value;
+      p.gold_rate_basis = $("gold_rate_basis").value;
+      if($("gold_value").value) p.gold_value = $("gold_value").value;
+    }
     if($("tenure_months").value) p.tenure_months = parseInt($("tenure_months").value, 10);
     return p;
   }

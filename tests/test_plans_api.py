@@ -361,3 +361,29 @@ def test_loan_kind_create_and_edit(client):
     assert e.status_code == 200 and e.get_json()["plan"]["kind"] == "home"
     # bad kind rejected
     assert client.patch(f"/api/plans/{pid}", json={"loan_kind": "spaceship"}).status_code == 400
+
+
+def test_gold_loan_collateral_and_ltv(client):
+    _register(client)
+    r = client.post("/api/plans", json={
+        "type": "loan", "name": "Gold Loan", "currency": "INR", "direction": "taken",
+        "interest_type": "yearly", "rate": "7.5", "start_date": "2026-01-01",
+        "tenure_months": 24, "loan_kind": "gold",
+        "gold_weight": "25", "gold_unit": "gram", "gold_rate": "9,300",
+        "gold_rate_basis": "per_gram", "gold_value": "2,32,500"})
+    assert r.status_code == 201
+    pid = r.get_json()["plan"]["id"]
+    assert r.get_json()["plan"]["collateral_value_minor"] == 23250000   # ₹2,32,500
+    # borrow the full value → LTV 100%
+    client.post(f"/api/plans/{pid}/loan/disbursements",
+                json={"amount": "2,32,500", "occurred_at": "2026-01-01T00:00:00"})
+    st = client.get(f"/api/plans/{pid}").get_json()["state"]
+    gc = st["gold_collateral"]
+    assert gc is not None
+    assert gc["value_minor"] == 23250000 and gc["unit"] == "gram"
+    assert gc["qty_micro"] == 25000000                                  # 25g ×1e6
+    assert gc["ltv_pct"] == 100
+    # switching the kind away from gold clears the collateral
+    client.patch(f"/api/plans/{pid}", json={"loan_kind": "personal"})
+    st2 = client.get(f"/api/plans/{pid}").get_json()["state"]
+    assert st2["gold_collateral"] is None

@@ -23,9 +23,21 @@ class ValidationError(LoanError):
     pass
 
 
+def _apply_collateral(loan, c) -> None:
+    """Set/clear a loan's inline collateral block (gold weight/rate/value). `None` value
+    in the dict clears that field; passing c=None leaves everything untouched."""
+    if c is None:
+        return
+    loan.collateral_qty_micro = c.get("qty_micro")
+    loan.collateral_unit = c.get("unit")
+    loan.collateral_rate_minor = c.get("rate_minor")
+    loan.collateral_rate_basis = c.get("rate_basis")
+    loan.collateral_value_minor = c.get("value_minor")
+
+
 def create_loan_plan(session: Session, *, owner_id, name, currency, direction, interest_type,
                      rate_bps, start_date, counterparty=None, tenure_months=None,
-                     kind="personal") -> Plan:
+                     kind="personal", collateral=None) -> Plan:
     if direction not in DIRECTIONS:
         raise ValidationError(f"unknown direction: {direction}")
     if interest_type not in INTEREST_TYPES:
@@ -41,10 +53,12 @@ def create_loan_plan(session: Session, *, owner_id, name, currency, direction, i
                 currency=currency.upper(), status="active")
     session.add(plan)
     session.flush()
-    session.add(Loan(plan_id=plan.id, direction=direction, counterparty=counterparty,
-                     interest_type=interest_type, kind=kind or "personal",
-                     rate_bps=rate_bps if interest_type != "none" else 0,
-                     start_date=start_date, tenure_months=tenure_months))
+    loan = Loan(plan_id=plan.id, direction=direction, counterparty=counterparty,
+                interest_type=interest_type, kind=kind or "personal",
+                rate_bps=rate_bps if interest_type != "none" else 0,
+                start_date=start_date, tenure_months=tenure_months)
+    _apply_collateral(loan, collateral)
+    session.add(loan)
     session.flush()
     return plan
 
@@ -71,10 +85,11 @@ def set_collateral(session: Session, *, plan: Plan, collateral_plan_id):
 
 def update_loan_terms(session: Session, *, plan: Plan, name=None, direction=None,
                       counterparty=None, interest_type=None, rate_bps=None,
-                      start_date=None, tenure_months=None, kind=None) -> Loan:
+                      start_date=None, tenure_months=None, kind=None, collateral=None) -> Loan:
     """Edit a loan plan's terms in place (owner-only at the API layer). Principal is NOT
     here — it's recorded as disbursements. Only provided fields change."""
     loan = plan.loan
+    _apply_collateral(loan, collateral)
     if name is not None:
         n = (name or "").strip()
         if n:
@@ -408,6 +423,18 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
             collateral = {"plan_id": cp.id, "name": cp.name, "asset_class": hs["asset_class"],
                           "currency": cp.currency, "value_minor": val, "ltv_pct": ltv}
 
+    # Inline collateral (e.g. a gold loan's weight/rate/value entered on the loan itself).
+    gold_collateral = None
+    if loan.collateral_value_minor or loan.collateral_qty_micro:
+        gval = loan.collateral_value_minor or 0
+        gltv = (int((Decimal(max(0, principal_outstanding)) * 100 / gval)
+                    .quantize(Decimal(1), rounding=ROUND_HALF_UP)) if gval else None)
+        gold_collateral = {
+            "qty_micro": loan.collateral_qty_micro, "unit": loan.collateral_unit,
+            "rate_minor": loan.collateral_rate_minor, "rate_basis": loan.collateral_rate_basis,
+            "value_minor": gval, "ltv_pct": gltv,
+        }
+
     # Surface existing ledger_entries rows in the state JSON (mirrors chit_state.ledger).
     # No new model/migration — these rows already exist; we just include them.
     _names = {}
@@ -440,5 +467,6 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
         "months_behind": months_behind,
         "secured": secured,
         "collateral": collateral,
+        "gold_collateral": gold_collateral,
         "ledger": ledger,
     }
