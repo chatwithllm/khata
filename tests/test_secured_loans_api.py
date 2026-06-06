@@ -141,3 +141,18 @@ def test_get_fx_rates_lists(client):
     body = r.get_json()
     assert body["base_currency"] == "INR"
     assert any(x["quote"] == "USD" for x in body["rates"])
+
+
+def test_create_rejects_empty_name_and_unknown_type(client):
+    _register(client)
+    r1 = client.post("/api/plans", json={"type": "asset", "name": "  ", "currency": "INR",
+                                         "total_price": "1000"})
+    assert r1.status_code == 400
+    r2 = client.post("/api/plans", json={"type": "wat", "name": "X", "currency": "INR"})
+    assert r2.status_code == 400
+
+
+def test_me_exposes_is_operator(client):
+    _register(client)  # first user → operator
+    body = client.get("/api/auth/me").get_json()
+    assert body["is_operator"] is True

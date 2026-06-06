@@ -1,6 +1,6 @@
 import calendar
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -192,7 +192,9 @@ def _emi(principal_minor: int, mr: Decimal, n: int) -> int:
         return -(-principal_minor // n)          # ceil division (interest-free)
     factor = (Decimal(1) + mr) ** n
     emi = Decimal(principal_minor) * mr * factor / (factor - 1)
-    return int(emi.quantize(Decimal(1), rounding=ROUND_HALF_UP))
+    # round the level payment UP, not half-up: a half-up EMI can underpay by a few
+    # minor units and leave a residual that forces an n+1-th month (term overshoot).
+    return int(emi.quantize(Decimal(1), rounding=ROUND_CEILING))
 
 
 def _simulate(principal_minor: int, mr: Decimal, payment_minor: int,
