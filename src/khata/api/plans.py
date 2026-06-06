@@ -50,7 +50,12 @@ def _summary(plan: Plan) -> dict:
                      "rate_bps": plan.loan.rate_bps, "counterparty": plan.loan.counterparty,
                      "secured": plan.loan.secured, "kind": plan.loan.kind,
                      "start_date": plan.loan.start_date.isoformat() if plan.loan.start_date else None,
-                     "tenure_months": plan.loan.tenure_months})
+                     "tenure_months": plan.loan.tenure_months,
+                     "collateral_qty_micro": plan.loan.collateral_qty_micro,
+                     "collateral_unit": plan.loan.collateral_unit,
+                     "collateral_rate_minor": plan.loan.collateral_rate_minor,
+                     "collateral_rate_basis": plan.loan.collateral_rate_basis,
+                     "collateral_value_minor": plan.loan.collateral_value_minor})
     elif plan.type == "holding" and plan.holding is not None:
         base.update({"asset_class": plan.holding.asset_class, "unit": plan.holding.unit,
                      "symbol": plan.holding.symbol,
@@ -113,6 +118,21 @@ def _payer_uid(plan, data, default_uid):
     return uid
 
 
+def _gold_collateral(data, currency):
+    """Build the inline-collateral dict from a request body's gold_* fields (or None when
+    there's nothing to set). Weight → micro; rate/value → minor."""
+    keys = ("gold_weight", "gold_value", "gold_rate")
+    if not any(data.get(k) for k in keys):
+        return None
+    return {
+        "qty_micro": to_micro(data.get("gold_weight")) if data.get("gold_weight") else None,
+        "unit": data.get("gold_unit") or "gram",
+        "rate_minor": to_minor(data.get("gold_rate"), currency) if data.get("gold_rate") else None,
+        "rate_basis": data.get("gold_rate_basis") or "per_gram",
+        "value_minor": to_minor(data.get("gold_value"), currency) if data.get("gold_value") else None,
+    }
+
+
 @bp.post("")
 def create():
     user = current_user()
@@ -130,7 +150,8 @@ def create():
                 interest_type=interest_type,
                 rate_bps=pct_to_bps(data.get("rate", "0")) if interest_type != "none" else 0,
                 start_date=date.fromisoformat(data["start_date"]) if data.get("start_date") else date.today(),
-                tenure_months=data.get("tenure_months"), kind=data.get("loan_kind") or "personal")
+                tenure_months=data.get("tenure_months"), kind=data.get("loan_kind") or "personal",
+                collateral=_gold_collateral(data, currency))
             if data.get("collateral_plan_id"):
                 loans.set_collateral(g.db, plan=plan,
                                      collateral_plan_id=data.get("collateral_plan_id"))
@@ -209,6 +230,12 @@ def update_plan(plan_id):
                     kw[k] = data.get(k)
             if "loan_kind" in data:
                 kw["kind"] = data.get("loan_kind")
+            # inline gold collateral: set when gold fields present; clear when the kind
+            # is changed away from gold (no longer a secured-by-gold loan)
+            if any(k in data for k in ("gold_weight", "gold_value", "gold_rate")):
+                kw["collateral"] = _gold_collateral(data, plan.currency) or {}
+            elif data.get("loan_kind") and data.get("loan_kind") != "gold":
+                kw["collateral"] = {}
             if "rate" in data:
                 kw["rate_bps"] = pct_to_bps(data.get("rate", "0"))
             if "start_date" in data:
