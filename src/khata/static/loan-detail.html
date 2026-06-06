@@ -1101,7 +1101,8 @@ function updateTLtv(){
   h.style.color = ltv>100?'var(--neg)':(ltv>75?'#a96a00':'var(--ink-faint)');
 }
 $('t-kind').addEventListener('change', toggleTGold);
-['t-gold-weight','t-gold-rate','t-gold-unit','t-gold-basis'].forEach(id=>$(id).addEventListener('input', recomputeTGold));
+// changing weight/rate/unit/basis re-derives the value (a value you type AFTER sticks)
+['t-gold-weight','t-gold-rate','t-gold-unit','t-gold-basis'].forEach(id=>$(id).addEventListener('input', ()=>{ _tGoldTouched=false; recomputeTGold(); }));
 $('t-gold-value').addEventListener('input', ()=>{ _tGoldTouched = $('t-gold-value').value.trim()!==''; updateTLtv(); });
 $('t-principal').addEventListener('input', updateTLtv);
 

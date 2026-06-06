@@ -503,7 +503,8 @@ function recomputeGoldValue(){
   $("gold_value").value = Math.round(val).toLocaleString("en-IN");
 }
 $("loan_kind").addEventListener("change", toggleGold);
-["gold_weight","gold_rate","gold_unit","gold_rate_basis"].forEach(id => $(id).addEventListener("input", recomputeGoldValue));
+// changing weight/rate/unit/basis re-derives the value (a value you type AFTER sticks)
+["gold_weight","gold_rate","gold_unit","gold_rate_basis"].forEach(id => $(id).addEventListener("input", () => { goldValueTouched = false; recomputeGoldValue(); }));
 $("gold_value").addEventListener("input", () => { goldValueTouched = $("gold_value").value.trim() !== ""; });
 toggleGold();
 
