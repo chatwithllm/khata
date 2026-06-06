@@ -183,17 +183,36 @@ function fmt(minor, ccy){
   return (neg?'-':'')+sym(ccy)+n;
 }
 
-// helper: an amount cell = <symbol><number>, all textContent (K4).
-// ccy is the amount's OWN currency (a plan's amount renders in ₹ even when the
-// dashboard base is $ — we never relabel a rupee figure with a dollar sign).
-function amtSpan(minor, ccy, cls){
+// ── currency conversion to the dashboard BASE ──
+// The dashboard shows every amount in the user's base currency. RATES holds stored fx
+// rows keyed "BASE>QUOTE" → base-per-quote ×1e6. toBase converts a plan-currency amount
+// to base; if no rate exists it keeps the native currency (honest fallback, never wrong).
+let RATES = {};
+function rateToBase(ccy){
+  if(ccy===BASE) return 1e6;
+  const dir=RATES[BASE+'>'+ccy]; if(dir) return dir;
+  const inv=RATES[ccy+'>'+BASE]; if(inv) return Math.round(1e12/inv);
+  return null;
+}
+function toBase(minor, ccy){
   ccy = ccy || BASE;
+  if(minor===null||minor===undefined||ccy===BASE) return [minor, BASE];
+  const r=rateToBase(ccy);
+  if(r==null) return [minor, ccy];
+  return [Math.round(minor*r/1e6), BASE];
+}
+function fmtB(minor, ccy){ const [m,c]=toBase(minor, ccy); return fmt(m, c); }
+
+// helper: an amount cell = <symbol><number>, all textContent (K4). Converts to base
+// (or keeps native if no rate); a relabelled rupee figure never carries a $ sign.
+function amtSpan(minor, ccy, cls){
+  let c; [minor, c] = toBase(minor, ccy);
   const wrap=document.createElement('span');
   if(cls) wrap.className=cls;
   if(minor===null||minor===undefined){ wrap.textContent='—'; return wrap; }
   const neg=minor<0;
-  const s=document.createElement('span'); s.className='symword'; s.textContent=(neg?'-':'')+sym(ccy);
-  const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(minor), ccy);
+  const s=document.createElement('span'); s.className='symword'; s.textContent=(neg?'-':'')+sym(c);
+  const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(minor), c);
   wrap.append(s,n);
   return wrap;
 }
@@ -255,8 +274,10 @@ function renderFeatured(box, plan, state){
   head.append(amts);
   const bar=el('div','bigbar'); const i=el('i'); i.dataset.w=pct; i.style.background='linear-gradient(90deg,var(--primary),var(--primary-deep))'; bar.append(i); head.append(bar);
   const row=el('div','row');
-  row.append(el('span', null, pct+'% paid · '+paidCount+' of '+insts.length+' installments'));
-  row.append(el('span', null, state.next_due_seq?('next due · #'+state.next_due_seq):'all installments cleared'));
+  row.append(el('span', null, insts.length ? (pct+'% paid · '+paidCount+' of '+insts.length+' installments')
+                                            : (pct+'% paid · ad-hoc payments')));
+  row.append(el('span', null, insts.length ? (state.next_due_seq?('next due · #'+state.next_due_seq):'all installments cleared')
+                                            : 'no fixed schedule'));
   head.append(row);
   box.append(head);
 
@@ -585,12 +606,16 @@ async function boot(){
   $('greet').textContent='Good '+part+', '+name;
   $('ava-init').textContent=(name[0]||'?').toUpperCase();
 
-  const [nw, dash, plansResp] = await Promise.all([
+  const [nw, dash, plansResp, fxResp] = await Promise.all([
     fetch('/api/networth').then(r=>r.json()),
     fetch('/api/dashboard').then(r=>r.json()),
     fetch('/api/plans').then(r=>r.json()),
+    fetch('/api/fx-rates').then(r=>r.json()).catch(()=>({rates:[]})),
   ]);
   BASE = nw.base_currency || 'INR';
+  // fx rate table for client-side conversion of per-plan amounts to base
+  RATES = {};
+  (fxResp.rates||[]).forEach(r=>{ RATES[r.base+'>'+r.quote]=r.rate_micro; });
   // role per plan id (from /api/dashboard) — used for the chit "Organizer" badge
   const roleById = {};
   (dash.plans || []).forEach(p => { roleById[p.id] = p.role; });
@@ -741,12 +766,12 @@ async function boot(){
         if(p.type==='asset'){
           const total=st.total_price_minor||0, paid=st.paid_to_date_minor||0, rem=st.remaining_minor||0;
           const pct = total ? Math.round(paid*100/total) : 0;
-          amt.textContent = fmt(paid, ccy);
-          cap.textContent = pct+'% paid'+(rem>0 ? ' · '+fmt(rem,ccy)+' left' : ' · complete');
+          amt.textContent = fmtB(paid, ccy);
+          cap.textContent = pct+'% paid'+(rem>0 ? ' · '+fmtB(rem,ccy)+' left' : ' · complete');
           cap.style.color = rem<=0 ? 'var(--pos)' : 'var(--ink-faint)';
           outCol.insertBefore(cap, ar);
           // richer meta: total price + schedule/ad-hoc + joint contributors
-          const bits=[fmt(total,ccy)+' total'];
+          const bits=[fmtB(total,ccy)+' total'];
           const insts=(st.installments||[]).length;
           bits.push(insts ? insts+' installments' : 'ad-hoc');
           const cs=st.contributors||[];
@@ -757,7 +782,7 @@ async function boot(){
 
         // loan
         const out=st.principal_outstanding_minor||0;
-        amt.textContent = fmt(out, ccy);
+        amt.textContent = fmtB(out, ccy);
         const ltv = st.gold_collateral && st.gold_collateral.ltv_pct;
         if(ltv!=null){
           if(ltv>100){ cap.textContent='⚠ LTV '+ltv+'%'; cap.style.color='var(--neg)';
@@ -769,11 +794,12 @@ async function boot(){
         const mi=monthlyInterestMinor(out, p.rate_bps, p.interest_type);
         const taken=(p.direction!=='given');
         if(!mi){ intAmt.textContent='—'; intAmt.style.color='var(--ink-faint)'; }
-        else { intAmt.textContent=(taken?'−':'+')+fmt(mi, ccy); intAmt.style.color=taken?'var(--neg)':'var(--pos)'; }
+        else { intAmt.textContent=(taken?'−':'+')+fmtB(mi, ccy); intAmt.style.color=taken?'var(--neg)':'var(--pos)'; }
         if(groupAgg){
-          groupAgg.sum+=out; groupAgg.interest+=mi; groupAgg.ccy=ccy;
-          groupAgg.outEl.textContent=fmt(groupAgg.sum, ccy);
-          groupAgg.intEl.textContent=(groupAgg.taken?'−':'+')+fmt(groupAgg.interest, ccy)+'/mo';
+          // accumulate in BASE so a cross-currency subtotal is valid (not a raw sum)
+          groupAgg.sum+=toBase(out,ccy)[0]; groupAgg.interest+=toBase(mi,ccy)[0]; groupAgg.ccy=BASE;
+          groupAgg.outEl.textContent=fmt(groupAgg.sum, BASE);
+          groupAgg.intEl.textContent=(groupAgg.taken?'−':'+')+fmt(groupAgg.interest, BASE)+'/mo';
         }
       }catch(e){}
     })).then(()=>{
