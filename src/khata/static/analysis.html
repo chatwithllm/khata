@@ -105,12 +105,17 @@
 <script>
 const $ = (id) => document.getElementById(id);
 
-// ── currency formatting (analysis is INR-denominated; minor units, no float, no client conversion) ──
+// ── currency formatting (minor units, no float, no client conversion) ──
+// BASE is the user's base currency, set during guard() from GET /api/networth.
+let BASE = 'INR';
+function sym(ccy){ return ccy==='USD' ? '$' : '₹'; }
 function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
+function usGroup(n){return Math.round(n).toLocaleString('en-US');}
 function fmtMinor(minor){
   if(minor===null||minor===undefined) return '—';
   const neg=minor<0, v=Math.abs(minor)/100;
-  return (neg?'-':'')+'₹'+indGroup(v);
+  const num = BASE==='USD' ? usGroup(v) : indGroup(v);
+  return (neg?'-':'')+sym(BASE)+num;
 }
 
 function el(tag, cls, text){
@@ -130,6 +135,11 @@ async function guard(){
   if(me.status===401){ window.location.href='/'; return false; }
   const u=(await me.json()).user;
   $('ava-init').textContent=((u.display_name||'?')[0]||'?').toUpperCase();
+  // base currency drives the symbol in fmtMinor (₹ for INR, $ for USD)
+  try{
+    const nw=await fetch('/api/networth').then(x=>x.ok?x.json():null);
+    if(nw && nw.base_currency) BASE=nw.base_currency;
+  }catch(e){}
   // sidebar counts
   try{
     const plansResp=await fetch('/api/plans').then(x=>x.json());

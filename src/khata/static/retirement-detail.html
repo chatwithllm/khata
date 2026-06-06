@@ -12,6 +12,16 @@
 /* ── retirement-detail.html-only rules (shell + detail-panel groups live in app.css) ── */
 .emptypanel{padding:30px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px}
 
+/* in-page not-found state (replaces a silent redirect to /app on 404/403) */
+.notfound{display:grid;place-items:center;min-height:60vh;padding:40px 22px}
+.notfound .nf-card{max-width:420px;text-align:center;padding:40px 34px;border:1px solid var(--line);border-radius:18px;background:var(--card);box-shadow:0 18px 50px -34px rgba(28,24,19,.4)}
+.notfound .nf-glyph{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;margin:0 auto 18px;background:color-mix(in srgb,var(--neg) 12%,transparent);color:var(--neg)}
+.notfound .nf-glyph svg{width:26px;height:26px}
+.notfound h2{font-family:"Fraunces",serif;font-weight:600;font-size:25px;letter-spacing:-.01em}
+.notfound p{font-size:14px;color:var(--ink-faint);margin-top:10px;line-height:1.5}
+.notfound .nf-back{display:inline-flex;align-items:center;gap:7px;margin-top:22px;font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;background:var(--primary);color:var(--paper);text-decoration:none;box-shadow:0 8px 18px -10px var(--primary);transition:transform .2s}
+.notfound .nf-back:hover{transform:translateY(-2px)}
+
 /* contribution split: stacked horizontal bar across three honest segments */
 .cstack{padding:18px 22px 22px}
 .cstack-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;gap:14px}
@@ -94,7 +104,7 @@
         <div class="sub" id="sub">—</div>
       </div>
       <div class="top-right">
-        <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="INR"><span class="cs">₹</span> INR</button><button data-set="USD"><span class="cs">$</span> USD</button></div>
+        <div class="curtog" id="curtog" title="Primary currency" style="display:none"><span class="slide"></span><button data-set="INR"><span class="cs">₹</span> INR</button><button data-set="USD"><span class="cs">$</span> USD</button></div>
         <button class="addbtn" id="editbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> Update plan</button>
         <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init" id="ava-init"></span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
       </div>
@@ -413,6 +423,32 @@ function openOver(){
 }
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
 
+// ── in-page not-found (no redirect) ──
+// Renders a centered "Plan not found" panel into the main content region.
+function renderNotFound(noun){
+  const content=document.querySelector('.content');
+  if(!content) return;
+  content.textContent='';
+  const wrap=el('div','notfound');
+  const card=el('div','nf-card');
+  const glyph=el('div','nf-glyph');
+  const svgNS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(svgNS,'svg');
+  svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('fill','none');
+  svg.setAttribute('stroke','currentColor'); svg.setAttribute('stroke-width','2');
+  const c=document.createElementNS(svgNS,'circle'); c.setAttribute('cx','12'); c.setAttribute('cy','12'); c.setAttribute('r','9'); svg.append(c);
+  const l1=document.createElementNS(svgNS,'line'); l1.setAttribute('x1','12'); l1.setAttribute('y1','8'); l1.setAttribute('x2','12'); l1.setAttribute('y2','13'); svg.append(l1);
+  const l2=document.createElementNS(svgNS,'line'); l2.setAttribute('x1','12'); l2.setAttribute('y1','16'); l2.setAttribute('x2','12'); l2.setAttribute('y2','16.5'); svg.append(l2);
+  glyph.append(svg);
+  card.append(glyph);
+  card.append(el('h2','','Plan not found'));
+  card.append(el('p','',"This "+noun+" doesn't exist or isn't yours."));
+  const back=el('a','nf-back'); back.href='/app'; back.textContent='Back to dashboard';
+  card.append(back);
+  wrap.append(card);
+  content.append(wrap);
+}
+
 // ── boot ──
 async function boot(){
   const me = await fetch('/api/auth/me');
@@ -422,9 +458,9 @@ async function boot(){
 
   const r = await fetch('/api/plans/'+pid);
   if(r.status===401){ window.location.href='/'; return; }
-  if(!r.ok){ window.location.href='/app'; return; }
+  if(!r.ok){ renderNotFound("retirement plan"); return; }
   const d = await r.json();
-  if(d.plan.type!=='retirement'){ window.location.href='/app'; return; }
+  if(!d.plan || d.plan.type!=='retirement'){ renderNotFound("retirement plan"); return; }
 
   const plan=d.plan, st=d.state;
   CUR = st;

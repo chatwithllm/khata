@@ -129,7 +129,7 @@
         <div class="sub" id="sub">—</div>
       </div>
       <div class="top-right">
-        <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="INR"><span class="cs">₹</span> INR</button><button data-set="USD"><span class="cs">$</span> USD</button></div>
+        <div class="curtog" id="curtog" title="Primary currency" style="display:none"><span class="slide"></span><button data-set="INR"><span class="cs">₹</span> INR</button><button data-set="USD"><span class="cs">$</span> USD</button></div>
         <button class="addbtn" id="addbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Add entry</button>
         <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init" id="ava-init"></span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
       </div>
@@ -445,10 +445,13 @@ function renderGlance(box, plan, st){
   if(plan.rate_bps!==null && plan.rate_bps!==undefined && itype && itype!=='none'){
     frow('Rate', (plan.rate_bps/100)+'%'+(plan.interest_type==='monthly'?'/mo':'/yr'));
   }
-  // Monthly interest ≈ principal × rate / 1200 (derived, labelled approx)
+  // Monthly interest = principal × monthly rate. For a monthly-rate loan the bps IS
+  // the monthly rate (÷10000); for a yearly-rate loan divide the annual by 12 (÷120000).
   const po=st.principal_outstanding_minor;
   if(po!==null && po!==undefined && plan.rate_bps && itype && itype!=='none'){
-    const monthlyMinor=Math.round(po*plan.rate_bps/120000); // (minor × bps/10000)/12
+    const monthlyMinor = itype==='monthly'
+      ? Math.round(po*plan.rate_bps/10000)
+      : Math.round(po*plan.rate_bps/120000);
     frowAmt('Monthly interest', monthlyMinor, true);
   }
   // Principal = principal_outstanding_minor
@@ -826,10 +829,12 @@ function renderCompare(box, plan){
   const form=el('div'); form.style.cssText='margin-top:18px;border-top:1px solid var(--line-2);padding-top:16px';
   const ftitle=el('div',null,'Add a lender offer'); ftitle.style.cssText='font-weight:600;font-size:13px;margin-bottom:10px';
   form.append(ftitle);
-  const grid=el('div'); grid.style.cssText='display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:12px;align-items:end';
+  const grid=el('div'); grid.style.cssText='display:grid;grid-template-columns:1.5fr .9fr .8fr .8fr .9fr;gap:12px;align-items:end';
   const fld=(id,label,ph2)=>{ const f=el('div'); f.style.cssText='display:flex;flex-direction:column;gap:5px;min-width:0'; const l=el('label',null,label); l.setAttribute('for',id); l.style.cssText='font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:700'; const inp=el('input'); inp.id=id; inp.placeholder=ph2; inp.autocomplete='off'; inp.style.cssText='box-sizing:border-box;width:100%;min-width:0;font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)'; f.append(l,inp); return f; };
+  const perFld=()=>{ const f=el('div'); f.style.cssText='display:flex;flex-direction:column;gap:5px;min-width:0'; const l=el('label',null,'Per'); l.setAttribute('for','cmp-per'); l.style.cssText='font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:700'; const s=el('select'); s.id='cmp-per'; s.style.cssText='box-sizing:border-box;width:100%;font:inherit;font-size:14px;padding:9px 8px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)'; [['yearly','/yr'],['monthly','/mo']].forEach(([v,t])=>{ const o=el('option',null,t); o.value=v; s.append(o); }); f.append(l,s); return f; };
   grid.append(fld('cmp-name','Lender','e.g. BofA, Prosper'),
-              fld('cmp-rate','Rate %/yr','6.5'),
+              fld('cmp-rate','Rate %','6.5'),
+              perFld(),
               fld('cmp-term','Term (mo)','24'),
               fld('cmp-fee','Fee %','1'));
   const addRow=el('div'); addRow.style.cssText='display:flex;justify-content:flex-end;margin-top:12px';
@@ -839,6 +844,7 @@ function renderCompare(box, plan){
     const rate=($('cmp-rate').value||'').trim();
     if(!rate){ $('cmp-rate').focus(); return; }
     _cmpOffers.push({label:name, rate:rate,
+                     interest_type: ($('cmp-per')&&$('cmp-per').value)||'yearly',
                      tenure_months: ($('cmp-term').value||'').trim()||undefined,
                      fee_pct: ($('cmp-fee').value||'').trim()||'0'});
     $('cmp-name').value=''; $('cmp-rate').value=''; $('cmp-term').value=''; $('cmp-fee').value='';
@@ -940,6 +946,31 @@ function renderCollateral(box, st){
   ph.append(t, el('div','meta','pledged security'));
   box.append(ph);
 
+  // Inline collateral (e.g. a gold loan: weight/value/LTV entered on the loan itself).
+  if(!st.collateral && st.gold_collateral){
+    const g=st.gold_collateral;
+    const body=el('div','coll');
+    const ctop=el('div','ctop');
+    const left=el('div');
+    left.append(el('div','cname','Gold'));
+    const wt = g.qty_micro!=null ? (g.qty_micro/1e6) : null;
+    const desc = (wt!=null ? (wt.toLocaleString('en-US',{maximumFractionDigits:3})+' '+(g.unit||'g')) : 'pledged');
+    left.append(el('div','cclass', desc));
+    ctop.append(left);
+    const val=el('div','cval'); val.append(amtSpan(g.value_minor)); ctop.append(val);
+    body.append(ctop);
+    const ltv = (g.ltv_pct===null||g.ltv_pct===undefined) ? null : g.ltv_pct;
+    const ltvrow=el('div','ltvrow');
+    ltvrow.append(el('span', null, 'Loan-to-value'));
+    const lv=el('span'); const b=el('b'); b.textContent=(ltv===null?'—':ltv+'%');
+    if(ltv!==null && ltv>100) b.style.color='var(--neg)';
+    lv.append(b); ltvrow.append(lv);
+    body.append(ltvrow);
+    const prog=el('div','miniprog'); const pi=el('i'); pi.dataset.w=(ltv===null?0:Math.min(100,ltv)); prog.append(pi);
+    body.append(prog);
+    box.append(body);
+    return;
+  }
   if(!st.collateral){
     // secured but nothing linked
     box.append(el('div','notepanel','secured · no collateral linked'));

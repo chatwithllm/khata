@@ -1,6 +1,6 @@
 import calendar
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -34,6 +34,10 @@ def _apply_collateral(loan, c) -> None:
     loan.collateral_rate_minor = c.get("rate_minor")
     loan.collateral_rate_basis = c.get("rate_basis")
     loan.collateral_value_minor = c.get("value_minor")
+    # A loan with a recorded collateral value IS secured (inline gold/asset pledge),
+    # even without a separate linked holding plan — so the LTV bar / collateral panel show.
+    if c.get("value_minor"):
+        loan.secured = True
 
 
 def create_loan_plan(session: Session, *, owner_id, name, currency, direction, interest_type,
@@ -188,7 +192,9 @@ def _emi(principal_minor: int, mr: Decimal, n: int) -> int:
         return -(-principal_minor // n)          # ceil division (interest-free)
     factor = (Decimal(1) + mr) ** n
     emi = Decimal(principal_minor) * mr * factor / (factor - 1)
-    return int(emi.quantize(Decimal(1), rounding=ROUND_HALF_UP))
+    # round the level payment UP, not half-up: a half-up EMI can underpay by a few
+    # minor units and leave a residual that forces an n+1-th month (term overshoot).
+    return int(emi.quantize(Decimal(1), rounding=ROUND_CEILING))
 
 
 def _simulate(principal_minor: int, mr: Decimal, payment_minor: int,
@@ -411,7 +417,9 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
 
     interest_due = max(0, interest_accrued - interest_paid)
 
-    secured = bool(loan.secured)
+    # A recorded inline collateral value means the loan is secured even if the legacy
+    # `secured` flag was never set (loans created before that flag was wired up).
+    secured = bool(loan.secured or loan.collateral_value_minor)
     collateral = None
     if loan.collateral_plan_id is not None:
         from . import holdings

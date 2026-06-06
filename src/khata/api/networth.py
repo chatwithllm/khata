@@ -38,6 +38,14 @@ def set_base_currency():
     return jsonify(base_currency=user.base_currency), 200
 
 
+@bp.get("/api/fx-rates")
+def get_fx_rates():
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    return jsonify(base_currency=user.base_currency, rates=fx.list_rates(g.db)), 200
+
+
 @bp.post("/api/fx-rates")
 def set_fx_rate():
     user = current_user()

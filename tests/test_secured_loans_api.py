@@ -111,3 +111,48 @@ def test_create_loan_with_inline_collateral(client):
     assert body["plan"]["secured"] is True
     assert body["state"]["secured"] is True
     assert body["state"]["collateral"]["plan_id"] == hid
+
+
+def test_gold_inline_collateral_marks_loan_secured(client):
+    _register(client)
+    r = client.post("/api/plans", json={
+        "type": "loan", "name": "Gold loan", "currency": "INR", "direction": "taken",
+        "loan_kind": "gold", "interest_type": "none", "start_date": "2026-01-01",
+        "gold_weight": "25", "gold_unit": "gram", "gold_rate": "9300",
+        "gold_rate_basis": "per_gram", "gold_value": "2,32,500"})
+    assert r.status_code == 201, r.get_json()
+    pid = r.get_json()["plan"]["id"]
+    st = client.get(f"/api/plans/{pid}").get_json()
+    assert st["state"]["secured"] is True
+
+
+def test_amount_overflow_is_400_not_500(client):
+    _register(client)
+    r = client.post("/api/plans", json={
+        "type": "asset", "name": "X", "currency": "INR", "total_price": "1e1000"})
+    assert r.status_code == 400, r.status_code
+
+
+def test_get_fx_rates_lists(client):
+    _register(client)
+    client.post("/api/fx-rates", json={"quote": "USD", "rate": "0.012"})
+    r = client.get("/api/fx-rates")
+    assert r.status_code == 200
+    body = r.get_json()
+    assert body["base_currency"] == "INR"
+    assert any(x["quote"] == "USD" for x in body["rates"])
+
+
+def test_create_rejects_empty_name_and_unknown_type(client):
+    _register(client)
+    r1 = client.post("/api/plans", json={"type": "asset", "name": "  ", "currency": "INR",
+                                         "total_price": "1000"})
+    assert r1.status_code == 400
+    r2 = client.post("/api/plans", json={"type": "wat", "name": "X", "currency": "INR"})
+    assert r2.status_code == 400
+
+
+def test_me_exposes_is_operator(client):
+    _register(client)  # first user → operator
+    body = client.get("/api/auth/me").get_json()
+    assert body["is_operator"] is True

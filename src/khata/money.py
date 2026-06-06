@@ -4,6 +4,13 @@ SUPPORTED_CURRENCIES = {"INR", "USD"}
 _EXP = 2  # both INR and USD use 2 minor digits
 _MICRO_EXP = 6  # quantities: integer micro-units (x1_000_000)
 
+# Domain bound on a parsed human number BEFORE scaling. Keeps the scaled result
+# inside SQLite's signed 64-bit column range and stops absurd inputs ("1e9999")
+# from blowing past Decimal's quantize precision — which raises InvalidOperation,
+# an ArithmeticError that is NOT a ValueError and would otherwise surface as 500.
+_MAX_INPUT = Decimal("1e15")
+_INT64_MAX = 2 ** 63 - 1
+
 
 def _check_currency(currency: str) -> str:
     c = (currency or "").upper()
@@ -12,22 +19,42 @@ def _check_currency(currency: str) -> str:
     return c
 
 
+def _parse_decimal(value, noun: str, *, strip_pct: bool = False) -> Decimal:
+    """Shared parse: reject float, empty, junk, non-finite, and absurd magnitude.
+    Every failure path raises ValueError so the API turns it into 400, never 500."""
+    s = str(value).strip().replace(",", "").replace("_", "")
+    if strip_pct:
+        s = s.rstrip("%").strip()
+    if not s:
+        raise ValueError(f"empty {noun}")
+    try:
+        d = Decimal(s)
+    except (InvalidOperation, ValueError):
+        raise ValueError(f"invalid number: {s!r}")
+    if not d.is_finite():
+        raise ValueError(f"non-finite {noun}: {s!r}")
+    if abs(d) >= _MAX_INPUT:
+        raise ValueError(f"{noun} out of range: {s!r}")
+    return d
+
+
+def _scaled_int(d: Decimal, scale_exp: int, noun: str) -> int:
+    try:
+        scaled = (d * (10 ** scale_exp)).quantize(Decimal(1), rounding=ROUND_HALF_UP)
+        n = int(scaled)
+    except (InvalidOperation, ArithmeticError, OverflowError):
+        raise ValueError(f"{noun} out of range")
+    if abs(n) > _INT64_MAX:
+        raise ValueError(f"{noun} out of range")
+    return n
+
+
 def to_minor(value: "str | int", currency: str) -> int:
     """Parse a human amount ("12,40,000", "12.50", 1500) into integer minor units."""
     _check_currency(currency)
     if isinstance(value, float):
         raise TypeError("amounts must be str or int, not float (money is never float)")
-    s = str(value).strip().replace(",", "").replace("_", "")
-    if not s:
-        raise ValueError("empty amount")
-    try:
-        d = Decimal(s)
-    except InvalidOperation:
-        raise ValueError(f"invalid number: {s!r}")
-    if not d.is_finite():
-        raise ValueError(f"non-finite amount: {s!r}")
-    minor = (d * (10 ** _EXP)).quantize(Decimal(1), rounding=ROUND_HALF_UP)
-    return int(minor)
+    return _scaled_int(_parse_decimal(value, "amount"), _EXP, "amount")
 
 
 def format_minor(amount_minor: int, currency: str) -> str:
@@ -42,16 +69,7 @@ def pct_to_bps(value) -> int:
     """Parse a human percent ("8.5", "8.5%", 2) into integer basis points (8.5 -> 850)."""
     if isinstance(value, float):
         raise TypeError("rate must be str or int, not float (rates are exact basis points)")
-    s = str(value).strip().replace(",", "").replace("_", "").rstrip("%").strip()
-    if not s:
-        raise ValueError("empty rate")
-    try:
-        d = Decimal(s)
-    except InvalidOperation:
-        raise ValueError(f"invalid number: {s!r}")
-    if not d.is_finite():
-        raise ValueError(f"non-finite rate: {s!r}")
-    return int((d * 100).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+    return _scaled_int(_parse_decimal(value, "rate", strip_pct=True), 2, "rate")
 
 
 def format_bps(bps: int) -> str:
@@ -66,16 +84,7 @@ def to_micro(value: "str | int") -> int:
     """Parse a human quantity ("92.5", 10) into integer micro-units (x1e6). Rejects float."""
     if isinstance(value, float):
         raise TypeError("quantities must be str or int, not float (no float)")
-    s = str(value).strip().replace(",", "").replace("_", "")
-    if not s:
-        raise ValueError("empty quantity")
-    try:
-        d = Decimal(s)
-    except InvalidOperation:
-        raise ValueError(f"invalid number: {s!r}")
-    if not d.is_finite():
-        raise ValueError(f"non-finite quantity: {s!r}")
-    return int((d * (10 ** _MICRO_EXP)).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+    return _scaled_int(_parse_decimal(value, "quantity"), _MICRO_EXP, "quantity")
 
 
 def format_micro(micro: int) -> str:

@@ -169,6 +169,10 @@ def create():
         return jsonify(error="unauthenticated"), 401
     data = request.get_json(silent=True) or {}
     ptype = (data.get("type") or "asset").lower()
+    if ptype not in {"asset", "loan", "holding", "chit", "retirement"}:
+        return jsonify(error="invalid", detail=f"unknown plan type: {ptype!r}"), 400
+    if not (data.get("name") or "").strip():
+        return jsonify(error="invalid", detail="name is required"), 400
     currency = (data.get("currency") or "INR").upper()
     try:
         if ptype == "loan":

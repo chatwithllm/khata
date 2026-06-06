@@ -383,7 +383,8 @@ function renderControls(box, d, feedEnabled){
   const qFld=el('div','fld');
   qFld.append(el('label',null,'FX — 1 of'));
   const fxq=el('select'); fxq.id='fxq';
-  [['USD','USD'],['INR','INR']].forEach(([v,t])=>{ const o=el('option',null,t); o.value=v; fxq.append(o); });
+  // only the NON-base currency is a valid quote (base==quote is rejected); default to it
+  ['USD','INR'].filter(c=>c!==BASE).forEach(c=>{ const o=el('option',null,c); o.value=c; fxq.append(o); });
   qFld.append(fxq);
   r2.append(qFld);
 
@@ -545,10 +546,12 @@ function renderHoldVsSell(box, d){
     const it=parseFloat($('hvs-int').value);
     const ho=parseInt($('hvs-horizon').value,10);
     if([av,ap,bo,it].some(x=>isNaN(x)) || isNaN(ho)){ errEl.textContent='Fill all fields with numbers.'; return; }
+    // send raw major amounts — the API's to_minor scales to minor units (×100).
+    // (pre-multiplying here AND server-side double-scaled the value 100×.)
     const qs=new URLSearchParams({
-      asset_value:String(Math.round(av*100)),
+      asset_value:$('hvs-asset').value.trim(),
       appreciation:String(ap),
-      borrow:String(Math.round(bo*100)),
+      borrow:$('hvs-borrow').value.trim(),
       interest:String(it),
       horizon:String(ho)
     });

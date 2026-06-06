@@ -72,7 +72,8 @@ def me():
     user = current_user()
     if user is None:
         return jsonify(error="unauthenticated"), 401
-    return jsonify(user=_user_json(user)), 200
+    from .backup import _is_operator  # local import avoids a blueprint import cycle
+    return jsonify(user=_user_json(user), is_operator=_is_operator(user)), 200
 
 
 @bp.post("/password")

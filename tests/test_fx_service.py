@@ -49,3 +49,19 @@ def test_set_rate_validation(s):
         set_rate(s, base="INR", quote="USD", rate_micro=0, as_of=_now())          # non-positive
     with pytest.raises(ValidationError):
         set_rate(s, base="EUR", quote="USD", rate_micro=1, as_of=_now())          # unsupported
+
+
+def test_get_rate_inverse_fallback(s):
+    # store INR→USD only; a USD-base user converting USD→INR must still resolve via inverse
+    set_rate(s, base="INR", quote="USD", rate_micro=12_000, as_of=_now())  # 1 INR = 0.012 USD
+    s.commit()
+    assert get_rate(s, "INR", "USD") == 12_000
+    inv = get_rate(s, "USD", "INR")
+    assert inv is not None
+    # 1/0.012 ≈ 83.33 → ~83_333_333 micro
+    assert 83_000_000 <= inv <= 83_700_000
+
+
+def test_get_rate_identity_and_missing(s):
+    assert get_rate(s, "USD", "USD") == 1_000_000
+    assert get_rate(s, "USD", "INR") is None
