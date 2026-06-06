@@ -330,6 +330,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-06 — Fix: editing a gold loan's weight/rate now re-derives the collateral value (the on-open 'value touched' guard was blocking recompute, leaving a stale value → the 1000% LTV). A value you type after still sticks.
 - 2026-06-06 — Gold LTV sanity guard: LTV >100% (impossible) flagged as an error everywhere — dashboard list "⚠ LTV NN%", loan-detail glance "⚠ NN%" + explainer row, and a live LTV hint in edit-terms as you type. Amber 75–100%, green ≤60%.
 - 2026-06-06 — Plan-list rows differentiate (esp. loans): meta line (Gold · from SBI · 7.5%/yr), category chip, + outstanding amount and LTV fetched per loan row — two same-named gold loans now read apart before opening. Client-only (app.html planMeta).
 - 2026-06-06 — Gold-loan collateral: weight/rate/market-value inputs on create + edit (shown for kind=gold, value auto-computed), shown in loan-detail glance with loan-to-value. `loans.collateral_*` cols + migration `cb5goldcoll01`, `loan_state.gold_collateral`.
