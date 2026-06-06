@@ -205,6 +205,7 @@ async function setupFx(base){
     if(!rows.length){ const e=document.createElement('div'); e.className='hint'; e.textContent='No rates set yet.'; box.append(e); return; }
     for(const r of rows){
       const row=document.createElement('div'); row.className='fxrow';
+      row.style.cssText='font-size:13px;color:var(--ink-soft);font-family:"JetBrains Mono";padding:3px 0';
       const v=(r.rate_micro/1e6);
       row.textContent='1 '+r.quote+' = '+(SYM[r.base]||'')+v.toLocaleString('en-US',{maximumFractionDigits:6})+' ('+r.base+')';
       box.append(row);

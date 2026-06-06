@@ -829,10 +829,12 @@ function renderCompare(box, plan){
   const form=el('div'); form.style.cssText='margin-top:18px;border-top:1px solid var(--line-2);padding-top:16px';
   const ftitle=el('div',null,'Add a lender offer'); ftitle.style.cssText='font-weight:600;font-size:13px;margin-bottom:10px';
   form.append(ftitle);
-  const grid=el('div'); grid.style.cssText='display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:12px;align-items:end';
+  const grid=el('div'); grid.style.cssText='display:grid;grid-template-columns:1.5fr .9fr .8fr .8fr .9fr;gap:12px;align-items:end';
   const fld=(id,label,ph2)=>{ const f=el('div'); f.style.cssText='display:flex;flex-direction:column;gap:5px;min-width:0'; const l=el('label',null,label); l.setAttribute('for',id); l.style.cssText='font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:700'; const inp=el('input'); inp.id=id; inp.placeholder=ph2; inp.autocomplete='off'; inp.style.cssText='box-sizing:border-box;width:100%;min-width:0;font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)'; f.append(l,inp); return f; };
+  const perFld=()=>{ const f=el('div'); f.style.cssText='display:flex;flex-direction:column;gap:5px;min-width:0'; const l=el('label',null,'Per'); l.setAttribute('for','cmp-per'); l.style.cssText='font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:700'; const s=el('select'); s.id='cmp-per'; s.style.cssText='box-sizing:border-box;width:100%;font:inherit;font-size:14px;padding:9px 8px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)'; [['yearly','/yr'],['monthly','/mo']].forEach(([v,t])=>{ const o=el('option',null,t); o.value=v; s.append(o); }); f.append(l,s); return f; };
   grid.append(fld('cmp-name','Lender','e.g. BofA, Prosper'),
-              fld('cmp-rate','Rate %/yr','6.5'),
+              fld('cmp-rate','Rate %','6.5'),
+              perFld(),
               fld('cmp-term','Term (mo)','24'),
               fld('cmp-fee','Fee %','1'));
   const addRow=el('div'); addRow.style.cssText='display:flex;justify-content:flex-end;margin-top:12px';
@@ -842,6 +844,7 @@ function renderCompare(box, plan){
     const rate=($('cmp-rate').value||'').trim();
     if(!rate){ $('cmp-rate').focus(); return; }
     _cmpOffers.push({label:name, rate:rate,
+                     interest_type: ($('cmp-per')&&$('cmp-per').value)||'yearly',
                      tenure_months: ($('cmp-term').value||'').trim()||undefined,
                      fee_pct: ($('cmp-fee').value||'').trim()||'0'});
     $('cmp-name').value=''; $('cmp-rate').value=''; $('cmp-term').value=''; $('cmp-fee').value='';

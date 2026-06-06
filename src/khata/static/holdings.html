@@ -383,7 +383,8 @@ function renderControls(box, d, feedEnabled){
   const qFld=el('div','fld');
   qFld.append(el('label',null,'FX — 1 of'));
   const fxq=el('select'); fxq.id='fxq';
-  [['USD','USD'],['INR','INR']].forEach(([v,t])=>{ const o=el('option',null,t); o.value=v; fxq.append(o); });
+  // only the NON-base currency is a valid quote (base==quote is rejected); default to it
+  ['USD','INR'].filter(c=>c!==BASE).forEach(c=>{ const o=el('option',null,c); o.value=c; fxq.append(o); });
   qFld.append(fxq);
   r2.append(qFld);
 
