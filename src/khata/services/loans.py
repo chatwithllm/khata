@@ -10,6 +10,9 @@ from ..money import SUPPORTED_CURRENCIES
 DIRECTIONS = {"given", "taken"}
 INTEREST_TYPES = {"none", "monthly", "yearly"}
 LOAN_ENTRY_KINDS = {"interest_payment", "principal_repayment"}
+# Loan categories — convey nature + what backs the loan. The secured ones imply collateral
+# even before a holding is linked (a gold loan is backed by gold, a home loan by property).
+LOAN_KINDS = {"personal", "gold", "home", "vehicle", "education", "business", "other"}
 
 
 class LoanError(Exception):
@@ -21,11 +24,14 @@ class ValidationError(LoanError):
 
 
 def create_loan_plan(session: Session, *, owner_id, name, currency, direction, interest_type,
-                     rate_bps, start_date, counterparty=None, tenure_months=None) -> Plan:
+                     rate_bps, start_date, counterparty=None, tenure_months=None,
+                     kind="personal") -> Plan:
     if direction not in DIRECTIONS:
         raise ValidationError(f"unknown direction: {direction}")
     if interest_type not in INTEREST_TYPES:
         raise ValidationError(f"unknown interest_type: {interest_type}")
+    if (kind or "personal") not in LOAN_KINDS:
+        raise ValidationError(f"unknown loan kind: {kind}")
     if currency.upper() not in SUPPORTED_CURRENCIES:
         raise ValidationError(f"unsupported currency: {currency!r}")
     if rate_bps < 0:
@@ -36,7 +42,7 @@ def create_loan_plan(session: Session, *, owner_id, name, currency, direction, i
     session.add(plan)
     session.flush()
     session.add(Loan(plan_id=plan.id, direction=direction, counterparty=counterparty,
-                     interest_type=interest_type,
+                     interest_type=interest_type, kind=kind or "personal",
                      rate_bps=rate_bps if interest_type != "none" else 0,
                      start_date=start_date, tenure_months=tenure_months))
     session.flush()
@@ -65,7 +71,7 @@ def set_collateral(session: Session, *, plan: Plan, collateral_plan_id):
 
 def update_loan_terms(session: Session, *, plan: Plan, name=None, direction=None,
                       counterparty=None, interest_type=None, rate_bps=None,
-                      start_date=None, tenure_months=None) -> Loan:
+                      start_date=None, tenure_months=None, kind=None) -> Loan:
     """Edit a loan plan's terms in place (owner-only at the API layer). Principal is NOT
     here — it's recorded as disbursements. Only provided fields change."""
     loan = plan.loan
@@ -73,6 +79,10 @@ def update_loan_terms(session: Session, *, plan: Plan, name=None, direction=None
         n = (name or "").strip()
         if n:
             plan.name = n
+    if kind is not None:
+        if kind not in LOAN_KINDS:
+            raise ValidationError(f"unknown loan kind: {kind}")
+        loan.kind = kind
     if direction is not None:
         if direction not in DIRECTIONS:
             raise ValidationError(f"unknown direction: {direction}")

@@ -341,3 +341,23 @@ def test_tag_paid_by_contributor(client):
     # non-member → 400
     assert client.post(f"/api/plans/{pid}/payments", json={"amount": "100", "method": "cash",
                                                            "funding_source": "savings", "paid_by": 999999}).status_code == 400
+
+
+def test_loan_kind_create_and_edit(client):
+    _register(client)
+    r = client.post("/api/plans", json={
+        "type": "loan", "name": "Gold loan", "currency": "INR", "direction": "taken",
+        "interest_type": "none", "start_date": "2026-01-01", "loan_kind": "gold"})
+    assert r.status_code == 201
+    pid = r.get_json()["plan"]["id"]
+    assert r.get_json()["plan"]["kind"] == "gold"
+    # default is personal when omitted
+    p2 = client.post("/api/plans", json={
+        "type": "loan", "name": "Cash", "currency": "INR", "direction": "taken",
+        "interest_type": "none", "start_date": "2026-01-01"}).get_json()["plan"]
+    assert p2["kind"] == "personal"
+    # edit the kind
+    e = client.patch(f"/api/plans/{pid}", json={"loan_kind": "home"})
+    assert e.status_code == 200 and e.get_json()["plan"]["kind"] == "home"
+    # bad kind rejected
+    assert client.patch(f"/api/plans/{pid}", json={"loan_kind": "spaceship"}).status_code == 400

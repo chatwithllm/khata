@@ -226,6 +226,17 @@
       <select id="t-direction"><option value="taken">Taken (borrowed)</option><option value="given">Given (lent)</option></select>
     </div>
     <div class="fld"><label for="t-counterparty">Counterparty</label><input id="t-counterparty" placeholder="Name"></div>
+    <div class="fld"><label for="t-kind">Loan type</label>
+      <select id="t-kind">
+        <option value="personal">Personal (unsecured)</option>
+        <option value="gold">Gold loan (secured · gold)</option>
+        <option value="home">Home / mortgage (secured · property)</option>
+        <option value="vehicle">Vehicle / auto (secured · vehicle)</option>
+        <option value="education">Education</option>
+        <option value="business">Business</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
     <div class="fld"><label for="t-interest">Interest</label>
       <select id="t-interest"><option value="none">Interest-free</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select>
     </div>
@@ -407,6 +418,8 @@ function renderGlance(box, plan, st){
     r.append(fv);
     body.append(r);
   }
+  // Type = loan category (Personal / Gold / Home / …)
+  frow('Type', LOAN_KIND_LABEL[plan.kind] || 'Personal');
   // Structure = interest_type (humanized, e.g. "yearly interest")
   const itype=plan.interest_type;
   if(itype && itype!=='none'){ frow('Structure', itype+' interest'); }
@@ -423,12 +436,17 @@ function renderGlance(box, plan, st){
   }
   // Principal = principal_outstanding_minor
   frowAmt('Principal', po, false);
-  // Security = secured ? collateral.name : "unsecured"
+  // Security = linked collateral → its name; else the loan kind's implied collateral
+  // (a gold/home/vehicle loan is backed by that asset even without a holding linked);
+  // personal/education/business default to unsecured.
   if(st.secured && st.collateral && st.collateral.name){ frow('Security', st.collateral.name); }
   else if(st.secured){ frow('Security', 'secured'); }
+  else if(LOAN_KIND_SEC[plan.kind]){ frow('Security', 'secured · '+LOAN_KIND_SEC[plan.kind]); }
   else { frow('Security', 'unsecured'); }
   box.append(body);
 }
+const LOAN_KIND_LABEL={personal:'Personal',gold:'Gold loan',home:'Home / mortgage',vehicle:'Vehicle / auto',education:'Education',business:'Business',other:'Other'};
+const LOAN_KIND_SEC={gold:'gold',home:'property',vehicle:'vehicle'};   // implied collateral by kind
 
 // ── ledger (transaction history, newest first) ──
 const LEDGER_KIND={
@@ -1024,6 +1042,7 @@ function openTerms(){
   $('terms-osub').textContent='against '+(plan.name||'this loan');
   $('t-name').value = plan.name || '';
   $('t-direction').value = plan.direction || 'taken';
+  $('t-kind').value = plan.kind || 'personal';
   $('t-counterparty').value = plan.counterparty || '';
   $('t-interest').value = (plan.interest_type || 'none');
   $('t-rate').value = (plan.rate_bps!==null && plan.rate_bps!==undefined) ? (plan.rate_bps/100) : '';
@@ -1130,6 +1149,7 @@ $('terms-save').addEventListener('click', async ()=>{
   const body = {
     name: $('t-name').value,
     direction: $('t-direction').value,
+    loan_kind: $('t-kind').value,
     counterparty: $('t-counterparty').value,
     interest_type: $('t-interest').value,
     rate: $('t-rate').value,

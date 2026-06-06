@@ -43,8 +43,10 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   memberships.
 - **asset_purchases**: plan_id, total_price_minor.
 - **installments**: id, plan_id, seq, planned_amount_minor, due_date?, note?.
-- **loans**: plan_id, direction (given|taken), counterparty?, interest_type (none|monthly|yearly),
-  rate_bps, basis, repayment, start_date, tenure_months?, secured (bool), collateral_plan_id? (FK→plans).
+- **loans**: plan_id, direction (given|taken), **kind** (personal|gold|home|vehicle|education|business|other —
+  the loan category; default personal; migration `ca4loankind01`), counterparty?, interest_type
+  (none|monthly|yearly), rate_bps, basis, repayment, start_date, tenure_months?, secured (bool),
+  collateral_plan_id? (FK→plans).
 - **holdings**: plan_id, asset_class, unit, symbol?, purity?, current_price_minor?, price_as_of?.
 - **chits**: plan_id, chit_value_minor, n_members, commission_bps, start_date.
 - **retirements**: plan_id, current_balance_minor, monthly_contribution_minor, employer_match_bps,
@@ -66,7 +68,7 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 ## 5. Enums (authoritative)
 - currencies `{INR, USD}` · payment methods `{cash, upi, transfer, cheque}` · funding sources
   `{savings, loan, borrowed, sold_asset, chit_payout, other}` · loan direction `{given, taken}` ·
-  interest_type `{none, monthly, yearly}` · loan entry kinds `{interest_payment, principal_repayment}`
+  interest_type `{none, monthly, yearly}` · loan kind `{personal, gold, home, vehicle, education, business, other}` · loan entry kinds `{interest_payment, principal_repayment}`
   (+ `disbursement` via its own endpoint) · asset_class `{gold, silver, equity, mf, cash, other}` ·
   chit kinds `{chit_contribution, chit_dividend, chit_prize}` · membership status `{invited, active, declined}` ·
   entry amount_status `{agreed, pending, countered}`.
@@ -147,6 +149,14 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-06 — Loan category (kind) — meaningful collateral, not just "unsecured".** A loan now carries a
+  `kind` (personal | gold | home | vehicle | education | business | other), picked in the create-plan loan
+  step and editable in the edit-terms slide-over. loan-detail "At a glance" shows a **Type** row, and the
+  **Security** row now derives from the kind when no holding collateral is linked: gold→"secured · gold",
+  home→"secured · property", vehicle→"secured · vehicle"; personal/education/business → "unsecured" (a
+  linked holding still overrides with its name). Was: every loan showed a bare "unsecured" with no sense of
+  what it was. Model `loans.kind` + migration `ca4loankind01`; `create_loan_plan`/`update_loan_terms` +
+  `LOAN_KINDS`; `_summary` exposes `kind`; `loan_kind` in create + PATCH bodies.
 - **2026-06-05 — Loan shop-around comparison (true cost vs other lenders).** A "Compare lenders" panel on
   loan-detail that pits the current loan against user-entered offers (e.g. BofA, Prosper) on a like-for-like
   principal. Financial-advisor framing: ranks by **total cost** (interest + upfront fee) and **effective APR**
@@ -299,6 +309,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-06 — Loan category (`loans.kind`: personal/gold/home/vehicle/education/business/other), picked at create + editable. loan-detail shows a Type row and a meaningful Security line (gold→"secured · gold" etc.) instead of bare "unsecured". Migration `ca4loankind01`.
 - 2026-06-05 — Loan shop-around comparison: loan-detail "Compare lenders" panel — current loan vs user offers ranked by total cost + fee-inclusive effective APR (exposes low-rate/high-fee loans). `loans.compare_offers`, `_apr_bps` (IRR), `POST /api/plans/<id>/loan/compare`.
 - 2026-06-05 — Loan repayment projection: loan-detail "Repayment plan" panel — EMI/total-interest/payoff baseline + extra-per-month / lump-sum / target-month what-ifs showing months & interest saved, plus an animated amortization chart (principal+interest bars + balance line) that redraws per scenario with a "N mo saved" region. `GET /api/plans/<id>/loan/amortization` (returns baseline + scenario schedules), `loans.amortize` (integer math, tested).
 - 2026-06-05 — Avatars everywhere: topbar on every page loads the server avatar (purges stale localStorage that leaked a prior account's photo across logins — reported bug); "Shared with" member lists show avatars (`list_members.avatar`).

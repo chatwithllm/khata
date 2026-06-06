@@ -13,6 +13,10 @@ class Loan(Base):
     plan_id: Mapped[int] = mapped_column(
         ForeignKey("plans.id", ondelete="CASCADE"), primary_key=True)
     direction: Mapped[str] = mapped_column(String(8), nullable=False)         # given | taken
+    # loan category — conveys the loan's nature + what backs it (personal=unsecured,
+    # gold/home/vehicle=secured by that asset, etc.). See LOAN_KINDS in services/loans.py.
+    kind: Mapped[str] = mapped_column(String(16), nullable=False,
+                                      default="personal", server_default="personal")
     counterparty: Mapped[str | None] = mapped_column(Text, nullable=True)
     interest_type: Mapped[str] = mapped_column(String(10), nullable=False)    # none | monthly | yearly
     rate_bps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

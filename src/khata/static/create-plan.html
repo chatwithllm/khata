@@ -269,7 +269,17 @@
           </div>
           <div class="frow">
             <div class="fld"><label>Counterparty</label><input class="inp" id="counterparty" placeholder="HDFC / Priya"></div>
-            <div class="fld"></div>
+            <div class="fld"><label>Loan type</label>
+              <select class="inp" id="loan_kind">
+                <option value="personal">Personal (unsecured)</option>
+                <option value="gold">Gold loan (secured · gold)</option>
+                <option value="home">Home / mortgage (secured · property)</option>
+                <option value="vehicle">Vehicle / auto (secured · vehicle)</option>
+                <option value="education">Education</option>
+                <option value="business">Business</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
           </div>
           <div class="frow">
             <div class="fld"><label>Interest</label>
@@ -542,6 +552,7 @@ function renderReview(){
     reviewRow("Installments", n ? String(n) + " scheduled" : "none");
   } else if(type === "loan"){
     reviewRow("Principal", $("principal").value);
+    reviewRow("Loan type", $("loan_kind").options[$("loan_kind").selectedIndex].text);
     reviewRow("Direction", $("direction").value);
     reviewRow("Counterparty", $("counterparty").value);
     reviewRow("Interest", $("interest_type").value);
@@ -632,6 +643,7 @@ function payload(){
     const it = $("interest_type").value;
     const p = { type: "loan", name, currency, direction: $("direction").value,
                 counterparty: $("counterparty").value || null, interest_type: it,
+                loan_kind: $("loan_kind").value,
                 start_date: $("start_date").value || null };
     if(it !== "none") p.rate = $("rate").value;
     if($("tenure_months").value) p.tenure_months = parseInt($("tenure_months").value, 10);
