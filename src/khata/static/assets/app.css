@@ -56,14 +56,6 @@ button:focus-visible,a:focus-visible,.lrow:focus-visible,.thumb:focus-visible{ou
 .nav-i:hover{background:var(--line-2);color:var(--ink)}
 .nav-i.on{background:var(--ink);color:var(--paper)}
 .nav-i .ct{margin-left:auto;font-size:11px;font-family:"JetBrains Mono";opacity:.7}
-/* drawer-only currency switch (injected by nav.js) — shown only in the mobile drawer,
-   where the topbar currency toggle is hidden. Hidden on desktop (topbar toggle wins). */
-.side-cur{display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
-.side-cur-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:0 11px 8px}
-.side-cur-row{display:flex;gap:8px;padding:0 11px}
-.side-cur-row button{flex:1;font:inherit;font-size:13.5px;font-weight:600;padding:9px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink-soft);cursor:pointer;transition:.2s}
-.side-cur-row button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.side-cur-row button:disabled{opacity:.6}
 
 /* topbar */
 .main{min-width:0}
@@ -72,6 +64,11 @@ button:focus-visible,a:focus-visible,.lrow:focus-visible,.thumb:focus-visible{ou
 .top h1{font-family:"Fraunces",serif;font-weight:600;font-size:23px;letter-spacing:-.01em}
 .top .sub{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-faint)}
 .top-right{display:flex;align-items:center;gap:14px}
+.addbtn .lp-short{display:none}   /* compact "Pay" label swaps in on phones */
+/* mobile-only content greeting (full, never truncated; topbar greeting hides ≤560) */
+.m-greet{display:none;margin:0 0 18px}
+.m-greet h2{font-family:"Fraunces",serif;font-weight:600;font-size:24px;letter-spacing:-.01em}
+.m-greet .ms{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-faint);margin-top:4px}
 .curtog{display:inline-flex;align-items:center;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:4px;position:relative;box-shadow:inset 0 1px 2px rgba(28,24,19,.06);transition:background .6s,border-color .6s}
 .curtog button{font-family:"Hanken Grotesk";font-weight:700;font-size:12.5px;letter-spacing:.04em;border:none;background:transparent;color:var(--ink-faint);width:62px;height:34px;border-radius:100px;cursor:pointer;z-index:1;transition:color .35s var(--ease);display:flex;align-items:center;justify-content:center;gap:5px}
 .curtog button .cs{font-family:"Fraunces",serif;font-weight:600;font-size:17px;line-height:1;margin-top:-1px}
@@ -219,7 +216,6 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
   .side{position:fixed;top:0;left:0;z-index:60;width:max(240px,72vw);max-width:300px;height:100vh;overflow-y:auto;
         transform:translateX(-100%);box-shadow:0 0 50px -6px rgba(20,16,12,.4);transition:transform .32s var(--ease)}
   .app.nav-open .side{transform:none}
-  .side-cur{display:block}
   .hamburger{display:inline-flex}
   .top{padding:12px 16px}
   .top h1{font-size:19px}
@@ -228,11 +224,21 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
   .planhead{padding:18px}
 }
 @media(max-width:560px){
-  .top h1{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .top .sub{display:none}
-  .top-right{gap:8px}
-  .top .curtog{display:none}          /* declutter — base currency lives in Settings; theme persists */
-  .addbtn{padding:8px 12px;font-size:13px;white-space:nowrap}
+  /* tidy single-row topbar: ☰ · currency · + Pay · avatar. Greeting moves to a
+     content header (.m-greet) so it never truncates to "Good aftern…". */
+  .top{padding:12px 14px}
+  .top > div:not(.top-right){display:none}
+  .top-right{gap:9px;flex:none}   /* keep its intrinsic width — don't shrink & overflow children */
+  .top .curtog{display:inline-flex;flex:none}
+  .top .curtog button{width:46px;height:32px;font-size:11px;gap:3px}
+  .top .curtog button .cs{font-size:13.5px}
+  .top .curtog .slide{width:46px;height:32px}
+  html[data-cur="usd"] .top .curtog .slide{transform:translateX(46px)}
+  .addbtn{padding:9px 14px;font-size:12.5px;white-space:nowrap;flex:none}
+  .addbtn .lp-full{display:none}
+  .addbtn .lp-short{display:inline}
+  .avatar{width:36px;height:36px;flex:none}
+  .m-greet{display:block}
   .kpis{grid-template-columns:1fr}
   .kpi{border-right:none;border-bottom:1px solid var(--line)}
   .kpi:last-child{border-bottom:none}
