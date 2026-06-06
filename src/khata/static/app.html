@@ -662,7 +662,7 @@ async function boot(){
     plist.append(e);
   } else {
     const fillLoans=[];
-    for(const p of shown){
+    function makeRow(p, groupAgg){
       const row=document.createElement('a'); row.className='prow'; row.href='/'+p.type+'/'+p.id;
       const left=el('div');
       const l1=el('div','l1'); l1.append(el('span','tag '+p.type, p.type), document.createTextNode(' '));
@@ -681,14 +681,45 @@ async function boot(){
       right.append(amt, ar);
       row.append(left, right);
       plist.append(row);
-      if(p.type==='loan') fillLoans.push({p, amt, right, ar});
+      if(p.type==='loan') fillLoans.push({p, amt, right, ar, groupAgg});
     }
-    // enrich loan rows with the outstanding amount + LTV (needs derived state)
-    Promise.all(fillLoans.map(async ({p, amt, right, ar})=>{
+    // section header for a loan direction group, returns its (live) subtotal element
+    function groupHeader(label, sub, accent, first){
+      const h=el('div'); h.style.cssText='display:flex;align-items:baseline;justify-content:space-between;padding:'+(first?'4px':'16px')+' 22px 8px';
+      if(!first) h.style.borderTop='1px solid var(--line-2)';
+      const lft=el('div'); lft.style.cssText='display:flex;align-items:baseline;gap:8px';
+      const lab=el('span',null,label); lab.style.cssText='font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:'+accent;
+      const s=el('span',null,sub); s.style.cssText='font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"';
+      lft.append(lab,s);
+      const tot=el('div'); tot.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:13px;color:'+accent;
+      h.append(lft, tot); plist.append(h);
+      return tot;
+    }
+    if(typeFilter==='loan'){
+      const taken=shown.filter(p=>p.direction==='taken');
+      const given=shown.filter(p=>p.direction==='given');
+      if(pmeta) pmeta.textContent = taken.length+' borrowed · '+given.length+' lent';
+      const groups=[
+        {arr:taken, label:'Borrowed', sub:'you owe', accent:'var(--neg)'},
+        {arr:given, label:'Lent out', sub:'owed to you', accent:'var(--pos)'},
+      ];
+      let first=true;
+      for(const g of groups){
+        if(!g.arr.length) continue;
+        const totEl=groupHeader(g.label, g.sub, g.accent, first); first=false;
+        const agg={sum:0, el:totEl, ccy:null};
+        g.arr.forEach(p=> makeRow(p, agg));
+      }
+    } else {
+      for(const p of shown) makeRow(p, null);
+    }
+    // enrich loan rows with the outstanding amount + LTV, and roll up each group's subtotal
+    Promise.all(fillLoans.map(async ({p, amt, right, ar, groupAgg})=>{
       try{
         const d=await fetch('/api/plans/'+p.id).then(r=>r.json());
         const st=d.state||{};
-        amt.textContent = fmt(st.principal_outstanding_minor, st.currency||p.currency);
+        const out=st.principal_outstanding_minor||0;
+        amt.textContent = fmt(out, st.currency||p.currency);
         const cap=el('div'); cap.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono"';
         const ltv = st.gold_collateral && st.gold_collateral.ltv_pct;
         if(ltv!=null){
@@ -698,6 +729,7 @@ async function boot(){
                  cap.style.color = ltv>75 ? '#a96a00' : (ltv<=60 ? 'var(--pos)' : 'var(--ink-faint)'); }
         } else { cap.textContent='outstanding'; }
         right.insertBefore(cap, ar);
+        if(groupAgg){ groupAgg.sum+=out; groupAgg.ccy=st.currency||p.currency; groupAgg.el.textContent=fmt(groupAgg.sum, groupAgg.ccy); }
       }catch(e){}
     }));
   }
