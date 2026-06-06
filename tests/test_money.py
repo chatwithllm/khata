@@ -99,3 +99,20 @@ def test_to_minor_rejects_garbage_with_valueerror():
     assert to_minor("12.50", "INR") == 1250
     assert to_micro("3.5") == 3500000
     assert pct_to_bps("8.5") == 850
+
+
+def test_to_minor_rejects_overflow_as_valueerror():
+    # huge exponent used to leak decimal.InvalidOperation → 500; must be ValueError now
+    import pytest
+    from khata.money import to_minor, to_micro, pct_to_bps
+    for bad in ("1e1000", "1e9999", "99999999999999999999999999"):
+        with pytest.raises(ValueError):
+            to_minor(bad, "INR")
+    with pytest.raises(ValueError):
+        to_micro("1e9999")
+    with pytest.raises(ValueError):
+        pct_to_bps("1e9999")
+
+
+def test_to_minor_accepts_large_but_in_range():
+    assert to_minor("1000000000", "INR") == 100000000000  # ₹100 crore, fine

@@ -68,3 +68,33 @@ def test_member_shared_plan_appears(ctx):
     d = net_position(s, u.id)
     assert any(p["id"] == plan.id and p["role"] == "member" for p in d["plans"])
     assert d["paid_to_date_minor"] == 5000000  # u's contribution to the shared asset
+
+
+def test_net_position_converts_to_base_with_fx(ctx):
+    s, u = ctx
+    from khata.services.fx import set_rate
+    # user base INR; a USD loan taken for $1000 (100000 minor). 1 USD = ₹80.
+    # Store the INVERSE direction (USD,INR = USD-per-INR = 0.0125) to also exercise
+    # the inverse-rate fallback: net_position needs get_rate(INR, USD) = ₹80/USD.
+    u.base_currency = "INR"
+    set_rate(s, base="USD", quote="INR", rate_micro=12_500, as_of=_dt())
+    taken = create_loan_plan(s, owner_id=u.id, name="USD loan", currency="USD", direction="taken",
+                             interest_type="none", rate_bps=0, start_date=date(2026, 1, 1))
+    add_disbursement(s, plan=taken, user_id=u.id, amount_minor=100000, occurred_at=_dt())
+    s.commit()
+    r = net_position(s, u.id)
+    assert r["base_currency"] == "INR"
+    assert r["i_owe_minor"] == 8000000   # $1000 → ₹80,000 (minor 8000000)
+    assert r["unconverted"] == {}
+
+
+def test_net_position_unconverted_when_no_rate(ctx):
+    s, u = ctx
+    u.base_currency = "USD"  # no INR↔USD rate stored
+    taken = create_loan_plan(s, owner_id=u.id, name="INR loan", currency="INR", direction="taken",
+                             interest_type="none", rate_bps=0, start_date=date(2026, 1, 1))
+    add_disbursement(s, plan=taken, user_id=u.id, amount_minor=10000000, occurred_at=_dt())
+    s.commit()
+    r = net_position(s, u.id)
+    assert r["i_owe_minor"] == 0                       # nothing convertible
+    assert r["unconverted"]["INR"]["i_owe_minor"] == 10000000  # surfaced, not lost

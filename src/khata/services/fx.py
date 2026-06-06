@@ -24,13 +24,31 @@ def convert(amount_minor: int, *, rate_micro: int) -> int:
 
 
 def get_rate(session: Session, base: str, quote: str) -> int | None:
+    """quote-per-base rate (×1e6). Same currency → identity. If only the reverse
+    rate (quote→base) is stored, derive the inverse so a single stored row works
+    both directions — a USD-base user with an INR→USD rate still gets converted."""
     base = (base or "").upper()
     quote = (quote or "").upper()
     if base == quote:
         return MICRO
     row = session.scalar(select(FxRate).where(
         FxRate.base_currency == base, FxRate.quote_currency == quote))
-    return row.rate_micro if row else None
+    if row is not None and row.rate_micro:
+        return row.rate_micro
+    inv = session.scalar(select(FxRate).where(
+        FxRate.base_currency == quote, FxRate.quote_currency == base))
+    if inv is not None and inv.rate_micro:
+        return int((Decimal(MICRO) * MICRO / inv.rate_micro).quantize(
+            Decimal(1), rounding=ROUND_HALF_UP))
+    return None
+
+
+def list_rates(session: Session) -> list[dict]:
+    """All stored fx rates (raw direction as entered)."""
+    rows = session.scalars(select(FxRate).order_by(FxRate.base_currency, FxRate.quote_currency))
+    return [{"base": r.base_currency, "quote": r.quote_currency,
+             "rate_micro": r.rate_micro, "as_of": r.as_of.isoformat() if r.as_of else None}
+            for r in rows]
 
 
 def set_rate(session: Session, *, base: str, quote: str, rate_micro: int, as_of) -> FxRate:

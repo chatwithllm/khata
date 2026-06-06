@@ -34,6 +34,10 @@ def _apply_collateral(loan, c) -> None:
     loan.collateral_rate_minor = c.get("rate_minor")
     loan.collateral_rate_basis = c.get("rate_basis")
     loan.collateral_value_minor = c.get("value_minor")
+    # A loan with a recorded collateral value IS secured (inline gold/asset pledge),
+    # even without a separate linked holding plan — so the LTV bar / collateral panel show.
+    if c.get("value_minor"):
+        loan.secured = True
 
 
 def create_loan_plan(session: Session, *, owner_id, name, currency, direction, interest_type,
