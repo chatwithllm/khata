@@ -254,7 +254,9 @@
         <div style="display:flex;gap:8px"><input id="t-gold-rate" placeholder="9,300" inputmode="decimal" style="flex:1">
           <select id="t-gold-basis" style="width:120px"><option value="per_gram">per gram</option><option value="per_10gram">per 10 g</option><option value="per_ounce">per troy oz</option></select></div>
       </div>
-      <div class="fld"><label for="t-gold-value">Market value at loan time</label><input id="t-gold-value" placeholder="2,32,500" inputmode="decimal"></div>
+      <div class="fld"><label for="t-gold-value">Market value at loan time</label><input id="t-gold-value" placeholder="2,32,500" inputmode="decimal">
+        <div id="t-ltv-hint" style="font-size:11.5px;font-family:'JetBrains Mono';color:var(--ink-faint);min-height:14px"></div>
+      </div>
     </div>
     <div class="err" id="terms-err"></div>
     <div class="acts"><button class="save" id="terms-save">Save changes</button><span class="cancel" id="terms-cancel">Cancel</span><span class="delloan" id="terms-del">Delete loan</span></div>
@@ -468,10 +470,17 @@ function renderGlance(box, plan, st){
     if(gc.ltv_pct!=null){
       const r=el('div','frow');
       r.append(el('span','fk','Loan-to-value'));
-      const fv=el('span','fv'); fv.textContent=gc.ltv_pct+'%';
-      // colour the LTV: gold loans typically cap ~75%; flag high
-      if(gc.ltv_pct>75) fv.style.color='var(--neg)'; else if(gc.ltv_pct<=60) fv.style.color='var(--pos)';
+      const fv=el('span','fv');
+      // colour the LTV: gold loans typically cap ~75%. >100% is impossible → flag as an error.
+      if(gc.ltv_pct>100){ fv.textContent='⚠ '+gc.ltv_pct+'%'; fv.style.color='var(--neg)'; }
+      else { fv.textContent=gc.ltv_pct+'%'; fv.style.color = gc.ltv_pct>75 ? '#a96a00' : (gc.ltv_pct<=60 ? 'var(--pos)' : ''); }
       r.append(fv); body.append(r);
+      if(gc.ltv_pct>100){
+        const w=el('div','frow'); w.style.borderTop='none'; w.style.paddingTop='0';
+        const note=el('span',null,'Loan exceeds the recorded gold value — check the weight, value, or principal (likely a missing digit).');
+        note.style.cssText='font-size:11.5px;color:var(--neg);line-height:1.45';
+        w.append(note); body.append(w);
+      }
     }
   }
   box.append(body);
@@ -1079,10 +1088,22 @@ function recomputeTGold(){
   const b=$('t-gold-basis').value;
   let v; if(b==='per_gram')v=grams*r; else if(b==='per_10gram')v=grams/10*r; else v=(grams/T_GRAMS_PER_OZ)*r;
   $('t-gold-value').value=Math.round(v).toLocaleString('en-IN');
+  updateTLtv();
+}
+// live loan-to-value as you type (principal ÷ gold value) — flags an impossible >100%
+function updateTLtv(){
+  const h=$('t-ltv-hint'); if(!h) return;
+  const P=parseFloat(($('t-principal').value||'').replace(/[, ]/g,''))||0;
+  const V=parseFloat(($('t-gold-value').value||'').replace(/[, ]/g,''))||0;
+  if(!P || !V){ h.textContent=''; return; }
+  const ltv=Math.round(P*100/V);
+  h.textContent='Loan-to-value '+ltv+'%'+(ltv>100?' · ⚠ loan exceeds the gold value — check your figures':(ltv>75?' · high (gold loans usually cap ~75%)':''));
+  h.style.color = ltv>100?'var(--neg)':(ltv>75?'#a96a00':'var(--ink-faint)');
 }
 $('t-kind').addEventListener('change', toggleTGold);
 ['t-gold-weight','t-gold-rate','t-gold-unit','t-gold-basis'].forEach(id=>$(id).addEventListener('input', recomputeTGold));
-$('t-gold-value').addEventListener('input', ()=>{ _tGoldTouched = $('t-gold-value').value.trim()!==''; });
+$('t-gold-value').addEventListener('input', ()=>{ _tGoldTouched = $('t-gold-value').value.trim()!==''; updateTLtv(); });
+$('t-principal').addEventListener('input', updateTLtv);
 
 function openTerms(){
   if(!DATA) return;
@@ -1111,6 +1132,7 @@ function openTerms(){
   const pf=$('t-principal'), hint=$('t-principal-hint');
   if(disb.length>1){ pf.value=(gross/100); pf.disabled=true; hint.textContent='Multiple disbursements (tranches) — edit them on the ledger.'; }
   else { pf.disabled=false; pf.value=(disb.length===1)?(gross/100):''; hint.textContent=(disb.length===1)?'Updates the opening disbursement amount.':'No principal yet — enter it to log the opening disbursement.'; }
+  updateTLtv();
   $('scrim').classList.add('on'); $('terms-over').classList.add('on'); $('terms-over').setAttribute('aria-hidden','false'); $('t-name').focus();
 }
 function closeTerms(){ $('scrim').classList.remove('on'); $('terms-over').classList.remove('on'); $('terms-over').setAttribute('aria-hidden','true'); }

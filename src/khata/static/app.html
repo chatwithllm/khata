@@ -690,9 +690,12 @@ async function boot(){
         const st=d.state||{};
         amt.textContent = fmt(st.principal_outstanding_minor, st.currency||p.currency);
         const cap=el('div'); cap.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono"';
-        if(st.gold_collateral && st.gold_collateral.ltv_pct!=null){
-          cap.textContent='LTV '+st.gold_collateral.ltv_pct+'%';
-          if(st.gold_collateral.ltv_pct>75) cap.style.color='var(--neg)';
+        const ltv = st.gold_collateral && st.gold_collateral.ltv_pct;
+        if(ltv!=null){
+          if(ltv>100){ cap.textContent='⚠ LTV '+ltv+'%'; cap.style.color='var(--neg)';
+                       cap.title='Loan exceeds the recorded gold value — check the weight / value / principal'; }
+          else { cap.textContent='LTV '+ltv+'%';
+                 cap.style.color = ltv>75 ? '#a96a00' : (ltv<=60 ? 'var(--pos)' : 'var(--ink-faint)'); }
         } else { cap.textContent='outstanding'; }
         right.insertBefore(cap, ar);
       }catch(e){}
