@@ -272,7 +272,7 @@ def test_edit_ledger_entry_and_occurred_at(client):
     assert e["note"] == "corrected" and e["occurred_at"].startswith("2025-04-01")
     # bad amount → 400 (no 500); missing entry → 400
     assert client.patch(f"/api/plans/{pid}/entries/{eid}", json={"amount": "abc"}).status_code == 400
-    assert client.patch(f"/api/plans/{pid}/entries/999999", json={"note": "x"}).status_code == 400
+    assert client.patch(f"/api/plans/{pid}/entries/999999", json={"note": "x"}).status_code == 404
     # unauthenticated → 401
     client.post("/api/auth/logout")
     assert client.patch(f"/api/plans/{pid}/entries/{eid}", json={"note": "x"}).status_code == 401
@@ -290,8 +290,8 @@ def test_delete_ledger_entry(client):
     assert r.status_code == 200
     st = r.get_json()["state"]
     assert st["paid_to_date_minor"] == 0 and st["ledger"] == []
-    # already gone → 400; unauth → 401
-    assert client.delete(f"/api/plans/{pid}/entries/{eid}").status_code == 400
+    # already gone → 404; unauth → 401
+    assert client.delete(f"/api/plans/{pid}/entries/{eid}").status_code == 404
     client.post("/api/auth/logout")
     assert client.delete(f"/api/plans/{pid}/entries/1").status_code == 401
 
@@ -411,3 +411,26 @@ def test_fund_asset_from_loan_link(client):
     # a non-existent funding plan is rejected
     assert client.post(f"/api/plans/{aid}/payments", json={
         "amount": "100", "method": "cash", "funding_source": "loan", "funding_plan_id": 99999}).status_code == 400
+
+
+def test_contributor_can_edit_own_entry_not_others(client):
+    # owner shares an asset with a member; member contributes, then edits their own entry
+    client.post("/api/auth/register", json={"email": "m@b.com", "display_name": "Priya", "password": "pw12345"})
+    client.post("/api/auth/logout")
+    _register(client, "o@b.com")  # owner
+    pid = client.post("/api/plans", json={"name": "Plot", "currency": "INR", "total_price": "10,00,000"}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{pid}/members", json={"email": "m@b.com"})
+    owner_entry = client.post(f"/api/plans/{pid}/payments", json={
+        "amount": "1,00,000", "method": "upi", "funding_source": "savings"}).get_json()["state"]["ledger"][0]["id"]
+    client.post("/api/auth/logout")
+    client.post("/api/auth/login", json={"email": "m@b.com", "password": "pw12345"})
+    client.post(f"/api/invitations/{pid}/accept")
+    # member logs their own contribution
+    r = client.post(f"/api/plans/{pid}/payments", json={"amount": "2,00,000", "method": "cash", "funding_source": "savings"})
+    own_entry = r.get_json()["state"]["ledger"][0]["id"]
+    # member edits their OWN entry → allowed
+    assert client.patch(f"/api/plans/{pid}/entries/{own_entry}", json={"note": "my share"}).status_code == 200
+    assert client.delete(f"/api/plans/{pid}/entries/{own_entry}").status_code == 200
+    # member edits the OWNER's entry → forbidden
+    assert client.patch(f"/api/plans/{pid}/entries/{owner_entry}", json={"note": "x"}).status_code == 403
+    assert client.delete(f"/api/plans/{pid}/entries/{owner_entry}").status_code == 403
