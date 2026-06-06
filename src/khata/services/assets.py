@@ -6,6 +6,7 @@ from ..money import SUPPORTED_CURRENCIES
 
 METHODS = {"cash", "upi", "transfer", "cheque"}
 SOURCES = {"savings", "loan", "borrowed", "sold_asset", "chit_payout", "other"}
+_UNSET = object()   # sentinel: "field not provided" vs explicitly set to None (clear)
 AMOUNT_STATUSES = {"agreed", "pending", "countered"}
 
 
@@ -58,7 +59,7 @@ def set_installments(session: Session, *, plan: Plan, items) -> None:
 
 def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred_at,
                 method, funding_source, direction="out", proof_ref=None, note=None,
-                acting_user_id=None) -> LedgerEntry:
+                acting_user_id=None, funding_plan_id=None) -> LedgerEntry:
     if amount_minor <= 0:
         raise ValidationError("amount must be > 0")
     if method not in METHODS:
@@ -70,7 +71,8 @@ def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred
     entry = LedgerEntry(plan_id=plan.id, logged_by_user_id=user_id, direction=direction,
                         amount_minor=amount_minor, currency=plan.currency, occurred_at=occurred_at,
                         method=method, funding_source=funding_source, proof_ref=proof_ref, note=note,
-                        amount_status=_amount_status_for(user_id, acting_user_id))
+                        amount_status=_amount_status_for(user_id, acting_user_id),
+                        funding_plan_id=funding_plan_id)
     session.add(entry)
     session.flush()
     return entry
@@ -79,7 +81,7 @@ def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred
 def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
                         amount_minor=None, occurred_at=None, method=None,
                         funding_source=None, note=None, logged_by_user_id=None,
-                        acting_user_id=None) -> LedgerEntry:
+                        acting_user_id=None, funding_plan_id=_UNSET) -> LedgerEntry:
     """Edit an existing ledger entry in-place (owner-only at the API layer).
     Only the provided fields change; kind/direction stay immutable. Derived
     balances recompute on the next *_state call (balances are never stored).
@@ -110,6 +112,8 @@ def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
         entry.note = note
     if logged_by_user_id is not None:
         entry.logged_by_user_id = logged_by_user_id
+    if funding_plan_id is not _UNSET:
+        entry.funding_plan_id = funding_plan_id      # may be None to unlink
     if amount_changed or attrib_changed:
         entry.amount_status = _amount_status_for(entry.logged_by_user_id, acting_user_id)
         entry.counter_amount_minor = None
@@ -290,10 +294,14 @@ def asset_state(session: Session, plan: Plan) -> dict:
     # Surface existing ledger_entries rows in the state JSON (mirrors chit_state.ledger).
     # No new model/migration — these rows already exist; we just include them.
     _users = {}
+    _fplans = {}
     for e in plan.ledger_entries:
         if e.logged_by_user_id not in _users:
             _u = session.get(User, e.logged_by_user_id)
             _users[e.logged_by_user_id] = (_u.display_name, _u.avatar) if _u else (None, None)
+        if e.funding_plan_id and e.funding_plan_id not in _fplans:
+            _fp = session.get(Plan, e.funding_plan_id)
+            _fplans[e.funding_plan_id] = (_fp.name, _fp.type) if _fp else (None, None)
     ledger = [
         {"id": e.id, "kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
          "created_at": e.created_at.isoformat() if e.created_at else None,
@@ -303,6 +311,9 @@ def asset_state(session: Session, plan: Plan) -> dict:
          "logged_by_user_id": e.logged_by_user_id,
          "paid_by_name": _users.get(e.logged_by_user_id, (None, None))[0],
          "paid_by_avatar": _users.get(e.logged_by_user_id, (None, None))[1],
+         "funding_plan_id": e.funding_plan_id,
+         "funding_plan_name": _fplans.get(e.funding_plan_id, (None, None))[0],
+         "funding_plan_type": _fplans.get(e.funding_plan_id, (None, None))[1],
          "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor}
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
     ]

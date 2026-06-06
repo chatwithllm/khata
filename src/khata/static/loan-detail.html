@@ -159,6 +159,8 @@
           <div class="panel fade d3" id="coll-panel" style="display:none"></div>
           <!-- loan terms -->
           <div class="panel fade d3" id="terms-panel"></div>
+          <!-- deployed into (where the borrowed money went) -->
+          <div class="panel fade d3" id="deployed-panel" style="display:none"></div>
           <!-- members (sharing) -->
           <div class="panel fade d4 fill" id="members-panel"></div>
         </div>
@@ -1006,6 +1008,32 @@ function renderTerms(box, plan, st){
   box.append(body);
 }
 
+// ── deployed into: where this borrowed money went (cross-plan funding link) ──
+function renderDeployed(box, st){
+  box.textContent='';
+  const dep = st.deployed || [];
+  if(!dep.length){ box.style.display='none'; return; }
+  box.style.display='';
+  const ph=el('div','ph'); const t=el('div','t','Deployed into'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','where it went')); box.append(ph);
+  const head=el('div'); head.style.cssText='display:flex;justify-content:space-between;align-items:baseline;padding:14px 22px;border-bottom:1px solid var(--line-2)';
+  const hl=el('span',null,'Put to work'); hl.style.cssText='font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:700';
+  const hv=el('span'); hv.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:15px'; hv.append(amtSpan(st.deployed_total_minor));
+  head.append(hl,hv); box.append(head);
+  for(const d of dep){
+    const r=document.createElement('a'); r.href='/'+(d.plan_type||'asset')+'/'+d.plan_id;
+    r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 22px;border-top:1px solid var(--line-2);text-decoration:none;color:inherit';
+    const lf=el('div');
+    const nm=el('div',null,d.plan_name||'plan'); nm.style.cssText='font-weight:600;font-size:14px'; lf.append(nm);
+    const dt=el('div',null,(d.plan_type||'')+' · '+fmtDate((d.occurred_at||'').slice(0,10))); dt.style.cssText='font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"'; lf.append(dt);
+    const rt=el('div'); rt.style.cssText='display:flex;align-items:center;gap:8px';
+    const av=el('div'); av.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px'; av.append(amtSpan(d.amount_minor));
+    const arr=el('span',null,'→'); arr.style.color='var(--ink-faint)';
+    rt.append(av, arr);
+    r.append(lf, rt); box.append(r);
+  }
+}
+
 // ── members (sharing) ──
 function renderMembers(box){
   box.textContent='';
@@ -1185,6 +1213,7 @@ async function boot(){
   renderGlance($('glance-panel'), plan, st);
   renderCollateral($('coll-panel'), st);
   renderTerms($('terms-panel'), plan, st);
+  renderDeployed($('deployed-panel'), st);
   renderMembers($('members-panel'));
 
   // sidebar counts from /api/plans

@@ -60,7 +60,7 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   **created_at** (when it was logged). Editable in place (see §7). `amount_status` drives the two-party
   contribution-amount agreement (§9): an entry whose attributed contributor (`logged_by_user_id`) differs
   from whoever recorded it starts `pending`; the recorded `amount_minor` still counts toward all totals —
-  the status only flags attribution accuracy. Migration `b8a2confirm1`.
+  the status only flags attribution accuracy. Migration `b8a2confirm1`. **funding_plan_id?** (FK→plans): provenance link — an asset contribution paid out of a loan points to that loan (migration `cc6fundlink01`); each plan still counts only its own entries, the link just records the money's chain.
 - **plan_memberships**: id, plan_id, user_id, role (owner|contributor|…), **status**
   (`invited`|`active`|`declined`), created_at. New shares start `invited`; the plan stays hidden
   from the invitee until they accept (→ `active`). Decline → `declined` (hidden, re-invitable —
@@ -152,6 +152,7 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-06 — Fund a contribution from a loan (cross-plan money chain).** Real flow: you borrow ₹10L → it becomes your asset contribution → you repay the loan. The asset payment now links to its source loan via `ledger_entries.funding_plan_id` (link-only — the loan disbursement and the asset payment stay separate real events; no double-count). Asset log-payment shows a **“from which loan”** picker when funding source is loan/borrowed; the asset ledger row shows a **“↗ <loan>”** link; loan-detail gains a **“Deployed into”** panel listing where the borrowed money went + total put to work. Payoff is the existing principal_repayment flow. `loan_state` gains `deployed[]`/`deployed_total_minor`; `asset_state.ledger` rows gain `funding_plan_id/name/type`. (Plan.ledger_entries relationship pinned to plan_id FK to disambiguate the new second FK.)
 - **2026-06-06 — Differentiable plan rows in the list (esp. loans).** The dashboard "Your plans" / filtered
   list showed only "<Name> · INR · owner" — two same-named gold loans were indistinguishable before opening.
   Now each row has a `planMeta(p)` line built from the summary (loan → "Gold · from SBI · 7.5%/yr"; holding →
@@ -330,6 +331,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-06 — Cross-plan funding link: an asset contribution can point to the loan it came from (`funding_plan_id`); asset ledger shows “↗ loan”, loan shows a “Deployed into” panel. Full loan→asset→payoff chain. Migration `cc6fundlink01`.
 - 2026-06-06 — Assets list enriched like loans: row meta shows total · schedule/ad-hoc · joint contributors, right side shows amount paid + % progress + amount left (fetched per row). No more bare "1 Acre · INR".
 - 2026-06-06 — Fix: loan rate label respects interest_type — a monthly-interest loan now reads "3%/mo" not "3%/yr" (was hardcoded /yr in the list meta, loan-detail glance, and compare table).
 - 2026-06-06 — Loans list shows monthly interest cashflow: per-row interest/mo (− you pay on borrowed, + you earn on lent), group subtotals, and a "Net interest / month" footer (lent earnings − borrowed cost) telling you if you're net ahead or paying out. Client-only (app.html, monthlyInterestMinor).

@@ -387,3 +387,27 @@ def test_gold_loan_collateral_and_ltv(client):
     client.patch(f"/api/plans/{pid}", json={"loan_kind": "personal"})
     st2 = client.get(f"/api/plans/{pid}").get_json()["state"]
     assert st2["gold_collateral"] is None
+
+
+def test_fund_asset_from_loan_link(client):
+    _register(client)
+    # a loan (taken) ₹10L
+    lid = client.post("/api/plans", json={
+        "type": "loan", "name": "Personal loan", "currency": "INR", "direction": "taken",
+        "interest_type": "yearly", "rate": "10", "start_date": "2026-01-01", "tenure_months": 24}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{lid}/loan/disbursements", json={"amount": "10,00,000", "occurred_at": "2026-01-01T00:00:00"})
+    # an asset; contribute ₹10L funded by that loan
+    aid = client.post("/api/plans", json={"name": "1 Acre", "currency": "INR", "total_price": "50,00,000"}).get_json()["plan"]["id"]
+    r = client.post(f"/api/plans/{aid}/payments", json={
+        "amount": "10,00,000", "method": "transfer", "funding_source": "loan", "funding_plan_id": lid})
+    assert r.status_code == 201
+    # asset ledger row links to the loan
+    row = client.get(f"/api/plans/{aid}").get_json()["state"]["ledger"][0]
+    assert row["funding_plan_id"] == lid and row["funding_plan_name"] == "Personal loan" and row["funding_plan_type"] == "loan"
+    # loan shows the money deployed into the asset
+    lst = client.get(f"/api/plans/{lid}").get_json()["state"]
+    assert lst["deployed_total_minor"] == 100000000
+    assert lst["deployed"][0]["plan_id"] == aid and lst["deployed"][0]["plan_name"] == "1 Acre"
+    # a non-existent funding plan is rejected
+    assert client.post(f"/api/plans/{aid}/payments", json={
+        "amount": "100", "method": "cash", "funding_source": "loan", "funding_plan_id": 99999}).status_code == 400

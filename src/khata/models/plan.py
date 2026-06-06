@@ -37,7 +37,8 @@ class Plan(Base):
         back_populates="plan", cascade="all, delete-orphan", order_by="Installment.seq")
     ledger_entries: Mapped[list["LedgerEntry"]] = relationship(
         back_populates="plan", cascade="all, delete-orphan",
-        order_by="LedgerEntry.occurred_at")
+        order_by="LedgerEntry.occurred_at",
+        foreign_keys="LedgerEntry.plan_id")   # disambiguate from funding_plan_id FK
     memberships: Mapped[list["PlanMembership"]] = relationship(
         back_populates="plan", cascade="all, delete-orphan")
 

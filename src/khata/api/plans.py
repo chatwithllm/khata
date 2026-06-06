@@ -133,6 +133,18 @@ def _gold_collateral(data, currency):
     }
 
 
+def _funding_plan_id(data, user):
+    """Resolve an optional `funding_plan_id` (the plan that funded this payment, e.g. the
+    loan an asset contribution came from). Must be a plan the user can access. Empty → None."""
+    fp = data.get("funding_plan_id")
+    if fp in (None, "", 0, "0"):
+        return None
+    p = g.db.get(Plan, int(fp))
+    if p is None or not sharing.accessible(g.db, plan=p, user_id=user.id):
+        raise ValueError("funding source must be a plan you can access")
+    return p.id
+
+
 @bp.post("")
 def create():
     user = current_user()
@@ -304,7 +316,8 @@ def payment(plan_id):
         entry = assets.log_payment(
             g.db, plan=plan, user_id=_payer_uid(plan, data, user.id), amount_minor=amount, occurred_at=occurred,
             method=data.get("method", ""), funding_source=data.get("funding_source", ""),
-            proof_ref=data.get("proof_ref"), note=data.get("note"), acting_user_id=user.id)
+            proof_ref=data.get("proof_ref"), note=data.get("note"), acting_user_id=user.id,
+            funding_plan_id=_funding_plan_id(data, user))
         g.db.commit()
     except (PlanError, ValueError, TypeError) as e:
         g.db.rollback()
@@ -336,6 +349,8 @@ def update_entry(plan_id, entry_id):
                 fields[k] = data.get(k)
         if "paid_by" in data:
             fields["logged_by_user_id"] = _payer_uid(plan, data, plan.owner_user_id)
+        if "funding_plan_id" in data:
+            fields["funding_plan_id"] = _funding_plan_id(data, user)
         assets.update_ledger_entry(g.db, plan=plan, entry_id=entry_id, acting_user_id=user.id, **fields)
         g.db.commit()
     except (PlanError, ValueError, TypeError) as e:
