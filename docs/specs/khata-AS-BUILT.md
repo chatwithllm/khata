@@ -330,6 +330,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-06 — Assets list enriched like loans: row meta shows total · schedule/ad-hoc · joint contributors, right side shows amount paid + % progress + amount left (fetched per row). No more bare "1 Acre · INR".
 - 2026-06-06 — Fix: loan rate label respects interest_type — a monthly-interest loan now reads "3%/mo" not "3%/yr" (was hardcoded /yr in the list meta, loan-detail glance, and compare table).
 - 2026-06-06 — Loans list shows monthly interest cashflow: per-row interest/mo (− you pay on borrowed, + you earn on lent), group subtotals, and a "Net interest / month" footer (lent earnings − borrowed cost) telling you if you're net ahead or paying out. Client-only (app.html, monthlyInterestMinor).
 - 2026-06-06 — Loans list splits Borrowed (you owe) vs Lent out (owed to you) — two sections with colour-coded headers + live subtotals; meta reads "N borrowed · M lent". Debt and receivables no longer lumped.
