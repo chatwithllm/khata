@@ -53,7 +53,9 @@ def set_fx_rate():
         return jsonify(error="unauthenticated"), 401
     data = request.get_json(silent=True) or {}
     try:
-        row = fx.set_rate(g.db, base=user.base_currency, quote=(data.get("quote") or ""),
+        # base/quote may be given explicitly (canonical pair); default to the user's base.
+        row = fx.set_rate(g.db, base=(data.get("base") or user.base_currency),
+                          quote=(data.get("quote") or ""),
                           rate_micro=to_micro(data.get("rate", "")), as_of=_as_of(data.get("as_of")))
         g.db.commit()
     except (fx.FxError, ValueError, TypeError) as e:

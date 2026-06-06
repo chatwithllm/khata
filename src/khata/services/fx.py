@@ -60,13 +60,15 @@ def set_rate(session: Session, *, base: str, quote: str, rate_micro: int, as_of)
         raise ValidationError("base and quote must differ")
     if rate_micro <= 0:
         raise ValidationError("rate must be > 0")
-    row = session.scalar(select(FxRate).where(
-        FxRate.base_currency == base, FxRate.quote_currency == quote))
-    if row is None:
-        row = FxRate(base_currency=base, quote_currency=quote, rate_micro=rate_micro, as_of=as_of)
-        session.add(row)
-    else:
-        row.rate_micro = rate_micro
-        row.as_of = as_of
+    # A currency PAIR holds exactly one canonical row. Drop any existing row in EITHER
+    # direction first, so a reverse entry can't leave two contradictory rows behind
+    # (e.g. INR→USD=98 and USD→INR=98, which means "1 USD=₹98" AND "1 INR=$98").
+    for existing in session.scalars(select(FxRate).where(
+            ((FxRate.base_currency == base) & (FxRate.quote_currency == quote)) |
+            ((FxRate.base_currency == quote) & (FxRate.quote_currency == base)))).all():
+        session.delete(existing)
+    session.flush()
+    row = FxRate(base_currency=base, quote_currency=quote, rate_micro=rate_micro, as_of=as_of)
+    session.add(row)
     session.flush()
     return row

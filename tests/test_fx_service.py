@@ -65,3 +65,17 @@ def test_get_rate_inverse_fallback(s):
 def test_get_rate_identity_and_missing(s):
     assert get_rate(s, "USD", "USD") == 1_000_000
     assert get_rate(s, "USD", "INR") is None
+
+
+def test_set_rate_clears_contradictory_reverse(s):
+    from khata.services.fx import list_rates
+    set_rate(s, base="USD", quote="INR", rate_micro=98_000_000, as_of=_now())  # bad: 1 INR=$98
+    s.commit()
+    # now set the canonical 1 USD = ₹98 (INR-per-USD); the reverse row must be gone
+    set_rate(s, base="INR", quote="USD", rate_micro=98_000_000, as_of=_now())
+    s.commit()
+    rows = list_rates(s)
+    assert len(rows) == 1
+    assert rows[0]["base"] == "INR" and rows[0]["quote"] == "USD"
+    # get_rate(USD, INR) now correctly inverts → ~0.0102, not 98
+    assert get_rate(s, "USD", "INR") < 1_000_000

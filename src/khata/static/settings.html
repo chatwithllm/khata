@@ -96,12 +96,9 @@
               </div>
               <div class="acts"><button class="save" id="savebase">Set base</button></div>
               <div class="msg" id="cmsg"></div>
-              <div class="hint" id="fxhint">FX rate — how much of your base currency 1 unit of the other is worth.</div>
-              <div class="row2">
-                <div class="fld"><label for="fxq">Convert from</label>
-                  <select id="fxq"></select>
-                </div>
-                <div class="fld"><label for="fxr" id="fxrlabel">Rate</label><input id="fxr" placeholder="83.42" inputmode="decimal"></div>
+              <div class="hint" id="fxhint">Exchange rate — used to show every plan in your base currency.</div>
+              <div class="row2" style="align-items:end">
+                <div class="fld"><label for="fxr">1 USD = ₹ (INR)</label><input id="fxr" placeholder="83.42" inputmode="decimal"></div>
               </div>
               <div class="msg" id="fmsg"></div>
               <div class="acts"><button class="alt" id="savefx">Set rate</button></div>
@@ -183,31 +180,31 @@ $('savebase').addEventListener('click', async ()=>{
   if(ok) await setupFx($('base').value);   // quote options + rate list follow the base
 });
 $('savefx').addEventListener('click', async ()=>{
-  const { ok, j }=await post('/api/fx-rates', { quote:$('fxq').value, rate:$('fxr').value });
+  // canonical pair: store INR-per-USD (1 USD = ₹rate). Works for either base direction;
+  // set_rate clears any contradictory reverse row.
+  const { ok, j }=await post('/api/fx-rates', { base:'INR', quote:'USD', rate:$('fxr').value });
   show($('fmsg'), ok, ok ? 'Rate set.' : (j.detail || j.error || 'Failed.'));
   if(ok){ $('fxr').value=''; await setupFx($('base').value); }
 });
 
-const SYM={INR:'₹', USD:'$'};
 async function setupFx(base){
-  const others=['INR','USD'].filter(c=>c!==base);
-  const sel=$('fxq'); sel.textContent='';
-  for(const c of others){ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.append(o); }
-  // hint + rate label make the direction explicit: "1 <other> = ? <base>"
-  const other=others[0];
-  const hint=$('fxhint'); if(hint) hint.textContent='How many '+base+' is 1 '+other+' worth? (1 '+other+' = ? '+base+')';
-  const rl=$('fxrlabel'); if(rl) rl.textContent='1 '+other+' in '+base;
-  // list existing rates
+  // single canonical rate (1 USD = ₹X); list it back as "1 USD = ₹X"
   const box=$('fxlist'); if(!box) return; box.textContent='';
   try{
     const data=await (await fetch('/api/fx-rates')).json();
-    const rows=data.rates||[];
-    if(!rows.length){ const e=document.createElement('div'); e.className='hint'; e.textContent='No rates set yet.'; box.append(e); return; }
+    const rows=(data.rates||[]);
+    if(!rows.length){ const e=document.createElement('div'); e.className='hint'; e.textContent='No rate set yet.'; box.append(e); return; }
     for(const r of rows){
+      // normalise any stored direction to "1 USD = ₹X"
+      let inrPerUsd=null;
+      if(r.base==='INR' && r.quote==='USD') inrPerUsd=r.rate_micro/1e6;
+      else if(r.base==='USD' && r.quote==='INR' && r.rate_micro) inrPerUsd=1e6/r.rate_micro;
       const row=document.createElement('div'); row.className='fxrow';
       row.style.cssText='font-size:13px;color:var(--ink-soft);font-family:"JetBrains Mono";padding:3px 0';
-      const v=(r.rate_micro/1e6);
-      row.textContent='1 '+r.quote+' = '+(SYM[r.base]||'')+v.toLocaleString('en-US',{maximumFractionDigits:6})+' ('+r.base+')';
+      row.textContent = inrPerUsd!=null
+        ? ('1 USD = ₹'+inrPerUsd.toLocaleString('en-US',{maximumFractionDigits:4}))
+        : ('1 '+r.quote+' = '+(r.rate_micro/1e6)+' '+r.base);
+      if(inrPerUsd!=null) $('fxr').placeholder=inrPerUsd.toLocaleString('en-US',{maximumFractionDigits:4});
       box.append(row);
     }
   }catch(e){}

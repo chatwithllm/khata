@@ -378,27 +378,17 @@ function renderControls(box, d, feedEnabled){
   r1.append(baseFld);
   body.append(r1);
 
-  // fx rate: 1 <quote> = <rate> BASE
+  // fx rate: single canonical "1 USD = ₹X" (INR-per-USD), used both base directions
   const r2=el('div','ctlrow');
-  const qFld=el('div','fld');
-  qFld.append(el('label',null,'FX — 1 of'));
-  const fxq=el('select'); fxq.id='fxq';
-  // only the NON-base currency is a valid quote (base==quote is rejected); default to it
-  ['USD','INR'].filter(c=>c!==BASE).forEach(c=>{ const o=el('option',null,c); o.value=c; fxq.append(o); });
-  qFld.append(fxq);
-  r2.append(qFld);
-
   const rFld=el('div','fld');
-  const rl=el('label'); rl.append(document.createTextNode('= rate in '));
-  const bb=el('b'); bb.textContent=BASE; rl.append(bb);
-  rFld.append(rl);
+  rFld.append(el('label',null,'1 USD = ₹ (INR)'));
   const fxr=el('input'); fxr.id='fxr'; fxr.placeholder='83.42'; fxr.inputMode='decimal';
   rFld.append(fxr);
   r2.append(rFld);
 
   const setBtn=el('button','setbtn','Set rate');
   setBtn.addEventListener('click', async ()=>{
-    if(await post('/api/fx-rates', { quote: fxq.value, rate: fxr.value })){ fxr.value=''; load(); }
+    if(await post('/api/fx-rates', { base:'INR', quote:'USD', rate: fxr.value })){ fxr.value=''; load(); }
   });
   r2.append(setBtn);
   body.append(r2);
