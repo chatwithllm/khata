@@ -226,6 +226,12 @@ function planMeta(p){
   if(p.role && p.role!=='owner') parts.push(p.role);
   return parts.filter(Boolean).join(' · ');
 }
+// monthly interest on a loan = outstanding × rate (yearly → /12). Minor units.
+function monthlyInterestMinor(po, rate_bps, itype){
+  if(!po || !rate_bps || !itype || itype==='none') return 0;
+  if(itype==='monthly') return Math.round(po*rate_bps/10000);   // rate is already per-month
+  return Math.round(po*rate_bps/120000);                        // yearly → per-month
+}
 
 // ── featured asset panel ──
 function renderFeatured(box, plan, state){
@@ -675,15 +681,22 @@ async function boot(){
       }
       left.append(l1);
       left.append(el('div','l2', planMeta(p)));
-      const right=el('div'); right.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;justify-content:center';
+      const right=el('div'); right.style.cssText='display:flex;align-items:center;gap:26px;justify-content:flex-end';
+      // interest/mo column (loans only — the cashflow direction)
+      const intCol=el('div'); intCol.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:104px';
+      const intAmt=el('div'); intAmt.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:13px';
+      if(p.type==='loan'){ const il=el('div',null,'interest/mo'); il.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono"'; intCol.append(intAmt, il); }
+      // outstanding column
+      const outCol=el('div'); outCol.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:112px';
       const amt=el('div'); amt.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px';
       const ar=el('div','arrow','→');
-      right.append(amt, ar);
+      outCol.append(amt, ar);
+      if(p.type==='loan') right.append(intCol, outCol); else right.append(outCol);
       row.append(left, right);
       plist.append(row);
-      if(p.type==='loan') fillLoans.push({p, amt, right, ar, groupAgg});
+      if(p.type==='loan') fillLoans.push({p, amt, intAmt, outCol, ar, groupAgg});
     }
-    // section header for a loan direction group, returns its (live) subtotal element
+    // section header for a loan direction group, returns its live subtotal elements
     function groupHeader(label, sub, accent, first){
       const h=el('div'); h.style.cssText='display:flex;align-items:baseline;justify-content:space-between;padding:'+(first?'4px':'16px')+' 22px 8px';
       if(!first) h.style.borderTop='1px solid var(--line-2)';
@@ -691,35 +704,40 @@ async function boot(){
       const lab=el('span',null,label); lab.style.cssText='font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:'+accent;
       const s=el('span',null,sub); s.style.cssText='font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"';
       lft.append(lab,s);
-      const tot=el('div'); tot.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:13px;color:'+accent;
-      h.append(lft, tot); plist.append(h);
-      return tot;
+      const tw=el('div'); tw.style.cssText='display:flex;align-items:baseline;gap:26px';
+      const intTot=el('div'); intTot.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:12px;min-width:104px;text-align:right;color:'+accent;
+      const outTot=el('div'); outTot.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:13px;min-width:112px;text-align:right;color:'+accent;
+      tw.append(intTot, outTot);
+      h.append(lft, tw); plist.append(h);
+      return {outEl:outTot, intEl:intTot};
     }
+    let aggs=[];
     if(typeFilter==='loan'){
       const taken=shown.filter(p=>p.direction==='taken');
       const given=shown.filter(p=>p.direction==='given');
       if(pmeta) pmeta.textContent = taken.length+' borrowed · '+given.length+' lent';
       const groups=[
-        {arr:taken, label:'Borrowed', sub:'you owe', accent:'var(--neg)'},
-        {arr:given, label:'Lent out', sub:'owed to you', accent:'var(--pos)'},
+        {arr:taken, label:'Borrowed', sub:'you owe', accent:'var(--neg)', taken:true},
+        {arr:given, label:'Lent out', sub:'owed to you', accent:'var(--pos)', taken:false},
       ];
       let first=true;
       for(const g of groups){
         if(!g.arr.length) continue;
-        const totEl=groupHeader(g.label, g.sub, g.accent, first); first=false;
-        const agg={sum:0, el:totEl, ccy:null};
+        const els=groupHeader(g.label, g.sub, g.accent, first); first=false;
+        const agg={sum:0, interest:0, outEl:els.outEl, intEl:els.intEl, ccy:'INR', taken:g.taken};
+        aggs.push(agg);
         g.arr.forEach(p=> makeRow(p, agg));
       }
     } else {
       for(const p of shown) makeRow(p, null);
     }
-    // enrich loan rows with the outstanding amount + LTV, and roll up each group's subtotal
-    Promise.all(fillLoans.map(async ({p, amt, right, ar, groupAgg})=>{
+    // enrich loan rows: outstanding + LTV + monthly interest cashflow, and roll up subtotals
+    Promise.all(fillLoans.map(async ({p, amt, intAmt, outCol, ar, groupAgg})=>{
       try{
         const d=await fetch('/api/plans/'+p.id).then(r=>r.json());
-        const st=d.state||{};
+        const st=d.state||{}; const ccy=st.currency||p.currency;
         const out=st.principal_outstanding_minor||0;
-        amt.textContent = fmt(out, st.currency||p.currency);
+        amt.textContent = fmt(out, ccy);
         const cap=el('div'); cap.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono"';
         const ltv = st.gold_collateral && st.gold_collateral.ltv_pct;
         if(ltv!=null){
@@ -728,10 +746,35 @@ async function boot(){
           else { cap.textContent='LTV '+ltv+'%';
                  cap.style.color = ltv>75 ? '#a96a00' : (ltv<=60 ? 'var(--pos)' : 'var(--ink-faint)'); }
         } else { cap.textContent='outstanding'; }
-        right.insertBefore(cap, ar);
-        if(groupAgg){ groupAgg.sum+=out; groupAgg.ccy=st.currency||p.currency; groupAgg.el.textContent=fmt(groupAgg.sum, groupAgg.ccy); }
+        outCol.insertBefore(cap, ar);
+        // monthly interest = outstanding × rate; you PAY on borrowed (−), EARN on lent (+)
+        const mi=monthlyInterestMinor(out, p.rate_bps, p.interest_type);
+        const taken=(p.direction!=='given');
+        if(!mi){ intAmt.textContent='—'; intAmt.style.color='var(--ink-faint)'; }
+        else { intAmt.textContent=(taken?'−':'+')+fmt(mi, ccy); intAmt.style.color=taken?'var(--neg)':'var(--pos)'; }
+        if(groupAgg){
+          groupAgg.sum+=out; groupAgg.interest+=mi; groupAgg.ccy=ccy;
+          groupAgg.outEl.textContent=fmt(groupAgg.sum, ccy);
+          groupAgg.intEl.textContent=(groupAgg.taken?'−':'+')+fmt(groupAgg.interest, ccy)+'/mo';
+        }
       }catch(e){}
-    }));
+    })).then(()=>{
+      // net monthly interest position (lent earnings − borrowed cost)
+      if(typeFilter!=='loan' || !aggs.length) return;
+      let paid=0, earned=0, ccy='INR';
+      aggs.forEach(a=>{ if(a.taken) paid+=a.interest; else earned+=a.interest; ccy=a.ccy||ccy; });
+      const net=earned-paid;
+      const nr=el('div'); nr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:2px solid var(--line);background:var(--paper-2)';
+      const lab=el('span',null,'Net interest / month'); lab.style.cssText='font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint)';
+      const v=el('div'); v.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:15px;display:flex;align-items:baseline;gap:8px';
+      const num=el('span');
+      const note=el('span'); note.style.cssText='font-size:11px;font-weight:600;text-transform:none;letter-spacing:0';
+      if(net>0){ num.textContent='+'+fmt(net,ccy)+'/mo'; num.style.color='var(--pos)'; note.textContent='you come out ahead'; note.style.color='var(--pos)'; }
+      else if(net<0){ num.textContent='−'+fmt(-net,ccy)+'/mo'; num.style.color='var(--neg)'; note.textContent='net cost — you pay out'; note.style.color='var(--neg)'; }
+      else { num.textContent=fmt(0,ccy)+'/mo'; num.style.color='var(--ink-faint)'; note.textContent='flat'; }
+      v.append(num, note);
+      nr.append(lab, v); plist.append(nr);
+    });
   }
   if(typeFilter){ const panel=plist.closest('.panel'); if(panel) panel.scrollIntoView({behavior:'smooth', block:'center'}); }
 
