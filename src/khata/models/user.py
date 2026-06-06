@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import String, DateTime
+from sqlalchemy import String, DateTime, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -20,6 +20,10 @@ class User(Base):
     google_sub: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True, index=True)
     base_currency: Mapped[str] = mapped_column(
         String(3), nullable=False, default="INR", server_default="INR")
+    # Cropped square avatar as a data URL (data:image/...;base64,...), set via the crop
+    # tool. Stored server-side so every member sees each contributor's photo, and so it
+    # travels with a backup. Capped small (~256px) at the API layer.
+    avatar: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     def __repr__(self) -> str:

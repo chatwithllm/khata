@@ -7,199 +7,697 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/assets/ledger.css">
+<link rel="stylesheet" href="/static/assets/app.css">
 <style>
-  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
-  .topbar .brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:20px}
-  .topbar .glyph{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,var(--primary),var(--primary-deep))}
-  .formcard{max-width:560px;margin:8px auto 40px}
-  .tabs{display:flex;gap:8px;margin:6px 0 18px}
-  .tab{flex:1;text-align:center;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px;cursor:pointer;font-weight:600;color:var(--ink-soft)}
-  .tab.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-  .fld{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
-  .fld label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
-  .fld input,.fld select{font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
-  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .grp{display:none} .grp.on{display:block}
-  .inst{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:7px}
-  .lnk{color:var(--primary);font-weight:600;cursor:pointer;font-size:13px}
-  .err{color:var(--neg);font-size:13px;min-height:18px;margin:4px 0}
-  .actions{display:flex;gap:12px;align-items:center;margin-top:10px}
+/* ── create-plan.html-only rules (shell lives in app.css) ── */
+
+/* scrim + modal overlay (the create wizard is shown as a centered modal
+   over a dimmed/blurred dashboard background — matches the mockup) */
+.dimwrap{position:relative;z-index:1}
+.dimwrap .app{filter:blur(3px) saturate(.85);transform:scale(.998);pointer-events:none}
+.scrim{position:fixed;inset:0;z-index:40;cursor:pointer;
+  background:radial-gradient(120% 80% at 50% 30%,color-mix(in srgb,var(--ink) 40%,transparent),color-mix(in srgb,var(--ink) 64%,transparent));
+  opacity:0;animation:scrimin .5s var(--ease) forwards;backdrop-filter:blur(2px)}
+@keyframes scrimin{to{opacity:1}}
+.modal{position:fixed;z-index:50;inset:0;display:grid;place-items:start center;padding:40px 20px;overflow-y:auto}
+.card-modal{width:min(760px,100%);background:var(--card);border:1px solid var(--line);border-radius:22px;
+  box-shadow:0 40px 90px -40px rgba(20,16,12,.7),0 1px 0 rgba(255,255,255,.5) inset;
+  overflow:hidden;opacity:0;transform:translateY(18px) scale(.96);
+  animation:modalin .55s var(--ease) .06s forwards}
+@keyframes modalin{to{opacity:1;transform:none}}
+
+/* modal head + close (×) button top-right */
+.mhead{display:flex;align-items:flex-start;justify-content:space-between;padding:22px 26px 16px;border-bottom:1px solid var(--line)}
+.mhead .ttl{font-family:"Fraunces",serif;font-weight:600;font-size:24px;letter-spacing:-.01em;line-height:1.1}
+.mhead .ttl em{font-style:italic;color:var(--primary-deep)}
+.mhead .sub{font-size:12.5px;color:var(--ink-faint);margin-top:5px;font-family:"JetBrains Mono"}
+.xbtn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--paper-2);color:var(--ink-soft);cursor:pointer;display:grid;place-items:center;flex:none;transition:.2s}
+.xbtn:hover{background:var(--ink);color:var(--paper)}
+.xbtn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.xbtn svg{width:15px;height:15px}
+
+/* step rail (1·Type → 2·Details → 3·Schedule → 4·Review) */
+.rail{display:flex;align-items:center;gap:0;padding:16px 26px;border-bottom:1px solid var(--line);background:var(--paper-2)}
+.step{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:var(--ink-faint)}
+.step .num{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:11.5px;font-family:"JetBrains Mono";font-weight:700;
+  background:var(--paper);border:1.5px solid var(--line);color:var(--ink-faint);transition:.3s}
+.step.done .num{background:var(--pos);border-color:transparent;color:#fff}
+.step.active{color:var(--ink)}
+.step.active .num{background:var(--ink);border-color:transparent;color:var(--paper)}
+.step .lbl{white-space:nowrap}
+.railsep{flex:1;height:1.5px;background:var(--line);margin:0 12px;min-width:14px;border-radius:2px;transition:.3s}
+.railsep.done{background:var(--pos)}
+@media(max-width:620px){.step .lbl{display:none}.railsep{margin:0 6px}}
+
+/* modal body + panes */
+.mbody{padding:22px 26px 4px}
+.pane{display:none}
+.pane.on{display:block}
+.secl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin:0 0 12px}
+
+/* type picker tiles */
+.types{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+@media(max-width:680px){.types{grid-template-columns:repeat(2,1fr)}}
+.tcard{position:relative;border:1.5px solid var(--line);background:var(--paper);border-radius:14px;padding:14px 12px;cursor:pointer;
+  text-align:left;transition:transform .2s var(--ease),border-color .2s,background .2s,box-shadow .2s;display:flex;flex-direction:column;gap:8px;font-family:inherit}
+.tcard:hover{transform:translateY(-3px);border-color:var(--primary)}
+.tcard:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.tcard .ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--paper-2);color:var(--primary-deep);transition:.2s}
+.tcard .ico svg{width:19px;height:19px}
+.tcard .nm{font-weight:700;font-size:14px;color:var(--ink)}
+.tcard .one{font-size:11px;color:var(--ink-faint);line-height:1.35}
+.tcard .check{position:absolute;top:9px;right:9px;width:18px;height:18px;border-radius:50%;background:var(--primary);color:#fff;display:none;place-items:center;font-size:10px}
+.tcard.sel{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 7%,var(--card));box-shadow:0 0 0 1.5px var(--primary)}
+.tcard.sel .ico{background:linear-gradient(145deg,var(--primary),var(--primary-deep));color:#fff}
+.tcard.sel .check{display:grid}
+
+/* form fields */
+.fhint{font-size:12px;color:var(--ink-faint);margin:-4px 0 16px;font-family:"JetBrains Mono"}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;margin-bottom:14px}
+.frow.one{grid-template-columns:1fr}
+@media(max-width:560px){.frow{grid-template-columns:1fr}}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-size:12px;font-weight:600;color:var(--ink-soft);letter-spacing:.01em}
+.fld .unit{font-size:10.5px;color:var(--ink-faint);font-weight:500}
+.inp{font-family:"Hanken Grotesk",sans-serif;font-size:14.5px;color:var(--ink);background:var(--paper);
+  border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;transition:.18s;width:100%}
+.inp.mono{font-family:"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+.inp:hover{border-color:var(--ink-faint)}
+.inp:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--glow)}
+.inp.bad{border-color:var(--neg);box-shadow:0 0 0 3px color-mix(in srgb,var(--neg) 16%,transparent)}
+
+/* segmented (UI-only toggles, e.g. chit variant / role) */
+.seg{display:inline-flex;background:var(--paper-2);border:1.5px solid var(--line);border-radius:10px;padding:3px;gap:2px;width:100%}
+.seg button{flex:1;font-family:"Hanken Grotesk",sans-serif;font-weight:600;font-size:13px;border:none;background:transparent;color:var(--ink-soft);
+  padding:7px 10px;border-radius:7px;cursor:pointer;transition:.2s;white-space:nowrap}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:var(--ink);color:var(--paper);box-shadow:0 4px 10px -6px rgba(20,16,12,.6)}
+.seg button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+/* installments builder (schedule step, asset) */
+.insthead{display:grid;grid-template-columns:1fr 1fr auto;gap:9px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:700;margin-bottom:6px}
+.inst{display:grid;grid-template-columns:1fr 1fr auto;gap:9px;margin-bottom:8px;align-items:center}
+.instx{width:38px;height:40px;border-radius:9px;border:1.5px solid var(--line);background:var(--paper-2);color:var(--ink-soft);cursor:pointer;display:grid;place-items:center;font-size:15px;transition:.2s}
+.instx:hover{background:var(--neg);color:#fff;border-color:transparent}
+.lnk{display:inline-block;color:var(--primary-deep);font-weight:600;cursor:pointer;font-size:13px;margin-top:2px}
+.lnk:hover{text-decoration:underline}
+
+/* auto-computed compute line (chit contribution preview) */
+.compute{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--paper-2);border:1px solid var(--line);
+  border-radius:12px;padding:14px 16px;margin:6px 0 16px}
+.compute .eq{display:flex;align-items:center;gap:9px;font-family:"JetBrains Mono";font-size:13px;color:var(--ink-soft);flex-wrap:wrap}
+.compute .eq b{color:var(--ink);font-weight:700}
+.compute .op{color:var(--ink-faint);font-weight:700}
+.compute .res{margin-left:auto;text-align:right}
+.compute .res .big{font-family:"Fraunces",serif;font-weight:600;font-size:26px;color:var(--primary-deep);line-height:1}
+.compute .res .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:700;margin-top:4px}
+@media(max-width:560px){.compute .res{margin-left:0;text-align:left;width:100%}}
+
+/* schedule note (non-asset types) */
+.schednote{display:flex;gap:13px;align-items:flex-start;background:var(--paper-2);border:1px solid var(--line);border-radius:14px;padding:15px 17px}
+.schednote .si{width:30px;height:30px;border-radius:9px;flex:none;background:var(--paper);border:1px solid var(--line);color:var(--primary-deep);display:grid;place-items:center}
+.schednote .si svg{width:17px;height:17px}
+.schednote .stxt{font-size:13.5px;line-height:1.5;color:var(--ink-soft)}
+
+/* review step */
+.review{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:8px}
+.rrow{display:flex;align-items:baseline;justify-content:space-between;gap:18px;padding:11px 16px;border-bottom:1px solid var(--line-2);background:var(--card)}
+.rrow:last-child{border-bottom:none}
+.rrow .rk{font-size:12px;font-weight:600;color:var(--ink-faint);letter-spacing:.02em}
+.rrow .rv{font-family:"JetBrains Mono",monospace;font-size:13.5px;color:var(--ink);text-align:right;word-break:break-word}
+.rsummary{display:flex;gap:13px;align-items:flex-start;background:color-mix(in srgb,var(--primary) 8%,var(--card));
+  border:1px solid color-mix(in srgb,var(--primary) 30%,var(--line));border-radius:14px;padding:15px 17px;margin-bottom:6px}
+.rsummary .si{width:30px;height:30px;border-radius:9px;flex:none;background:linear-gradient(145deg,var(--primary),var(--primary-deep));color:#fff;display:grid;place-items:center}
+.rsummary .si svg{width:17px;height:17px}
+.rsummary .stxt{font-size:14px;line-height:1.5;color:var(--ink)}
+
+/* error + footer */
+.err{color:var(--neg);font-size:13px;min-height:18px;margin:2px 26px 0;font-family:"JetBrains Mono"}
+.mfoot{display:flex;align-items:center;justify-content:space-between;padding:18px 26px;border-top:1px solid var(--line);background:var(--paper-2);margin-top:18px}
+.mfoot .ftxt{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.fbtns{display:flex;gap:10px}
+.btn{font-family:"Hanken Grotesk",sans-serif;font-weight:600;font-size:14.5px;padding:11px 22px;border-radius:11px;cursor:pointer;transition:.2s;border:1.5px solid transparent}
+.btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.btn.ghost{background:transparent;border-color:var(--line);color:var(--ink-soft)}
+.btn.ghost:hover{border-color:var(--ink-faint);color:var(--ink)}
+.btn.prim{background:var(--ink);color:var(--paper);display:inline-flex;align-items:center;gap:8px}
+.btn.prim:hover{transform:translateY(-2px);box-shadow:0 12px 24px -14px rgba(20,16,12,.7)}
+.btn.prim svg{width:15px;height:15px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="topbar">
+
+<!-- ===== dimmed dashboard background (the route stays /create; the
+     wizard is presented as a modal over a blurred shell) ===== -->
+<div class="dimwrap" aria-hidden="true">
+<div class="app">
+  <aside class="side">
     <a class="brand" href="/app"><span class="glyph"></span> Khata</a>
-    <a class="link" href="/app">← Back to app</a>
-  </div>
+    <a class="newplan on" href="/create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
+    <div class="navsec">Overview</div>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
+    <a class="nav-i" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
+    <div class="navsec">Money plans</div>
+    <a class="nav-i" href="/app?type=asset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i" href="/app?type=chit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app?type=loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app?type=retirement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <div class="navsec">Records</div>
+    <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
+    <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
+    <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+    <a class="nav-i" href="#" style="color:var(--neg)" onclick="event.preventDefault();fetch('/api/auth/logout',{method:'POST'}).finally(function(){location.href='/'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log out</a>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>Money plans</h1>
+        <div class="sub">your honest ledger</div>
+      </div>
+    </div>
+    <div class="content"></div>
+  </main>
+</div>
+</div>
 
-  <div class="formcard">
-    <h1 style="font-family:'Fraunces',serif;font-weight:600;font-size:28px;margin-bottom:6px">New plan</h1>
-    <p class="muted" style="margin-bottom:14px">Track a purchase, a loan, or a holding.</p>
+<!-- ===== scrim (backdrop click closes → /app) ===== -->
+<div class="scrim" id="scrim" title="Back to app"></div>
 
-    <div class="tabs">
-      <div class="tab on" data-t="asset">Asset</div>
-      <div class="tab" data-t="loan">Loan</div>
-      <div class="tab" data-t="holding">Holding</div>
-      <div class="tab" data-t="chit">Chit</div>
-      <div class="tab" data-t="retirement">Retirement</div>
+<!-- ===== modal wizard ===== -->
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle">
+  <div class="card-modal">
+
+    <div class="mhead">
+      <div>
+        <div class="ttl" id="mtitle">New <em>money plan</em></div>
+        <div class="sub">Khata keeps the ledger · you pick the shape</div>
+      </div>
+      <button class="xbtn" id="xbtn" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
 
-    <div class="fld"><label>Name</label><input id="name" placeholder="Devanahalli plot"></div>
-    <div class="fld"><label>Currency</label>
-      <select id="currency"><option value="INR">INR ₹</option><option value="USD">USD $</option></select>
+    <!-- step rail -->
+    <div class="rail" id="rail">
+      <div class="step active" data-step="1"><span class="num">1</span><span class="lbl">Type</span></div>
+      <span class="railsep" data-sep="1"></span>
+      <div class="step" data-step="2"><span class="num">2</span><span class="lbl">Details</span></div>
+      <span class="railsep" data-sep="2"></span>
+      <div class="step" data-step="3"><span class="num">3</span><span class="lbl">Schedule</span></div>
+      <span class="railsep" data-sep="3"></span>
+      <div class="step" data-step="4"><span class="num">4</span><span class="lbl">Review</span></div>
     </div>
 
-    <!-- Asset -->
-    <div class="grp on" id="g-asset">
-      <div class="fld"><label>Total price</label><input id="total_price" placeholder="20,00,000"></div>
-      <label class="lbl" style="font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700">Installments (optional)</label>
-      <div id="insts"></div>
-      <span class="lnk" id="addinst">+ Add installment</span>
-    </div>
+    <div class="mbody">
 
-    <!-- Loan -->
-    <div class="grp" id="g-loan">
-      <div class="row2">
-        <div class="fld"><label>Direction</label>
-          <select id="direction"><option value="taken">I borrowed (taken)</option><option value="given">I lent (given)</option></select>
+      <!-- ===== STEP 1 · Type ===== -->
+      <div class="pane on" id="pane-1">
+        <p class="secl">1 · Choose a plan type</p>
+        <div class="types" id="types">
+          <button class="tcard sel" data-t="asset" type="button">
+            <span class="check">✓</span>
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg></span>
+            <span class="nm">Asset</span><span class="one">Instalment buy — land, gold, vehicle</span>
+          </button>
+          <button class="tcard" data-t="chit" type="button">
+            <span class="check">✓</span>
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+            <span class="nm">Chit</span><span class="one">Rotating savings, pot &amp; auction</span>
+          </button>
+          <button class="tcard" data-t="loan" type="button">
+            <span class="check">✓</span>
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg></span>
+            <span class="nm">Loan</span><span class="one">Money given or taken, with interest</span>
+          </button>
+          <button class="tcard" data-t="retirement" type="button">
+            <span class="check">✓</span>
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg></span>
+            <span class="nm">401(k)</span><span class="one">Retirement, employer match</span>
+          </button>
+          <button class="tcard" data-t="holding" type="button">
+            <span class="check">✓</span>
+            <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l5-5 4 4 8-8M21 8v5h-5"/></svg></span>
+            <span class="nm">Holding</span><span class="one">Gold, silver, equity, cash</span>
+          </button>
         </div>
-        <div class="fld"><label>Counterparty</label><input id="counterparty" placeholder="HDFC / Priya"></div>
       </div>
-      <div class="row2">
-        <div class="fld"><label>Interest</label>
-          <select id="interest_type"><option value="none">None</option><option value="monthly">Per month</option><option value="yearly">Per year</option></select>
+
+      <!-- ===== STEP 2 · Details ===== -->
+      <div class="pane" id="pane-2">
+        <p class="secl" id="detail-lbl">2 · Details</p>
+
+        <!-- shared -->
+        <div class="frow">
+          <div class="fld"><label>Plan name</label><input class="inp" id="name" placeholder="Devanahalli plot"></div>
+          <div class="fld"><label>Currency</label>
+            <select class="inp" id="currency"><option value="INR">INR ₹</option><option value="USD">USD $</option></select>
+          </div>
         </div>
-        <div class="fld" id="ratefld" style="display:none"><label>Rate %</label><input id="rate" placeholder="8.5"></div>
-      </div>
-      <div class="row2">
-        <div class="fld"><label>Start date</label><input id="start_date" type="date"></div>
-        <div class="fld"><label>Tenure (months)</label><input id="tenure_months" placeholder="optional"></div>
-      </div>
-    </div>
 
-    <!-- Holding -->
-    <div class="grp" id="g-holding">
-      <div class="row2">
-        <div class="fld"><label>Asset class</label>
-          <select id="asset_class"><option>gold</option><option>silver</option><option>equity</option><option>mf</option><option>cash</option><option>other</option></select>
+        <!-- Asset -->
+        <div class="grp" data-grp="asset">
+          <div class="frow one">
+            <div class="fld"><label>Total price</label><input class="inp mono" id="total_price" placeholder="20,00,000"></div>
+          </div>
         </div>
-        <div class="fld"><label>Unit</label><input id="unit" placeholder="gram / share / unit"></div>
-      </div>
-      <div class="row2">
-        <div class="fld"><label>Symbol</label><input id="symbol" placeholder="HDFC (optional)"></div>
-        <div class="fld"><label>Purity</label><input id="purity" placeholder="22K (optional)"></div>
-      </div>
-    </div>
 
-    <!-- Chit -->
-    <div class="grp" id="g-chit">
-      <div class="row2">
-        <div class="fld"><label>Chit value</label><input id="chit_value" placeholder="10,00,000"></div>
-        <div class="fld"><label>Members</label><input id="n_members" type="number" placeholder="20"></div>
-      </div>
-      <div class="row2">
-        <div class="fld"><label>Commission %</label><input id="commission_c" placeholder="5"></div>
-        <div class="fld"><label>Start date</label><input id="start_date_c" type="date"></div>
-      </div>
-    </div>
+        <!-- Loan -->
+        <div class="grp" data-grp="loan" hidden>
+          <div class="frow">
+            <div class="fld"><label>Principal · amount borrowed / lent</label><input class="inp mono" id="principal" placeholder="5,00,000" inputmode="decimal"></div>
+            <div class="fld"><label>Direction</label>
+              <select class="inp" id="direction"><option value="taken">I borrowed (taken)</option><option value="given">I lent (given)</option></select>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="fld"><label>Counterparty</label><input class="inp" id="counterparty" placeholder="HDFC / Priya"></div>
+            <div class="fld"></div>
+          </div>
+          <div class="frow">
+            <div class="fld"><label>Interest</label>
+              <select class="inp" id="interest_type"><option value="none">None</option><option value="monthly">Per month</option><option value="yearly">Per year</option></select>
+            </div>
+            <div class="fld" id="ratefld" hidden><label>Rate %</label><input class="inp mono" id="rate" placeholder="8.5"></div>
+          </div>
+          <div class="frow">
+            <div class="fld"><label>Start date</label><input class="inp" id="start_date" type="date"></div>
+            <div class="fld"><label>Tenure (months)</label><input class="inp mono" id="tenure_months" placeholder="optional"></div>
+          </div>
+        </div>
 
-    <!-- Retirement -->
-    <div class="grp" id="g-retirement">
-      <div class="row2">
-        <div class="fld"><label>Current balance</label><input id="r_balance" placeholder="0"></div>
-        <div class="fld"><label>Monthly contribution</label><input id="r_contrib" placeholder="10,000"></div>
+        <!-- Holding -->
+        <div class="grp" data-grp="holding" hidden>
+          <div class="frow">
+            <div class="fld"><label>Asset class</label>
+              <select class="inp" id="asset_class">
+                <option value="gold">gold</option><option value="silver">silver</option>
+                <option value="equity">equity</option><option value="mf">mf</option>
+                <option value="cash">cash</option><option value="other">other</option>
+              </select>
+            </div>
+            <div class="fld"><label>Unit</label><input class="inp" id="unit" placeholder="gram / share / unit"></div>
+          </div>
+          <div class="frow">
+            <div class="fld"><label>Symbol</label><input class="inp" id="symbol" placeholder="HDFC (optional)"></div>
+            <div class="fld"><label>Purity</label><input class="inp" id="purity" placeholder="22K (optional)"></div>
+          </div>
+        </div>
+
+        <!-- Chit -->
+        <div class="grp" data-grp="chit" hidden>
+          <!-- Variant / My role are UI-only — NOT sent to the API (no backend field) -->
+          <div class="frow">
+            <div class="fld"><label>Variant <span class="unit">display only</span></label>
+              <div class="seg" id="c_variant">
+                <button type="button" class="on" data-v="auction">Auction</button>
+                <button type="button" data-v="pure">Pure (lottery)</button>
+              </div>
+            </div>
+            <div class="fld"><label>My role <span class="unit">display only</span></label>
+              <div class="seg" id="c_role">
+                <button type="button" class="on" data-v="member">Member</button>
+                <button type="button" data-v="organizer">Organizer</button>
+              </div>
+            </div>
+          </div>
+          <div class="frow">
+            <div class="fld"><label>Members <span class="unit">n_members</span></label><input class="inp mono" id="n_members" type="number" min="2" placeholder="20"></div>
+            <div class="fld"><label>Pot amount <span class="unit">chit_value</span></label><input class="inp mono" id="chit_value" placeholder="10,00,000"></div>
+          </div>
+          <div class="frow">
+            <div class="fld"><label>Commission % <span class="unit">commission</span></label><input class="inp mono" id="commission_c" placeholder="5"></div>
+            <div class="fld"><label>Start date</label><input class="inp" id="start_date_c" type="date"></div>
+          </div>
+          <!-- auto-computed monthly contribution preview (client-side display only) -->
+          <p class="secl">Auto-computed</p>
+          <div class="compute">
+            <div class="eq">
+              <span><b id="c_e_pot">—</b></span>
+              <span class="op">÷</span>
+              <span><b id="c_e_members">—</b> members</span>
+            </div>
+            <div class="res">
+              <div class="big"><span id="c_contrib" class="mono">—</span><span style="font-size:14px;color:var(--ink-faint)">/mo</span></div>
+              <div class="lbl">Monthly contribution</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Retirement / 401(k) -->
+        <div class="grp" data-grp="retirement" hidden>
+          <div class="frow">
+            <div class="fld"><label>Current balance</label><input class="inp mono" id="r_balance" placeholder="0"></div>
+            <div class="fld"><label>Monthly contribution</label><input class="inp mono" id="r_contrib" placeholder="10,000"></div>
+          </div>
+          <div class="frow">
+            <div class="fld"><label>Employer match %</label><input class="inp mono" id="r_match" placeholder="0"></div>
+            <div class="fld"><label>Annual return %</label><input class="inp mono" id="r_return" placeholder="8"></div>
+          </div>
+          <div class="frow">
+            <div class="fld"><label>Inflation %</label><input class="inp mono" id="r_infl" placeholder="6"></div>
+            <div class="fld"><label>Current age</label><input class="inp mono" id="r_cage" type="number" placeholder="30"></div>
+          </div>
+          <div class="frow one">
+            <div class="fld"><label>Retirement age</label><input class="inp mono" id="r_rage" type="number" placeholder="60"></div>
+          </div>
+        </div>
       </div>
-      <div class="row2">
-        <div class="fld"><label>Employer match %</label><input id="r_match" placeholder="0"></div>
-        <div class="fld"><label>Annual return %</label><input id="r_return" placeholder="8"></div>
+
+      <!-- ===== STEP 3 · Schedule ===== -->
+      <div class="pane" id="pane-3">
+        <p class="secl">3 · Schedule</p>
+
+        <!-- Asset: installments builder -->
+        <div class="sched" data-sched="asset">
+          <div class="fhint">Add the instalments you plan to pay (optional — Khata can track them as you go).</div>
+          <div class="insthead"><span>Amount</span><span>Due date</span><span></span></div>
+          <div id="insts"></div>
+          <span class="lnk" id="addinst">+ Add installment</span>
+        </div>
+
+        <!-- Non-asset: schedule auto-derived, nothing to enter -->
+        <div class="sched" data-sched="other" hidden>
+          <div class="schednote">
+            <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zM12 8v4M12 16h.01"/></svg></div>
+            <div class="stxt" id="sched-note">Khata derives the schedule for this plan automatically from the details you entered — no installments to set up. Continue to review.</div>
+          </div>
+        </div>
       </div>
-      <div class="row2">
-        <div class="fld"><label>Inflation %</label><input id="r_infl" placeholder="6"></div>
-        <div class="fld"><label>Current age</label><input id="r_cage" placeholder="30"></div>
+
+      <!-- ===== STEP 4 · Review ===== -->
+      <div class="pane" id="pane-4">
+        <p class="secl">4 · Review</p>
+        <div class="rsummary">
+          <div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div class="stxt" id="review-sum">Review your plan before creating it.</div>
+        </div>
+        <div class="review" id="review-list"></div>
       </div>
-      <div class="fld"><label>Retirement age</label><input id="r_rage" placeholder="60"></div>
-    </div>
+
+    </div><!-- /mbody -->
 
     <div class="err" id="err"></div>
-    <div class="actions">
-      <button class="btn" id="submit">Create plan</button>
-      <a class="link" href="/app">Cancel</a>
+
+    <div class="mfoot">
+      <span class="ftxt" id="ftxt">Step 1 of 4 · Type</span>
+      <div class="fbtns">
+        <button class="btn ghost" id="backbtn" type="button">Back</button>
+        <button class="btn prim" id="nextbtn" type="button">Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
     </div>
+
   </div>
 </div>
 
 <script>
-  const $ = (id) => document.getElementById(id);
-  let type = "asset";
+const $ = (id) => document.getElementById(id);
+let type = "asset";
+let step = 1;
+const STEP_NAMES = { 1: "Type", 2: "Details", 3: "Schedule", 4: "Review" };
+const TYPES = ["asset", "loan", "holding", "chit", "retirement"];
+const TYPE_LABEL = { asset: "Asset", loan: "Loan", holding: "Holding", chit: "Chit", retirement: "401(k)" };
 
-  // auth guard
-  (async () => { if ((await fetch("/api/auth/me")).status === 401) window.location.href = "/"; })();
+// ── auth guard: GET /api/auth/me, 401 → / ──
+async function guard(){
+  const me = await fetch("/api/auth/me");
+  if(me.status === 401){ window.location.href = "/"; return null; }
+  return (await me.json()).user;
+}
 
-  document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
-    type = t.dataset.t;
-    document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === t));
-    ["asset", "loan", "holding", "chit", "retirement"].forEach((g) => $("g-" + g).classList.toggle("on", g === type));
-    $("err").textContent = "";
-  }));
+// ── sidebar live counts from /api/plans ──
+async function loadCounts(){
+  try{
+    const plansResp = await fetch("/api/plans").then(x => x.json());
+    const plans = plansResp.plans || [];
+    const by = (t) => plans.filter(p => p.type === t).length || "";
+    $("ct-asset").textContent = by("asset");
+    $("ct-chit").textContent = by("chit");
+    $("ct-loan").textContent = by("loan");
+    $("ct-retirement").textContent = by("retirement");
+  }catch(e){}
+}
 
-  $("interest_type").addEventListener("change", () => {
-    $("ratefld").style.display = $("interest_type").value === "none" ? "none" : "block";
+// ── close (× / backdrop / ESC) → /app ──
+function closeWizard(){ window.location.href = "/app"; }
+$("xbtn").addEventListener("click", closeWizard);
+$("scrim").addEventListener("click", closeWizard);
+document.addEventListener("keydown", (e) => { if(e.key === "Escape") closeWizard(); });
+
+// ── type tiles (step 1) ──
+document.querySelectorAll(".tcard").forEach((t) => t.addEventListener("click", () => {
+  type = t.dataset.t;
+  document.querySelectorAll(".tcard").forEach((x) => x.classList.toggle("sel", x === t));
+  document.querySelectorAll(".grp").forEach((g) => g.hidden = g.dataset.grp !== type);
+  // schedule pane: only asset has an installments builder
+  document.querySelector('[data-sched="asset"]').hidden = type !== "asset";
+  document.querySelector('[data-sched="other"]').hidden = type === "asset";
+  $("detail-lbl").textContent = "2 · " + TYPE_LABEL[type] + " details";
+  $("err").textContent = "";
+}));
+
+// ── loan: rate field toggles with interest type ──
+$("interest_type").addEventListener("change", () => {
+  $("ratefld").hidden = $("interest_type").value === "none";
+});
+
+// ── chit: UI-only Variant / Role segments + contribution preview ──
+document.querySelectorAll("#c_variant, #c_role").forEach((seg) => {
+  seg.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if(!b) return;
+    seg.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
   });
+});
+function numClean(s){ return parseFloat(String(s || "").replace(/[, ]/g, "")) || 0; }
+function indGroup(n){
+  n = Math.round(n); let s = Math.abs(n).toString();
+  if(s.length > 3){ let l = s.slice(-3), r = s.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ","); s = r + "," + l; }
+  return (n < 0 ? "-" : "") + s;
+}
+function chitPreview(){
+  const pot = numClean($("chit_value").value);
+  const members = parseInt($("n_members").value, 10) || 0;
+  const sym = $("currency").value === "USD" ? "$" : "₹";
+  $("c_e_pot").textContent = pot ? sym + indGroup(pot) : "—";
+  $("c_e_members").textContent = members || "—";
+  $("c_contrib").textContent = (pot && members) ? sym + indGroup(pot / members) : "—";
+}
+["chit_value", "n_members", "commission_c", "currency"].forEach((id) => {
+  $(id).addEventListener("input", chitPreview);
+});
 
-  function addInst(amount, due) {
-    const row = document.createElement("div"); row.className = "inst";
-    const a = document.createElement("input"); a.placeholder = "amount"; a.className = "i-amt"; a.value = amount || "";
-    const d = document.createElement("input"); d.type = "date"; d.className = "i-due"; if (due) d.value = due;
-    const x = document.createElement("span"); x.className = "lnk"; x.textContent = "✕";
-    x.addEventListener("click", () => row.remove());
-    row.append(a, d, x); $("insts").appendChild(row);
+// ── installments builder (createElement, no innerHTML) ──
+function addInst(amount, due){
+  const row = document.createElement("div"); row.className = "inst";
+  const a = document.createElement("input"); a.placeholder = "amount"; a.className = "i-amt inp mono"; a.value = amount || "";
+  const d = document.createElement("input"); d.type = "date"; d.className = "i-due inp"; if(due) d.value = due;
+  const x = document.createElement("button"); x.type = "button"; x.className = "instx"; x.textContent = "×";
+  x.addEventListener("click", () => row.remove());
+  row.append(a, d, x); $("insts").appendChild(row);
+}
+$("addinst").addEventListener("click", () => addInst());
+
+// ── per-step required-field validation; returns "" if ok, else error msg ──
+function markBad(el, bad){ if(el) el.classList.toggle("bad", !!bad); }
+function validateStep(s){
+  // clear previous bad marks
+  document.querySelectorAll(".inp.bad").forEach((e) => e.classList.remove("bad"));
+  if(s === 1) return ""; // a type is always selected
+  if(s === 2){
+    const need = [];
+    if(!$("name").value.trim()){ markBad($("name"), true); need.push("name"); }
+    if(type === "asset" && !numClean($("total_price").value)){ markBad($("total_price"), true); need.push("total price"); }
+    if(type === "loan" && !numClean($("principal").value)){ markBad($("principal"), true); need.push("principal"); }
+    if(type === "loan" && !$("counterparty").value.trim()){ markBad($("counterparty"), true); need.push("counterparty"); }
+    if(type === "loan" && $("interest_type").value !== "none" && !numClean($("rate").value)){ markBad($("rate"), true); need.push("rate"); }
+    if(type === "holding" && !$("unit").value.trim()){ markBad($("unit"), true); need.push("unit"); }
+    if(type === "chit"){
+      if(!numClean($("chit_value").value)){ markBad($("chit_value"), true); need.push("pot amount"); }
+      if(!(parseInt($("n_members").value, 10) > 0)){ markBad($("n_members"), true); need.push("members"); }
+    }
+    if(type === "retirement"){
+      if(!(parseInt($("r_cage").value, 10) > 0)){ markBad($("r_cage"), true); need.push("current age"); }
+      if(!(parseInt($("r_rage").value, 10) > 0)){ markBad($("r_rage"), true); need.push("retirement age"); }
+    }
+    if(need.length) return "Please fill: " + need.join(", ") + ".";
   }
-  $("addinst").addEventListener("click", () => addInst());
+  return "";
+}
 
-  function payload() {
-    const name = $("name").value, currency = $("currency").value;
-    if (type === "loan") {
-      const it = $("interest_type").value;
-      const p = { type: "loan", name, currency, direction: $("direction").value,
-                  counterparty: $("counterparty").value || null, interest_type: it,
-                  start_date: $("start_date").value || null };
-      if (it !== "none") p.rate = $("rate").value;
-      if ($("tenure_months").value) p.tenure_months = parseInt($("tenure_months").value, 10);
-      return p;
-    }
-    if (type === "holding") {
-      return { type: "holding", name, currency, asset_class: $("asset_class").value,
-               unit: $("unit").value, symbol: $("symbol").value || null, purity: $("purity").value || null };
-    }
-    if (type === "chit") {
-      return { type: "chit", name, currency, chit_value: $("chit_value").value,
-               n_members: parseInt($("n_members").value, 10), commission: $("commission_c").value,
-               start_date: $("start_date_c").value || null };
-    }
-    if (type === "retirement") {
-      return { type: "retirement", name, currency, current_balance: $("r_balance").value,
-               monthly_contribution: $("r_contrib").value, employer_match: $("r_match").value,
-               annual_return: $("r_return").value, inflation: $("r_infl").value,
-               current_age: parseInt($("r_cage").value, 10), retirement_age: parseInt($("r_rage").value, 10) };
-    }
-    const insts = [...document.querySelectorAll(".inst")].map((r) => ({
-      amount: r.querySelector(".i-amt").value, due_date: r.querySelector(".i-due").value || null,
-    })).filter((i) => i.amount);
-    const p = { name, currency, total_price: $("total_price").value };
-    if (insts.length) p.installments = insts;
+// ── render the review list for step 4 ──
+function reviewRow(k, v){
+  if(v === "" || v == null) return;
+  const row = document.createElement("div"); row.className = "rrow";
+  const kk = document.createElement("span"); kk.className = "rk"; kk.textContent = k;
+  const vv = document.createElement("span"); vv.className = "rv"; vv.textContent = v;
+  row.append(kk, vv); $("review-list").appendChild(row);
+}
+function renderReview(){
+  const list = $("review-list");
+  while(list.firstChild) list.removeChild(list.firstChild);
+  const cur = $("currency").value;
+  reviewRow("Type", TYPE_LABEL[type]);
+  reviewRow("Name", $("name").value);
+  reviewRow("Currency", cur);
+  if(type === "asset"){
+    reviewRow("Total price", $("total_price").value);
+    const n = document.querySelectorAll(".inst").length;
+    reviewRow("Installments", n ? String(n) + " scheduled" : "none");
+  } else if(type === "loan"){
+    reviewRow("Principal", $("principal").value);
+    reviewRow("Direction", $("direction").value);
+    reviewRow("Counterparty", $("counterparty").value);
+    reviewRow("Interest", $("interest_type").value);
+    if($("interest_type").value !== "none") reviewRow("Rate %", $("rate").value);
+    reviewRow("Start date", $("start_date").value);
+    reviewRow("Tenure (months)", $("tenure_months").value);
+  } else if(type === "holding"){
+    reviewRow("Asset class", $("asset_class").value);
+    reviewRow("Unit", $("unit").value);
+    reviewRow("Symbol", $("symbol").value);
+    reviewRow("Purity", $("purity").value);
+  } else if(type === "chit"){
+    reviewRow("Pot amount", $("chit_value").value);
+    reviewRow("Members", $("n_members").value);
+    reviewRow("Commission %", $("commission_c").value);
+    reviewRow("Start date", $("start_date_c").value);
+    const pot = numClean($("chit_value").value), m = parseInt($("n_members").value, 10) || 0;
+    if(pot && m) reviewRow("Monthly contribution", (cur === "USD" ? "$" : "₹") + indGroup(pot / m));
+  } else if(type === "retirement"){
+    reviewRow("Current balance", $("r_balance").value);
+    reviewRow("Monthly contribution", $("r_contrib").value);
+    reviewRow("Employer match %", $("r_match").value);
+    reviewRow("Annual return %", $("r_return").value);
+    reviewRow("Inflation %", $("r_infl").value);
+    reviewRow("Current age", $("r_cage").value);
+    reviewRow("Retirement age", $("r_rage").value);
+  }
+  $("review-sum").textContent = "Creating a " + TYPE_LABEL[type] + " plan" +
+    ($("name").value ? " — " + $("name").value : "") + ". Submit to add it to your ledger.";
+}
+
+// ── step navigation ──
+function showStep(s){
+  step = s;
+  for(let i = 1; i <= 4; i++) $("pane-" + i).classList.toggle("on", i === s);
+  // rail state
+  document.querySelectorAll(".step").forEach((el) => {
+    const n = +el.dataset.step;
+    el.classList.toggle("active", n === s);
+    el.classList.toggle("done", n < s);
+  });
+  document.querySelectorAll(".railsep").forEach((el) => {
+    el.classList.toggle("done", +el.dataset.sep < s);
+  });
+  $("ftxt").textContent = "Step " + s + " of 4 · " + STEP_NAMES[s];
+  $("backbtn").textContent = s === 1 ? "Close" : "Back";
+  const nb = $("nextbtn");
+  // rebuild next-button label (last step = submit)
+  while(nb.firstChild) nb.removeChild(nb.firstChild);
+  if(s === 4){
+    nb.appendChild(document.createTextNode("Create plan "));
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor"); svg.setAttribute("stroke-width", "2.4");
+    const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    p.setAttribute("d", "M12 5v14M5 12h14"); svg.appendChild(p); nb.appendChild(svg);
+    renderReview();
+  } else {
+    nb.appendChild(document.createTextNode("Continue "));
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor"); svg.setAttribute("stroke-width", "2.4");
+    const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    p.setAttribute("d", "M5 12h14M13 6l6 6-6 6"); svg.appendChild(p); nb.appendChild(svg);
+  }
+  $("err").textContent = "";
+}
+
+$("backbtn").addEventListener("click", () => {
+  if(step === 1){ closeWizard(); return; }
+  showStep(step - 1);
+});
+
+$("nextbtn").addEventListener("click", () => {
+  if(step < 4){
+    const e = validateStep(step);
+    if(e){ $("err").textContent = e; return; }
+    showStep(step + 1);
+    return;
+  }
+  submitPlan();
+});
+
+// ── build the active type's payload — exact create() keys preserved ──
+function payload(){
+  const name = $("name").value, currency = $("currency").value;
+  if(type === "loan"){
+    const it = $("interest_type").value;
+    const p = { type: "loan", name, currency, direction: $("direction").value,
+                counterparty: $("counterparty").value || null, interest_type: it,
+                start_date: $("start_date").value || null };
+    if(it !== "none") p.rate = $("rate").value;
+    if($("tenure_months").value) p.tenure_months = parseInt($("tenure_months").value, 10);
     return p;
   }
+  if(type === "holding"){
+    return { type: "holding", name, currency, asset_class: $("asset_class").value,
+             unit: $("unit").value, symbol: $("symbol").value || null, purity: $("purity").value || null };
+  }
+  if(type === "chit"){
+    return { type: "chit", name, currency, chit_value: $("chit_value").value,
+             n_members: parseInt($("n_members").value, 10), commission: $("commission_c").value,
+             start_date: $("start_date_c").value || null };
+  }
+  if(type === "retirement"){
+    return { type: "retirement", name, currency, current_balance: $("r_balance").value,
+             monthly_contribution: $("r_contrib").value, employer_match: $("r_match").value,
+             annual_return: $("r_return").value, inflation: $("r_infl").value,
+             current_age: parseInt($("r_cage").value, 10), retirement_age: parseInt($("r_rage").value, 10) };
+  }
+  // asset (default)
+  const insts = [...document.querySelectorAll(".inst")].map((r) => ({
+    amount: r.querySelector(".i-amt").value, due_date: r.querySelector(".i-due").value || null,
+  })).filter((i) => i.amount);
+  const p = { type: "asset", name, currency, total_price: $("total_price").value };
+  if(insts.length) p.installments = insts;
+  return p;
+}
 
-  $("submit").addEventListener("click", async () => {
-    $("err").textContent = "";
-    const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" },
-                                          body: JSON.stringify(payload()) });
-    if (r.ok) { window.location.href = "/app"; return; }
-    const e = await r.json().catch(() => ({}));
-    $("err").textContent = (e.detail || e.error || "Could not create the plan.");
-  });
+// ── type → detail route ──
+const ROUTE = { asset: "/asset/", loan: "/loan/", holding: "/holding/",
+                chit: "/chit/", retirement: "/retirement/" };
+
+async function submitPlan(){
+  $("err").textContent = "";
+  // loan: the principal is recorded as the opening disbursement (Khata models principal
+  // as dated disbursements, supporting later top-ups/tranches).
+  const loanPrincipal = (type === "loan") ? ($("principal").value || "").trim() : "";
+  const startDate = (type === "loan") ? ($("start_date").value || "") : "";
+  const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify(payload()) });
+  if(r.status === 401){ window.location.href = "/"; return; }
+  if(r.ok){
+    const d = await r.json().catch(() => ({}));
+    const plan = d.plan || {};
+    if(type === "loan" && plan.id != null && loanPrincipal){
+      const dr = await fetch("/api/plans/" + plan.id + "/loan/disbursements", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: loanPrincipal, occurred_at: startDate ? startDate + "T12:00:00" : null, note: "Opening principal" }) });
+      if(!dr.ok){ const e = await dr.json().catch(() => ({})); $("err").textContent = "Loan created, but principal failed: " + (e.detail || e.error || "try adding it on the loan page."); }
+    }
+    const route = ROUTE[plan.type] || "/app";
+    window.location.href = (plan.id != null && ROUTE[plan.type]) ? route + plan.id : "/app";
+    return;
+  }
+  const e = await r.json().catch(() => ({}));
+  $("err").textContent = (e.detail || e.error || "Could not create the plan.");
+}
+
+// ── boot ──
+(async () => {
+  const user = await guard();
+  if(!user) return;
+  loadCounts();
+  showStep(1);
+})();
 </script>
 </body>
 </html>

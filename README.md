@@ -44,3 +44,6 @@ Multi-user accounts (local + Google) with shared plans & contributor attribution
 
 ## Planning
 GSD/superpowers artifacts in `.planning/`.
+
+## Rebuild blueprint
+The authoritative as-built spec (data model, APIs, state contracts, deviations, deploy) lives in [`docs/specs/khata-AS-BUILT.md`](docs/specs/khata-AS-BUILT.md) — read it to rebuild from scratch without hunting the app.

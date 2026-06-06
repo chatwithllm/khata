@@ -19,6 +19,8 @@ class PlanMembership(Base):
         ForeignKey("plans.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     role: Mapped[str] = mapped_column(String(16), nullable=False, default="contributor")
+    # invited | active | declined — new shares start 'invited' until the user accepts.
+    status: Mapped[str] = mapped_column(String(12), nullable=False, server_default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     plan: Mapped["Plan"] = relationship(back_populates="memberships")

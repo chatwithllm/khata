@@ -6,7 +6,7 @@ from khata.db import Base, make_engine, make_session_factory
 from khata.models import User
 from khata.services.assets import create_asset_plan, log_payment
 from khata.services.loans import create_loan_plan, add_disbursement
-from khata.services.sharing import add_member
+from khata.services.sharing import add_member, respond_invitation
 from khata.services.dashboard import net_position
 
 
@@ -59,7 +59,8 @@ def test_member_shared_plan_appears(ctx):
     s.flush()
     plan = create_asset_plan(s, owner_id=other.id, name="Joint", currency="INR",
                              total_price_minor=20000000)
-    add_member(s, plan=plan, email="a@b.com")  # u is a member
+    add_member(s, plan=plan, email="a@b.com")  # u is invited
+    respond_invitation(s, user_id=u.id, plan_id=plan.id, accept=True)  # u accepts → active member
     log_payment(s, plan=plan, user_id=u.id, amount_minor=5000000, occurred_at=_dt(),
                 method="upi", funding_source="savings")
     s.commit()

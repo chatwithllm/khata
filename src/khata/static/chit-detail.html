@@ -7,188 +7,899 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/assets/ledger.css">
+<link rel="stylesheet" href="/static/assets/app.css">
 <style>
-  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
-  .topbar .brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:20px}
-  .topbar .glyph{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,var(--primary),var(--primary-deep))}
-  .head{display:flex;align-items:flex-end;justify-content:space-between;margin:8px 0 16px;gap:12px}
-  .head h1{font-family:"Fraunces",serif;font-weight:600;font-size:30px}
-  .head .meta{font-size:13px;color:var(--ink-faint)}
-  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:10px}
-  @media(max-width:680px){.cards{grid-template-columns:1fr}}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
-  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-faint);font-weight:700}
-  .stat .v{font-family:"Fraunces",serif;font-size:24px;margin-top:6px}
-  .stat .v.pos{color:var(--pos)} .stat .v.neg{color:var(--neg)}
-  .statusline{font-size:13px;color:var(--ink-soft);margin-bottom:18px}
-  .sec{margin:22px 0}
-  .sec h2{font-family:"Fraunces",serif;font-weight:600;font-size:18px;margin-bottom:10px}
-  .calc{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
-  .calc .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
-  .calc input{font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
-  .calc .out{margin-top:10px;font-size:14px;color:var(--ink-soft);min-height:18px}
-  .calc .out.err{color:var(--neg)}
-  .led{width:100%;border-collapse:collapse}
-  .led th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line)}
-  .led td{padding:9px 10px;border-bottom:1px solid var(--line-2);font-size:14px}
-  .led td.amt{font-family:"JetBrains Mono";text-align:right}
-  .led .dir-in{color:var(--pos)} .led .dir-out{color:var(--neg)}
-  .ledempty{color:var(--ink-faint);padding:16px;text-align:center}
-  .modal{position:fixed;inset:0;background:rgba(20,16,12,.45);display:none;align-items:center;justify-content:center;z-index:50}
-  .modal.on{display:flex}
-  .sheet{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;width:min(440px,92vw);box-shadow:var(--shadow)}
-  .sheet h3{font-family:"Fraunces",serif;font-size:20px;margin-bottom:12px}
-  .fld{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
-  .fld label{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
-  .fld input,.fld select{font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
-  .err{color:var(--neg);font-size:13px;min-height:18px}
-  .acts{display:flex;gap:10px;align-items:center;margin-top:6px}
+/* ── chit-detail.html-only rules (shell + shared groups live in app.css) ── */
+.emptypanel{padding:30px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px}
+
+/* 7.4 in-page not-found state (replaces a silent redirect to /app on 404/403) */
+.notfound{display:grid;place-items:center;min-height:60vh;padding:40px 22px}
+.notfound .nf-card{max-width:420px;text-align:center;padding:40px 34px;border:1px solid var(--line);border-radius:18px;background:var(--card);box-shadow:0 18px 50px -34px rgba(28,24,19,.4)}
+.notfound .nf-glyph{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;margin:0 auto 18px;background:color-mix(in srgb,var(--neg) 12%,transparent);color:var(--neg)}
+.notfound .nf-glyph svg{width:26px;height:26px}
+.notfound h2{font-family:"Fraunces",serif;font-weight:600;font-size:25px;letter-spacing:-.01em}
+.notfound p{font-size:14px;color:var(--ink-faint);margin-top:10px;line-height:1.5}
+.notfound .nf-back{display:inline-flex;align-items:center;gap:7px;margin-top:22px;font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;background:var(--primary);color:var(--paper);text-decoration:none;box-shadow:0 8px 18px -10px var(--primary);transition:transform .2s}
+.notfound .nf-back:hover{transform:translateY(-2px)}
+
+/* header KPI accents */
+.kpi.pos .n{color:var(--pos)} .kpi.neg .n{color:var(--neg)}
+.wonbadge{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:color-mix(in srgb,var(--pos) 18%,transparent);color:var(--pos);padding:3px 9px;border-radius:20px;margin-left:8px}
+
+/* 7.1 header badge pills (real fields only: commission %, monthly, member count) */
+.chit-badges{display:flex;gap:8px;flex-wrap:wrap;padding:14px 22px 0}
+.chit-badges .pill{font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);text-transform:none;background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.chit-badges .pill.comm{background:color-mix(in srgb,var(--primary) 9%,transparent);border-color:color-mix(in srgb,var(--primary) 28%,transparent);color:var(--primary-deep)}
+.chit-badges .pill.role{background:color-mix(in srgb,var(--ink) 7%,transparent);border-color:color-mix(in srgb,var(--ink) 16%,transparent);color:var(--ink-soft);font-weight:700;letter-spacing:.02em}
+
+/* 7.2 expanded stat grid (5-6 cards; hero net-position) */
+.chit-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper-2)}
+@media(max-width:560px){.chit-kpis{grid-template-columns:1fr 1fr}}
+.chit-kpis .kpi{padding:16px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.chit-kpis .kpi:nth-child(3n){border-right:none}
+.chit-kpis .kpi .l{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+.chit-kpis .kpi .n{font-family:"Fraunces",serif;font-weight:600;font-size:24px;letter-spacing:-.02em;margin-top:6px;line-height:1}
+.chit-kpis .kpi .d{font-size:11px;margin-top:6px;font-family:"JetBrains Mono";color:var(--ink-faint)}
+.chit-kpis .kpi.pos .n{color:var(--pos)} .chit-kpis .kpi.neg .n{color:var(--neg)}
+.chit-kpis .kpi.hero-stat{background:var(--ink);color:var(--paper)}
+.chit-kpis .kpi.hero-stat .l{color:color-mix(in srgb,var(--paper) 60%,transparent)}
+.chit-kpis .kpi.hero-stat .n{color:var(--pos-dk)}
+.chit-kpis .kpi.hero-stat .n.neg{color:var(--neg)}
+.chit-kpis .kpi.hero-stat .d{color:color-mix(in srgb,var(--paper) 60%,transparent)}
+
+/* 7.3 auction rounds table (taker parsed from dividend notes; bid% not in data) */
+.rtbl-wrap{overflow-x:auto;border-top:1px solid var(--line-2)}
+.rtbl{width:100%;border-collapse:collapse;font-size:13px}
+.rtbl thead th{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;text-align:right;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--paper-2);white-space:nowrap}
+.rtbl thead th.lf{text-align:left}
+.rtbl tbody td{padding:10px 16px;border-bottom:1px solid var(--line-2);text-align:right;font-family:"JetBrains Mono";font-variant-numeric:tabular-nums;white-space:nowrap}
+.rtbl tbody td.lf{text-align:left;font-family:"Hanken Grotesk"}
+.rtbl tbody tr:last-child td{border-bottom:none}
+.rtbl tbody tr:hover{background:var(--line-2)}
+.rtbl tbody tr.now{background:color-mix(in srgb,var(--primary) 8%,transparent)}
+.rtbl tbody tr.now:hover{background:color-mix(in srgb,var(--primary) 13%,transparent)}
+.rtbl tbody tr.open td{color:var(--ink-faint)}
+.rtbl .rn{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;background:var(--paper-2);color:var(--ink-faint);margin-right:9px;font-family:"JetBrains Mono";vertical-align:middle}
+.rtbl tbody tr.done .rn{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.rtbl tbody tr.now .rn{background:var(--primary);color:#fff}
+.rtbl .who{font-weight:600;font-size:13.5px}
+.rtbl td.divamt.in{color:var(--pos);font-weight:700}
+
+/* auction rounds strip */
+.chit-body{padding:20px 22px}
+.rounds{display:flex;gap:6px;margin:4px 0 14px;flex-wrap:wrap}
+.rd{flex:1;min-width:26px;height:46px;border-radius:8px;background:var(--paper-2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-family:"JetBrains Mono";color:var(--ink-faint);position:relative;border:1px solid var(--line-2)}
+.rd.done{background:color-mix(in srgb,var(--pos) 14%,transparent);color:var(--pos);border-color:transparent}
+.rd.now{background:var(--paper);border-color:var(--primary);color:var(--primary-deep)}
+.rd .r{font-weight:700;font-size:11px}
+.rd .wm{position:absolute;top:3px;right:4px;font-size:9px;color:var(--pos)}
+.rounds-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.rounds-legend span{display:inline-flex;align-items:center;gap:6px}
+.dotk{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+/* my-position breakdown */
+.bd{padding:20px 22px}
+.bd .brow{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line-2)}
+.bd .brow:first-child{padding-top:4px}
+.bd .blab{font-size:13.5px;color:var(--ink-soft);display:flex;align-items:center;gap:9px}
+.bd .blab .ic{width:8px;height:8px;border-radius:2px;flex:none}
+.bd .bamt{font-family:"JetBrains Mono";font-weight:700;font-size:14.5px}
+.bd .bamt.out{color:var(--neg)}.bd .bamt.in{color:var(--pos)}
+.bd .net{display:flex;align-items:flex-end;justify-content:space-between;padding-top:16px;margin-top:4px}
+.bd .net .l{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600}
+.bd .net .v{font-family:"Fraunces",serif;font-weight:600;font-size:32px;line-height:1;margin-top:5px}
+.bd .net .v.pos{color:var(--pos)} .bd .net .v.neg{color:var(--neg)}
+
+/* ledger */
+.led{padding:6px 0}
+.led .lrow{display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:center;padding:12px 22px;border-top:1px solid var(--line-2)}
+.led .lrow:first-child{border-top:none}
+.led .ldot{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;font-family:"JetBrains Mono"}
+.led .ldot.in{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.led .ldot.out{background:color-mix(in srgb,var(--neg) 14%,transparent);color:var(--neg)}
+.led .li .nm{font-weight:600;font-size:14px}
+.led .li .mt{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:2px}
+.led .lamt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right;white-space:nowrap}
+.led .lamt.in{color:var(--pos)} .led .lamt.out{color:var(--ink)}
+
+/* net-position mini chart (derived from ledger cumulative) */
+.chartwrap{padding:18px 22px 6px}
+.chart{width:100%;height:auto;display:block;overflow:visible}
+.chart .grid-l{stroke:var(--line-2);stroke-width:1}
+.chart .zero{stroke:var(--ink-faint);stroke-width:1;stroke-dasharray:3 4;opacity:.7}
+.chart .area{fill:url(#netfill);opacity:.9}
+.chart .ln{fill:none;stroke:var(--primary);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
+.chart .axe{font-family:"JetBrains Mono";font-size:8.5px;fill:var(--ink-faint)}
+.chartcap{display:flex;gap:18px;flex-wrap:wrap;padding:4px 22px 16px;font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.chartcap span{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:14px;height:3px;border-radius:2px;display:inline-block}
+
+/* terms */
+.terms{padding:6px 0}
+.terms .trow{display:flex;justify-content:space-between;align-items:center;padding:11px 22px;border-top:1px solid var(--line-2);font-size:13.5px}
+.terms .trow:first-child{border-top:none}
+.terms .trow .tk{color:var(--ink-faint)}
+.terms .trow .tv{font-family:"JetBrains Mono";font-weight:600;text-align:right}
+
+/* auction what-if (dividend calculator) */
+.calc{padding:18px 22px;display:flex;flex-direction:column;gap:13px}
+.calc .cfld{display:flex;flex-direction:column;gap:6px}
+.calc .cfld label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+.calc .cinput{display:flex;gap:10px;align-items:center}
+.calc .cinput input{flex:1;font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);transition:border-color .2s}
+.calc .cinput input:focus{outline:none;border-color:var(--primary)}
+.calc .cgo{font-weight:600;font-size:14px;padding:10px 16px;border-radius:10px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;box-shadow:0 8px 18px -10px var(--primary);transition:transform .2s}
+.calc .cgo:hover{transform:translateY(-2px)}
+.calc .cerr{color:var(--neg);font-size:13px;min-height:18px}
+.calc .cres{border-top:1px solid var(--line-2);padding-top:4px}
+.calc .crow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line-2);font-size:13.5px}
+.calc .crow:first-child{border-top:none}
+.calc .crow .ck{color:var(--ink-faint)}
+.calc .crow .cv{font-family:"JetBrains Mono";font-weight:700}
+.calc .crow .cv.in{color:var(--pos)}
+
+/* slide-over (copied from loan-detail pattern) */
+.scrim{position:fixed;inset:0;background:rgba(20,16,12,.45);opacity:0;visibility:hidden;transition:opacity .3s var(--ease),visibility .3s;z-index:40}
+.scrim.on{opacity:1;visibility:visible}
+.over{position:fixed;top:0;right:0;bottom:0;width:min(440px,94vw);background:var(--card);border-left:1px solid var(--line);box-shadow:-24px 0 60px -30px rgba(28,24,19,.5);transform:translateX(100%);transition:transform .42s var(--ease);z-index:45;display:flex;flex-direction:column;overflow-y:auto}
+.over.on{transform:none}
+.over .oh{padding:24px 26px 18px;border-bottom:1px solid var(--line)}
+.over .eyebrow{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+.over .oh h3{font-family:"Fraunces",serif;font-weight:600;font-size:24px;margin-top:6px;letter-spacing:-.01em}
+.over .oh h3 em{font-style:italic;color:var(--primary-deep)}
+.over .osub{font-size:12.5px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:6px}
+.over .obody{padding:22px 26px;display:flex;flex-direction:column;gap:14px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+.fld input,.fld select{font-family:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);transition:border-color .2s}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--primary)}
+.err{color:var(--neg);font-size:13px;min-height:18px}
+.acts{display:flex;gap:12px;align-items:center;margin-top:4px}
+.acts .save{font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;box-shadow:0 8px 18px -10px var(--primary);transition:transform .2s}
+.acts .save:hover{transform:translateY(-2px)}
+.acts .cancel{font-weight:600;font-size:14px;color:var(--ink-faint);cursor:pointer}
+.acts .cancel:hover{color:var(--ink)}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="topbar">
+<div class="app">
+  <!-- sidebar -->
+  <aside class="side">
     <a class="brand" href="/app"><span class="glyph"></span> Khata</a>
-    <a class="link" href="/app">← Back to app</a>
-  </div>
-  <div class="head">
-    <div><h1 id="name">Chit</h1><div class="meta" id="meta">—</div></div>
-    <button class="btn" id="actbtn">Add entry</button>
-  </div>
-  <div class="cards">
-    <div class="stat"><div class="k">Net position</div><div class="v mono" id="net">—</div></div>
-    <div class="stat"><div class="k">Prize received</div><div class="v mono" id="prize">—</div></div>
-    <div class="stat"><div class="k">Net contributed</div><div class="v mono" id="netcontrib">—</div></div>
-  </div>
-  <div class="statusline" id="statusline"></div>
+    <a class="newplan" href="/create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
+    <div class="navsec">Overview</div>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
+    <a class="nav-i" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
+    <div class="navsec">Money plans</div>
+    <a class="nav-i" href="/app?type=asset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i on" href="/app?type=chit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app?type=loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app?type=retirement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <div class="navsec">Records</div>
+    <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
+    <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
+    <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+    <a class="nav-i" href="#" style="color:var(--neg)" onclick="event.preventDefault();fetch('/api/auth/logout',{method:'POST'}).finally(function(){location.href='/'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log out</a>
+  </aside>
 
-  <div class="sec">
-    <h2>Dividend calculator</h2>
-    <div class="calc">
-      <div class="row">
-        <div class="fld" style="margin-bottom:0"><label>Winning bid</label><input id="bid" placeholder="1,00,000"></div>
-        <button class="btn" id="calc">Calc</button>
+  <!-- main -->
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1 id="name">Chit</h1>
+        <div class="sub" id="sub">—</div>
       </div>
-      <div class="out" id="calcout"></div>
+      <div class="top-right">
+        <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="INR"><span class="cs">₹</span> INR</button><button data-set="USD"><span class="cs">$</span> USD</button></div>
+        <button class="addbtn" id="addbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Add entry</button>
+        <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init" id="ava-init"></span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
+      </div>
     </div>
-  </div>
 
-  <div class="sec">
-    <h2>Ledger</h2>
-    <div id="ledger"></div>
-  </div>
+    <div class="content">
+      <div class="grid2">
+        <!-- LEFT MAIN -->
+        <div class="stack fillcol">
+          <!-- header KPIs -->
+          <div class="panel fade" id="header-panel"></div>
+          <!-- auction rounds -->
+          <div class="panel fade d1" id="rounds-panel"></div>
+          <!-- contribution schedule (month-by-month, derived) -->
+          <div class="panel fade d1" id="schedule-panel"></div>
+          <!-- ledger -->
+          <div class="panel fade d2 fill" id="ledger-panel"></div>
+        </div>
 
-  <div class="sec"><div id="sharing"></div></div>
+        <!-- RIGHT RAIL -->
+        <div class="stack fillcol">
+          <!-- my position -->
+          <div class="panel fade d2" id="position-panel"></div>
+          <!-- net position over rounds (mini chart, derived) -->
+          <div class="panel fade d3" id="chart-panel" style="display:none"></div>
+          <!-- chit terms -->
+          <div class="panel fade d3" id="terms-panel"></div>
+          <!-- auction what-if (dividend calculator) -->
+          <div class="panel fade d3" id="dividend-panel"></div>
+          <!-- members (sharing) -->
+          <div class="panel fade d4 fill" id="members-panel"></div>
+        </div>
+      </div>
+    </div>
+  </main>
 </div>
 
-<div class="modal" id="modal">
-  <div class="sheet">
-    <h3>Add chit entry</h3>
-    <div class="fld"><label>Kind</label>
+<!-- add-entry slide-over -->
+<div class="scrim" id="scrim"></div>
+<aside class="over" id="over" aria-hidden="true">
+  <div class="oh">
+    <div class="eyebrow">New entry</div>
+    <h3>Add a chit <em>entry</em></h3>
+    <div class="osub" id="osub"></div>
+  </div>
+  <div class="obody">
+    <div class="fld"><label for="kind">Kind</label>
       <select id="kind">
         <option value="chit_contribution">Contribution</option>
-        <option value="chit_dividend">Dividend received</option>
-        <option value="chit_prize">Prize received</option>
+        <option value="chit_dividend">Dividend</option>
+        <option value="chit_prize">Prize</option>
       </select>
     </div>
-    <div class="fld"><label>Amount</label><input id="amount" placeholder="50,000"></div>
-    <div class="fld"><label>Note (optional)</label><input id="note" placeholder="month 3"></div>
+    <div class="fld"><label for="amount">Amount</label><input id="amount" placeholder="16,667" inputmode="decimal"></div>
+    <div class="fld"><label for="occurred">When (optional)</label><input id="occurred" type="datetime-local"></div>
+    <div class="fld"><label for="note">Note (optional)</label><input id="note" placeholder="month 6 subscription"></div>
     <div class="err" id="err"></div>
-    <div class="acts"><button class="btn" id="save">Save</button><a class="link" id="cancel">Cancel</a></div>
+    <div class="acts"><button class="save" id="save">Save entry</button><span class="cancel" id="cancel">Cancel</span></div>
   </div>
-</div>
+</aside>
+
+<!-- edit-entry slide-over -->
+<aside class="over" id="edit-over" aria-hidden="true">
+  <div class="oh">
+    <div class="eyebrow">Edit</div>
+    <h3>Edit chit <em>entry</em></h3>
+    <div class="osub" id="edit-osub"></div>
+  </div>
+  <div class="obody">
+    <div class="fld"><label for="edit-amount">Amount</label><input id="edit-amount" placeholder="16,667" inputmode="decimal"></div>
+    <div class="fld"><label for="edit-occurred">Date (when it happened)</label><input id="edit-occurred" type="date"></div>
+    <div class="fld"><label for="edit-note">Note (optional)</label><input id="edit-note" placeholder="month 6 subscription"></div>
+    <div class="err" id="edit-err"></div>
+    <div class="acts"><button class="save" id="edit-save">Save changes</button><span class="cancel" id="edit-cancel">Cancel</span><span class="del" id="del-entry" style="margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
+  </div>
+</aside>
 
 <script src="/static/assets/sharing.js"></script>
 <script>
-  const $ = (id) => document.getElementById(id);
-  const SYM = { INR: "₹", USD: "$" };
-  const pid = parseInt(location.pathname.split("/").pop(), 10);
-  let currency = "INR";
+const $ = (id) => document.getElementById(id);
+const pid = parseInt(location.pathname.split("/").pop(), 10);
+let BASE = "INR";
 
-  const KIND_LABEL = { chit_contribution: "Contribution", chit_dividend: "Dividend received", chit_prize: "Prize received" };
+// ── currency formatting (real amounts already in BASE; no client-side conversion) ──
+function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
+function usGroup(n){return Math.round(n).toLocaleString('en-US');}
+function sym(ccy){return ccy==='INR'?'₹':'$';}
+function fmtNum(minor, ccy){
+  if(minor===null||minor===undefined) return '—';
+  const v=minor/100;
+  return ccy==='INR'?indGroup(v):usGroup(v);
+}
 
-  function fmtMinor(m, ccy) {
-    if (m === null || m === undefined) return "—";
-    const neg = m < 0, v = Math.abs(m) / 100;
-    return (neg ? "-" : "") + (SYM[ccy] || "") + v.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+function el(tag, cls, text){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined && text!==null) e.textContent=text;
+  return e;
+}
+// an amount cell = <symbol><number>, all textContent (K4)
+function amtSpan(minor, cls){
+  const wrap=document.createElement('span');
+  if(cls) wrap.className=cls;
+  if(minor===null||minor===undefined){ wrap.textContent='—'; return wrap; }
+  const neg=minor<0;
+  const s=document.createElement('span'); s.className='symword'; s.textContent=(neg?'-':'')+sym(BASE);
+  const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(minor), BASE);
+  wrap.append(s,n);
+  return wrap;
+}
+
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDate(iso){
+  if(!iso) return '—';
+  const parts=String(iso).split('T')[0].split('-');
+  if(parts.length<3) return iso;
+  const y=parts[0], mi=parseInt(parts[1],10)-1, d=parseInt(parts[2],10);
+  return d+' '+(MONTHS[mi]||'?')+' '+y;
+}
+const KIND_LABEL = { chit_contribution: "Contribution", chit_dividend: "Dividend", chit_prize: "Prize" };
+
+// ── header KPIs ──
+function renderHeader(box, plan, st, isOwner){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t'); t.append(el('span','tag chit','Chit'), document.createTextNode(' '));
+  const nm=el('span'); nm.textContent=plan.name; t.append(nm);
+  if(st.won) t.append(el('span','wonbadge','Prize won'));
+  const commPct=(st.commission_bps/100);
+  ph.append(t, el('div','meta', 'auction · monthly'));
+  box.append(ph);
+
+  // 7.1: badge pills backed by REAL signals only — never an invented role.
+  //  · Auction    → state.commission_bps > 0 (auction chits charge commission; pure rotating don't)
+  //  · Organizer  → this user owns the plan (/api/dashboard role==='owner', passed in as isOwner)
+  //  · Member     → state.total_contributed_minor > 0 (the user pays subscriptions)
+  // plus the existing commission % and Monthly cadence pills, and member count.
+  const badges=el('div','chit-badges');
+  if(st.commission_bps > 0) badges.append(el('span','pill role', 'Auction'));
+  if(isOwner) badges.append(el('span','pill role', 'Organizer'));
+  if((st.total_contributed_minor||0) > 0) badges.append(el('span','pill role', 'Member'));
+  badges.append(
+    el('span','pill comm', commPct+'% Commission'),
+    el('span','pill', 'Monthly'),
+    el('span','pill', st.n_members+' members'));
+  box.append(badges);
+
+  // 7.2: expanded stat grid (5-6 cards) — net position is the hero card.
+  const kpis=el('div','chit-kpis');
+  function kpi(cls,label,node,detail){
+    const k=el('div','kpi'+(cls?' '+cls:''));
+    k.append(el('div','l',label));
+    const n=el('div','n'); n.append(node); k.append(n);
+    if(detail) k.append(el('div','d',detail));
+    return k;
+  }
+  function txt(s){ return document.createTextNode(s); }
+  const np = st.net_position_minor||0;
+  const netCls = np > 0 ? 'pos' : (np < 0 ? 'neg' : '');
+  kpis.append(
+    kpi('hero-stat '+netCls,'Net position', amtSpan(st.net_position_minor), 'paid in vs received'),
+    kpi('','Total paid in', amtSpan(st.total_contributed_minor), st.months_recorded+' rounds'),
+    kpi('','Dividends earned', amtSpan(st.total_dividends_minor), 'across recorded rounds'),
+    kpi('','Contribution / mo', amtSpan(st.subscription_minor), 'base subscription'),
+    kpi('','Members', txt(String(st.n_members)), 'in the chit'),
+    kpi('','Rounds recorded', txt(st.months_recorded+' of '+st.n_members), 'auction history'));
+  box.append(kpis);
+
+  // subscription/commission caption line
+  const head=el('div','planhead');
+  const row=el('div','row');
+  const lcap=el('span');
+  lcap.append(document.createTextNode('subscription '));
+  lcap.append(amtSpan(st.subscription_minor));
+  lcap.append(document.createTextNode('/mo'));
+  row.append(lcap);
+  row.append(el('span', null, st.months_recorded+' of '+st.n_members+' rounds recorded'));
+  head.append(row);
+  box.append(head);
+}
+
+// ── auction rounds strip (months_recorded of n_members; no per-round winner/bid) ──
+function renderRounds(box, st){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Auction rounds'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta', st.months_recorded+' of '+st.n_members+' recorded'));
+  box.append(ph);
+  const body=el('div','chit-body');
+  const rounds=el('div','rounds');
+  const n=st.n_members||0, rec=st.months_recorded||0, won=!!st.won;
+  for(let k=1;k<=n;k++){
+    let cls='rd';
+    if(k<=rec) cls='rd done';
+    else if(k===rec+1) cls='rd now';
+    const rd=el('div',cls);
+    // 7.5: color-only dots — round number only, no "done"/"next" text labels (mockup omits them)
+    rd.append(el('span','r',String(k)));
+    rounds.append(rd);
+  }
+  // Per-round winner is NOT tracked — only the aggregate `won` flag exists.
+  // Do not pin a star to any specific round (would fabricate which round was won);
+  // the aggregate win is surfaced via the legend badge + the header "Prize won" badge.
+  body.append(rounds);
+  const legend=el('div','rounds-legend');
+  function lg(color,label){ const s=el('span'); s.append(el('i','dotk'), document.createTextNode(label)); s.firstChild.style.background=color; return s; }
+  legend.append(lg('var(--pos)','recorded'));
+  legend.append(lg('var(--primary)','next'));
+  legend.append(lg('var(--paper-2)','upcoming'));
+  if(won) legend.append(el('span', null, '★ you won a round'));
+  body.append(legend);
+  box.append(body);
+
+  // 7.3: per-round table from REAL data — taker, bid %, dividend/member and your-pay all
+  // parsed/derived from each chit_dividend note ("Round N · taker <Name> · bid <N>%").
+  //  · BID %    → parsed from the note ("bid N%")
+  //  · YOUR PAY → subscription_minor − that round's dividend-per-member (the entry's amount_minor)
+  // Future rounds (no ledger entry) show "—" in both columns — never fabricated.
+  const ledger = st.ledger || [];
+  const byRound = {};        // round number -> { taker, dividend_minor, bid_pct }
+  for(const e of ledger){
+    if(e.kind!=='chit_dividend') continue;
+    const note=e.note || '';
+    const rm=note.match(/Round\s+(\d+)/i);
+    if(!rm) continue;
+    const rnum=parseInt(rm[1],10);
+    let taker=null;
+    const ti=note.indexOf('taker ');
+    if(ti>=0){
+      taker=note.slice(ti+'taker '.length).trim();
+      // strip a trailing " · bid N%" segment from the taker name if present
+      const dot=taker.indexOf('·');
+      if(dot>=0) taker=taker.slice(0,dot).trim();
+    }
+    let bidPct=null;
+    const bm=note.match(/bid\s+(\d+(?:\.\d+)?)\s*%/i);
+    if(bm) bidPct=bm[1];
+    byRound[rnum]={ taker: taker, dividend_minor: e.amount_minor, bid_pct: bidPct };
   }
 
-  function renderLedger(rows) {
-    const box = $("ledger");
-    box.textContent = "";
-    if (!rows || !rows.length) {
-      const e = document.createElement("div"); e.className = "ledempty";
-      e.textContent = "No entries yet."; box.appendChild(e); return;
+  const tw=el('div','rtbl-wrap');
+  const tbl=el('table','rtbl');
+  const thead=el('thead'); const htr=el('tr');
+  htr.append(el('th','lf','Round / taker'), el('th',null,'Bid %'), el('th',null,'Dividend / member'), el('th',null,'Your pay'));
+  thead.append(htr); tbl.append(thead);
+  const tbody=el('tbody');
+  for(let k=1;k<=n;k++){
+    const info=byRound[k];
+    let trCls='';
+    if(k<=rec) trCls='done';
+    else if(k===rec+1) trCls='now';
+    else trCls='open';
+    const tr=el('tr', trCls);
+    const lf=el('td','lf');
+    lf.append(el('span','rn',String(k)));
+    if(info && info.taker){
+      lf.append(el('span','who', info.taker));
+    } else if(k<=rec){
+      // recorded but no parseable taker note
+      lf.append(el('span','who', '—'));
+    } else {
+      lf.append(el('span','who', 'open auction'));
     }
-    const table = document.createElement("table"); table.className = "led";
-    const thead = document.createElement("thead"); const htr = document.createElement("tr");
-    for (const h of ["Kind", "Direction", "Amount", "Date"]) {
-      const th = document.createElement("th"); th.textContent = h; htr.appendChild(th);
+    tr.append(lf);
+    // bid % cell (parsed from note; "—" when absent)
+    if(info && info.bid_pct!==null && info.bid_pct!==undefined){
+      tr.append(el('td',null, info.bid_pct+'%'));
+    } else {
+      tr.append(el('td',null,'—'));
     }
-    thead.appendChild(htr); table.appendChild(thead);
-    const tbody = document.createElement("tbody");
-    for (const e of rows) {
-      const tr = document.createElement("tr");
-      const tdK = document.createElement("td"); tdK.textContent = KIND_LABEL[e.kind] || e.kind;
-      const tdD = document.createElement("td"); tdD.textContent = e.direction;
-      tdD.className = e.direction === "in" ? "dir-in" : "dir-out";
-      const tdA = document.createElement("td"); tdA.className = "amt"; tdA.textContent = fmtMinor(e.amount_minor, currency);
-      const tdT = document.createElement("td"); tdT.textContent = (e.occurred_at || "").slice(0, 10);
-      tr.append(tdK, tdD, tdA, tdT); tbody.appendChild(tr);
+    // dividend/member cell
+    if(info && info.dividend_minor!==undefined && info.dividend_minor!==null){
+      const dt=el('td','divamt in'); dt.append(amtSpan(info.dividend_minor)); tr.append(dt);
+    } else {
+      tr.append(el('td',null,'—'));
     }
-    table.appendChild(tbody); box.appendChild(table);
+    // your-pay cell = subscription − dividend per member (derived; only when we have the dividend)
+    if(info && info.dividend_minor!==undefined && info.dividend_minor!==null){
+      const yourPay=(st.subscription_minor||0) - info.dividend_minor;
+      const yt=el('td'); yt.append(amtSpan(yourPay)); tr.append(yt);
+    } else {
+      tr.append(el('td',null,'—'));
+    }
+    tbody.append(tr);
+  }
+  tbl.append(tbody); tw.append(tbl); box.append(tw);
+}
+
+// ── contribution schedule (month-by-month; derived from start_date + n_members) ──
+function monthYr(iso){ const p=(iso||'').split('-'); return p.length>=2 ? (MONTHS[parseInt(p[1],10)-1]||'?')+' '+p[0] : '—'; }
+function renderSchedule(box, st){
+  box.textContent='';
+  const sch=st.schedule||[];
+  const ph=el('div','ph');
+  const t=el('div','t','Contribution schedule'); t.style.fontSize='16px';
+  const paid=sch.filter(r=>r.status==='paid').length;
+  ph.append(t, el('div','meta', paid+' of '+(st.term_months||sch.length)+' months paid'));
+  box.append(ph);
+  if(!sch.length){ box.append(el('div','emptypanel','No schedule.')); return; }
+
+  // Next-due / overdue banner
+  if(st.next_due_month!=null){
+    const due=el('div'); due.style.cssText='display:flex;align-items:center;gap:10px;margin:14px 22px 4px;padding:11px 14px;border-radius:11px;font-size:13px;font-weight:600';
+    const behind=st.months_behind||0;
+    if(behind>0){
+      due.style.background='color-mix(in srgb,var(--neg) 12%,transparent)'; due.style.color='var(--neg)';
+      due.append(document.createTextNode('⚠ '+behind+' month'+(behind>1?'s':'')+' overdue · next due '+monthYr(st.next_due_date)));
+    } else {
+      due.style.background='color-mix(in srgb,var(--primary) 14%,transparent)'; due.style.color='var(--accent-dk)';
+      due.append(document.createTextNode('Next due · '+monthYr(st.next_due_date)));
+    }
+    box.append(due);
+  } else {
+    const done=el('div'); done.style.cssText='margin:14px 22px 4px;padding:11px 14px;border-radius:11px;font-size:13px;font-weight:600;background:color-mix(in srgb,var(--pos) 12%,transparent);color:var(--pos)';
+    done.append(document.createTextNode('✓ All '+sch.length+' months recorded'));
+    box.append(done);
   }
 
-  async function load() {
-    const r = await fetch("/api/plans/" + pid);
-    if (r.status === 401) { window.location.href = "/"; return; }
-    if (!r.ok) { window.location.href = "/app"; return; }
-    const d = await r.json();
-    if (d.plan.type !== "chit") { window.location.href = "/app"; return; }
-    currency = d.plan.currency;
-    const st = d.state, p = d.plan;
-    $("name").textContent = p.name;
-    $("meta").textContent = "chit · " + currency + " · " + p.status;
-
-    const n = $("net"); n.textContent = fmtMinor(st.net_position_minor, currency);
-    n.classList.toggle("pos", (st.net_position_minor || 0) > 0);
-    n.classList.toggle("neg", (st.net_position_minor || 0) < 0);
-    $("prize").textContent = fmtMinor(st.prize_received_minor, currency);
-    $("netcontrib").textContent = fmtMinor(st.net_contributed_minor, currency);
-
-    $("statusline").textContent = "Subscription " + fmtMinor(st.subscription_minor, currency) + "/mo"
-      + " · " + st.months_recorded + "/" + st.n_members + " months"
-      + " · commission " + (st.commission_bps / 100) + "%"
-      + " · " + (st.won ? "won the pot" : "not won yet");
-
-    renderLedger(st.ledger);
-    mountSharing(pid, $("sharing"));
-  }
-
-  $("calc").addEventListener("click", async () => {
-    const out = $("calcout"); out.classList.remove("err"); out.textContent = "";
-    const r = await fetch("/api/plans/" + pid + "/chit/dividend?bid=" + encodeURIComponent($("bid").value));
-    if (r.status === 401) { window.location.href = "/"; return; }
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) { out.classList.add("err"); out.textContent = d.detail || d.error || "Could not calculate."; return; }
-    out.textContent = "Dividend/member " + fmtMinor(d.dividend_per_member_minor, currency)
-      + " · prize " + fmtMinor(d.prize_minor, currency);
+  const grid=el('div'); grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;padding:12px 22px 20px';
+  sch.forEach(r=>{
+    const cell=el('div'); cell.style.cssText='border:1px solid var(--line);border-radius:10px;padding:9px 10px;display:flex;flex-direction:column;gap:3px';
+    const top=el('div'); top.style.cssText='display:flex;align-items:center;justify-content:space-between';
+    const mo=el('span', null, monthYr(r.period_start)); mo.style.cssText='font-size:11.5px;font-weight:600';
+    const dot=el('span'); dot.style.cssText='width:9px;height:9px;border-radius:50%;flex:none';
+    let col='var(--paper-2)', title='upcoming';
+    if(r.status==='paid'){ col='var(--pos)'; title='paid'; }
+    else if(r.status==='due'){ col='var(--neg)'; title='due'; }
+    dot.style.background=col; dot.title=title;
+    top.append(mo,dot);
+    const am=el('div'); am.style.cssText='font-family:"JetBrains Mono";font-size:11px;color:var(--ink-faint)';
+    am.append(el('span','symword',sym(BASE)), document.createTextNode(fmtNum(r.expected_minor,BASE)));
+    cell.append(top, am);
+    if(r.status!=='paid'){ cell.style.opacity = r.status==='due' ? '1' : '.6'; }
+    grid.append(cell);
   });
+  box.append(grid);
+}
 
-  $("actbtn").addEventListener("click", () => { $("err").textContent = ""; $("modal").classList.add("on"); });
-  $("cancel").addEventListener("click", () => $("modal").classList.remove("on"));
-  $("save").addEventListener("click", async () => {
-    $("err").textContent = "";
-    const body = { kind: $("kind").value, amount: $("amount").value };
-    if ($("note").value) body.note = $("note").value;
-    const r = await fetch("/api/plans/" + pid + "/chit/entries",
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (r.ok) { $("modal").classList.remove("on"); $("amount").value = ""; $("note").value = ""; load(); return; }
-    const e = await r.json().catch(() => ({})); $("err").textContent = e.detail || e.error || "Could not save.";
-  });
+// ── my position breakdown ──
+function renderPosition(box, st){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','My position'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','contributed vs received'));
+  box.append(ph);
+  const body=el('div','bd');
+  function brow(color, label, minor, dirCls){
+    const r=el('div','brow');
+    const lab=el('div','blab'); const ic=el('span','ic'); ic.style.background=color; lab.append(ic, document.createTextNode(label));
+    const amt=el('div','bamt '+dirCls);
+    amt.append(amtSpan(minor));
+    r.append(lab, amt);
+    return r;
+  }
+  body.append(brow('var(--neg)','Total contributed', st.total_contributed_minor, 'out'));
+  body.append(brow('var(--pos-soft)','Dividends earned', st.total_dividends_minor, 'in'));
+  body.append(brow('var(--pos)','Prize received', st.prize_received_minor, 'in'));
+  const net=el('div','net');
+  const left=el('div');
+  left.append(el('div','l','Net position'));
+  const npCls = (st.net_position_minor||0) > 0 ? 'pos' : ((st.net_position_minor||0) < 0 ? 'neg' : '');
+  const v=el('div','v '+npCls); v.append(amtSpan(st.net_position_minor)); left.append(v);
+  net.append(left);
+  body.append(net);
+  box.append(body);
+}
 
-  load();
+// ── ledger (the one detail page with a real ledger) ──
+function renderLedger(box, st){
+  box.textContent='';
+  const rows = st.ledger || [];
+  const ph=el('div','ph');
+  const t=el('div','t','Ledger'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta', rows.length+' entries'));
+  box.append(ph);
+  if(!rows.length){ box.append(el('div','emptypanel','No entries yet.')); return; }
+  const body=el('div','led fillrows');
+  for(const e of rows){
+    const r=el('div','lrow');
+    const dir=e.direction;
+    const dot=el('div','ldot '+(dir==='in'?'in':'out')); dot.textContent = dir==='in'?'+':'−';
+    const li=el('div','li');
+    // meta line: date · note (note rendered via textContent, K4)
+    const mt=el('div','mt'); mt.textContent = e.note ? (fmtDate(e.occurred_at)+' · '+e.note) : fmtDate(e.occurred_at);
+    li.append(el('div','nm', KIND_LABEL[e.kind] || e.kind), mt);
+    const amt=el('div','lamt '+(dir==='in'?'in':'out'));
+    const pfx = dir==='in' ? '+' : '−';
+    const aw=document.createElement('span');
+    const ss=el('span','symword'); ss.textContent=pfx+sym(BASE); aw.append(ss);
+    const nn=el('span'); nn.textContent=fmtNum(Math.abs(e.amount_minor), BASE); aw.append(nn);
+    amt.append(aw);
+    // ✎ edit affordance — opens the edit slide-over pre-filled from this entry
+    if(e.id!=null){
+      const edit=el('span','proof','✎ edit');
+      edit.style.cssText='cursor:pointer;font-size:11.5px;color:var(--ink-faint);margin-top:4px;display:inline-block';
+      edit.tabIndex=0; edit.setAttribute('role','button');
+      edit.addEventListener('click', ()=>openEdit(e));
+      edit.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); openEdit(e); } });
+      amt.append(document.createElement('br'), edit);
+    }
+    r.append(dot, li, amt);
+    body.append(r);
+  }
+  box.append(body);
+}
+
+// ── net position over rounds (mini chart) — derived: cumulative net from ledger ──
+function renderChart(box, st){
+  box.textContent='';
+  const rows = (st.ledger || []).slice().sort((a,b)=>String(a.occurred_at).localeCompare(String(b.occurred_at)));
+  if(rows.length < 2){ box.style.display='none'; return; }
+  // cumulative net: in adds, out subtracts (minor units)
+  let cum=0; const pts=[];
+  for(const e of rows){ cum += (e.direction==='in' ? e.amount_minor : -e.amount_minor); pts.push(cum); }
+  box.style.display='';
+  const ph=el('div','ph');
+  const t=el('div','t','Net position over rounds'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','cumulative · from ledger'));
+  box.append(ph);
+
+  const W=560, H=180, padL=8, padR=8, padT=18, padB=22;
+  const minV=Math.min(0, ...pts), maxV=Math.max(0, ...pts);
+  const span=(maxV-minV)||1;
+  const x=(i)=> padL + (pts.length>1 ? i*(W-padL-padR)/(pts.length-1) : 0);
+  const y=(v)=> padT + (maxV - v)*(H-padT-padB)/span;
+  const zeroY=y(0);
+
+  const svgNS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(svgNS,'svg');
+  svg.setAttribute('class','chart');
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  svg.setAttribute('role','img');
+  svg.setAttribute('aria-label','Cumulative net position across recorded chit ledger entries');
+  // defs gradient
+  const defs=document.createElementNS(svgNS,'defs');
+  const grad=document.createElementNS(svgNS,'linearGradient');
+  grad.setAttribute('id','netfill'); grad.setAttribute('x1','0'); grad.setAttribute('y1','0'); grad.setAttribute('x2','0'); grad.setAttribute('y2','1');
+  const s1=document.createElementNS(svgNS,'stop'); s1.setAttribute('offset','0'); s1.setAttribute('stop-color','var(--primary)'); s1.setAttribute('stop-opacity','0.20');
+  const s2=document.createElementNS(svgNS,'stop'); s2.setAttribute('offset','1'); s2.setAttribute('stop-color','var(--primary)'); s2.setAttribute('stop-opacity','0');
+  grad.append(s1,s2); defs.append(grad); svg.append(defs);
+  // zero baseline
+  const zl=document.createElementNS(svgNS,'line'); zl.setAttribute('class','zero');
+  zl.setAttribute('x1',padL); zl.setAttribute('y1',zeroY); zl.setAttribute('x2',W-padR); zl.setAttribute('y2',zeroY); svg.append(zl);
+  // area + line
+  let lpts=pts.map((v,i)=>x(i)+','+y(v)).join(' ');
+  const area=document.createElementNS(svgNS,'path');
+  area.setAttribute('class','area');
+  area.setAttribute('d','M'+x(0)+','+zeroY+' L'+pts.map((v,i)=>x(i)+','+y(v)).join(' L')+' L'+x(pts.length-1)+','+zeroY+' Z');
+  svg.append(area);
+  const ln=document.createElementNS(svgNS,'polyline'); ln.setAttribute('class','ln'); ln.setAttribute('points',lpts); svg.append(ln);
+  const wrap=el('div','chartwrap'); wrap.append(svg); box.append(wrap);
+  const cap=el('div','chartcap');
+  const c1=el('span'); const sw=el('i','swatch'); sw.style.background='var(--primary)'; c1.append(sw, document.createTextNode('cumulative net (received − contributed)')); cap.append(c1);
+  box.append(cap);
+}
+
+// ── chit terms ──
+function renderTerms(box, st){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Chit terms'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','contract'));
+  box.append(ph);
+  const body=el('div','terms');
+  function trowText(k,v){
+    const r=el('div','trow');
+    r.append(el('span','tk',k));
+    const tv=el('span','tv'); tv.textContent=v; r.append(tv);
+    body.append(r);
+  }
+  function trowAmt(k,minor){
+    const r=el('div','trow');
+    r.append(el('span','tk',k));
+    const tv=el('span','tv'); tv.append(amtSpan(minor)); r.append(tv);
+    body.append(r);
+  }
+  trowAmt('Chit value', st.chit_value_minor);
+  trowText('Members', String(st.n_members));
+  trowText('Commission', (st.commission_bps/100)+'%');
+  trowAmt('Subscription / mo', st.subscription_minor);
+  trowText('Rounds recorded', st.months_recorded+' of '+st.n_members);
+  box.append(body);
+}
+
+// ── auction what-if (dividend calculator) ──
+// GET /api/plans/<id>/chit/dividend?bid=<amount> → auction_dividend():
+//   { commission_minor, dividend_pool_minor, dividend_per_member_minor, prize_minor }
+// Net subscription (this round) = subscription_minor − dividend_per_member_minor (derived here).
+function renderDividend(box, st){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Auction what-if'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','dividend per member'));
+  box.append(ph);
+  const body=el('div','calc');
+
+  const fld=el('div','cfld');
+  fld.append(el('label', null, 'Winning bid'));
+  const inputRow=el('div','cinput');
+  const inp=el('input'); inp.id='bid'; inp.setAttribute('inputmode','decimal'); inp.placeholder='1,90,000';
+  const go=el('button','cgo','Compute'); go.id='bidgo'; go.type='button';
+  inputRow.append(inp, go);
+  fld.append(inputRow);
+  body.append(fld);
+
+  const err=el('div','cerr'); err.id='biderr';
+  body.append(err);
+
+  const res=el('div','cres'); res.id='bidres'; res.style.display='none';
+  body.append(res);
+  box.append(body);
+
+  function crow(label, valNode, cls){
+    const r=el('div','crow');
+    r.append(el('span','ck',label));
+    const v=el('span','cv'+(cls?' '+cls:''));
+    v.append(valNode);
+    r.append(v);
+    return r;
+  }
+
+  async function compute(){
+    err.textContent='';
+    res.style.display='none';
+    res.textContent='';
+    const bid=inp.value.trim();
+    if(!bid){ err.textContent='Enter a winning bid.'; return; }
+    const r=await fetch('/api/plans/'+pid+'/chit/dividend?bid='+encodeURIComponent(bid));
+    if(r.status===401){ window.location.href='/'; return; }
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){ err.textContent = j.detail || j.error || 'Could not compute.'; return; }
+    // derived: net subscription this round = subscription − dividend per member
+    const netSub = (st.subscription_minor||0) - (j.dividend_per_member_minor||0);
+    res.append(crow('Commission', amtSpan(j.commission_minor)));
+    res.append(crow('Dividend pool', amtSpan(j.dividend_pool_minor)));
+    res.append(crow('Dividend / member', amtSpan(j.dividend_per_member_minor), 'in'));
+    res.append(crow('Prize (winner gets)', amtSpan(j.prize_minor)));
+    res.append(crow('Net subscription / member', amtSpan(netSub)));
+    res.style.display='';
+  }
+  go.addEventListener('click', compute);
+  inp.addEventListener('keydown', (e)=>{ if(e.key==='Enter') compute(); });
+}
+
+// ── members (sharing) ──
+function renderMembers(box){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Member roster'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','joint ownership'));
+  box.append(ph);
+  const body=el('div'); body.style.padding='18px 22px';
+  box.append(body);
+  mountSharing(pid, body);
+}
+
+// ── add-entry slide-over open/close ──
+function openOver(){ $('err').textContent=''; $('scrim').classList.add('on'); $('over').classList.add('on'); $('over').setAttribute('aria-hidden','false'); $('amount').focus(); }
+function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
+
+// ── edit-entry slide-over open/close ──
+let editId=null;
+function openEdit(e){
+  editId=e.id;
+  $('edit-err').textContent='';
+  $('edit-amount').value=(Math.abs(e.amount_minor||0)/100);
+  $('edit-note').value=e.note||'';
+  $('edit-occurred').value=(e.occurred_at||'').slice(0,10);
+  $('edit-osub').textContent='in '+($('name').textContent||'this chit');
+  $('scrim').classList.add('on'); $('edit-over').classList.add('on'); $('edit-over').setAttribute('aria-hidden','false');
+  $('edit-amount').focus();
+}
+function closeEdit(){ $('scrim').classList.remove('on'); $('edit-over').classList.remove('on'); $('edit-over').setAttribute('aria-hidden','true'); }
+
+// ── 7.4 in-page not-found (no redirect) ──
+// Renders a centered "Plan not found" panel into the main content region.
+function renderNotFound(){
+  const content=document.querySelector('.content');
+  if(!content) return;
+  content.textContent='';
+  const wrap=el('div','notfound');
+  const card=el('div','nf-card');
+  const glyph=el('div','nf-glyph');
+  const svgNS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(svgNS,'svg');
+  svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('fill','none');
+  svg.setAttribute('stroke','currentColor'); svg.setAttribute('stroke-width','2');
+  const c=document.createElementNS(svgNS,'circle'); c.setAttribute('cx','12'); c.setAttribute('cy','12'); c.setAttribute('r','9'); svg.append(c);
+  const l1=document.createElementNS(svgNS,'line'); l1.setAttribute('x1','12'); l1.setAttribute('y1','8'); l1.setAttribute('x2','12'); l1.setAttribute('y2','13'); svg.append(l1);
+  const l2=document.createElementNS(svgNS,'line'); l2.setAttribute('x1','12'); l2.setAttribute('y1','16'); l2.setAttribute('x2','12'); l2.setAttribute('y2','16.5'); svg.append(l2);
+  glyph.append(svg);
+  card.append(glyph);
+  card.append(el('h2','','Plan not found'));
+  card.append(el('p','',"This chit doesn't exist or isn't yours."));
+  const back=el('a','nf-back'); back.href='/app'; back.textContent='Back to dashboard';
+  card.append(back);
+  wrap.append(card);
+  content.append(wrap);
+}
+
+// ── boot ──
+async function boot(){
+  const me = await fetch('/api/auth/me');
+  if(me.status===401){ window.location.href='/'; return; }
+  const user=(await me.json()).user;
+  $('ava-init').textContent=((user.display_name||'?')[0]||'?').toUpperCase();
+
+  const r = await fetch('/api/plans/'+pid);
+  if(r.status===401){ window.location.href='/'; return; }
+  // 7.4: non-ok (404/403) → render an in-page not-found state instead of bouncing to /app.
+  if(!r.ok){ renderNotFound(); return; }
+  const d = await r.json();
+  // wrong plan type for this page is also a "not found" for the chit view (no redirect).
+  if(!d.plan || d.plan.type!=='chit'){ renderNotFound(); return; }
+
+  const plan=d.plan, st=d.state;
+
+  // ownership: which dashboard plans does this user own? (drives the "Organizer" pill)
+  let isOwner=false;
+  try{
+    const dash = await fetch('/api/dashboard');
+    if(dash.ok){
+      const dj = await dash.json();
+      const mine = (dj.plans || []).find(p => p.id===pid);
+      if(mine && mine.role==='owner') isOwner=true;
+    }
+  }catch(e){}
+  BASE = plan.currency || 'INR';
+  document.documentElement.dataset.cur = BASE.toLowerCase();
+  document.title = 'Khata — '+plan.name;
+  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));
+
+  $('name').textContent = plan.name;
+  $('sub').textContent = 'Chit funds · '+st.n_members+' members · '+plan.status+' · '+BASE;
+  $('osub').textContent = 'to '+plan.name;
+
+  renderHeader($('header-panel'), plan, st, isOwner);
+  renderRounds($('rounds-panel'), st);
+  renderSchedule($('schedule-panel'), st);
+  renderLedger($('ledger-panel'), st);
+  renderPosition($('position-panel'), st);
+  renderChart($('chart-panel'), st);
+  renderTerms($('terms-panel'), st);
+  renderDividend($('dividend-panel'), st);
+  renderMembers($('members-panel'));
+
+  // sidebar counts from /api/plans
+  try{
+    const plansResp = await fetch('/api/plans').then(x=>x.json());
+    const plans = plansResp.plans || [];
+    const by=(t)=>plans.filter(p=>p.type===t).length||'';
+    $('ct-asset').textContent=by('asset');
+    $('ct-chit').textContent=by('chit');
+    $('ct-loan').textContent=by('loan');
+    $('ct-retirement').textContent=by('retirement');
+  }catch(e){}
+
+  setTimeout(()=>document.querySelectorAll('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%'),350);
+}
+
+// ── currency toggle: real base-currency switch ──
+$('curtog').addEventListener('click', async (e)=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const target=b.dataset.set;
+  if(target===BASE) return;
+  await fetch('/api/base-currency',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({currency:target})});
+  location.reload();
+});
+
+// ── add-entry wiring ──
+$('addbtn').addEventListener('click', openOver);
+$('cancel').addEventListener('click', closeOver);
+$('scrim').addEventListener('click', ()=>{ closeOver(); closeEdit(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeEdit(); } });
+$('save').addEventListener('click', async ()=>{
+  $('err').textContent='';
+  const body={ kind:$('kind').value, amount:$('amount').value, occurred_at:($('occurred').value || null), note:($('note').value || null) };
+  const r=await fetch('/api/plans/'+pid+'/chit/entries', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if(r.ok){ closeOver(); $('amount').value=''; $('note').value=''; $('occurred').value=''; boot(); return; }
+  const e=await r.json().catch(()=>({}));
+  $('err').textContent = e.detail || e.error || 'Could not save the entry.';
+});
+
+// ── edit-entry wiring (chit entries send only amount, occurred_at, note) ──
+$('edit-cancel').addEventListener('click', closeEdit);
+$('edit-save').addEventListener('click', async ()=>{
+  if(editId==null) return;
+  $('edit-err').textContent='';
+  const occ = $('edit-occurred').value ? $('edit-occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift
+  const body={ amount:$('edit-amount').value, occurred_at:occ, note:($('edit-note').value || null) };
+  const r=await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if(r.ok){ closeEdit(); boot(); return; }
+  const e=await r.json().catch(()=>({}));
+  $('edit-err').textContent = e.detail || e.error || 'Could not save changes.';
+});
+$('del-entry').addEventListener('click', async ()=>{
+  if(editId==null) return;
+  if(!confirm('Delete this entry? This cannot be undone.')) return;
+  $('edit-err').textContent='';
+  const r=await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'DELETE' });
+  if(r.ok){ closeEdit(); boot(); return; }
+  const e=await r.json().catch(()=>({}));
+  $('edit-err').textContent = e.detail || e.error || 'Could not delete.';
+});
+
+// ── profile photo upload (localStorage, display-only) ──
+(function(){var av=document.getElementById("avatar");if(!av)return;try{localStorage.removeItem("khata_avatar");}catch(e){}var inp=av.querySelector("input");if(inp)inp.disabled=true;av.title="Edit photo in Settings";av.style.cursor="pointer";av.addEventListener("click",function(e){e.preventDefault();window.location.href="/settings";});fetch("/api/auth/me").then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&d.user&&d.user.avatar){av.style.backgroundImage='url("'+d.user.avatar+'")';av.classList.add("has-img");}else{av.style.backgroundImage="";av.classList.remove("has-img");}}).catch(function(){});})();
+
+boot();
 </script>
 </body>
 </html>

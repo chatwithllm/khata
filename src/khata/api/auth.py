@@ -19,7 +19,7 @@ bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 def _user_json(user: User) -> dict:
     return {"id": user.id, "email": user.email, "display_name": user.display_name,
-            "has_password": bool(user.password_hash)}
+            "has_password": bool(user.password_hash), "avatar": user.avatar}
 
 
 def current_user():
@@ -102,6 +102,30 @@ def update_profile_route():
     except AuthError as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(user=_user_json(user)), 200
+
+
+# Cropped avatars are stored as small data URLs. Cap the payload so the DB / JSON backup
+# stay lean (a 256px JPEG is well under this; reject anything that isn't a small image).
+_AVATAR_MAX = 200_000   # ~200 KB of data-URL text
+
+
+@bp.post("/avatar")
+def set_avatar_route():
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    data = request.get_json(silent=True) or {}
+    av = data.get("avatar")
+    if av in (None, ""):
+        user.avatar = None            # clear the photo
+    else:
+        if not isinstance(av, str) or not av.startswith("data:image/"):
+            return jsonify(error="invalid", detail="avatar must be an image data URL"), 400
+        if len(av) > _AVATAR_MAX:
+            return jsonify(error="invalid", detail="image too large — crop/zoom to a smaller area"), 413
+        user.avatar = av
+    g.db.commit()
     return jsonify(user=_user_json(user)), 200
 
 

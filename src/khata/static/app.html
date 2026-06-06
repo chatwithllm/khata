@@ -3,186 +3,735 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Khata — App</title>
+<title>Khata — dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/assets/ledger.css">
+<link rel="stylesheet" href="/static/assets/app.css">
 <style>
-  .app{display:grid;grid-template-columns:236px 1fr;min-height:100vh;position:relative;z-index:1}
-  @media(max-width:880px){.app{grid-template-columns:1fr}.side{display:none}}
-  .side{border-right:1px solid var(--line);background:var(--paper-2);padding:20px 14px;position:sticky;top:0;height:100vh}
-  .side .brand{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:600;font-size:20px;padding:4px 8px 16px}
-  .side .glyph{width:26px;height:26px;border-radius:7px;background:linear-gradient(145deg,var(--primary),var(--primary-deep));box-shadow:0 6px 14px -6px var(--primary)}
-  .newplan{display:block;text-align:center;background:linear-gradient(145deg,var(--primary),var(--primary-deep));color:#fff;font-weight:600;padding:9px;border-radius:10px;margin:0 4px 12px}
-  .navsec{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:14px 10px 6px}
-  .nav-i{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:9px;font-weight:500;color:var(--ink-soft);font-size:14px;cursor:pointer}
-  .nav-i:hover{background:var(--line-2);color:var(--ink)}
-  .nav-i.on{background:var(--ink);color:var(--paper)}
-  .nav-i.soon{opacity:.5;cursor:default}
-  .nav-i .ct{margin-left:auto;font-size:10px;font-family:"JetBrains Mono";opacity:.7}
-  .main{min-width:0}
-  .top{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--line);position:sticky;top:0;background:color-mix(in srgb,var(--paper) 84%,transparent);backdrop-filter:blur(8px);z-index:20}
-  .top h1{font-family:"Fraunces",serif;font-weight:600;font-size:22px}
-  .top .sub{font-size:12.5px;color:var(--ink-faint)}
-  .top-right{display:flex;align-items:center;gap:12px}
-  .badge{font-family:"JetBrains Mono";font-weight:700;font-size:12px;background:var(--paper-2);border:1px solid var(--line);border-radius:100px;padding:5px 11px}
-  .lo{font-size:13px;color:var(--ink-soft);cursor:pointer}
-  .lo:hover{color:var(--neg)}
-  .body{padding:24px 28px}
-  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-  @media(max-width:760px){.cards{grid-template-columns:repeat(2,1fr)}}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
-  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-faint);font-weight:700}
-  .stat .v{font-family:"Fraunces",serif;font-size:24px;margin-top:6px}
-  .stat .v.pos{color:var(--pos)} .stat .v.neg{color:var(--neg)}
-  .chips{display:flex;gap:8px;margin:22px 0 10px;flex-wrap:wrap}
-  .chip{font-size:13px;border:1px solid var(--line);background:var(--card);border-radius:100px;padding:6px 14px;cursor:pointer;color:var(--ink-soft)}
-  .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-  .plan{display:flex;align-items:center;gap:12px;padding:13px 16px;border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:9px}
-  .plan .nm{font-weight:600} .plan .meta{font-size:12.5px;color:var(--ink-faint)}
-  .plan .tag{margin-left:auto;font-size:11px;font-family:"JetBrains Mono";text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);border:1px solid var(--line);border-radius:100px;padding:3px 9px}
-  .empty{color:var(--ink-faint);padding:24px;text-align:center}
+/* ── app.html-only rules (shared shell + detail-panel groups live in app.css) ── */
+
+/* pending share invitations banner */
+#invites{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+#invites:empty{display:none;margin:0}
+.invite{background:linear-gradient(180deg,color-mix(in srgb,var(--primary) 9%,var(--card)),var(--card));border:1px solid color-mix(in srgb,var(--primary) 40%,var(--line));border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.invite .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:color-mix(in srgb,var(--primary) 20%,transparent);color:var(--accent-dk);flex:none}
+.invite .itxt{flex:1;min-width:200px}
+.invite .itxt .it1{font-weight:600;font-size:14px}
+.invite .itxt .it1 b{font-weight:700}
+.invite .itxt .it2{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:3px}
+.invite .iacts{display:flex;gap:8px;flex:none}
+.invite .iacts button{font:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:9px;cursor:pointer;border:1px solid var(--line);transition:.15s}
+.invite .iacts .acc{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.invite .iacts .acc:hover{opacity:.88}
+.invite .iacts .dec{background:transparent;color:var(--ink-faint)}
+.invite .iacts .dec:hover{border-color:var(--neg);color:var(--neg)}
+.invite .iacts button:disabled{opacity:.5;cursor:default}
+/* amount-confirmation cards reuse .invite; warm amber accent to read as "needs your number" */
+#confirms{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+#confirms:empty{display:none;margin:0}
+.invite.confirm{background:linear-gradient(180deg,color-mix(in srgb,#d98a00 11%,var(--card)),var(--card));border-color:color-mix(in srgb,#d98a00 42%,var(--line))}
+.invite.confirm .ic{background:color-mix(in srgb,#d98a00 20%,transparent);color:#a96a00}
+.invite .iamt{margin-top:6px;display:flex;gap:8px}
+.invite .iamt input{font:inherit;font-size:13px;padding:7px 11px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:150px}
+.invite .iamt button{font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:var(--paper)}
+
+/* stat cards */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:900px){.stats{grid-template-columns:1fr 1fr}}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:.6s}
+.stat .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;display:flex;align-items:center;gap:7px}
+.stat .v{font-family:"Fraunces",serif;font-weight:600;font-size:30px;letter-spacing:-.02em;margin-top:8px;line-height:1}
+.stat .v .cur{font-size:17px;color:var(--ink-faint);vertical-align:super}
+.stat .d{font-size:12px;margin-top:7px;font-family:"JetBrains Mono"}
+.stat .d.up{color:var(--pos)}.stat .d.dn{color:var(--neg)}
+.stat.hero-stat{background:var(--ink);color:var(--paper)}
+.stat.hero-stat .k{color:color-mix(in srgb,var(--paper) 60%,transparent)}
+.stat.hero-stat .v .cur{color:var(--accent-dk)}
+.stat.hero-stat::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 100% 0,color-mix(in srgb,var(--primary) 34%,transparent),transparent 60%)}
+
+/* compact "your plans" list (replaces mockup raw ledger — no combined-ledger endpoint) */
+.plist .prow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:13px 22px;border-top:1px solid var(--line-2);align-items:center}
+.plist .prow:first-child{border-top:none}
+.plist .l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
+.plist .l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.plist .arrow{color:var(--ink-faint);font-family:"JetBrains Mono";font-size:13px}
+
+/* chit panel */
+.chit-body{padding:20px 22px}
+.posbox{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:16px;border-bottom:1px solid var(--line-2)}
+.posbox .pl{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600}
+.posbox .pv{font-family:"Fraunces",serif;font-weight:600;font-size:30px;color:var(--pos);line-height:1;margin-top:6px}
+.posbox .side2{text-align:right;font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.rounds{display:flex;gap:6px;margin:16px 0 8px;flex-wrap:wrap}
+.rd{flex:1;min-width:26px;height:42px;border-radius:8px;background:var(--paper-2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;font-family:"JetBrains Mono";color:var(--ink-faint);position:relative;border:1px solid var(--line-2)}
+.rd.done{background:color-mix(in srgb,var(--pos) 14%,transparent);color:var(--pos);border-color:transparent}
+.rd.now{background:var(--paper);border-color:var(--primary);color:var(--primary-deep)}
+.rd .r{font-weight:700}
+.chit-foot{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-soft);padding-top:12px;font-family:"JetBrains Mono"}
+.chit-foot b{color:var(--ink)}
+
+.emptypanel{padding:34px 22px;text-align:center;color:var(--ink-faint)}
+.emptypanel a{color:var(--primary-deep);font-weight:600}
+
+/* asset ledger rows (ported from mockup .ledger; .pill/.proof live in app.css) */
+.ledger .lrow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:13px 22px;border-top:1px solid var(--line-2)}
+.ledger .l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
+.ledger .amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right}
+.ledger .amt.in{color:var(--pos)} .ledger .amt.out{color:var(--ink)}
+.ledger .l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.ledger .l2r{font-size:11px;color:var(--ink-faint);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
 </style>
 </head>
 <body>
 <div class="app">
+  <!-- sidebar -->
   <aside class="side">
     <a class="brand" href="/app"><span class="glyph"></span> Khata</a>
-    <a class="newplan" href="/create">+ New plan</a>
+    <a class="newplan" href="/create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
     <div class="navsec">Overview</div>
-    <a class="nav-i on" href="/app">Dashboard</a>
-    <a class="nav-i" href="/holdings">Holdings &amp; net worth</a>
+    <a class="nav-i on" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
+    <a class="nav-i" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
     <div class="navsec">Money plans</div>
-    <div class="nav-i" data-filter="asset">Assets <span class="ct" id="ct-asset"></span></div>
-    <div class="nav-i" data-filter="loan">Loans <span class="ct" id="ct-loan"></span></div>
-    <div class="nav-i" data-filter="holding">Holdings <span class="ct" id="ct-holding"></span></div>
-    <div class="nav-i" data-filter="chit">Chit funds <span class="ct" id="ct-chit"></span></div>
-    <div class="nav-i" data-filter="retirement">Retirement <span class="ct" id="ct-retirement"></span></div>
-    <div class="navsec">More</div>
-    <a class="nav-i" href="/features">Features</a>
-    <a class="nav-i" href="/analysis">Analysis</a>
-    <a class="nav-i" href="/settings">Settings</a>
+    <a class="nav-i" href="/app?type=asset" data-nav="asset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i" href="/app?type=chit" data-nav="chit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app?type=loan" data-nav="loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app?type=retirement" data-nav="retirement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <div class="navsec">Records</div>
+    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Ledger</a>
+    <a class="nav-i" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Proofs</a>
+    <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+    <a class="nav-i" id="logout-link" href="#" style="color:var(--neg)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log out</a>
   </aside>
 
+  <!-- main -->
   <main class="main">
-    <header class="top">
-      <div><h1 id="greet">Welcome</h1><div class="sub" id="sub">Your money, your ledger.</div></div>
-      <div class="top-right">
-        <span class="badge" id="basebadge">—</span>
-        <span class="lo" id="logout">Log out</span>
+    <div class="top">
+      <div>
+        <h1 id="greet">Welcome</h1>
+        <div class="sub" id="sub">Your money, your ledger.</div>
       </div>
-    </header>
-    <div class="body">
-      <div class="cards">
-        <div class="stat"><div class="k">Net worth</div><div class="v mono" id="networth">—</div></div>
-        <div class="stat"><div class="k">Paid to date</div><div class="v mono" id="paid">—</div></div>
-        <div class="stat"><div class="k">I owe</div><div class="v mono neg" id="iowe">—</div></div>
-        <div class="stat"><div class="k">Owed to me</div><div class="v mono pos" id="owed">—</div></div>
+      <div class="top-right">
+        <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="INR"><span class="cs">₹</span> INR</button><button data-set="USD"><span class="cs">$</span> USD</button></div>
+        <a class="addbtn" id="logbtn" href="/app"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Log payment</a>
+        <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init" id="ava-init"></span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- pending share invitations (populated by boot) -->
+      <div id="invites"></div>
+      <!-- per-entry amount confirmations awaiting this user (populated by boot) -->
+      <div id="confirms"></div>
+      <!-- stat row -->
+      <div class="stats">
+        <div class="stat hero-stat fade"><div class="k">Net position</div><div class="v"><span class="cur" id="nw-cur">₹</span><span id="networth">—</span></div><div class="d up" style="color:var(--accent-dk)">across all plans</div></div>
+        <div class="stat fade d1"><div class="k">Paid to date</div><div class="v"><span class="cur" id="paid-cur">₹</span><span id="paid">—</span></div><div class="d up" id="paid-d">into your asset plans</div></div>
+        <div class="stat fade d2"><div class="k">I owe</div><div class="v"><span class="cur" id="iowe-cur">₹</span><span id="iowe">—</span></div><div class="d dn">loans you've taken</div></div>
+        <div class="stat fade d3"><div class="k">Owed to me</div><div class="v"><span class="cur" id="owed-cur">₹</span><span id="owed">—</span></div><div class="d up">loans given + chit dividends</div></div>
       </div>
 
-      <div class="chips" id="chips">
-        <span class="chip on" data-f="all">All</span>
-        <span class="chip" data-f="asset">Assets</span>
-        <span class="chip" data-f="loan">Loans</span>
-        <span class="chip" data-f="holding">Holdings</span>
-        <span class="chip" data-f="chit">Chits</span>
-        <span class="chip" data-f="retirement">Retirement</span>
+      <div class="grid2">
+        <!-- left: featured asset + plans list -->
+        <div>
+          <div class="panel fade d2" id="featured"></div>
+          <div class="panel plist fade d3" style="margin-top:22px">
+            <div class="ph"><div class="t" id="plans-title" style="font-size:16px">Your plans</div><div class="meta" id="plans-meta"></div></div>
+            <div id="plans"></div>
+          </div>
+        </div>
+
+        <!-- right column -->
+        <div class="fillcol" id="rightcol"></div>
       </div>
-      <div id="plans"></div>
     </div>
   </main>
 </div>
 
 <script>
-  const $ = (id) => document.getElementById(id);
-  const SYM = { INR: "₹", USD: "$" };
-  let ALL = [];
-  let base = "INR";
+// When arriving with ?type=<asset|chit|loan|retirement>, hide the dashboard-only
+// widgets SYNCHRONOUSLY before first paint, so they don't flash before the focused
+// list renders. (boot() also reasserts this once data loads.)
+(function(){
+  const tf = new URLSearchParams(location.search).get('type');
+  // sidebar highlight — set the active item synchronously so it doesn't flash
+  // "Dashboard" (hardcoded in the static HTML) before switching to the type.
+  document.querySelectorAll('.side .nav-i').forEach(n=>n.classList.remove('on'));
+  const active = tf ? document.querySelector('.side .nav-i[data-nav="'+tf+'"]')
+                    : document.querySelector('.side .nav-i[href="/app"]');
+  if(active) active.classList.add('on');
+  if(!tf) return;
+  const hide = (sel)=>{ const e=document.querySelector(sel); if(e) e.style.display='none'; };
+  hide('.stats'); hide('#featured'); hide('#rightcol');
+  const g=document.querySelector('.grid2'); if(g) g.style.gridTemplateColumns='1fr';
+})();
+const $ = (id) => document.getElementById(id);
+let BASE = "INR";
 
-  function fmtMinor(m, ccy) {
-    if (m === null || m === undefined) return "—";
-    const neg = m < 0, v = Math.abs(m) / 100;
-    return (neg ? "-" : "") + (SYM[ccy] || "") + v.toLocaleString("en-IN", { minimumFractionDigits: 2 });
+// ── currency formatting (real amounts already in BASE; no client-side conversion) ──
+function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
+function usGroup(n){return Math.round(n).toLocaleString('en-US');}
+function sym(ccy){return ccy==='INR'?'₹':'$';}
+// returns the grouped number string only (sign included); caller pairs it with a separate symbol span
+function fmtNum(minor, ccy){
+  if(minor===null||minor===undefined) return '—';
+  const v=minor/100;
+  return ccy==='INR'?indGroup(v):usGroup(v);
+}
+// full formatted amount including symbol (for textContent in inline spots)
+function fmt(minor, ccy){
+  if(minor===null||minor===undefined) return '—';
+  const neg=minor<0, n=fmtNum(Math.abs(minor), ccy);
+  return (neg?'-':'')+sym(ccy)+n;
+}
+
+// helper: an amount cell = <symbol><number>, all textContent (K4)
+function amtSpan(minor, cls){
+  const wrap=document.createElement('span');
+  if(cls) wrap.className=cls;
+  if(minor===null||minor===undefined){ wrap.textContent='—'; return wrap; }
+  const neg=minor<0;
+  const s=document.createElement('span'); s.className='symword'; s.textContent=(neg?'-':'')+sym(BASE);
+  const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(minor), BASE);
+  wrap.append(s,n);
+  return wrap;
+}
+
+function el(tag, cls, text){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined && text!==null) e.textContent=text;
+  return e;
+}
+
+// ── featured asset panel ──
+function renderFeatured(box, plan, state){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t'); t.append(el('span','tag asset','Asset'), document.createTextNode(' '));
+  const nm=el('span'); nm.textContent=plan.name; t.append(nm);
+  const meta=el('div','meta'); meta.textContent=plan.currency+' · '+plan.status;
+  ph.append(t,meta); box.append(ph);
+
+  const total=state.total_price_minor, paid=state.paid_to_date_minor, rem=state.remaining_minor;
+  const pct = total ? Math.round(paid*100/total) : 0;
+  const insts = state.installments || [];
+  const paidCount = insts.filter(i=>i.status==='paid').length;
+
+  const head=el('div','planhead');
+  const amts=el('div','amts');
+  function amt(minor,label){const d=el('div');const n=el('div','n');n.append(amtSpan(minor));d.append(n,el('div','l',label));return d;}
+  amts.append(amt(paid,'Paid'), amt(rem,'Remaining'), amt(total,'Total'));
+  head.append(amts);
+  const bar=el('div','bigbar'); const i=el('i'); i.dataset.w=pct; i.style.background='linear-gradient(90deg,var(--primary),var(--primary-deep))'; bar.append(i); head.append(bar);
+  const row=el('div','row');
+  row.append(el('span', null, pct+'% paid · '+paidCount+' of '+insts.length+' installments'));
+  row.append(el('span', null, state.next_due_seq?('next due · #'+state.next_due_seq):'all installments cleared'));
+  head.append(row);
+  box.append(head);
+
+  const ph2=el('div','ph'); ph2.style.borderTop='1px solid var(--line)';
+  ph2.append(el('div','t','Installment schedule'), el('div','meta','planned vs paid'));
+  ph2.querySelector('.t').style.fontSize='15px';
+  box.append(ph2);
+
+  const sched=el('div','sched');
+  for(const it of insts){
+    const dotCls = it.status==='paid'?'paid':(it.status==='partial'?'part':'due');
+    const srow=el('div','srow');
+    const dot=el('span','dot '+dotCls);
+    dot.textContent = it.status==='paid'?'✓':(it.status==='partial'?'~':String(it.seq));
+    const si=el('div','si');
+    si.append(el('div','nm','Installment #'+it.seq));
+    const statusLabel = it.status==='paid'?'paid in full':(it.status==='partial'?'part paid':'due');
+    si.append(el('div','mt',statusLabel));
+    const sv=el('div','sv');
+    const pa=el('div','pa'); pa.append(amtSpan(it.applied_minor)); if(it.status==='due') pa.style.color='var(--ink-faint)';
+    const pl=el('div','pl'); pl.append(document.createTextNode('planned '), amtSpan(it.planned_amount_minor));
+    sv.append(pa,pl);
+    srow.append(dot,si,sv);
+    sched.append(srow);
   }
+  if(!insts.length){ sched.append(el('div','emptypanel','No installments scheduled.')); }
+  box.append(sched);
 
-  function planTag(p) {
-    if (p.type === "loan") return (p.direction || "loan");
-    if (p.type === "holding") return (p.asset_class || "holding");
-    return "asset";
-  }
-
-  function render(filter) {
-    const rows = filter === "all" ? ALL : ALL.filter((p) => p.type === filter);
-    const box = $("plans");
-    box.textContent = "";
-    if (!rows.length) {
-      const e = document.createElement("div"); e.className = "empty";
-      e.textContent = "No plans yet. Create one to get started.";
-      box.appendChild(e); return;
+  // ── ledger (newest first; real state.ledger rows) ──
+  const ledger = (state.ledger || []).slice().sort((a,b)=>String(b.occurred_at||'').localeCompare(String(a.occurred_at||'')));
+  if(ledger.length){
+    const ph3=el('div','ph'); ph3.style.borderTop='1px solid var(--line)';
+    const t3=el('div','t','Ledger'); t3.style.fontSize='15px';
+    const m3=el('div','meta'); m3.append(document.createTextNode('balance '), amtSpan(rem));
+    ph3.append(t3,m3);
+    box.append(ph3);
+    const led=el('div','ledger');
+    for(const r of ledger){
+      const inn = r.direction==='in';
+      const row=el('div','lrow');
+      row.append(el('div','l1', r.note || r.kind || 'Entry'));
+      const amt=el('div','amt '+(inn?'in':'out'));
+      const sign=el('span'); sign.textContent=inn?'+':'−';
+      amt.append(sign, amtSpan(Math.abs(r.amount_minor)));
+      row.append(amt);
+      row.append(el('div','l2', fmtDate(r.occurred_at)));
+      const l2r=el('div','l2r');
+      if(r.method) l2r.append(el('span','pill', r.method));
+      if(r.funding_source) l2r.append(el('span','pill', String(r.funding_source).replace(/_/g,' ')));
+      if(r.has_proof){ const pf=el('span','proof'); pf.append(document.createTextNode('▣ proof')); l2r.append(pf); }
+      row.append(l2r);
+      led.append(row);
     }
-    for (const p of rows) {
-      const row = document.createElement("a"); row.className = "plan";
-      row.href = "/" + p.type + "/" + p.id; row.style.color = "inherit";
-      const left = document.createElement("div");
-      const nm = document.createElement("div"); nm.className = "nm"; nm.textContent = p.name;
-      const meta = document.createElement("div"); meta.className = "meta";
-      meta.textContent = p.type + " · " + p.currency + " · " + p.status;
-      left.append(nm, meta);
-      const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = planTag(p);
-      row.append(left, tag);
-      box.appendChild(row);
+    box.append(led);
+  }
+}
+
+// format an ISO occurred_at into "DD Mon · HH:MM"
+function fmtDate(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  if(isNaN(d)) return String(iso);
+  const day=String(d.getDate()).padStart(2,'0');
+  const mon=d.toLocaleString('en-US',{month:'short'});
+  const hh=String(d.getHours()).padStart(2,'0');
+  const mm=String(d.getMinutes()).padStart(2,'0');
+  return day+' '+mon+' · '+hh+':'+mm;
+}
+
+// ── stat card #2 "Paid to date" month-delta subtitle ──
+// derives a REAL "most recent month with out-payments" figure from the featured
+// asset ledger; labels it with that month's actual name (not "this month").
+function setPaidMonthDelta(ledger){
+  const sub=$('paid-d');
+  if(!sub || !Array.isArray(ledger)) return;
+  const outs=ledger.filter(r=>r && r.direction==='out' && r.occurred_at && r.amount_minor!=null);
+  if(!outs.length) return; // leave existing honest text
+  // most recent YYYY-MM among out-payments
+  let latestKey='';
+  for(const r of outs){
+    const key=String(r.occurred_at).slice(0,7); // YYYY-MM
+    if(key>latestKey) latestKey=key;
+  }
+  if(!latestKey) return;
+  let sum=0;
+  for(const r of outs){ if(String(r.occurred_at).slice(0,7)===latestKey) sum+=Math.abs(r.amount_minor); }
+  const [y,m]=latestKey.split('-');
+  const monthName=new Date(Number(y), Number(m)-1, 1).toLocaleString('en-US',{month:'long'});
+  sub.textContent='';
+  sub.append(document.createTextNode('▲ '));
+  sub.append(amtSpan(sum));
+  sub.append(document.createTextNode(' · '+monthName+' '+y));
+  sub.classList.add('up');
+}
+
+function renderFeaturedEmpty(box){
+  box.textContent='';
+  const ph=el('div','ph');
+  ph.append(el('div','t','Featured asset'), el('div','meta','asset plans'));
+  box.append(ph);
+  const e=el('div','emptypanel');
+  e.append(document.createTextNode('No asset plans yet — '));
+  const a=el('a'); a.href='/create'; a.textContent='create one'; e.append(a);
+  box.append(e);
+}
+
+// ── right column panels ──
+function liabPanel(loans){
+  const p=el('div','panel liab fade d3');
+  const ph=el('div','ph');
+  ph.append(el('div','t','Liabilities'), el('div','meta','owed by me'));
+  ph.querySelector('.t').style.fontSize='16px';
+  p.append(ph);
+  for(const x of loans){
+    const st=x.state;
+    const row=el('div','lrow2');
+    const left=el('div');
+    left.append(el('div','nm', x.plan.counterparty || x.plan.name));
+    const rateLabel = (x.plan.rate_bps && x.plan.rate_bps>0) ? ((x.plan.rate_bps/100)+'% interest') : 'no interest';
+    left.append(el('div','mt', rateLabel));
+    // miniprog: interest-due as fraction of total outstanding (honest, derivable)
+    const total=st.total_minor||0, idue=st.interest_due_minor||0;
+    const frac = total ? Math.min(100, Math.round(idue*100/total)) : 0;
+    const mp=el('div','miniprog'); const mi=el('i'); mi.dataset.w=frac; mp.append(mi); left.append(mp);
+    const rt=el('div','rt');
+    rt.append(amtSpan(st.total_minor,'a'));
+    const l=el('div','l'); l.append(document.createTextNode('outstanding')); rt.append(l);
+    row.append(left,rt);
+    p.append(row);
+  }
+  return p;
+}
+
+function chitPanel(c){
+  const st=c.state;
+  const p=el('div','panel fade d3');
+  const ph=el('div','ph');
+  const t=el('div','t'); t.append(el('span','tag chit','Chit'), document.createTextNode(' '));
+  const nm=el('span'); nm.textContent=c.plan.name; t.append(nm);
+  // real-signal badges: Auction (commission>0), Organizer (owner role)
+  const badges=el('div'); badges.style.cssText='display:inline-flex;gap:6px;margin-left:8px';
+  const pill=(txt)=>{ const s=el('span'); s.textContent=txt; s.style.cssText='font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)'; return s; };
+  if((st.commission_bps||0)>0) badges.append(pill('Auction'));
+  if(((window.__roleById||{})[c.plan.id])==='owner') badges.append(pill('Organizer'));
+  if(badges.children.length) t.append(badges);
+  ph.append(t, el('div','meta', st.n_members+' members'));
+  p.append(ph);
+  const body=el('div','chit-body');
+  const pos=el('div','posbox');
+  const posL=el('div');
+  posL.append(el('div','pl','My net position'));
+  const pv=el('div','pv'); pv.append(amtSpan(st.net_position_minor)); posL.append(pv);
+  const side=el('div','side2');
+  side.append(document.createTextNode('contribution '));
+  side.append(amtSpan(st.subscription_minor));
+  side.append(document.createTextNode('/mo'));
+  pos.append(posL, side);
+  body.append(pos);
+  // rounds strip
+  const rounds=el('div','rounds');
+  const n=st.n_members||0, rec=st.months_recorded||0;
+  for(let k=1;k<=n;k++){
+    let cls='rd';
+    if(k<=rec) cls='rd done';
+    else if(k===rec+1) cls='rd now';
+    const rd=el('div',cls);
+    rd.append(el('span','r',String(k)));
+    if(k===rec+1 && k<=n) rd.append(document.createTextNode('now'));
+    rounds.append(rd);
+  }
+  body.append(rounds);
+  const foot=el('div','chit-foot');
+  const f1=el('span'); f1.append(document.createTextNode('dividends earned · ')); const b=el('b'); b.append(amtSpan(st.total_dividends_minor)); f1.append(b);
+  const f2=el('span', null, rec+' of '+n+' rounds recorded');
+  foot.append(f1,f2);
+  body.append(foot);
+  p.append(body);
+  return p;
+}
+
+function loanGivenPanel(g){
+  const st=g.state;
+  const p=el('div','panel fade d4 fill');
+  const ph=el('div','ph');
+  const t=el('div','t'); t.append(el('span','tag chit','Lent'), document.createTextNode(' '));
+  const nm=el('span'); nm.textContent=g.plan.counterparty || g.plan.name; t.append(nm);
+  t.style.fontSize='16px';
+  const rateLabel=(g.plan.rate_bps && g.plan.rate_bps>0)?('given · '+(g.plan.rate_bps/100)+'%'):'given · no interest';
+  ph.append(t, el('div','meta', rateLabel));
+  p.append(ph);
+  const rows=el('div','fillrows'); rows.style.padding='18px 22px';
+  const splitBox=el('div'); splitBox.style.cssText='display:flex;justify-content:space-between;align-items:flex-end';
+  const L=el('div');
+  const lLbl=el('div', null, 'Principal outstanding'); lLbl.style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600'; L.append(lLbl);
+  const lv=el('div'); lv.style.cssText='font-family:Fraunces,serif;font-weight:600;font-size:28px;color:var(--pos);line-height:1;margin-top:5px'; lv.append(amtSpan(st.principal_outstanding_minor)); L.append(lv);
+  const R=el('div'); R.style.textAlign='right';
+  const rLbl=el('div', null, 'Interest due'); rLbl.style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600'; R.append(rLbl);
+  const rv=el('div','mono'); rv.style.cssText='font-weight:700;font-size:17px;color:var(--primary-deep);margin-top:5px'; rv.append(amtSpan(st.interest_due_minor)); R.append(rv);
+  splitBox.style.borderBottom='1px solid var(--line-2)';
+  splitBox.style.paddingBottom='14px';
+  splitBox.append(L,R);
+  rows.append(splitBox);
+
+  // tranche rows: disbursement ledger entries (oldest first), couple of them
+  const disb=(st.ledger||[]).filter(r=>r.kind==='disbursement')
+    .sort((a,b)=>String(a.occurred_at||'').localeCompare(String(b.occurred_at||'')));
+  if(disb.length){
+    const tr=el('div'); tr.style.cssText='margin-top:14px;display:grid;gap:9px';
+    disb.forEach((r,i)=>{
+      const line=el('div'); line.style.cssText='display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink-soft)';
+      line.append(el('span', null, '▸ '+(r.note||'Tranche')+' · '+fmtDate(r.occurred_at).split(' · ')[0]));
+      const v=el('span','mono'); v.style.fontWeight='600';
+      if(i>0) v.append(document.createTextNode('+'));
+      v.append(amtSpan(r.amount_minor));
+      line.append(v);
+      tr.append(line);
+    });
+    rows.append(tr);
+  }
+
+  // foot: interest received
+  if(st.interest_paid_minor!==undefined && st.interest_paid_minor!==null){
+    const foot=el('div','chit-foot');
+    foot.style.cssText='border-top:1px solid var(--line-2);margin-top:13px;padding-top:12px';
+    const f1=el('span'); f1.append(document.createTextNode('interest received · '));
+    const b=el('b'); b.append(amtSpan(st.interest_paid_minor)); f1.append(b);
+    foot.append(f1);
+    rows.append(foot);
+  }
+
+  p.append(rows);
+  return p;
+}
+
+// ── pending share invitations ──
+const PLAN_TYPE_LABEL={asset:'asset plan',loan:'loan',holding:'holding',chit:'chit fund',retirement:'retirement plan'};
+const artLabel=(t)=>{const l=PLAN_TYPE_LABEL[t]||'plan';return (/^[aeiou]/i.test(l)?'an ':'a ')+l;};
+async function renderInvites(){
+  const box=$('invites'); if(!box) return;
+  let invs=[];
+  try{ invs=(await fetch('/api/invitations').then(r=>r.json())).invitations||[]; }catch(_){ return; }
+  box.textContent='';
+  invs.forEach(inv=>{
+    const card=el('div','invite');
+    const ic=el('div','ic'); ic.innerHTML='';
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('width','19');svg.setAttribute('height','19');svg.setAttribute('viewBox','0 0 24 24');
+    svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2');
+    const pa=document.createElementNS('http://www.w3.org/2000/svg','path');
+    pa.setAttribute('d','M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2');svg.appendChild(pa);
+    const ci=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ci.setAttribute('cx','9');ci.setAttribute('cy','7');ci.setAttribute('r','4');svg.appendChild(ci);
+    const p2=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p2.setAttribute('d','M19 8v6M22 11h-6');svg.appendChild(p2);
+    ic.appendChild(svg);
+
+    const txt=el('div','itxt');
+    const t1=el('div','it1');
+    const by=el('b',null,inv.shared_by||inv.shared_by_email||'Someone');
+    t1.append(by, document.createTextNode(' shared '+artLabel(inv.plan_type)+' with you'));
+    const t2=el('div','it2', '“'+inv.plan_name+'” · '+(inv.role||'contributor')+' · awaiting your approval');
+    txt.append(t1,t2);
+
+    const acts=el('div','iacts');
+    const acc=el('button','acc','Accept'); const dec=el('button','dec','Decline');
+    const respond=async(accept)=>{
+      acc.disabled=true; dec.disabled=true;
+      try{
+        const r=await fetch('/api/invitations/'+inv.plan_id+'/'+(accept?'accept':'decline'),{method:'POST'});
+        if(r.ok){ card.remove(); if(accept) location.reload(); }
+        else { acc.disabled=false; dec.disabled=false; }
+      }catch(_){ acc.disabled=false; dec.disabled=false; }
+    };
+    acc.addEventListener('click',()=>respond(true));
+    dec.addEventListener('click',()=>respond(false));
+    acts.append(acc,dec);
+    card.append(ic,txt,acts);
+    box.appendChild(card);
+  });
+}
+
+// ── per-entry amount confirmations ──
+function svgIcon(paths){
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width','19');svg.setAttribute('height','19');svg.setAttribute('viewBox','0 0 24 24');
+  svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2');
+  paths.forEach(d=>{const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d',d);svg.appendChild(p);});
+  return svg;
+}
+async function renderConfirms(){
+  const box=$('confirms'); if(!box) return;
+  let cs=[];
+  try{ cs=(await fetch('/api/confirmations').then(r=>r.json())).confirmations||[]; }catch(_){ return; }
+  box.textContent='';
+  cs.forEach(c=>{
+    const card=el('div','invite confirm');
+    const ic=el('div','ic'); ic.appendChild(svgIcon(['M12 1v22','M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6']));
+    const txt=el('div','itxt');
+    const t1=el('div','it1');
+    const cur=PLAN_TYPE_LABEL[c.plan_type]||'plan';
+    if(c.your_role==='contributor'){
+      t1.append(el('b',null,c.from_name||'The owner'),
+        document.createTextNode(' attributed '+fmt(c.amount_minor,c.currency)+' to you'));
+    }else{
+      t1.append(el('b',null,c.from_name||'A contributor'),
+        document.createTextNode(' proposes '+fmt(c.counter_amount_minor,c.currency)+
+          ' (you recorded '+fmt(c.amount_minor,c.currency)+')'));
+    }
+    const t2=el('div','it2','“'+c.plan_name+'” · '+cur+' · needs your confirmation');
+    txt.append(t1,t2);
+
+    const acts=el('div','iacts');
+    const primary=el('button','acc', c.your_role==='owner' ? ('Accept '+fmt(c.counter_amount_minor,c.currency)) : 'Confirm');
+    const counter=el('button','dec', c.your_role==='owner' ? 'Counter' : 'Propose correction');
+    acts.append(primary,counter);
+
+    // inline amount entry for the counter/propose action
+    const amtBox=el('div','iamt'); amtBox.style.display='none'; amtBox.style.flexBasis='100%';
+    const inp=el('input'); inp.placeholder='e.g. 2,50,000';
+    const send=el('button',null,'Send'); amtBox.append(inp,send);
+
+    const post=async(body, btns)=>{
+      btns.forEach(b=>b.disabled=true);
+      try{
+        const r=await fetch('/api/plans/'+c.plan_id+'/entries/'+c.entry_id+'/amount',{
+          method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        if(r.ok){ card.remove(); location.reload(); }
+        else { btns.forEach(b=>b.disabled=false); }
+      }catch(_){ btns.forEach(b=>b.disabled=false); }
+    };
+    primary.addEventListener('click',()=>post({action: c.your_role==='owner'?'accept':'confirm'},[primary,counter]));
+    counter.addEventListener('click',()=>{ amtBox.style.display=amtBox.style.display==='none'?'flex':'none'; inp.focus(); });
+    send.addEventListener('click',()=>{ if(inp.value.trim()) post({action:'counter',amount:inp.value.trim()},[send]); });
+
+    card.append(ic,txt,acts,amtBox);
+    box.appendChild(card);
+  });
+}
+
+// ── boot ──
+async function boot(){
+  const me = await fetch('/api/auth/me');
+  if(me.status===401){ window.location.href='/'; return; }
+  const user=(await me.json()).user;
+  renderInvites();
+  renderConfirms();
+  const name=user.display_name||'there';
+  const h=new Date().getHours();
+  const part = h<12?'morning':(h<17?'afternoon':'evening');
+  $('greet').textContent='Good '+part+', '+name;
+  $('ava-init').textContent=(name[0]||'?').toUpperCase();
+
+  const [nw, dash, plansResp] = await Promise.all([
+    fetch('/api/networth').then(r=>r.json()),
+    fetch('/api/dashboard').then(r=>r.json()),
+    fetch('/api/plans').then(r=>r.json()),
+  ]);
+  BASE = nw.base_currency || 'INR';
+  // role per plan id (from /api/dashboard) — used for the chit "Organizer" badge
+  const roleById = {};
+  (dash.plans || []).forEach(p => { roleById[p.id] = p.role; });
+  window.__roleById = roleById;
+  document.documentElement.dataset.cur = BASE.toLowerCase();
+  // currency toggle highlight
+  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));
+  document.querySelectorAll('.stat .cur').forEach(c=>c.textContent=sym(BASE));
+
+  const plans = plansResp.plans || [];
+  $('sub').textContent = new Date().toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'}) + ' · ' + plans.length + ' active plans';
+
+  // stat cards
+  $('networth').textContent = fmtNum(nw.net_worth_minor, BASE);
+  $('paid').textContent = fmtNum(dash.paid_to_date_minor, BASE);
+  $('iowe').textContent = fmtNum(dash.i_owe_minor, BASE);
+  $('owed').textContent = fmtNum(dash.owed_to_me_minor, BASE);
+
+  // sidebar counts
+  const by=(t)=>plans.filter(p=>p.type===t).length||'';
+  $('ct-asset').textContent=by('asset');
+  $('ct-chit').textContent=by('chit');
+  $('ct-loan').textContent=by('loan');
+  $('ct-retirement').textContent=by('retirement');
+
+  // "your plans" list — filtered by ?type=<asset|chit|loan|retirement> from the sidebar
+  const typeFilter = new URLSearchParams(location.search).get('type');
+  const TLABEL = {asset:'Assets', chit:'Chit funds', loan:'Loans', retirement:'401(k)'};
+  const shown = typeFilter ? plans.filter(p=>p.type===typeFilter) : plans;
+  // highlight the active sidebar item (Dashboard when no filter)
+  document.querySelectorAll('.side .nav-i').forEach(n=>n.classList.remove('on'));
+  if(typeFilter){ const navEl=document.querySelector('.side .nav-i[data-nav="'+typeFilter+'"]'); if(navEl) navEl.classList.add('on'); }
+  else { const dash=document.querySelector('.side .nav-i[href="/app"]'); if(dash) dash.classList.add('on'); }
+  const ptitle=$('plans-title'); if(ptitle) ptitle.textContent = typeFilter ? (TLABEL[typeFilter]||'Plans') : 'Your plans';
+  const pmeta=$('plans-meta'); pmeta.textContent = shown.length+(shown.length===1?' plan':' plans');
+  // Focused list view when a type is picked: hide the dashboard widgets (stat cards,
+  // featured panel, liabilities/lent) so it's a clean list, not "the dashboard".
+  if(typeFilter){
+    const stats=document.querySelector('.stats'); if(stats) stats.style.display='none';
+    if($('featured')) $('featured').style.display='none';
+    if($('rightcol')) $('rightcol').style.display='none';
+    const g=document.querySelector('.grid2'); if(g) g.style.gridTemplateColumns='1fr';
+    const pl=$('plans') && $('plans').closest('.panel'); if(pl) pl.style.marginTop='0';
+    // greeting sub reflects the view
+    const sub=$('sub'); if(sub) sub.textContent = (TLABEL[typeFilter]||'Plans')+' · '+shown.length+(shown.length===1?' plan':' plans');
+  }
+  const plist=$('plans');
+  if(!shown.length){
+    const e=el('div','emptypanel');
+    e.append(document.createTextNode(typeFilter ? ('No '+(TLABEL[typeFilter]||'plans').toLowerCase()+' yet — ') : 'No plans yet — '));
+    const a=el('a'); a.href='/create'; a.textContent='create one'; e.append(a);
+    plist.append(e);
+  } else {
+    for(const p of shown){
+      const row=document.createElement('a'); row.className='prow'; row.href='/'+p.type+'/'+p.id;
+      const left=el('div');
+      const l1=el('div','l1'); l1.append(el('span','tag '+p.type, p.type), document.createTextNode(' '));
+      const pn=el('span'); pn.textContent=p.name; l1.append(pn); left.append(l1);
+      left.append(el('div','l2', (p.currency||'')+' · '+(p.role||'owner')));
+      const ar=el('div','arrow','→');
+      row.append(left, ar);
+      plist.append(row);
     }
   }
+  if(typeFilter){ const panel=plist.closest('.panel'); if(panel) panel.scrollIntoView({behavior:'smooth', block:'center'}); }
 
-  async function boot() {
-    const me = await fetch("/api/auth/me");
-    if (me.status === 401) { window.location.href = "/"; return; }
-    const user = (await me.json()).user;
-    $("greet").textContent = "Hello, " + user.display_name;
-
-    const [nw, dash, plans] = await Promise.all([
-      fetch("/api/networth").then((r) => r.json()),
-      fetch("/api/dashboard").then((r) => r.json()),
-      fetch("/api/plans").then((r) => r.json()),
-    ]);
-    base = nw.base_currency || "INR";
-    $("basebadge").textContent = "Base " + base;
-    $("networth").textContent = fmtMinor(nw.net_worth_minor, base);
-    $("paid").textContent = fmtMinor(dash.paid_to_date_minor, base);
-    $("iowe").textContent = fmtMinor(dash.i_owe_minor, base);
-    $("owed").textContent = fmtMinor(dash.owed_to_me_minor, base);
-
-    ALL = plans.plans || [];
-    const by = (t) => ALL.filter((p) => p.type === t).length || "";
-    $("ct-asset").textContent = by("asset");
-    $("ct-loan").textContent = by("loan");
-    $("ct-holding").textContent = by("holding");
-    $("ct-chit").textContent = by("chit");
-    $("ct-retirement").textContent = by("retirement");
-    render("all");
+  // featured asset
+  const assets = plans.filter(p=>p.type==='asset');
+  const featBox=$('featured');
+  if(assets.length){
+    $('logbtn').href='/asset/'+assets[0].id;
+    try{
+      const d=await fetch('/api/plans/'+assets[0].id).then(r=>r.json());
+      renderFeatured(featBox, d.plan, d.state);
+      try{ setPaidMonthDelta(d.state && d.state.ledger); }
+      catch(err){ console.error('paid month-delta failed', err); }
+    }catch(e){ renderFeaturedEmpty(featBox); }
+  } else {
+    renderFeaturedEmpty(featBox);
   }
 
-  document.querySelectorAll("#chips .chip").forEach((c) => {
-    c.addEventListener("click", () => {
-      document.querySelectorAll("#chips .chip").forEach((x) => x.classList.remove("on"));
-      c.classList.add("on");
-      render(c.dataset.f);
-    });
-  });
-  document.querySelectorAll(".nav-i[data-filter]").forEach((n) => {
-    n.addEventListener("click", () => {
-      const f = n.dataset.filter;
-      document.querySelectorAll("#chips .chip").forEach((x) => x.classList.toggle("on", x.dataset.f === f));
-      render(f);
-    });
-  });
-  $("logout").addEventListener("click", async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/";
-  });
+  // right column: fetch details for loans + chits (parallel)
+  const loanPlans = plans.filter(p=>p.type==='loan');
+  const chitPlans = plans.filter(p=>p.type==='chit');
+  const need = [...loanPlans, ...chitPlans];
+  const details = {};
+  await Promise.all(need.map(async p=>{
+    try{ details[p.id]=await fetch('/api/plans/'+p.id).then(r=>r.json()); }catch(e){}
+  }));
 
-  boot();
+  const right=$('rightcol');
+  const taken=[], given=[];
+  for(const p of loanPlans){
+    const d=details[p.id]; if(!d) continue;
+    const dir = (d.plan.direction)||(d.state&&d.state.direction);
+    if(dir==='taken') taken.push(d);
+    else if(dir==='given') given.push(d);
+  }
+  // order: chit, then liabilities, then lent (given)
+  // each panel append is isolated so one failing panel can't blank the column
+  for(const p of chitPlans){
+    try{ const d=details[p.id]; if(d) right.append(chitPanel(d)); }
+    catch(err){ console.error('chitPanel failed for plan '+p.id, err); }
+  }
+  if(taken.length){
+    try{ right.append(liabPanel(taken)); }
+    catch(err){ console.error('liabPanel failed', err); }
+  }
+  for(const d of given){
+    try{ right.append(loanGivenPanel(d)); }
+    catch(err){ console.error('loanGivenPanel failed for plan '+(d&&d.plan&&d.plan.id), err); }
+  }
+  if(!right.children.length){
+    const p=el('div','panel fade d3');
+    const ph=el('div','ph'); ph.append(el('div','t','Activity'), el('div','meta','')); ph.querySelector('.t').style.fontSize='16px';
+    p.append(ph);
+    const e=el('div','emptypanel');
+    e.append(document.createTextNode('No loans or chit funds yet — '));
+    const a=el('a'); a.href='/create'; a.textContent='create a plan'; e.append(a);
+    p.append(e);
+    right.append(p);
+  }
+
+  // trigger width animations after render
+  setTimeout(()=>document.querySelectorAll('[data-w]').forEach(b=>b.style.width=b.dataset.w+'%'),350);
+}
+
+// ── currency toggle: real base-currency switch ──
+$('curtog').addEventListener('click', async (e)=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const target=b.dataset.set;
+  if(target===BASE) return;
+  await fetch('/api/base-currency',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({currency:target})});
+  location.reload();
+});
+
+// ── log out ──
+(function(){ var lo=document.getElementById('logout-link'); if(!lo) return;
+  lo.addEventListener('click', async function(e){ e.preventDefault();
+    try{ await fetch('/api/auth/logout',{method:'POST'}); }catch(_){}
+    window.location.href='/'; }); })();
+
+// ── profile photo upload (localStorage, display-only) ──
+(function(){var av=document.getElementById("avatar");if(!av)return;try{localStorage.removeItem("khata_avatar");}catch(e){}var inp=av.querySelector("input");if(inp)inp.disabled=true;av.title="Edit photo in Settings";av.style.cursor="pointer";av.addEventListener("click",function(e){e.preventDefault();window.location.href="/settings";});fetch("/api/auth/me").then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&d.user&&d.user.avatar){av.style.backgroundImage='url("'+d.user.avatar+'")';av.classList.add("has-img");}else{av.style.backgroundImage="";av.classList.remove("has-img");}}).catch(function(){});})();
+
+boot();
 </script>
 </body>
 </html>
