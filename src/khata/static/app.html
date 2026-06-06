@@ -205,6 +205,28 @@ function el(tag, cls, text){
   return e;
 }
 
+// ── per-plan meta line (differentiates rows in the list before opening) ──
+const LOAN_KIND_SHORT={personal:'Personal',gold:'Gold',home:'Home',vehicle:'Vehicle',education:'Education',business:'Business',other:'Other'};
+function planMeta(p){
+  const parts=[];
+  if(p.type==='loan'){
+    if(p.kind && LOAN_KIND_SHORT[p.kind]) parts.push(LOAN_KIND_SHORT[p.kind]);
+    if(p.counterparty) parts.push((p.direction==='given'?'to ':'from ')+p.counterparty);
+    else if(p.direction) parts.push(p.direction==='given'?'lent out':'borrowed');
+    if(p.rate_bps && p.interest_type && p.interest_type!=='none') parts.push((p.rate_bps/100)+'%/yr');
+  } else if(p.type==='holding'){
+    if(p.asset_class) parts.push(p.asset_class);
+    if(p.symbol) parts.push(p.symbol);
+  } else if(p.type==='chit'){
+    if(p.n_members) parts.push(p.n_members+' members');
+  } else if(p.type==='retirement'){
+    if(p.current_age && p.retirement_age) parts.push(p.current_age+'→'+p.retirement_age+' yrs');
+  }
+  parts.push(p.currency||'');
+  if(p.role && p.role!=='owner') parts.push(p.role);
+  return parts.filter(Boolean).join(' · ');
+}
+
 // ── featured asset panel ──
 function renderFeatured(box, plan, state){
   box.textContent='';
@@ -639,16 +661,42 @@ async function boot(){
     const a=el('a'); a.href='/create'; a.textContent='create one'; e.append(a);
     plist.append(e);
   } else {
+    const fillLoans=[];
     for(const p of shown){
       const row=document.createElement('a'); row.className='prow'; row.href='/'+p.type+'/'+p.id;
       const left=el('div');
       const l1=el('div','l1'); l1.append(el('span','tag '+p.type, p.type), document.createTextNode(' '));
-      const pn=el('span'); pn.textContent=p.name; l1.append(pn); left.append(l1);
-      left.append(el('div','l2', (p.currency||'')+' · '+(p.role||'owner')));
+      const pn=el('span'); pn.textContent=p.name; l1.append(pn);
+      // a small category chip on loans so two same-named loans still differ at a glance
+      if(p.type==='loan' && p.kind && p.kind!=='personal'){
+        const chip=el('span', null, (LOAN_KIND_SHORT[p.kind]||p.kind));
+        chip.style.cssText='font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:color-mix(in srgb,var(--primary) 14%,transparent);color:var(--accent-dk)';
+        l1.append(chip);
+      }
+      left.append(l1);
+      left.append(el('div','l2', planMeta(p)));
+      const right=el('div'); right.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;justify-content:center';
+      const amt=el('div'); amt.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px';
       const ar=el('div','arrow','→');
-      row.append(left, ar);
+      right.append(amt, ar);
+      row.append(left, right);
       plist.append(row);
+      if(p.type==='loan') fillLoans.push({p, amt, right, ar});
     }
+    // enrich loan rows with the outstanding amount + LTV (needs derived state)
+    Promise.all(fillLoans.map(async ({p, amt, right, ar})=>{
+      try{
+        const d=await fetch('/api/plans/'+p.id).then(r=>r.json());
+        const st=d.state||{};
+        amt.textContent = fmt(st.principal_outstanding_minor, st.currency||p.currency);
+        const cap=el('div'); cap.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono"';
+        if(st.gold_collateral && st.gold_collateral.ltv_pct!=null){
+          cap.textContent='LTV '+st.gold_collateral.ltv_pct+'%';
+          if(st.gold_collateral.ltv_pct>75) cap.style.color='var(--neg)';
+        } else { cap.textContent='outstanding'; }
+        right.insertBefore(cap, ar);
+      }catch(e){}
+    }));
   }
   if(typeFilter){ const panel=plist.closest('.panel'); if(panel) panel.scrollIntoView({behavior:'smooth', block:'center'}); }
 

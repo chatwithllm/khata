@@ -152,6 +152,13 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-06 — Differentiable plan rows in the list (esp. loans).** The dashboard "Your plans" / filtered
+  list showed only "<Name> · INR · owner" — two same-named gold loans were indistinguishable before opening.
+  Now each row has a `planMeta(p)` line built from the summary (loan → "Gold · from SBI · 7.5%/yr"; holding →
+  asset_class · symbol; chit → N members; retirement → age range) + a small category **chip** on non-personal
+  loans, and **loan rows fetch state** to show the **outstanding amount** on the right with a caption
+  ("outstanding", or **"LTV 86%"** colour-flagged for gold loans). So "Gold · from SBI · ₹2,00,000 · LTV 86%"
+  vs "Gold · from Muthoot · ₹40,000 · LTV 84%" read apart at a glance. Client-only (app.html); no API change.
 - **2026-06-06 — Gold-loan collateral details + loan-to-value.** When the loan kind is gold, create-plan and
   edit-terms reveal a **Gold pledged** block: weight (grams / troy oz), the rate at loan time (per gram /
   per 10 g / per troy oz), and market value (auto-filled = weight × rate, editable). Stored inline on the loan
@@ -320,6 +327,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-06 — Plan-list rows differentiate (esp. loans): meta line (Gold · from SBI · 7.5%/yr), category chip, + outstanding amount and LTV fetched per loan row — two same-named gold loans now read apart before opening. Client-only (app.html planMeta).
 - 2026-06-06 — Gold-loan collateral: weight/rate/market-value inputs on create + edit (shown for kind=gold, value auto-computed), shown in loan-detail glance with loan-to-value. `loans.collateral_*` cols + migration `cb5goldcoll01`, `loan_state.gold_collateral`.
 - 2026-06-06 — Loan category (`loans.kind`: personal/gold/home/vehicle/education/business/other), picked at create + editable. loan-detail shows a Type row and a meaningful Security line (gold→"secured · gold" etc.) instead of bare "unsecured". Migration `ca4loankind01`.
 - 2026-06-05 — Loan shop-around comparison: loan-detail "Compare lenders" panel — current loan vs user offers ranked by total cost + fee-inclusive effective APR (exposes low-rate/high-fee loans). `loans.compare_offers`, `_apr_bps` (IRR), `POST /api/plans/<id>/loan/compare`.
