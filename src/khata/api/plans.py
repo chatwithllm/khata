@@ -48,7 +48,7 @@ def _summary(plan: Plan) -> dict:
     if plan.type == "loan" and plan.loan is not None:
         base.update({"direction": plan.loan.direction, "interest_type": plan.loan.interest_type,
                      "rate_bps": plan.loan.rate_bps, "counterparty": plan.loan.counterparty,
-                     "secured": plan.loan.secured,
+                     "secured": plan.loan.secured, "kind": plan.loan.kind,
                      "start_date": plan.loan.start_date.isoformat() if plan.loan.start_date else None,
                      "tenure_months": plan.loan.tenure_months})
     elif plan.type == "holding" and plan.holding is not None:
@@ -130,7 +130,7 @@ def create():
                 interest_type=interest_type,
                 rate_bps=pct_to_bps(data.get("rate", "0")) if interest_type != "none" else 0,
                 start_date=date.fromisoformat(data["start_date"]) if data.get("start_date") else date.today(),
-                tenure_months=data.get("tenure_months"))
+                tenure_months=data.get("tenure_months"), kind=data.get("loan_kind") or "personal")
             if data.get("collateral_plan_id"):
                 loans.set_collateral(g.db, plan=plan,
                                      collateral_plan_id=data.get("collateral_plan_id"))
@@ -207,6 +207,8 @@ def update_plan(plan_id):
             for k in ("direction", "counterparty", "interest_type"):
                 if k in data:
                     kw[k] = data.get(k)
+            if "loan_kind" in data:
+                kw["kind"] = data.get("loan_kind")
             if "rate" in data:
                 kw["rate_bps"] = pct_to_bps(data.get("rate", "0"))
             if "start_date" in data:
