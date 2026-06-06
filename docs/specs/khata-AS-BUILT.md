@@ -331,6 +331,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-06 — Cross-currency funding link: a contribution funded by a loan in a DIFFERENT currency now renders in its own currency on the loan's "Deployed into" (per-currency totals, no nonsensical cross-currency sum; row flags the currency). `loan_state.deployed[].currency` + `deployed_totals`.
 - 2026-06-06 — A plan contributor can now edit/delete their OWN ledger entries (was owner-only → 403 'forbidden' for a member editing their contribution). Owner still required to re-attribute an entry to someone else. Missing entry now → 404 (was 400).
 - 2026-06-06 — Cross-plan funding link: an asset contribution can point to the loan it came from (`funding_plan_id`); asset ledger shows “↗ loan”, loan shows a “Deployed into” panel. Full loan→asset→payoff chain. Migration `cc6fundlink01`.
 - 2026-06-06 — Assets list enriched like loans: row meta shows total · schedule/ad-hoc · joint contributors, right side shows amount paid + % progress + amount left (fetched per row). No more bare "1 Acre · INR".
