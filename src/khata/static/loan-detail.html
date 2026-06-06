@@ -439,9 +439,9 @@ function renderGlance(box, plan, st){
   const itype=plan.interest_type;
   if(itype && itype!=='none'){ frow('Structure', itype+' interest'); }
   else { frow('Structure', 'interest-free'); }
-  // Rate = rate_bps/100 + "%/yr"
+  // Rate = rate_bps/100 + per-period (/mo for monthly interest, /yr for yearly)
   if(plan.rate_bps!==null && plan.rate_bps!==undefined && itype && itype!=='none'){
-    frow('Rate', (plan.rate_bps/100)+'%/yr');
+    frow('Rate', (plan.rate_bps/100)+'%'+(plan.interest_type==='monthly'?'/mo':'/yr'));
   }
   // Monthly interest ≈ principal × rate / 1200 (derived, labelled approx)
   const po=st.principal_outstanding_minor;
@@ -859,7 +859,7 @@ async function fetchCompare(){
   drawCompare(res, data);
 }
 const _CMP_ROWS=[
-  {k:'Rate', f:r=> r.available?((r.rate_bps/100)+'% /yr'):'—'},
+  {k:'Rate', f:r=> r.available?((r.rate_bps/100)+'% '+(r.interest_type==='monthly'?'/mo':'/yr')):'—'},
   {k:'Term', f:r=> r.tenure_months?(r.tenure_months+' mo'):'—'},
   {k:'Upfront fee', amt:'fee_minor'},
   {k:'Monthly payment', amt:'emi_minor'},

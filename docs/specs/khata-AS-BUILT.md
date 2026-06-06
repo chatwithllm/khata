@@ -330,6 +330,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-06 — Fix: loan rate label respects interest_type — a monthly-interest loan now reads "3%/mo" not "3%/yr" (was hardcoded /yr in the list meta, loan-detail glance, and compare table).
 - 2026-06-06 — Loans list shows monthly interest cashflow: per-row interest/mo (− you pay on borrowed, + you earn on lent), group subtotals, and a "Net interest / month" footer (lent earnings − borrowed cost) telling you if you're net ahead or paying out. Client-only (app.html, monthlyInterestMinor).
 - 2026-06-06 — Loans list splits Borrowed (you owe) vs Lent out (owed to you) — two sections with colour-coded headers + live subtotals; meta reads "N borrowed · M lent". Debt and receivables no longer lumped.
 - 2026-06-06 — Fix: editing a gold loan's weight/rate now re-derives the collateral value (the on-open 'value touched' guard was blocking recompute, leaving a stale value → the 1000% LTV). A value you type after still sticks.
