@@ -409,6 +409,44 @@ def loan_amortization(plan_id):
         lump_month=lump_month, target_months=target)), 200
 
 
+@bp.post("/<int:plan_id>/loan/compare")
+def loan_compare(plan_id):
+    """Shop-around comparison: the current loan vs user-supplied offers, on a like-for-like
+    principal, ranked by total cost / effective APR (fee-inclusive)."""
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _accessible_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "loan":
+        return jsonify(error="not_a_loan"), 400
+    loan = plan.loan
+    data = request.get_json(silent=True) or {}
+    try:
+        if data.get("amount"):
+            principal = to_minor(data.get("amount"), plan.currency)
+        else:
+            principal = loans.loan_state(g.db, loan, as_of=date.today())["principal_outstanding_minor"]
+        # the current loan is always the first row (the baseline to beat)
+        offers = [{"label": loan.counterparty or "Your current loan", "rate_bps": loan.rate_bps,
+                   "interest_type": loan.interest_type, "tenure_months": loan.tenure_months,
+                   "fee_minor": 0}]
+        for o in (data.get("offers") or []):
+            offers.append({
+                "label": (o.get("label") or "Offer").strip(),
+                "rate_bps": pct_to_bps(o.get("rate", "0")),
+                "interest_type": o.get("interest_type") or "yearly",
+                "tenure_months": int(o["tenure_months"]) if o.get("tenure_months") else loan.tenure_months,
+                "fee_bps": pct_to_bps(o.get("fee_pct", "0")) if o.get("fee_pct") else 0,
+                "fee_minor": to_minor(o.get("fee_amount"), plan.currency) if o.get("fee_amount") else 0,
+            })
+        result = loans.compare_offers(principal_minor=principal, currency=plan.currency, offers=offers)
+    except (LoanError, ValueError, TypeError) as e:
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(result), 200
+
+
 @bp.post("/<int:plan_id>/loan/collateral")
 def loan_collateral(plan_id):
     user = current_user()
