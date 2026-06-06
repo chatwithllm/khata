@@ -728,7 +728,7 @@ $('del-entry').addEventListener('click', async ()=>{
 });
 
 // ── topbar avatar: display-only here; photo is set/cropped in Settings ──
-(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input");if(inp)inp.disabled=true;av.title="Edit photo in Settings";av.style.cursor="pointer";av.addEventListener("click",function(e){e.preventDefault();window.location.href="/settings";});})();
+(function(){var av=document.getElementById("avatar");if(!av)return;try{localStorage.removeItem("khata_avatar");}catch(e){}var inp=av.querySelector("input");if(inp)inp.disabled=true;av.title="Edit photo in Settings";av.style.cursor="pointer";av.addEventListener("click",function(e){e.preventDefault();window.location.href="/settings";});})();
 
 boot();
 </script>

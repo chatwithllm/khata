@@ -859,7 +859,7 @@ $('save').addEventListener('click', async ()=>{
 });
 
 // ── profile photo upload (localStorage, display-only) ──
-(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
+(function(){var av=document.getElementById("avatar");if(!av)return;try{localStorage.removeItem("khata_avatar");}catch(e){}var inp=av.querySelector("input");if(inp)inp.disabled=true;av.title="Edit photo in Settings";av.style.cursor="pointer";av.addEventListener("click",function(e){e.preventDefault();window.location.href="/settings";});fetch("/api/auth/me").then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&d.user&&d.user.avatar){av.style.backgroundImage='url("'+d.user.avatar+'")';av.classList.add("has-img");}else{av.style.backgroundImage="";av.classList.remove("has-img");}}).catch(function(){});})();
 
 boot();
 </script>

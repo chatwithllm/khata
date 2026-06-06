@@ -155,7 +155,14 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   inline (asset_state ledger gained `paid_by_avatar`; contributors gained `avatar`). (5) **Ledger edit** is now
   a single **✎ edit** toggle in the panel header → enters an edit mode (rows highlight + become clickable to
   edit), replacing the per-row ✎. Topbar avatar on detail pages is display-only and links to Settings to edit.
-  (Crop/avatars wired on Settings + asset-detail; other detail pages' topbar still show initials — fast follow.)
+- **2026-06-05 — Avatars everywhere + killed the stale localStorage photo.** Follow-up to the above: the
+  topbar avatar on **every** page now loads the current user's server avatar from `/api/auth/me` (and purges
+  the old per-browser `khata_avatar` localStorage key, which was leaking a previous account's photo across
+  logins on a shared browser — the reported bug). The **"Shared with" member list** (`sharing.js`, used on
+  every detail page's Members panel) shows each member's avatar too (`list_members` gained `avatar`). So a
+  contributor's photo now appears consistently wherever they're shown — topbar, contributors, ledger, members
+  — and reflects the logged-in account, not a cached one. (Loan/chit ledger paid_by avatars still pending —
+  those state dicts don't yet carry paid_by_avatar.)
 - **2026-06-05 — Removed the asset "Recent pace" banner.** It extrapolated a monthly rate from the last 2–3
   inter-payment gaps; when payments were <1 day apart the `30.44/avgGapDays` factor exploded (saw ₹54+
   crore/mo), and the extrapolation was low-value for irregular asset buying regardless. An animated-trajectory
@@ -261,6 +268,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Avatars everywhere: topbar on every page loads the server avatar (purges stale localStorage that leaked a prior account's photo across logins — reported bug); "Shared with" member lists show avatars (`list_members.avatar`).
 - 2026-06-05 — Asset ledger: each row shows its share of the plan total as a quiet "X% of total" line under the amount (right-aligned, muted; "<1% of total" for tiny entries). Client-side, no API change.
 - 2026-06-05 — Profile pictures: server-side `users.avatar` + crop tool (drag/zoom) in Settings; contributor tiles + ledger rows show avatars (hover reveals full photo); contributors share bar redesigned (no cramped labels); ledger edit moved to a single header toggle (was per-row). `POST /api/auth/avatar`, asset_state avatar fields, migration c9a3avatar01. Also fixed a TZ-flaky secured-loan test (explicit occurred_at).
 - 2026-06-05 — Asset detail: removed the broken "Recent pace" banner (₹-crore explosion on sub-day gaps, low-value extrapolation). KPIs + progress bar + schedule already carry the facts.

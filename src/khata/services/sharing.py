@@ -82,14 +82,14 @@ def remove_member(session: Session, *, plan: Plan, user_id: int) -> None:
 
 def list_members(session: Session, plan: Plan) -> list[dict]:
     owner = session.get(User, plan.owner_user_id)
-    rows = [{"user_id": owner.id, "email": owner.email,
-             "display_name": owner.display_name, "role": "owner", "status": "active"}]
+    rows = [{"user_id": owner.id, "email": owner.email, "display_name": owner.display_name,
+             "avatar": owner.avatar, "role": "owner", "status": "active"}]
     for m in plan.memberships:
         if m.status == "declined":
             continue
         u = session.get(User, m.user_id)
-        rows.append({"user_id": u.id, "email": u.email,
-                     "display_name": u.display_name, "role": m.role, "status": m.status})
+        rows.append({"user_id": u.id, "email": u.email, "display_name": u.display_name,
+                     "avatar": u.avatar, "role": m.role, "status": m.status})
     return rows
 
 
