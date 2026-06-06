@@ -152,6 +152,7 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-06 — Tablet & mobile responsive shell.** The fixed 240px sidebar became an **off-canvas drawer** at ≤880px: a hamburger (injected into every topbar by the shared `static/assets/nav.js`) toggles `.nav-open` on `.app`, sliding the sidebar in over a scrim (Esc / scrim / nav-tap closes). Topbar shrinks + the greeting truncates so the actions stay; content/panel padding reduces; `.kpis` and dashboard `.stats` stack to one column on phones; the loans list drops its secondary interest/mo column (`.pr-icol`) on phones. `nav.js` added to all app pages (guards on `.app`/`.top`/`.side`); responsive `@media` overrides kept at the END of app.css so they beat the base shell rules. (Landing page already had its own responsive.)
 - **2026-06-06 — Fund a contribution from a loan (cross-plan money chain).** Real flow: you borrow ₹10L → it becomes your asset contribution → you repay the loan. The asset payment now links to its source loan via `ledger_entries.funding_plan_id` (link-only — the loan disbursement and the asset payment stay separate real events; no double-count). Asset log-payment shows a **“from which loan”** picker when funding source is loan/borrowed; the asset ledger row shows a **“↗ <loan>”** link; loan-detail gains a **“Deployed into”** panel listing where the borrowed money went + total put to work. Payoff is the existing principal_repayment flow. `loan_state` gains `deployed[]`/`deployed_total_minor`; `asset_state.ledger` rows gain `funding_plan_id/name/type`. (Plan.ledger_entries relationship pinned to plan_id FK to disambiguate the new second FK.)
 - **2026-06-06 — Differentiable plan rows in the list (esp. loans).** The dashboard "Your plans" / filtered
   list showed only "<Name> · INR · owner" — two same-named gold loans were indistinguishable before opening.
@@ -331,6 +332,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-06 — Responsive: off-canvas sidebar drawer + hamburger (nav.js), responsive topbar/padding, stacked KPIs/stats on phones, loans interest column hidden on phones. App usable on tablet + mobile.
 - 2026-06-06 — Cross-currency funding link: a contribution funded by a loan in a DIFFERENT currency now renders in its own currency on the loan's "Deployed into" (per-currency totals, no nonsensical cross-currency sum; row flags the currency). `loan_state.deployed[].currency` + `deployed_totals`.
 - 2026-06-06 — A plan contributor can now edit/delete their OWN ledger entries (was owner-only → 403 'forbidden' for a member editing their contribution). Owner still required to re-attribute an entry to someone else. Missing entry now → 404 (was 400).
 - 2026-06-06 — Cross-plan funding link: an asset contribution can point to the loan it came from (`funding_plan_id`); asset ledger shows “↗ loan”, loan shows a “Deployed into” panel. Full loan→asset→payoff chain. Migration `cc6fundlink01`.
