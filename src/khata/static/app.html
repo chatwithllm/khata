@@ -680,7 +680,7 @@ async function boot(){
         l1.append(chip);
       }
       left.append(l1);
-      left.append(el('div','l2', planMeta(p)));
+      const l2el=el('div','l2', planMeta(p)); left.append(l2el);
       const right=el('div'); right.style.cssText='display:flex;align-items:center;gap:26px;justify-content:flex-end';
       // interest/mo column (loans only — the cashflow direction)
       const intCol=el('div'); intCol.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:104px';
@@ -694,7 +694,7 @@ async function boot(){
       if(p.type==='loan') right.append(intCol, outCol); else right.append(outCol);
       row.append(left, right);
       plist.append(row);
-      if(p.type==='loan') fillLoans.push({p, amt, intAmt, outCol, ar, groupAgg});
+      if(p.type==='loan'||p.type==='asset') fillLoans.push({p, amt, intAmt, outCol, ar, l2el, groupAgg});
     }
     // section header for a loan direction group, returns its live subtotal elements
     function groupHeader(label, sub, accent, first){
@@ -731,14 +731,34 @@ async function boot(){
     } else {
       for(const p of shown) makeRow(p, null);
     }
-    // enrich loan rows: outstanding + LTV + monthly interest cashflow, and roll up subtotals
-    Promise.all(fillLoans.map(async ({p, amt, intAmt, outCol, ar, groupAgg})=>{
+    // enrich rows with derived state — loans: outstanding + LTV + interest cashflow;
+    // assets: amount paid + % progress + remaining + joint contributors
+    Promise.all(fillLoans.map(async ({p, amt, intAmt, outCol, ar, l2el, groupAgg})=>{
       try{
         const d=await fetch('/api/plans/'+p.id).then(r=>r.json());
         const st=d.state||{}; const ccy=st.currency||p.currency;
+        const cap=el('div'); cap.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono"';
+
+        if(p.type==='asset'){
+          const total=st.total_price_minor||0, paid=st.paid_to_date_minor||0, rem=st.remaining_minor||0;
+          const pct = total ? Math.round(paid*100/total) : 0;
+          amt.textContent = fmt(paid, ccy);
+          cap.textContent = pct+'% paid'+(rem>0 ? ' · '+fmt(rem,ccy)+' left' : ' · complete');
+          cap.style.color = rem<=0 ? 'var(--pos)' : 'var(--ink-faint)';
+          outCol.insertBefore(cap, ar);
+          // richer meta: total price + schedule/ad-hoc + joint contributors
+          const bits=[fmt(total,ccy)+' total'];
+          const insts=(st.installments||[]).length;
+          bits.push(insts ? insts+' installments' : 'ad-hoc');
+          const cs=st.contributors||[];
+          if(cs.length>1){ bits.push('joint · '+cs.map(c=>c.display_name).filter(Boolean).join(' + ')); }
+          if(l2el) l2el.textContent = bits.join(' · ');
+          return;
+        }
+
+        // loan
         const out=st.principal_outstanding_minor||0;
         amt.textContent = fmt(out, ccy);
-        const cap=el('div'); cap.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono"';
         const ltv = st.gold_collateral && st.gold_collateral.ltv_pct;
         if(ltv!=null){
           if(ltv>100){ cap.textContent='⚠ LTV '+ltv+'%'; cap.style.color='var(--neg)';
@@ -747,7 +767,6 @@ async function boot(){
                  cap.style.color = ltv>75 ? '#a96a00' : (ltv<=60 ? 'var(--pos)' : 'var(--ink-faint)'); }
         } else { cap.textContent='outstanding'; }
         outCol.insertBefore(cap, ar);
-        // monthly interest = outstanding × rate; you PAY on borrowed (−), EARN on lent (+)
         const mi=monthlyInterestMinor(out, p.rate_bps, p.interest_type);
         const taken=(p.direction!=='given');
         if(!mi){ intAmt.textContent='—'; intAmt.style.color='var(--ink-faint)'; }
