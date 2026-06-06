@@ -111,12 +111,14 @@
       </div>
       <div class="top-right">
         <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="INR"><span class="cs">₹</span> INR</button><button data-set="USD"><span class="cs">$</span> USD</button></div>
-        <a class="addbtn" id="logbtn" href="/app"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Log payment</a>
+        <a class="addbtn" id="logbtn" href="/app"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> <span class="lp-full">Log payment</span><span class="lp-short">Pay</span></a>
         <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init" id="ava-init"></span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
       </div>
     </div>
 
     <div class="content">
+      <!-- mobile-only greeting header (topbar greeting hides on phones) -->
+      <div class="m-greet"><h2 id="greet-m">Welcome</h2><div class="ms" id="sub-m"></div></div>
       <!-- pending share invitations (populated by boot) -->
       <div id="invites"></div>
       <!-- per-entry amount confirmations awaiting this user (populated by boot) -->
@@ -604,6 +606,7 @@ async function boot(){
   const h=new Date().getHours();
   const part = h<12?'morning':(h<17?'afternoon':'evening');
   $('greet').textContent='Good '+part+', '+name;
+  if($('greet-m')) $('greet-m').textContent='Good '+part+', '+name;
   $('ava-init').textContent=(name[0]||'?').toUpperCase();
 
   const [nw, dash, plansResp, fxResp] = await Promise.all([
@@ -626,6 +629,7 @@ async function boot(){
 
   const plans = plansResp.plans || [];
   $('sub').textContent = new Date().toLocaleDateString(undefined,{weekday:'short',day:'2-digit',month:'short',year:'numeric'}) + ' · ' + plans.length + ' active plans';
+  if($('sub-m')) $('sub-m').textContent = $('sub').textContent;
 
   // stat cards — show the base-converted total; any amount with no fx rate is shown
   // in its OWN currency (never relabelled with the base symbol, never silently $0).
