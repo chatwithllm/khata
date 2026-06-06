@@ -205,6 +205,45 @@ function amtSpan(minor, cls){
   return wrap;
 }
 
+// ── avatars: a circular chip showing the contributor's photo, or a coloured initial ──
+const AV_COLORS=['#b06a32','#3d6b6e','#7a5ea8','#5a7a3a','#a8506a','#3a6a9a'];
+function avatarEl(url, name, size, idx){
+  const s=size||32;
+  const a=el('div','ava-chip');
+  a.style.cssText='width:'+s+'px;height:'+s+'px;border-radius:50%;flex:none;display:grid;place-items:center;'
+    +'overflow:hidden;font-weight:700;color:#fff;line-height:1;font-size:'+Math.round(s*0.42)+'px';
+  if(url){ a.style.backgroundImage='url("'+url+'")'; a.style.backgroundSize='cover'; a.style.backgroundPosition='center'; }
+  else { a.style.background=AV_COLORS[(idx||0)%AV_COLORS.length]; a.textContent=((name||'?')[0]||'?').toUpperCase(); }
+  return a;
+}
+// hover an avatar → reveal a large, clean version in a floating popover
+let __revealEl=null;
+function attachReveal(trigger, url, name){
+  if(!url) return;
+  trigger.style.cursor='zoom-in';
+  function show(){
+    hide();
+    const pop=el('div'); pop.id='ava-reveal';
+    pop.style.cssText='position:fixed;z-index:120;padding:8px;background:var(--card);border:1px solid var(--line);'
+      +'border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.30);pointer-events:none;opacity:0;transition:opacity .14s,transform .14s;transform:scale(.96)';
+    const img=el('div'); img.style.cssText='width:170px;height:170px;border-radius:13px;background-size:cover;background-position:center';
+    img.style.backgroundImage='url("'+url+'")';
+    const cap=el('div',null,name||''); cap.style.cssText='text-align:center;font-size:12px;color:var(--ink-faint);margin-top:7px;font-weight:600';
+    pop.append(img); if(name) pop.append(cap);
+    document.body.append(pop); __revealEl=pop;
+    const r=trigger.getBoundingClientRect();
+    let left=r.left+r.width/2-93, top=r.bottom+10;
+    left=Math.max(10,Math.min(window.innerWidth-196,left));
+    if(top+210>window.innerHeight) top=r.top-220;
+    pop.style.left=left+'px'; pop.style.top=top+'px';
+    requestAnimationFrame(()=>{ pop.style.opacity='1'; pop.style.transform='scale(1)'; });
+  }
+  function hide(){ if(__revealEl){ __revealEl.remove(); __revealEl=null; } }
+  trigger.addEventListener('mouseenter', show);
+  trigger.addEventListener('mouseleave', hide);
+  trigger.addEventListener('click', e=>{ e.stopPropagation(); show(); });
+}
+
 // humanize funding source code → label
 const SRC_LABELS={chit_payout:'Chit payout',sold_asset:'Sold asset',savings:'Savings',loan:'Loan',borrowed:'Borrowed',other:'Other'};
 function srcLabel(code){
@@ -300,41 +339,72 @@ function renderSchedule(box, st){
 }
 
 // ── ledger (3.1): list state.ledger newest-first ──
+let LEDGER_EDIT=false;
 function renderLedger(box, st){
   box.textContent='';
   const rows = st.ledger || [];
+  // map each contributor's user_id → colour index (matches the Contributors bar/avatars)
+  const colorByUid={};
+  (st.contributors||[]).forEach((c,i)=>{ colorByUid[c.user_id]=i; });
+  const shared = (st.contributors||[]).length>1 || MEMBERS.length>1;
+
   const ph=el('div','ph');
   const t=el('div','t','Ledger'); t.style.fontSize='16px';
-  ph.append(t, el('div','meta', rows.length+(rows.length===1?' entry':' entries')));
+  const right=el('div'); right.style.cssText='display:flex;align-items:center;gap:12px';
+  right.append(el('div','meta', rows.length+(rows.length===1?' entry':' entries')));
+  // single Edit toggle in the headline (replaces the per-row ✎)
+  if(rows.some(r=>r.id!=null)){
+    const editBtn=el('span','proof', LEDGER_EDIT?'✓ done':'✎ edit');
+    editBtn.style.cssText='cursor:pointer;user-select:none'; editBtn.tabIndex=0; editBtn.setAttribute('role','button');
+    if(LEDGER_EDIT){ editBtn.style.color='var(--accent-dk)'; editBtn.style.fontWeight='700'; }
+    const toggle=()=>{ LEDGER_EDIT=!LEDGER_EDIT; renderLedger(box, st); };
+    editBtn.addEventListener('click', toggle);
+    editBtn.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+    right.append(editBtn);
+  }
+  ph.append(t, right);
   box.append(ph);
+
+  if(LEDGER_EDIT){
+    const hint=el('div',null,'Select a row to edit it.');
+    hint.style.cssText='font-size:12px;color:var(--accent-dk);padding:10px 22px 0;font-weight:600';
+    box.append(hint);
+  }
+
   const ledger=el('div','ledger fillrows');
   if(!rows.length){ ledger.append(el('div','emptypanel','No ledger entries yet.')); box.append(ledger); return; }
-  // newest first by occurred_at (fallback: keep API order)
   const sorted = rows.slice().sort((a,b)=>{
     const da=parseISO(a.occurred_at), db=parseISO(b.occurred_at);
     if(da&&db) return db-da; if(db) return 1; if(da) return -1; return 0;
   });
   for(const lr of sorted){
     const row=el('div','lrow'); row.tabIndex=0;
-    // l1 — title (note → kind → fallback), via textContent
+    const editable = lr.id!=null;
     const ttl = lr.note || (lr.kind!=null && lr.kind!=='' ? srcLabel(lr.kind) : 'Payment');
     row.append(el('div','l1', ttl));
-    // amount — +/− with in/out color
     const out = lr.direction==='out';
     const amt=el('div','amt '+(out?'out':'in'));
     const sgn=el('span','symword'); sgn.textContent=(out?'−':'+')+sym(BASE);
     const num=el('span'); num.textContent=fmtNum(Math.abs(lr.amount_minor||0), BASE);
     amt.append(sgn,num);
     row.append(amt);
-    // l2 — occurred date · time (+ "logged" date when it differs from occurred)
+
+    // l2 — date · time, then (on shared plans) the contributor's avatar + name
+    const l2=el('div','l2'); l2.style.cssText='display:flex;align-items:center;gap:6px;flex-wrap:wrap';
     const d=parseISO(lr.occurred_at);
-    let l2txt = d ? (fmtDay(d)+' · '+fmtTime(d)) : '—';
+    let dtxt = d ? (fmtDay(d)+' · '+fmtTime(d)) : '—';
     const cd=parseISO(lr.created_at);
-    if(cd && d && fmtDay(cd)!==fmtDay(d)) l2txt += ' · logged '+fmtDay(cd);
-    // who paid this entry — only meaningful on shared plans (≥2 members)
-    if(MEMBERS.length>1 && lr.paid_by_name) l2txt += ' · '+lr.paid_by_name;
-    row.append(el('div','l2', l2txt));
-    // l2r — method + funding_source pills + proof + edit
+    if(cd && d && fmtDay(cd)!==fmtDay(d)) dtxt += ' · logged '+fmtDay(cd);
+    l2.append(el('span', null, dtxt));
+    if(shared && lr.paid_by_name){
+      l2.append(el('span', null, '·'));
+      const av=avatarEl(lr.paid_by_avatar, lr.paid_by_name, 18, colorByUid[lr.logged_by_user_id]||0);
+      attachReveal(av, lr.paid_by_avatar, lr.paid_by_name);
+      l2.append(av, el('span', null, lr.paid_by_name));
+    }
+    row.append(l2);
+
+    // l2r — method + funding pills + status + proof (no per-row edit anymore)
     const l2r=el('div','l2r');
     if(lr.method) l2r.append(el('span','pill m', lr.method));
     if(lr.funding_source) l2r.append(el('span','pill f', srcLabel(lr.funding_source)));
@@ -348,13 +418,16 @@ function renderLedger(box, st){
       l2r.append(chip);
     }
     if(lr.has_proof) l2r.append(el('span','proof','▣ proof'));
-    if(lr.id!=null){
-      const edit=el('span','proof','✎ edit'); edit.style.cursor='pointer'; edit.tabIndex=0; edit.setAttribute('role','button');
-      edit.addEventListener('click', ()=>openEdit(lr));
-      edit.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); openEdit(lr); } });
-      l2r.append(edit);
-    }
+    if(LEDGER_EDIT && editable) l2r.append(el('span','proof','✎'));
     row.append(l2r);
+
+    // edit-mode: the whole row is the edit affordance
+    if(LEDGER_EDIT && editable){
+      row.style.cursor='pointer';
+      row.style.boxShadow='inset 3px 0 0 var(--accent-dk)';
+      row.addEventListener('click', ()=>openEdit(lr));
+      row.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openEdit(lr); } });
+    }
     ledger.append(row);
   }
   box.append(ledger);
@@ -425,19 +498,27 @@ function renderContributors(box, st, myUserId){
     contrib.append(el('div','emptypanel','Just you so far.'));
     box.append(contrib); return;
   }
-  const sharebar=el('div','sharebar');
+  // Clean proportional share bar — colour only, NO cramped inline labels. Each person's
+  // colour matches their row below (which carries the name + %), so a 19% slice never
+  // has to squeeze text. Segments grow on reveal via the existing [data-w] animation.
+  const sharebar=el('div');
+  sharebar.style.cssText='display:flex;height:12px;border-radius:7px;overflow:hidden;background:var(--paper-2);margin:4px 0 16px;gap:2px';
   cs.forEach((c,idx)=>{
-    const seg=el('span','seg '+(idx===0?'you':'priya'));
-    seg.dataset.w=(c.pct||0);
-    seg.textContent=(c.display_name||('User '+c.user_id))+' '+(c.pct||0)+'%';
+    const seg=el('div'); seg.dataset.w=(c.pct||0);
+    seg.style.cssText='height:100%;width:0;border-radius:4px;background:'+AV_COLORS[idx%AV_COLORS.length]
+      +';transition:width .85s cubic-bezier(.22,1,.36,1)';
+    seg.title=(c.display_name||('User '+c.user_id))+' · '+(c.pct||0)+'%';
     sharebar.append(seg);
   });
   contrib.append(sharebar);
+
   cs.forEach((c,idx)=>{
     const name=c.display_name||('User '+c.user_id);
     const isMe = (myUserId!=null && c.user_id===myUserId);
     const person=el('div','cperson');
-    const av=el('span','av '+(idx===0?'y':'p')); av.textContent=(name[0]||'?').toUpperCase();
+    const av=avatarEl(c.avatar, name, 38, idx);
+    av.style.boxShadow='0 0 0 2px '+AV_COLORS[idx%AV_COLORS.length];   // ring ties to bar colour
+    attachReveal(av, c.avatar, name);
     person.append(av);
     const mid=el('div');
     const nm=el('div','nm', (isMe?'You · ':'')+name);
@@ -536,6 +617,7 @@ async function boot(){
   const myUserId = user.id;
   ME_ID = user.id;
   $('ava-init').textContent=((user.display_name||'?')[0]||'?').toUpperCase();
+  if(user.avatar){ const a=$('avatar'); a.style.backgroundImage='url("'+user.avatar+'")'; a.classList.add('has-img'); }
 
   // members list (owner + shared) — used by the "Paid by · contributor" field
   MEMBERS = (await fetch('/api/plans/'+pid+'/members').then(r=>r.json()).catch(()=>({}))).members || [];
@@ -637,8 +719,8 @@ $('del-entry').addEventListener('click', async ()=>{
   $('err').textContent = e.detail || e.error || 'Could not delete.';
 });
 
-// ── profile photo upload (localStorage, display-only) ──
-(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
+// ── topbar avatar: display-only here; photo is set/cropped in Settings ──
+(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input");if(inp)inp.disabled=true;av.title="Edit photo in Settings";av.style.cursor="pointer";av.addEventListener("click",function(e){e.preventDefault();window.location.href="/settings";});})();
 
 boot();
 </script>

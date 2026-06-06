@@ -35,7 +35,9 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   (app shell + detail panels); `sharing.js` (`mountSharing`). HTML served `Cache-Control: no-store`.
 
 ## 4. Data model (11 tables)
-- **users**: id, email, display_name, password_hash?, google_sub?, base_currency, created_at.
+- **users**: id, email, display_name, password_hash?, google_sub?, base_currency, **avatar?** (cropped
+  square profile photo as a `data:image/...` URL, set via the crop tool; stored server-side so every member
+  sees each contributor's photo and it travels with backups), created_at. Migration `c9a3avatar01`.
 - **plans** (spine): id, owner_user_id, **type** (asset|loan|holding|chit|retirement), name, currency,
   status, created_at. 1:1 → asset/loan/holding/chit/retirement; 1:N → installments, ledger_entries,
   memberships.
@@ -72,10 +74,10 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 ## 6. Derived state contracts (what `GET /api/plans/<id>` returns as `state`, by type)
 - **asset_state**: total_price_minor, paid_to_date_minor, remaining_minor, overpaid_minor, next_due_seq,
   installments[{seq, planned_amount_minor, applied_minor, status(paid|partial|due), due_date}], funding_breakdown
-  [{source, amount_minor, pct}], contributors[{user_id, display_name, paid_minor, pct, **unconfirmed**}], **ledger**
-  [{id, kind, direction, amount_minor, created_at, occurred_at, method, funding_source, note, has_proof,
-  logged_by_user_id, paid_by_name, **amount_status**, **counter_amount_minor**}]. (loan_state.ledger carries the
-  same amount_status/counter fields.)
+  [{source, amount_minor, pct}], contributors[{user_id, display_name, **avatar**, paid_minor, pct, **unconfirmed**}],
+  **ledger** [{id, kind, direction, amount_minor, created_at, occurred_at, method, funding_source, note, has_proof,
+  logged_by_user_id, paid_by_name, **paid_by_avatar**, **amount_status**, **counter_amount_minor**}].
+  (loan_state.ledger carries the same amount_status/counter fields.)
 - **loan_state**: direction, currency, principal_outstanding_minor, interest_accrued_minor,
   interest_paid_minor, interest_due_minor, total_minor, as_of, schedule[{month_index, period_start,
   expected_minor, applied_minor, status}], next_due_month, months_behind, secured, collateral|null
@@ -95,8 +97,9 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   effective_monthly_minor, total_contributions_minor, projected_corpus_minor, projected_corpus_real_minor.
 
 ## 7. API surface (all endpoints)
-**Auth** (`/api/auth/*`): POST register · login · logout · google · password · profile · GET config
-(`{google_client_id}`) · me (`{user:{id,email,display_name,has_password}}`).
+**Auth** (`/api/auth/*`): POST register · login · logout · google · password · profile · **avatar**
+(`{avatar: <data-url|null>}` — validates `data:image/` prefix + ~200 KB cap; clears on null) · GET config
+(`{google_client_id}`) · me (`{user:{id,email,display_name,has_password,avatar}}`).
 **Plans** (`/api/plans*`): GET `""` (list) · GET `/<id>` (`{plan, state}`) · **PATCH `/<id>`** (edit plan / loan terms — owner) · **DELETE `/<id>`** (delete whole plan — owner) · POST `""` (create, dispatches
 on `type`) · POST `/<id>/installments` · POST `/<id>/payments` (asset; accepts **occurred_at**) ·
 **PATCH/DELETE `/<id>/entries/<entry_id>`** (edit / delete a ledger entry — owner-only; edit takes amount/
@@ -140,6 +143,19 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-05 — Profile pictures (crop tool, server-side) + avatars across the asset page.** Replaced the
+  old per-browser localStorage avatar hack with a real **server-side photo per user** (`users.avatar`, a
+  cropped 256px JPEG data URL): so every member sees each contributor's face, and photos travel with backups.
+  (1) **Crop tool** (Settings → avatar): pick a file → a circular crop overlay with **drag-to-pan + zoom
+  slider**, rendered to a 256×256 canvas → `POST /api/auth/avatar`. Remove button clears it. (2) **Contributor
+  tiles** show the photo (coloured initial fallback), **hover/click reveals a large clean version** in a
+  floating popover; each person's colour rings their avatar and matches their share-bar segment. (3) **Share
+  bar redesigned** — a clean proportional two-tone bar with NO cramped inline labels (a 19% slice no longer
+  crushes text); names + % live in the rows below. (4) **Ledger rows** show the paying contributor's avatar
+  inline (asset_state ledger gained `paid_by_avatar`; contributors gained `avatar`). (5) **Ledger edit** is now
+  a single **✎ edit** toggle in the panel header → enters an edit mode (rows highlight + become clickable to
+  edit), replacing the per-row ✎. Topbar avatar on detail pages is display-only and links to Settings to edit.
+  (Crop/avatars wired on Settings + asset-detail; other detail pages' topbar still show initials — fast follow.)
 - **2026-06-05 — Removed the asset "Recent pace" banner.** It extrapolated a monthly rate from the last 2–3
   inter-payment gaps; when payments were <1 day apart the `30.44/avgGapDays` factor exploded (saw ₹54+
   crore/mo), and the extrapolation was low-value for irregular asset buying regardless. An animated-trajectory
@@ -245,6 +261,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Profile pictures: server-side `users.avatar` + crop tool (drag/zoom) in Settings; contributor tiles + ledger rows show avatars (hover reveals full photo); contributors share bar redesigned (no cramped labels); ledger edit moved to a single header toggle (was per-row). `POST /api/auth/avatar`, asset_state avatar fields, migration c9a3avatar01. Also fixed a TZ-flaky secured-loan test (explicit occurred_at).
 - 2026-06-05 — Asset detail: removed the broken "Recent pace" banner (₹-crore explosion on sub-day gaps, low-value extrapolation). KPIs + progress bar + schedule already carry the facts.
 - 2026-06-05 — Whole-instance backup & restore: in-app JSON download/upload (merge by email + FK remap, pre-restore auto-save) + CLI raw-SQLite backup.sh/restore.sh (replace). `GET /api/backup`, `POST /api/restore`, Settings → Data panel.
 - 2026-06-05 — Chit monthly contribution schedule + next-due reminder (chit_state.schedule/next_due_date/months_behind; chit-detail month-grid panel). Derived, no schema change.

@@ -282,24 +282,27 @@ def asset_state(session: Session, plan: Plan) -> dict:
         user = session.get(User, uid)
         contributors.append({"user_id": uid,
                              "display_name": user.display_name if user else None,
+                             "avatar": user.avatar if user else None,
                              "paid_minor": amt,
                              "pct": round(amt * 100 / paid) if paid else 0,
                              "unconfirmed": uid in unconfirmed_uids})
 
     # Surface existing ledger_entries rows in the state JSON (mirrors chit_state.ledger).
     # No new model/migration — these rows already exist; we just include them.
-    _names = {}
+    _users = {}
     for e in plan.ledger_entries:
-        if e.logged_by_user_id not in _names:
+        if e.logged_by_user_id not in _users:
             _u = session.get(User, e.logged_by_user_id)
-            _names[e.logged_by_user_id] = _u.display_name if _u else None
+            _users[e.logged_by_user_id] = (_u.display_name, _u.avatar) if _u else (None, None)
     ledger = [
         {"id": e.id, "kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
          "created_at": e.created_at.isoformat() if e.created_at else None,
          "occurred_at": e.occurred_at.isoformat(), "method": e.method,
          "funding_source": e.funding_source, "note": e.note,
          "has_proof": bool(e.proof_ref),
-         "logged_by_user_id": e.logged_by_user_id, "paid_by_name": _names.get(e.logged_by_user_id),
+         "logged_by_user_id": e.logged_by_user_id,
+         "paid_by_name": _users.get(e.logged_by_user_id, (None, None))[0],
+         "paid_by_avatar": _users.get(e.logged_by_user_id, (None, None))[1],
          "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor}
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
     ]
