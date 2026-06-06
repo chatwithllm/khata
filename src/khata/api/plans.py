@@ -2,7 +2,7 @@ from datetime import date, datetime, timezone
 
 from flask import Blueprint, current_app, g, jsonify, request
 
-from ..models import Plan, User
+from ..models import Plan, User, LedgerEntry
 from ..money import format_minor, pct_to_bps, to_micro, to_minor
 from ..services import assets, chits, feed, holdings, loans, retirement, sharing
 from ..services.assets import PlanError
@@ -48,7 +48,14 @@ def _summary(plan: Plan) -> dict:
     if plan.type == "loan" and plan.loan is not None:
         base.update({"direction": plan.loan.direction, "interest_type": plan.loan.interest_type,
                      "rate_bps": plan.loan.rate_bps, "counterparty": plan.loan.counterparty,
-                     "secured": plan.loan.secured})
+                     "secured": plan.loan.secured, "kind": plan.loan.kind,
+                     "start_date": plan.loan.start_date.isoformat() if plan.loan.start_date else None,
+                     "tenure_months": plan.loan.tenure_months,
+                     "collateral_qty_micro": plan.loan.collateral_qty_micro,
+                     "collateral_unit": plan.loan.collateral_unit,
+                     "collateral_rate_minor": plan.loan.collateral_rate_minor,
+                     "collateral_rate_basis": plan.loan.collateral_rate_basis,
+                     "collateral_value_minor": plan.loan.collateral_value_minor})
     elif plan.type == "holding" and plan.holding is not None:
         base.update({"asset_class": plan.holding.asset_class, "unit": plan.holding.unit,
                      "symbol": plan.holding.symbol,
@@ -97,6 +104,64 @@ def _accessible_plan(user, plan_id):
     return plan, None
 
 
+def _payer_uid(plan, data, default_uid):
+    """Resolve who actually paid/contributed an entry: an optional `paid_by` user id
+    that must be attached to the plan; defaults to the caller. Lets joint plans attribute
+    each entry to the real contributor (for audit + ownership shares). Uses on_plan so an
+    invited-but-not-yet-accepted contributor can still be tagged on entries."""
+    pb = data.get("paid_by")
+    if pb in (None, ""):
+        return default_uid
+    uid = int(pb)
+    if not sharing.on_plan(g.db, plan=plan, user_id=uid):
+        raise ValueError("paid_by must be a member of this plan")
+    return uid
+
+
+def _gold_collateral(data, currency):
+    """Build the inline-collateral dict from a request body's gold_* fields (or None when
+    there's nothing to set). Weight → micro; rate/value → minor."""
+    keys = ("gold_weight", "gold_value", "gold_rate")
+    if not any(data.get(k) for k in keys):
+        return None
+    return {
+        "qty_micro": to_micro(data.get("gold_weight")) if data.get("gold_weight") else None,
+        "unit": data.get("gold_unit") or "gram",
+        "rate_minor": to_minor(data.get("gold_rate"), currency) if data.get("gold_rate") else None,
+        "rate_basis": data.get("gold_rate_basis") or "per_gram",
+        "value_minor": to_minor(data.get("gold_value"), currency) if data.get("gold_value") else None,
+    }
+
+
+def _editable_entry(user, plan_id, entry_id):
+    """Resolve a ledger entry the user may edit/delete: the plan must be accessible, and
+    the user must be the plan OWNER or the entry's own contributor (logged_by_user_id) —
+    so a contributor can manage their own contribution. Returns (plan, entry, is_owner, err)."""
+    plan, err = _accessible_plan(user, plan_id)
+    if err:
+        return None, None, False, err
+    entry = g.db.get(LedgerEntry, entry_id)
+    if entry is None or entry.plan_id != plan.id:
+        return None, None, False, (jsonify(error="not_found"), 404)
+    is_owner = (user.id == plan.owner_user_id)
+    if not is_owner and user.id != entry.logged_by_user_id:
+        return None, None, False, (jsonify(error="forbidden",
+                                           detail="only the owner or this entry's contributor can edit it"), 403)
+    return plan, entry, is_owner, None
+
+
+def _funding_plan_id(data, user):
+    """Resolve an optional `funding_plan_id` (the plan that funded this payment, e.g. the
+    loan an asset contribution came from). Must be a plan the user can access. Empty → None."""
+    fp = data.get("funding_plan_id")
+    if fp in (None, "", 0, "0"):
+        return None
+    p = g.db.get(Plan, int(fp))
+    if p is None or not sharing.accessible(g.db, plan=p, user_id=user.id):
+        raise ValueError("funding source must be a plan you can access")
+    return p.id
+
+
 @bp.post("")
 def create():
     user = current_user()
@@ -114,7 +179,8 @@ def create():
                 interest_type=interest_type,
                 rate_bps=pct_to_bps(data.get("rate", "0")) if interest_type != "none" else 0,
                 start_date=date.fromisoformat(data["start_date"]) if data.get("start_date") else date.today(),
-                tenure_months=data.get("tenure_months"))
+                tenure_months=data.get("tenure_months"), kind=data.get("loan_kind") or "personal",
+                collateral=_gold_collateral(data, currency))
             if data.get("collateral_plan_id"):
                 loans.set_collateral(g.db, plan=plan,
                                      collateral_plan_id=data.get("collateral_plan_id"))
@@ -174,6 +240,65 @@ def detail(plan_id):
     return jsonify(_detail(plan)), 200
 
 
+@bp.patch("/<int:plan_id>")
+def update_plan(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner-only
+    if err:
+        return err
+    data = request.get_json(silent=True) or {}
+    try:
+        if plan.type == "loan":
+            kw = {}
+            if "name" in data:
+                kw["name"] = data.get("name")
+            for k in ("direction", "counterparty", "interest_type"):
+                if k in data:
+                    kw[k] = data.get(k)
+            if "loan_kind" in data:
+                kw["kind"] = data.get("loan_kind")
+            # inline gold collateral: set when gold fields present; clear when the kind
+            # is changed away from gold (no longer a secured-by-gold loan)
+            if any(k in data for k in ("gold_weight", "gold_value", "gold_rate")):
+                kw["collateral"] = _gold_collateral(data, plan.currency) or {}
+            elif data.get("loan_kind") and data.get("loan_kind") != "gold":
+                kw["collateral"] = {}
+            if "rate" in data:
+                kw["rate_bps"] = pct_to_bps(data.get("rate", "0"))
+            if "start_date" in data:
+                kw["start_date"] = date.fromisoformat(data["start_date"]) if data.get("start_date") else None
+            if "tenure_months" in data:
+                kw["tenure_months"] = int(data["tenure_months"]) if data.get("tenure_months") not in (None, "") else None
+            loans.update_loan_terms(g.db, plan=plan, **kw)
+        else:
+            if "name" in data and (data.get("name") or "").strip():
+                plan.name = data.get("name").strip()
+        g.db.commit()
+    except (LoanError, PlanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(_detail(plan)), 200
+
+
+@bp.delete("/<int:plan_id>")
+def delete_plan_route(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner-only
+    if err:
+        return err
+    try:
+        assets.delete_plan(g.db, plan=plan)
+        g.db.commit()
+    except (PlanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(ok=True), 200
+
+
 @bp.post("/<int:plan_id>/installments")
 def installments(plan_id):
     user = current_user()
@@ -206,9 +331,10 @@ def payment(plan_id):
         amount = to_minor(data.get("amount", ""), plan.currency)
         occurred = _parse_dt(data.get("occurred_at"))
         entry = assets.log_payment(
-            g.db, plan=plan, user_id=user.id, amount_minor=amount, occurred_at=occurred,
+            g.db, plan=plan, user_id=_payer_uid(plan, data, user.id), amount_minor=amount, occurred_at=occurred,
             method=data.get("method", ""), funding_source=data.get("funding_source", ""),
-            proof_ref=data.get("proof_ref"), note=data.get("note"))
+            proof_ref=data.get("proof_ref"), note=data.get("note"), acting_user_id=user.id,
+            funding_plan_id=_funding_plan_id(data, user))
         g.db.commit()
     except (PlanError, ValueError, TypeError) as e:
         g.db.rollback()
@@ -218,6 +344,79 @@ def payment(plan_id):
                "amount_display": format_minor(entry.amount_minor, plan.currency),
                "method": entry.method, "funding_source": entry.funding_source},
         state=assets.asset_state(g.db, plan)), 201
+
+
+@bp.patch("/<int:plan_id>/entries/<int:entry_id>")
+def update_entry(plan_id, entry_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, entry, is_owner, err = _editable_entry(user, plan_id, entry_id)   # owner OR contributor
+    if err:
+        return err
+    data = request.get_json(silent=True) or {}
+    try:
+        fields = {}
+        if "amount" in data:
+            fields["amount_minor"] = to_minor(data.get("amount", ""), plan.currency)
+        if "occurred_at" in data:
+            fields["occurred_at"] = _parse_dt(data.get("occurred_at"))
+        for k in ("method", "funding_source", "note"):
+            if k in data:
+                fields[k] = data.get(k)
+        # only the owner may re-attribute an entry to a different contributor
+        if "paid_by" in data and is_owner:
+            fields["logged_by_user_id"] = _payer_uid(plan, data, plan.owner_user_id)
+        if "funding_plan_id" in data:
+            fields["funding_plan_id"] = _funding_plan_id(data, user)
+        assets.update_ledger_entry(g.db, plan=plan, entry_id=entry_id, acting_user_id=user.id, **fields)
+        g.db.commit()
+    except (PlanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(_detail(plan)), 200
+
+
+@bp.delete("/<int:plan_id>/entries/<int:entry_id>")
+def delete_entry(plan_id, entry_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, entry, is_owner, err = _editable_entry(user, plan_id, entry_id)   # owner OR contributor
+    if err:
+        return err
+    try:
+        assets.delete_ledger_entry(g.db, plan=plan, entry_id=entry_id)
+        g.db.commit()
+    except (PlanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(_detail(plan)), 200
+
+
+@bp.post("/<int:plan_id>/entries/<int:entry_id>/amount")
+def respond_amount(plan_id, entry_id):
+    """Two-party amount agreement: the attributed contributor confirms/counters, the
+    owner accepts/re-counters. Either side of the negotiation may call (accessible)."""
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _accessible_plan(user, plan_id)
+    if err:
+        return err
+    data = request.get_json(silent=True) or {}
+    action = (data.get("action") or "").lower()
+    amount = None
+    try:
+        if action == "counter":
+            amount = to_minor(data.get("amount", ""), plan.currency)
+        assets.respond_amount(g.db, plan=plan, entry_id=entry_id, actor_uid=user.id,
+                              action=action, amount_minor=amount)
+        g.db.commit()
+    except (PlanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(_detail(plan)), 200
 
 
 @bp.post("/<int:plan_id>/loan/disbursements")
@@ -233,15 +432,81 @@ def loan_disbursement(plan_id):
     data = request.get_json(silent=True) or {}
     try:
         entry = loans.add_disbursement(
-            g.db, plan=plan, user_id=user.id,
+            g.db, plan=plan, user_id=_payer_uid(plan, data, user.id),
             amount_minor=to_minor(data.get("amount", ""), plan.currency),
-            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"))
+            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"),
+            acting_user_id=user.id)
         g.db.commit()
     except (LoanError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(entry=_entry_json(entry, plan),
                    state=loans.loan_state(g.db, plan.loan, as_of=date.today())), 201
+
+
+@bp.get("/<int:plan_id>/loan/amortization")
+def loan_amortization(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _accessible_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "loan":
+        return jsonify(error="not_a_loan"), 400
+    loan = plan.loan
+    st = loans.loan_state(g.db, loan, as_of=date.today())
+    args = request.args
+    try:
+        extra = to_minor(args.get("extra"), plan.currency) if args.get("extra") else 0
+        lump = to_minor(args.get("lump"), plan.currency) if args.get("lump") else 0
+        lump_month = int(args.get("lump_month")) if args.get("lump_month") else 1
+        target = int(args.get("target_months")) if args.get("target_months") else None
+    except (ValueError, TypeError) as e:
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(loans.amortize(
+        principal_minor=st["principal_outstanding_minor"], rate_bps=loan.rate_bps,
+        interest_type=loan.interest_type, tenure_months=loan.tenure_months,
+        currency=plan.currency, extra_monthly_minor=extra, lump_minor=lump,
+        lump_month=lump_month, target_months=target)), 200
+
+
+@bp.post("/<int:plan_id>/loan/compare")
+def loan_compare(plan_id):
+    """Shop-around comparison: the current loan vs user-supplied offers, on a like-for-like
+    principal, ranked by total cost / effective APR (fee-inclusive)."""
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _accessible_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "loan":
+        return jsonify(error="not_a_loan"), 400
+    loan = plan.loan
+    data = request.get_json(silent=True) or {}
+    try:
+        if data.get("amount"):
+            principal = to_minor(data.get("amount"), plan.currency)
+        else:
+            principal = loans.loan_state(g.db, loan, as_of=date.today())["principal_outstanding_minor"]
+        # the current loan is always the first row (the baseline to beat)
+        offers = [{"label": loan.counterparty or "Your current loan", "rate_bps": loan.rate_bps,
+                   "interest_type": loan.interest_type, "tenure_months": loan.tenure_months,
+                   "fee_minor": 0}]
+        for o in (data.get("offers") or []):
+            offers.append({
+                "label": (o.get("label") or "Offer").strip(),
+                "rate_bps": pct_to_bps(o.get("rate", "0")),
+                "interest_type": o.get("interest_type") or "yearly",
+                "tenure_months": int(o["tenure_months"]) if o.get("tenure_months") else loan.tenure_months,
+                "fee_bps": pct_to_bps(o.get("fee_pct", "0")) if o.get("fee_pct") else 0,
+                "fee_minor": to_minor(o.get("fee_amount"), plan.currency) if o.get("fee_amount") else 0,
+            })
+        result = loans.compare_offers(principal_minor=principal, currency=plan.currency, offers=offers)
+    except (LoanError, ValueError, TypeError) as e:
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(result), 200
 
 
 @bp.post("/<int:plan_id>/loan/collateral")
@@ -383,7 +648,8 @@ def add_member(plan_id):
         return jsonify(error="invalid", detail=str(e)), 400
     u = g.db.get(User, m.user_id)
     return jsonify(member={"user_id": u.id, "email": u.email,
-                           "display_name": u.display_name, "role": m.role}), 201
+                           "display_name": u.display_name, "role": m.role,
+                           "status": m.status}), 201
 
 
 @bp.get("/<int:plan_id>/members")
@@ -427,10 +693,10 @@ def loan_entry(plan_id):
     data = request.get_json(silent=True) or {}
     try:
         entry = loans.log_loan_entry(
-            g.db, plan=plan, user_id=user.id, kind=data.get("kind", ""),
+            g.db, plan=plan, user_id=_payer_uid(plan, data, user.id), kind=data.get("kind", ""),
             amount_minor=to_minor(data.get("amount", ""), plan.currency),
             occurred_at=_parse_dt(data.get("occurred_at")),
-            method=data.get("method"), note=data.get("note"))
+            method=data.get("method"), note=data.get("note"), acting_user_id=user.id)
         g.db.commit()
     except (LoanError, ValueError, TypeError) as e:
         g.db.rollback()

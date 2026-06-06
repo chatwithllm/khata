@@ -12,9 +12,58 @@
 /* ── chit-detail.html-only rules (shell + shared groups live in app.css) ── */
 .emptypanel{padding:30px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px}
 
+/* 7.4 in-page not-found state (replaces a silent redirect to /app on 404/403) */
+.notfound{display:grid;place-items:center;min-height:60vh;padding:40px 22px}
+.notfound .nf-card{max-width:420px;text-align:center;padding:40px 34px;border:1px solid var(--line);border-radius:18px;background:var(--card);box-shadow:0 18px 50px -34px rgba(28,24,19,.4)}
+.notfound .nf-glyph{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;margin:0 auto 18px;background:color-mix(in srgb,var(--neg) 12%,transparent);color:var(--neg)}
+.notfound .nf-glyph svg{width:26px;height:26px}
+.notfound h2{font-family:"Fraunces",serif;font-weight:600;font-size:25px;letter-spacing:-.01em}
+.notfound p{font-size:14px;color:var(--ink-faint);margin-top:10px;line-height:1.5}
+.notfound .nf-back{display:inline-flex;align-items:center;gap:7px;margin-top:22px;font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;background:var(--primary);color:var(--paper);text-decoration:none;box-shadow:0 8px 18px -10px var(--primary);transition:transform .2s}
+.notfound .nf-back:hover{transform:translateY(-2px)}
+
 /* header KPI accents */
 .kpi.pos .n{color:var(--pos)} .kpi.neg .n{color:var(--neg)}
 .wonbadge{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:color-mix(in srgb,var(--pos) 18%,transparent);color:var(--pos);padding:3px 9px;border-radius:20px;margin-left:8px}
+
+/* 7.1 header badge pills (real fields only: commission %, monthly, member count) */
+.chit-badges{display:flex;gap:8px;flex-wrap:wrap;padding:14px 22px 0}
+.chit-badges .pill{font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);text-transform:none;background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.chit-badges .pill.comm{background:color-mix(in srgb,var(--primary) 9%,transparent);border-color:color-mix(in srgb,var(--primary) 28%,transparent);color:var(--primary-deep)}
+.chit-badges .pill.role{background:color-mix(in srgb,var(--ink) 7%,transparent);border-color:color-mix(in srgb,var(--ink) 16%,transparent);color:var(--ink-soft);font-weight:700;letter-spacing:.02em}
+
+/* 7.2 expanded stat grid (5-6 cards; hero net-position) */
+.chit-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--paper-2)}
+@media(max-width:560px){.chit-kpis{grid-template-columns:1fr 1fr}}
+.chit-kpis .kpi{padding:16px 20px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.chit-kpis .kpi:nth-child(3n){border-right:none}
+.chit-kpis .kpi .l{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+.chit-kpis .kpi .n{font-family:"Fraunces",serif;font-weight:600;font-size:24px;letter-spacing:-.02em;margin-top:6px;line-height:1}
+.chit-kpis .kpi .d{font-size:11px;margin-top:6px;font-family:"JetBrains Mono";color:var(--ink-faint)}
+.chit-kpis .kpi.pos .n{color:var(--pos)} .chit-kpis .kpi.neg .n{color:var(--neg)}
+.chit-kpis .kpi.hero-stat{background:var(--ink);color:var(--paper)}
+.chit-kpis .kpi.hero-stat .l{color:color-mix(in srgb,var(--paper) 60%,transparent)}
+.chit-kpis .kpi.hero-stat .n{color:var(--pos-dk)}
+.chit-kpis .kpi.hero-stat .n.neg{color:var(--neg)}
+.chit-kpis .kpi.hero-stat .d{color:color-mix(in srgb,var(--paper) 60%,transparent)}
+
+/* 7.3 auction rounds table (taker parsed from dividend notes; bid% not in data) */
+.rtbl-wrap{overflow-x:auto;border-top:1px solid var(--line-2)}
+.rtbl{width:100%;border-collapse:collapse;font-size:13px}
+.rtbl thead th{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;text-align:right;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--paper-2);white-space:nowrap}
+.rtbl thead th.lf{text-align:left}
+.rtbl tbody td{padding:10px 16px;border-bottom:1px solid var(--line-2);text-align:right;font-family:"JetBrains Mono";font-variant-numeric:tabular-nums;white-space:nowrap}
+.rtbl tbody td.lf{text-align:left;font-family:"Hanken Grotesk"}
+.rtbl tbody tr:last-child td{border-bottom:none}
+.rtbl tbody tr:hover{background:var(--line-2)}
+.rtbl tbody tr.now{background:color-mix(in srgb,var(--primary) 8%,transparent)}
+.rtbl tbody tr.now:hover{background:color-mix(in srgb,var(--primary) 13%,transparent)}
+.rtbl tbody tr.open td{color:var(--ink-faint)}
+.rtbl .rn{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;background:var(--paper-2);color:var(--ink-faint);margin-right:9px;font-family:"JetBrains Mono";vertical-align:middle}
+.rtbl tbody tr.done .rn{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.rtbl tbody tr.now .rn{background:var(--primary);color:#fff}
+.rtbl .who{font-weight:600;font-size:13.5px}
+.rtbl td.divamt.in{color:var(--pos);font-weight:700}
 
 /* auction rounds strip */
 .chit-body{padding:20px 22px}
@@ -122,14 +171,15 @@
     <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
     <a class="nav-i" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
     <div class="navsec">Money plans</div>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
-    <a class="nav-i on" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <a class="nav-i" href="/app?type=asset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i on" href="/app?type=chit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app?type=loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app?type=retirement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
     <div class="navsec">Records</div>
     <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
     <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
     <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+    <a class="nav-i" href="#" style="color:var(--neg)" onclick="event.preventDefault();fetch('/api/auth/logout',{method:'POST'}).finally(function(){location.href='/'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log out</a>
   </aside>
 
   <!-- main -->
@@ -154,6 +204,8 @@
           <div class="panel fade" id="header-panel"></div>
           <!-- auction rounds -->
           <div class="panel fade d1" id="rounds-panel"></div>
+          <!-- contribution schedule (month-by-month, derived) -->
+          <div class="panel fade d1" id="schedule-panel"></div>
           <!-- ledger -->
           <div class="panel fade d2 fill" id="ledger-panel"></div>
         </div>
@@ -197,6 +249,22 @@
     <div class="fld"><label for="note">Note (optional)</label><input id="note" placeholder="month 6 subscription"></div>
     <div class="err" id="err"></div>
     <div class="acts"><button class="save" id="save">Save entry</button><span class="cancel" id="cancel">Cancel</span></div>
+  </div>
+</aside>
+
+<!-- edit-entry slide-over -->
+<aside class="over" id="edit-over" aria-hidden="true">
+  <div class="oh">
+    <div class="eyebrow">Edit</div>
+    <h3>Edit chit <em>entry</em></h3>
+    <div class="osub" id="edit-osub"></div>
+  </div>
+  <div class="obody">
+    <div class="fld"><label for="edit-amount">Amount</label><input id="edit-amount" placeholder="16,667" inputmode="decimal"></div>
+    <div class="fld"><label for="edit-occurred">Date (when it happened)</label><input id="edit-occurred" type="date"></div>
+    <div class="fld"><label for="edit-note">Note (optional)</label><input id="edit-note" placeholder="month 6 subscription"></div>
+    <div class="err" id="edit-err"></div>
+    <div class="acts"><button class="save" id="edit-save">Save changes</button><span class="cancel" id="edit-cancel">Cancel</span><span class="del" id="del-entry" style="margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
   </div>
 </aside>
 
@@ -245,29 +313,50 @@ function fmtDate(iso){
 const KIND_LABEL = { chit_contribution: "Contribution", chit_dividend: "Dividend", chit_prize: "Prize" };
 
 // ── header KPIs ──
-function renderHeader(box, plan, st){
+function renderHeader(box, plan, st, isOwner){
   box.textContent='';
   const ph=el('div','ph');
   const t=el('div','t'); t.append(el('span','tag chit','Chit'), document.createTextNode(' '));
   const nm=el('span'); nm.textContent=plan.name; t.append(nm);
   if(st.won) t.append(el('span','wonbadge','Prize won'));
   const commPct=(st.commission_bps/100);
-  const metaBits=[st.n_members+'-member', commPct+'% commission'];
-  ph.append(t, el('div','meta', metaBits.join(' · ')));
+  ph.append(t, el('div','meta', 'auction · monthly'));
   box.append(ph);
 
-  const kpis=el('div','kpis');
-  function kpi(cls,label,minor){
+  // 7.1: badge pills backed by REAL signals only — never an invented role.
+  //  · Auction    → state.commission_bps > 0 (auction chits charge commission; pure rotating don't)
+  //  · Organizer  → this user owns the plan (/api/dashboard role==='owner', passed in as isOwner)
+  //  · Member     → state.total_contributed_minor > 0 (the user pays subscriptions)
+  // plus the existing commission % and Monthly cadence pills, and member count.
+  const badges=el('div','chit-badges');
+  if(st.commission_bps > 0) badges.append(el('span','pill role', 'Auction'));
+  if(isOwner) badges.append(el('span','pill role', 'Organizer'));
+  if((st.total_contributed_minor||0) > 0) badges.append(el('span','pill role', 'Member'));
+  badges.append(
+    el('span','pill comm', commPct+'% Commission'),
+    el('span','pill', 'Monthly'),
+    el('span','pill', st.n_members+' members'));
+  box.append(badges);
+
+  // 7.2: expanded stat grid (5-6 cards) — net position is the hero card.
+  const kpis=el('div','chit-kpis');
+  function kpi(cls,label,node,detail){
     const k=el('div','kpi'+(cls?' '+cls:''));
     k.append(el('div','l',label));
-    const n=el('div','n'); n.append(amtSpan(minor)); k.append(n);
+    const n=el('div','n'); n.append(node); k.append(n);
+    if(detail) k.append(el('div','d',detail));
     return k;
   }
-  const netCls = (st.net_position_minor||0) > 0 ? 'pos' : ((st.net_position_minor||0) < 0 ? 'neg' : '');
+  function txt(s){ return document.createTextNode(s); }
+  const np = st.net_position_minor||0;
+  const netCls = np > 0 ? 'pos' : (np < 0 ? 'neg' : '');
   kpis.append(
-    kpi('','Chit value',st.chit_value_minor),
-    kpi(netCls,'My net position',st.net_position_minor),
-    kpi('','Net contributed',st.net_contributed_minor));
+    kpi('hero-stat '+netCls,'Net position', amtSpan(st.net_position_minor), 'paid in vs received'),
+    kpi('','Total paid in', amtSpan(st.total_contributed_minor), st.months_recorded+' rounds'),
+    kpi('','Dividends earned', amtSpan(st.total_dividends_minor), 'across recorded rounds'),
+    kpi('','Contribution / mo', amtSpan(st.subscription_minor), 'base subscription'),
+    kpi('','Members', txt(String(st.n_members)), 'in the chit'),
+    kpi('','Rounds recorded', txt(st.months_recorded+' of '+st.n_members), 'auction history'));
   box.append(kpis);
 
   // subscription/commission caption line
@@ -298,9 +387,8 @@ function renderRounds(box, st){
     if(k<=rec) cls='rd done';
     else if(k===rec+1) cls='rd now';
     const rd=el('div',cls);
+    // 7.5: color-only dots — round number only, no "done"/"next" text labels (mockup omits them)
     rd.append(el('span','r',String(k)));
-    if(k===rec+1 && k<=n) rd.append(document.createTextNode('next'));
-    else if(k<=rec) rd.append(document.createTextNode('done'));
     rounds.append(rd);
   }
   // Per-round winner is NOT tracked — only the aggregate `won` flag exists.
@@ -315,6 +403,130 @@ function renderRounds(box, st){
   if(won) legend.append(el('span', null, '★ you won a round'));
   body.append(legend);
   box.append(body);
+
+  // 7.3: per-round table from REAL data — taker, bid %, dividend/member and your-pay all
+  // parsed/derived from each chit_dividend note ("Round N · taker <Name> · bid <N>%").
+  //  · BID %    → parsed from the note ("bid N%")
+  //  · YOUR PAY → subscription_minor − that round's dividend-per-member (the entry's amount_minor)
+  // Future rounds (no ledger entry) show "—" in both columns — never fabricated.
+  const ledger = st.ledger || [];
+  const byRound = {};        // round number -> { taker, dividend_minor, bid_pct }
+  for(const e of ledger){
+    if(e.kind!=='chit_dividend') continue;
+    const note=e.note || '';
+    const rm=note.match(/Round\s+(\d+)/i);
+    if(!rm) continue;
+    const rnum=parseInt(rm[1],10);
+    let taker=null;
+    const ti=note.indexOf('taker ');
+    if(ti>=0){
+      taker=note.slice(ti+'taker '.length).trim();
+      // strip a trailing " · bid N%" segment from the taker name if present
+      const dot=taker.indexOf('·');
+      if(dot>=0) taker=taker.slice(0,dot).trim();
+    }
+    let bidPct=null;
+    const bm=note.match(/bid\s+(\d+(?:\.\d+)?)\s*%/i);
+    if(bm) bidPct=bm[1];
+    byRound[rnum]={ taker: taker, dividend_minor: e.amount_minor, bid_pct: bidPct };
+  }
+
+  const tw=el('div','rtbl-wrap');
+  const tbl=el('table','rtbl');
+  const thead=el('thead'); const htr=el('tr');
+  htr.append(el('th','lf','Round / taker'), el('th',null,'Bid %'), el('th',null,'Dividend / member'), el('th',null,'Your pay'));
+  thead.append(htr); tbl.append(thead);
+  const tbody=el('tbody');
+  for(let k=1;k<=n;k++){
+    const info=byRound[k];
+    let trCls='';
+    if(k<=rec) trCls='done';
+    else if(k===rec+1) trCls='now';
+    else trCls='open';
+    const tr=el('tr', trCls);
+    const lf=el('td','lf');
+    lf.append(el('span','rn',String(k)));
+    if(info && info.taker){
+      lf.append(el('span','who', info.taker));
+    } else if(k<=rec){
+      // recorded but no parseable taker note
+      lf.append(el('span','who', '—'));
+    } else {
+      lf.append(el('span','who', 'open auction'));
+    }
+    tr.append(lf);
+    // bid % cell (parsed from note; "—" when absent)
+    if(info && info.bid_pct!==null && info.bid_pct!==undefined){
+      tr.append(el('td',null, info.bid_pct+'%'));
+    } else {
+      tr.append(el('td',null,'—'));
+    }
+    // dividend/member cell
+    if(info && info.dividend_minor!==undefined && info.dividend_minor!==null){
+      const dt=el('td','divamt in'); dt.append(amtSpan(info.dividend_minor)); tr.append(dt);
+    } else {
+      tr.append(el('td',null,'—'));
+    }
+    // your-pay cell = subscription − dividend per member (derived; only when we have the dividend)
+    if(info && info.dividend_minor!==undefined && info.dividend_minor!==null){
+      const yourPay=(st.subscription_minor||0) - info.dividend_minor;
+      const yt=el('td'); yt.append(amtSpan(yourPay)); tr.append(yt);
+    } else {
+      tr.append(el('td',null,'—'));
+    }
+    tbody.append(tr);
+  }
+  tbl.append(tbody); tw.append(tbl); box.append(tw);
+}
+
+// ── contribution schedule (month-by-month; derived from start_date + n_members) ──
+function monthYr(iso){ const p=(iso||'').split('-'); return p.length>=2 ? (MONTHS[parseInt(p[1],10)-1]||'?')+' '+p[0] : '—'; }
+function renderSchedule(box, st){
+  box.textContent='';
+  const sch=st.schedule||[];
+  const ph=el('div','ph');
+  const t=el('div','t','Contribution schedule'); t.style.fontSize='16px';
+  const paid=sch.filter(r=>r.status==='paid').length;
+  ph.append(t, el('div','meta', paid+' of '+(st.term_months||sch.length)+' months paid'));
+  box.append(ph);
+  if(!sch.length){ box.append(el('div','emptypanel','No schedule.')); return; }
+
+  // Next-due / overdue banner
+  if(st.next_due_month!=null){
+    const due=el('div'); due.style.cssText='display:flex;align-items:center;gap:10px;margin:14px 22px 4px;padding:11px 14px;border-radius:11px;font-size:13px;font-weight:600';
+    const behind=st.months_behind||0;
+    if(behind>0){
+      due.style.background='color-mix(in srgb,var(--neg) 12%,transparent)'; due.style.color='var(--neg)';
+      due.append(document.createTextNode('⚠ '+behind+' month'+(behind>1?'s':'')+' overdue · next due '+monthYr(st.next_due_date)));
+    } else {
+      due.style.background='color-mix(in srgb,var(--primary) 14%,transparent)'; due.style.color='var(--accent-dk)';
+      due.append(document.createTextNode('Next due · '+monthYr(st.next_due_date)));
+    }
+    box.append(due);
+  } else {
+    const done=el('div'); done.style.cssText='margin:14px 22px 4px;padding:11px 14px;border-radius:11px;font-size:13px;font-weight:600;background:color-mix(in srgb,var(--pos) 12%,transparent);color:var(--pos)';
+    done.append(document.createTextNode('✓ All '+sch.length+' months recorded'));
+    box.append(done);
+  }
+
+  const grid=el('div'); grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;padding:12px 22px 20px';
+  sch.forEach(r=>{
+    const cell=el('div'); cell.style.cssText='border:1px solid var(--line);border-radius:10px;padding:9px 10px;display:flex;flex-direction:column;gap:3px';
+    const top=el('div'); top.style.cssText='display:flex;align-items:center;justify-content:space-between';
+    const mo=el('span', null, monthYr(r.period_start)); mo.style.cssText='font-size:11.5px;font-weight:600';
+    const dot=el('span'); dot.style.cssText='width:9px;height:9px;border-radius:50%;flex:none';
+    let col='var(--paper-2)', title='upcoming';
+    if(r.status==='paid'){ col='var(--pos)'; title='paid'; }
+    else if(r.status==='due'){ col='var(--neg)'; title='due'; }
+    dot.style.background=col; dot.title=title;
+    top.append(mo,dot);
+    const am=el('div'); am.style.cssText='font-family:"JetBrains Mono";font-size:11px;color:var(--ink-faint)';
+    am.append(el('span','symword',sym(BASE)), document.createTextNode(fmtNum(r.expected_minor,BASE)));
+    cell.append(top, am);
+    if(r.status!=='paid'){ cell.style.opacity = r.status==='due' ? '1' : '.6'; }
+    grid.append(cell);
+  });
+  box.append(grid);
 }
 
 // ── my position breakdown ──
@@ -370,6 +582,15 @@ function renderLedger(box, st){
     const ss=el('span','symword'); ss.textContent=pfx+sym(BASE); aw.append(ss);
     const nn=el('span'); nn.textContent=fmtNum(Math.abs(e.amount_minor), BASE); aw.append(nn);
     amt.append(aw);
+    // ✎ edit affordance — opens the edit slide-over pre-filled from this entry
+    if(e.id!=null){
+      const edit=el('span','proof','✎ edit');
+      edit.style.cssText='cursor:pointer;font-size:11.5px;color:var(--ink-faint);margin-top:4px;display:inline-block';
+      edit.tabIndex=0; edit.setAttribute('role','button');
+      edit.addEventListener('click', ()=>openEdit(e));
+      edit.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); openEdit(e); } });
+      amt.append(document.createElement('br'), edit);
+    }
     r.append(dot, li, amt);
     body.append(r);
   }
@@ -530,6 +751,46 @@ function renderMembers(box){
 function openOver(){ $('err').textContent=''; $('scrim').classList.add('on'); $('over').classList.add('on'); $('over').setAttribute('aria-hidden','false'); $('amount').focus(); }
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
 
+// ── edit-entry slide-over open/close ──
+let editId=null;
+function openEdit(e){
+  editId=e.id;
+  $('edit-err').textContent='';
+  $('edit-amount').value=(Math.abs(e.amount_minor||0)/100);
+  $('edit-note').value=e.note||'';
+  $('edit-occurred').value=(e.occurred_at||'').slice(0,10);
+  $('edit-osub').textContent='in '+($('name').textContent||'this chit');
+  $('scrim').classList.add('on'); $('edit-over').classList.add('on'); $('edit-over').setAttribute('aria-hidden','false');
+  $('edit-amount').focus();
+}
+function closeEdit(){ $('scrim').classList.remove('on'); $('edit-over').classList.remove('on'); $('edit-over').setAttribute('aria-hidden','true'); }
+
+// ── 7.4 in-page not-found (no redirect) ──
+// Renders a centered "Plan not found" panel into the main content region.
+function renderNotFound(){
+  const content=document.querySelector('.content');
+  if(!content) return;
+  content.textContent='';
+  const wrap=el('div','notfound');
+  const card=el('div','nf-card');
+  const glyph=el('div','nf-glyph');
+  const svgNS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(svgNS,'svg');
+  svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('fill','none');
+  svg.setAttribute('stroke','currentColor'); svg.setAttribute('stroke-width','2');
+  const c=document.createElementNS(svgNS,'circle'); c.setAttribute('cx','12'); c.setAttribute('cy','12'); c.setAttribute('r','9'); svg.append(c);
+  const l1=document.createElementNS(svgNS,'line'); l1.setAttribute('x1','12'); l1.setAttribute('y1','8'); l1.setAttribute('x2','12'); l1.setAttribute('y2','13'); svg.append(l1);
+  const l2=document.createElementNS(svgNS,'line'); l2.setAttribute('x1','12'); l2.setAttribute('y1','16'); l2.setAttribute('x2','12'); l2.setAttribute('y2','16.5'); svg.append(l2);
+  glyph.append(svg);
+  card.append(glyph);
+  card.append(el('h2','','Plan not found'));
+  card.append(el('p','',"This chit doesn't exist or isn't yours."));
+  const back=el('a','nf-back'); back.href='/app'; back.textContent='Back to dashboard';
+  card.append(back);
+  wrap.append(card);
+  content.append(wrap);
+}
+
 // ── boot ──
 async function boot(){
   const me = await fetch('/api/auth/me');
@@ -539,11 +800,24 @@ async function boot(){
 
   const r = await fetch('/api/plans/'+pid);
   if(r.status===401){ window.location.href='/'; return; }
-  if(!r.ok){ window.location.href='/app'; return; }
+  // 7.4: non-ok (404/403) → render an in-page not-found state instead of bouncing to /app.
+  if(!r.ok){ renderNotFound(); return; }
   const d = await r.json();
-  if(d.plan.type!=='chit'){ window.location.href='/app'; return; }
+  // wrong plan type for this page is also a "not found" for the chit view (no redirect).
+  if(!d.plan || d.plan.type!=='chit'){ renderNotFound(); return; }
 
   const plan=d.plan, st=d.state;
+
+  // ownership: which dashboard plans does this user own? (drives the "Organizer" pill)
+  let isOwner=false;
+  try{
+    const dash = await fetch('/api/dashboard');
+    if(dash.ok){
+      const dj = await dash.json();
+      const mine = (dj.plans || []).find(p => p.id===pid);
+      if(mine && mine.role==='owner') isOwner=true;
+    }
+  }catch(e){}
   BASE = plan.currency || 'INR';
   document.documentElement.dataset.cur = BASE.toLowerCase();
   document.title = 'Khata — '+plan.name;
@@ -553,8 +827,9 @@ async function boot(){
   $('sub').textContent = 'Chit funds · '+st.n_members+' members · '+plan.status+' · '+BASE;
   $('osub').textContent = 'to '+plan.name;
 
-  renderHeader($('header-panel'), plan, st);
+  renderHeader($('header-panel'), plan, st, isOwner);
   renderRounds($('rounds-panel'), st);
+  renderSchedule($('schedule-panel'), st);
   renderLedger($('ledger-panel'), st);
   renderPosition($('position-panel'), st);
   renderChart($('chart-panel'), st);
@@ -588,8 +863,8 @@ $('curtog').addEventListener('click', async (e)=>{
 // ── add-entry wiring ──
 $('addbtn').addEventListener('click', openOver);
 $('cancel').addEventListener('click', closeOver);
-$('scrim').addEventListener('click', closeOver);
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); } });
+$('scrim').addEventListener('click', ()=>{ closeOver(); closeEdit(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeEdit(); } });
 $('save').addEventListener('click', async ()=>{
   $('err').textContent='';
   const body={ kind:$('kind').value, amount:$('amount').value, occurred_at:($('occurred').value || null), note:($('note').value || null) };
@@ -599,10 +874,33 @@ $('save').addEventListener('click', async ()=>{
   $('err').textContent = e.detail || e.error || 'Could not save the entry.';
 });
 
+// ── edit-entry wiring (chit entries send only amount, occurred_at, note) ──
+$('edit-cancel').addEventListener('click', closeEdit);
+$('edit-save').addEventListener('click', async ()=>{
+  if(editId==null) return;
+  $('edit-err').textContent='';
+  const occ = $('edit-occurred').value ? $('edit-occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift
+  const body={ amount:$('edit-amount').value, occurred_at:occ, note:($('edit-note').value || null) };
+  const r=await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if(r.ok){ closeEdit(); boot(); return; }
+  const e=await r.json().catch(()=>({}));
+  $('edit-err').textContent = e.detail || e.error || 'Could not save changes.';
+});
+$('del-entry').addEventListener('click', async ()=>{
+  if(editId==null) return;
+  if(!confirm('Delete this entry? This cannot be undone.')) return;
+  $('edit-err').textContent='';
+  const r=await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'DELETE' });
+  if(r.ok){ closeEdit(); boot(); return; }
+  const e=await r.json().catch(()=>({}));
+  $('edit-err').textContent = e.detail || e.error || 'Could not delete.';
+});
+
 // ── profile photo upload (localStorage, display-only) ──
-(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
+(function(){var av=document.getElementById("avatar");if(!av)return;try{localStorage.removeItem("khata_avatar");}catch(e){}var inp=av.querySelector("input");if(inp)inp.disabled=true;av.title="Edit photo in Settings";av.style.cursor="pointer";av.addEventListener("click",function(e){e.preventDefault();window.location.href="/settings";});fetch("/api/auth/me").then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&d.user&&d.user.avatar){av.style.backgroundImage='url("'+d.user.avatar+'")';av.classList.add("has-img");}else{av.style.backgroundImage="";av.classList.remove("has-img");}}).catch(function(){});})();
 
 boot();
 </script>
+<script src="/static/assets/nav.js" defer></script>
 </body>
 </html>

@@ -1,5 +1,7 @@
 # Personal Money-Plans Tracker ("Khata") — Intent Brief
 
+> **As-built / rebuild blueprint:** see [`khata-AS-BUILT.md`](./khata-AS-BUILT.md) for the current implemented system (data model, APIs, state contracts, deviations, deploy). This file is the original *intent brief* (the why).
+
 ## One line
 A privacy-first personal app to plan and track the money commitments I run in irregular, real-world Indian patterns — buying an asset in piecemeal installments, and participating in or running chit funds — recording every transaction as a single source of truth with proof, live balances, and my true net position across all of them, in multiple currencies.
 

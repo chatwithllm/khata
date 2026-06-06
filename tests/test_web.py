@@ -59,14 +59,14 @@ def test_app_shell_served(client):
     assert r.status_code == 200
     body = r.data.decode()
     for needle in ["/api/auth/me", "/api/networth", "/api/dashboard", "/api/plans",
-                   "Net worth", "ledger.css", "/holdings", "/features"]:
+                   "Net position", "ledger.css", "/holdings", "Analysis"]:
         assert needle in body
 
 
 def test_dashboard_fidelity_markers(client):
     body = client.get("/app").data.decode()
     for needle in ["/api/auth/me", "/api/dashboard", "/api/networth", "/api/plans",
-                   "curtog", "Log payment", "Liabilities", "Net worth"]:
+                   "curtog", "Log payment", "Liabilities", "Net position"]:
         assert needle in body
 
 

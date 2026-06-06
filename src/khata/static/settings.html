@@ -36,14 +36,15 @@
     <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
     <a class="nav-i" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
     <div class="navsec">Money plans</div>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <a class="nav-i" href="/app?type=asset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i" href="/app?type=chit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app?type=loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app?type=retirement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
     <div class="navsec">Records</div>
     <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
     <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
     <a class="nav-i on" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+    <a class="nav-i" href="#" style="color:var(--neg)" onclick="event.preventDefault();fetch('/api/auth/logout',{method:'POST'}).finally(function(){location.href='/'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log out</a>
   </aside>
 
   <!-- main -->
@@ -106,6 +107,20 @@
               <div class="acts"><button class="alt" id="savefx">Set rate</button></div>
             </div>
           </div>
+
+          <!-- Data: backup & restore -->
+          <div class="panel fade d3 fill">
+            <div class="ph"><div class="t" style="font-size:16px">Data</div><div class="meta">backup &amp; restore</div></div>
+            <div class="pbody">
+              <div class="hint">Download a full snapshot of <em>everything</em> in this instance — keep it on your own disk or cloud. Your data is yours.</div>
+              <div class="acts"><a class="save" id="dlbackup" href="/api/backup" download>Download backup</a></div>
+
+              <div class="hint" style="margin-top:18px">Restore <strong>adds</strong> a backup's plans on top of what's already here (users matched by email). A pre-restore snapshot is auto-saved on the server first.</div>
+              <div class="fld"><label for="restorefile">Backup file (.json)</label><input id="restorefile" type="file" accept="application/json,.json"></div>
+              <div class="msg" id="rmsg"></div>
+              <div class="acts"><button class="alt" id="dorestore">Restore from file</button></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -127,6 +142,7 @@ async function load(){
   const u=(await me.json()).user;
   $('display_name').value=u.display_name || '';
   $('ava-init').textContent=((u.display_name||'?')[0]||'?').toUpperCase();
+  if(window.__applyAvatar) window.__applyAvatar(u.avatar);
   $('pwtitle').textContent=u.has_password ? 'Change password' : 'Set a password';
   $('pwhint').textContent=u.has_password
     ? 'Update your email / password login.'
@@ -164,11 +180,109 @@ $('savefx').addEventListener('click', async ()=>{
   show($('fmsg'), ok, ok ? 'Rate set.' : (j.detail || j.error || 'Failed.'));
   if(ok) $('fxr').value='';
 });
+$('dorestore').addEventListener('click', async ()=>{
+  const fileEl=$('restorefile');
+  const f=fileEl.files && fileEl.files[0];
+  if(!f){ show($('rmsg'), false, 'Pick a backup .json file first.'); return; }
+  if(!confirm('Restore from "'+f.name+'"? This ADDS its plans on top of your current data. A pre-restore snapshot is saved first.')) return;
+  const btn=$('dorestore'); btn.disabled=true;
+  show($('rmsg'), true, 'Restoring…');
+  try{
+    const fd=new FormData(); fd.append('file', f);
+    const r=await fetch('/api/restore', { method:'POST', body:fd });
+    const j=await r.json().catch(()=>({}));
+    if(r.ok){
+      const s=j.stats||{};
+      const added=(s.plans||0)+' plans, '+(s.ledger_entries||0)+' entries';
+      const usr=(s.users_created||0)+' new user(s), '+(s.users_matched||0)+' matched';
+      show($('rmsg'), true, 'Restored: '+added+' added · '+usr+'.');
+      fileEl.value='';
+    } else {
+      show($('rmsg'), false, j.detail || j.error || 'Restore failed.');
+    }
+  }catch(e){ show($('rmsg'), false, 'Restore failed.'); }
+  finally{ btn.disabled=false; }
+});
 
-// ── profile photo upload (localStorage, display-only) ──
-(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
+// ── profile photo: crop + upload (server-side, shared across the app) ──
+(function(){
+  const av=$('avatar'); if(!av) return;
+  const inp=av.querySelector('input');
+  function el(t,c,x){ const e=document.createElement(t); if(c)e.className=c; if(x!=null)e.textContent=x; return e; }
+  function applyAvatar(url){
+    if(url){ av.style.backgroundImage='url("'+url+'")'; av.classList.add('has-img'); }
+    else { av.style.backgroundImage=''; av.classList.remove('has-img'); }
+  }
+  window.__applyAvatar=applyAvatar;
+
+  const V=280, S=256;            // crop viewport (display) and output size (px)
+  let scrim, stage, imgEl, slider, msgEl, state;
+  function build(){
+    scrim=el('div'); scrim.id='crop-scrim';
+    scrim.style.cssText='position:fixed;inset:0;background:rgba(20,18,14,.55);z-index:90;display:none;align-items:center;justify-content:center';
+    const card=el('div'); card.style.cssText='background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;width:340px;max-width:92vw;box-shadow:0 24px 60px rgba(0,0,0,.28)';
+    const h=el('div',null,'Position & crop'); h.style.cssText='font-family:"Fraunces",serif;font-size:19px';
+    const sub=el('div',null,'Drag to move · slide to zoom'); sub.style.cssText='font-size:12px;color:var(--ink-faint);margin:2px 0 14px';
+    stage=el('div'); stage.style.cssText='position:relative;width:'+V+'px;height:'+V+'px;margin:0 auto;border-radius:50%;overflow:hidden;background:var(--paper-2);cursor:grab;touch-action:none;border:1px solid var(--line)';
+    imgEl=document.createElement('img'); imgEl.alt=''; imgEl.style.cssText='position:absolute;left:0;top:0;max-width:none;user-select:none;pointer-events:none';
+    stage.append(imgEl);
+    slider=document.createElement('input'); slider.type='range'; slider.min='1'; slider.max='3'; slider.step='0.01'; slider.value='1';
+    slider.style.cssText='width:100%;margin:16px 0 6px;accent-color:var(--primary)';
+    msgEl=el('div','msg'); msgEl.style.minHeight='16px';
+    const acts=el('div'); acts.style.cssText='display:flex;gap:10px;justify-content:flex-end;margin-top:4px';
+    const cancel=el('button',null,'Cancel'); cancel.style.cssText='font:inherit;font-size:14px;padding:9px 16px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--ink-faint);cursor:pointer';
+    const rm=el('button',null,'Remove'); rm.style.cssText=cancel.style.cssText+';color:var(--neg)';
+    const save=el('button','save','Save photo');
+    acts.append(rm,cancel,save);
+    card.append(h,sub,stage,slider,msgEl,acts); scrim.append(card); document.body.append(scrim);
+
+    let drag=null;
+    stage.addEventListener('pointerdown',e=>{ drag={x:e.clientX,y:e.clientY,tx:state.tx,ty:state.ty}; stage.setPointerCapture(e.pointerId); stage.style.cursor='grabbing'; });
+    stage.addEventListener('pointermove',e=>{ if(!drag)return; state.tx=drag.tx+(e.clientX-drag.x); state.ty=drag.ty+(e.clientY-drag.y); render(); });
+    stage.addEventListener('pointerup',()=>{ drag=null; stage.style.cursor='grab'; });
+    slider.addEventListener('input',()=>setZoom(parseFloat(slider.value)));
+    cancel.addEventListener('click',close);
+    rm.addEventListener('click',()=>save_(null));
+    save.addEventListener('click',()=>{
+      const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
+      const ctx=cv.getContext('2d'); const ss=V/state.scale;
+      ctx.drawImage(imgEl, -state.tx/state.scale, -state.ty/state.scale, ss, ss, 0,0,S,S);
+      let url; try{ url=cv.toDataURL('image/jpeg',0.85); }catch(e){ fail('Could not process image.'); return; }
+      save_(url);
+    });
+  }
+  function close(){ if(scrim) scrim.style.display='none'; inp.value=''; }
+  function fail(m){ msgEl.className='msg err'; msgEl.textContent=m; }
+  function setZoom(z){
+    const cx=V/2, cy=V/2, rx=(cx-state.tx)/state.scale, ry=(cy-state.ty)/state.scale;
+    state.scale=state.cover*z; state.tx=cx-rx*state.scale; state.ty=cy-ry*state.scale; render();
+  }
+  function render(){
+    const w=imgEl.naturalWidth*state.scale, h=imgEl.naturalHeight*state.scale;
+    state.tx=Math.min(0,Math.max(V-w,state.tx)); state.ty=Math.min(0,Math.max(V-h,state.ty));
+    imgEl.style.width=w+'px'; imgEl.style.height=h+'px'; imgEl.style.left=state.tx+'px'; imgEl.style.top=state.ty+'px';
+  }
+  function open(dataUrl){
+    if(!scrim) build();
+    msgEl.className='msg'; msgEl.textContent=''; slider.value='1';
+    imgEl.onload=()=>{ const nw=imgEl.naturalWidth, nh=imgEl.naturalHeight, cover=Math.max(V/nw,V/nh);
+      state={scale:cover,cover:cover,tx:(V-nw*cover)/2,ty:(V-nh*cover)/2}; render(); scrim.style.display='flex'; };
+    imgEl.src=dataUrl;
+  }
+  async function save_(url){
+    msgEl.className='msg'; msgEl.textContent='Saving…';
+    try{
+      const r=await fetch('/api/auth/avatar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({avatar:url})});
+      const j=await r.json().catch(()=>({}));
+      if(r.ok){ applyAvatar(j.user.avatar); close(); } else fail(j.detail||j.error||'Could not save.');
+    }catch(e){ fail('Could not save.'); }
+  }
+  inp.addEventListener('change',e=>{ const f=e.target.files&&e.target.files[0]; if(!f) return;
+    const rd=new FileReader(); rd.onload=()=>open(rd.result); rd.readAsDataURL(f); });
+})();
 
 load();
 </script>
+<script src="/static/assets/nav.js" defer></script>
 </body>
 </html>

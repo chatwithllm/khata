@@ -153,6 +153,12 @@ def test_member_can_access_and_contribute(client):
     client.post("/api/auth/logout")
     client.post("/api/auth/login", json={"email": "b@b.com", "password": "pw12345"})
 
+    # Invited but not yet accepted: the plan is hidden until the member accepts.
+    assert client.get(f"/api/plans/{pid}").status_code == 403
+    invs = client.get("/api/invitations").get_json()["invitations"]
+    assert any(i["plan_id"] == pid and i["shared_by"] == "Arjun" for i in invs)
+    assert client.post(f"/api/invitations/{pid}/accept").status_code == 200
+
     assert client.get(f"/api/plans/{pid}").status_code == 200            # member reads
     assert client.post(f"/api/plans/{pid}/payments", json={
         "amount": "2,00,000", "method": "upi", "funding_source": "savings"}).status_code == 201
@@ -162,6 +168,49 @@ def test_member_can_access_and_contribute(client):
                        json={"email": "a@b.com"}).status_code == 403      # owner-only
     st = client.get(f"/api/plans/{pid}").get_json()["state"]
     assert any(c["display_name"] == "Priya" for c in st["contributors"])
+
+
+def test_amount_agreement_flow_api(client):
+    # Priya has an account; owner shares + attributes a payment to her.
+    client.post("/api/auth/register", json={
+        "email": "p@b.com", "display_name": "Priya", "password": "pw12345"})
+    client.post("/api/auth/logout")
+    _register(client, "a@b.com")  # owner Arjun
+    pid = client.post("/api/plans", json={
+        "name": "Joint", "currency": "INR", "total_price": "10,00,000"}).get_json()["plan"]["id"]
+    pri_uid = None
+    client.post(f"/api/plans/{pid}/members", json={"email": "p@b.com"})
+    members = client.get(f"/api/plans/{pid}/members").get_json()["members"]
+    pri_uid = next(m["user_id"] for m in members if m["email"] == "p@b.com")
+    # owner logs ₹2L "paid by Priya" → pending her confirmation
+    r = client.post(f"/api/plans/{pid}/payments", json={
+        "amount": "2,00,000", "method": "upi", "funding_source": "savings", "paid_by": pri_uid})
+    assert r.status_code == 201
+    eid = r.get_json()["state"]["ledger"][0]["id"]
+    assert r.get_json()["state"]["ledger"][0]["amount_status"] == "pending"
+    # owner has nothing to confirm (it's Priya's turn)
+    assert client.get("/api/confirmations").get_json()["confirmations"] == []
+
+    # Priya accepts the share, sees the confirmation, counters higher
+    client.post("/api/auth/logout")
+    client.post("/api/auth/login", json={"email": "p@b.com", "password": "pw12345"})
+    client.post(f"/api/invitations/{pid}/accept")
+    confs = client.get("/api/confirmations").get_json()["confirmations"]
+    assert any(c["entry_id"] == eid and c["your_role"] == "contributor" for c in confs)
+    assert client.post(f"/api/plans/{pid}/entries/{eid}/amount",
+                       json={"action": "counter", "amount": "2,50,000"}).status_code == 200
+
+    # owner accepts the counter → recorded amount becomes ₹2.5L, agreed
+    client.post("/api/auth/logout")
+    client.post("/api/auth/login", json={"email": "a@b.com", "password": "pw12345"})
+    confs = client.get("/api/confirmations").get_json()["confirmations"]
+    assert any(c["entry_id"] == eid and c["your_role"] == "owner"
+               and c["counter_amount_minor"] == 25000000 for c in confs)
+    d = client.post(f"/api/plans/{pid}/entries/{eid}/amount", json={"action": "accept"})
+    assert d.status_code == 200
+    row = next(l for l in d.get_json()["state"]["ledger"] if l["id"] == eid)
+    assert row["amount_status"] == "agreed" and row["amount_minor"] == 25000000
+    assert client.get("/api/confirmations").get_json()["confirmations"] == []
 
 
 def test_non_member_forbidden(client):
@@ -197,3 +246,208 @@ def test_dashboard_rollup(client):
 
 def test_dashboard_requires_auth(client):
     assert client.get("/api/dashboard").status_code == 401
+
+
+def test_edit_ledger_entry_and_occurred_at(client):
+    _register(client)
+    pid = client.post("/api/plans", json={
+        "name": "Plot", "currency": "INR", "total_price": "10,00,000",
+        "installments": [{"amount": "5,00,000"}, {"amount": "5,00,000"}]}).get_json()["plan"]["id"]
+    # log a payment with an explicit occurred_at date
+    r = client.post(f"/api/plans/{pid}/payments", json={
+        "amount": "3,00,000", "method": "transfer", "funding_source": "savings",
+        "occurred_at": "2025-03-15T12:00:00"})
+    assert r.status_code == 201
+    e = client.get(f"/api/plans/{pid}").get_json()["state"]["ledger"][0]
+    assert e["occurred_at"].startswith("2025-03-15")
+    assert "id" in e and "created_at" in e          # exposed for edit + "logged" display
+    eid = e["id"]
+    # edit it: change amount + note + date → derived state recomputes
+    r = client.patch(f"/api/plans/{pid}/entries/{eid}", json={
+        "amount": "4,00,000", "note": "corrected", "occurred_at": "2025-04-01T12:00:00"})
+    assert r.status_code == 200
+    st = r.get_json()["state"]
+    assert st["paid_to_date_minor"] == 40000000
+    e = [x for x in st["ledger"] if x["id"] == eid][0]
+    assert e["note"] == "corrected" and e["occurred_at"].startswith("2025-04-01")
+    # bad amount → 400 (no 500); missing entry → 400
+    assert client.patch(f"/api/plans/{pid}/entries/{eid}", json={"amount": "abc"}).status_code == 400
+    assert client.patch(f"/api/plans/{pid}/entries/999999", json={"note": "x"}).status_code == 404
+    # unauthenticated → 401
+    client.post("/api/auth/logout")
+    assert client.patch(f"/api/plans/{pid}/entries/{eid}", json={"note": "x"}).status_code == 401
+
+
+def test_delete_ledger_entry(client):
+    _register(client)
+    pid = client.post("/api/plans", json={
+        "name": "Plot", "currency": "INR", "total_price": "10,00,000"}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{pid}/payments", json={
+        "amount": "3,00,000", "method": "cash", "funding_source": "savings"})
+    eid = client.get(f"/api/plans/{pid}").get_json()["state"]["ledger"][0]["id"]
+    # delete → derived paid recomputes to 0, ledger empty
+    r = client.delete(f"/api/plans/{pid}/entries/{eid}")
+    assert r.status_code == 200
+    st = r.get_json()["state"]
+    assert st["paid_to_date_minor"] == 0 and st["ledger"] == []
+    # already gone → 404; unauth → 401
+    assert client.delete(f"/api/plans/{pid}/entries/{eid}").status_code == 404
+    client.post("/api/auth/logout")
+    assert client.delete(f"/api/plans/{pid}/entries/1").status_code == 401
+
+
+def test_edit_loan_terms_and_delete_plan(client):
+    _register(client)
+    pid = client.post("/api/plans", json={
+        "type": "loan", "name": "Old name", "currency": "INR", "direction": "taken",
+        "counterparty": "HDFC", "interest_type": "yearly", "rate": "8.5",
+        "start_date": "2025-01-15"}).get_json()["plan"]["id"]
+    # edit terms
+    r = client.patch(f"/api/plans/{pid}", json={"name": "New name", "counterparty": "ICICI", "rate": "10"})
+    assert r.status_code == 200
+    d = client.get(f"/api/plans/{pid}").get_json()["plan"]
+    assert d["name"] == "New name" and d["counterparty"] == "ICICI" and d["rate_bps"] == 1000
+    # bad interest_type → 400
+    assert client.patch(f"/api/plans/{pid}", json={"interest_type": "weird"}).status_code == 400
+    # delete the whole plan
+    assert client.delete(f"/api/plans/{pid}").status_code == 200
+    assert client.get(f"/api/plans/{pid}").status_code == 404
+    # unauth → 401
+    client.post("/api/auth/logout")
+    assert client.delete(f"/api/plans/{pid}").status_code == 401
+
+
+def test_tag_paid_by_contributor(client):
+    # owner + a second member
+    client.post("/api/auth/register", json={"email": "owner@b.com", "display_name": "Owner", "password": "pw12345"})
+    client.post("/api/auth/register", json={"email": "mate@b.com", "display_name": "Mate", "password": "pw12345"})
+    mate_id = client.get("/api/auth/me").get_json()["user"]["id"]   # logged in as mate now
+    client.post("/api/auth/login", json={"email": "owner@b.com", "password": "pw12345"})
+    pid = client.post("/api/plans", json={"type": "asset", "name": "Plot", "currency": "INR",
+                                          "total_price": "10,00,000"}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{pid}/members", json={"email": "mate@b.com"})
+    # log a payment tagged as paid by mate
+    r = client.post(f"/api/plans/{pid}/payments", json={"amount": "2,00,000", "method": "cash",
+                                                        "funding_source": "savings", "paid_by": mate_id})
+    assert r.status_code == 201
+    st = client.get(f"/api/plans/{pid}").get_json()["state"]
+    e = st["ledger"][0]
+    assert e["logged_by_user_id"] == mate_id and e["paid_by_name"] == "Mate"
+    assert any(c["display_name"] == "Mate" and c["paid_minor"] == 20000000 for c in st["contributors"])
+    # re-tag via edit (paid_by → owner)
+    owner_id = client.get("/api/auth/me").get_json()["user"]["id"]
+    assert client.patch(f"/api/plans/{pid}/entries/{e['id']}", json={"paid_by": owner_id}).status_code == 200
+    assert client.get(f"/api/plans/{pid}").get_json()["state"]["ledger"][0]["paid_by_name"] == "Owner"
+    # non-member → 400
+    assert client.post(f"/api/plans/{pid}/payments", json={"amount": "100", "method": "cash",
+                                                           "funding_source": "savings", "paid_by": 999999}).status_code == 400
+
+
+def test_loan_kind_create_and_edit(client):
+    _register(client)
+    r = client.post("/api/plans", json={
+        "type": "loan", "name": "Gold loan", "currency": "INR", "direction": "taken",
+        "interest_type": "none", "start_date": "2026-01-01", "loan_kind": "gold"})
+    assert r.status_code == 201
+    pid = r.get_json()["plan"]["id"]
+    assert r.get_json()["plan"]["kind"] == "gold"
+    # default is personal when omitted
+    p2 = client.post("/api/plans", json={
+        "type": "loan", "name": "Cash", "currency": "INR", "direction": "taken",
+        "interest_type": "none", "start_date": "2026-01-01"}).get_json()["plan"]
+    assert p2["kind"] == "personal"
+    # edit the kind
+    e = client.patch(f"/api/plans/{pid}", json={"loan_kind": "home"})
+    assert e.status_code == 200 and e.get_json()["plan"]["kind"] == "home"
+    # bad kind rejected
+    assert client.patch(f"/api/plans/{pid}", json={"loan_kind": "spaceship"}).status_code == 400
+
+
+def test_gold_loan_collateral_and_ltv(client):
+    _register(client)
+    r = client.post("/api/plans", json={
+        "type": "loan", "name": "Gold Loan", "currency": "INR", "direction": "taken",
+        "interest_type": "yearly", "rate": "7.5", "start_date": "2026-01-01",
+        "tenure_months": 24, "loan_kind": "gold",
+        "gold_weight": "25", "gold_unit": "gram", "gold_rate": "9,300",
+        "gold_rate_basis": "per_gram", "gold_value": "2,32,500"})
+    assert r.status_code == 201
+    pid = r.get_json()["plan"]["id"]
+    assert r.get_json()["plan"]["collateral_value_minor"] == 23250000   # ₹2,32,500
+    # borrow the full value → LTV 100%
+    client.post(f"/api/plans/{pid}/loan/disbursements",
+                json={"amount": "2,32,500", "occurred_at": "2026-01-01T00:00:00"})
+    st = client.get(f"/api/plans/{pid}").get_json()["state"]
+    gc = st["gold_collateral"]
+    assert gc is not None
+    assert gc["value_minor"] == 23250000 and gc["unit"] == "gram"
+    assert gc["qty_micro"] == 25000000                                  # 25g ×1e6
+    assert gc["ltv_pct"] == 100
+    # switching the kind away from gold clears the collateral
+    client.patch(f"/api/plans/{pid}", json={"loan_kind": "personal"})
+    st2 = client.get(f"/api/plans/{pid}").get_json()["state"]
+    assert st2["gold_collateral"] is None
+
+
+def test_fund_asset_from_loan_link(client):
+    _register(client)
+    # a loan (taken) ₹10L
+    lid = client.post("/api/plans", json={
+        "type": "loan", "name": "Personal loan", "currency": "INR", "direction": "taken",
+        "interest_type": "yearly", "rate": "10", "start_date": "2026-01-01", "tenure_months": 24}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{lid}/loan/disbursements", json={"amount": "10,00,000", "occurred_at": "2026-01-01T00:00:00"})
+    # an asset; contribute ₹10L funded by that loan
+    aid = client.post("/api/plans", json={"name": "1 Acre", "currency": "INR", "total_price": "50,00,000"}).get_json()["plan"]["id"]
+    r = client.post(f"/api/plans/{aid}/payments", json={
+        "amount": "10,00,000", "method": "transfer", "funding_source": "loan", "funding_plan_id": lid})
+    assert r.status_code == 201
+    # asset ledger row links to the loan
+    row = client.get(f"/api/plans/{aid}").get_json()["state"]["ledger"][0]
+    assert row["funding_plan_id"] == lid and row["funding_plan_name"] == "Personal loan" and row["funding_plan_type"] == "loan"
+    # loan shows the money deployed into the asset
+    lst = client.get(f"/api/plans/{lid}").get_json()["state"]
+    assert lst["deployed_total_minor"] == 100000000
+    assert lst["deployed"][0]["plan_id"] == aid and lst["deployed"][0]["plan_name"] == "1 Acre"
+    # a non-existent funding plan is rejected
+    assert client.post(f"/api/plans/{aid}/payments", json={
+        "amount": "100", "method": "cash", "funding_source": "loan", "funding_plan_id": 99999}).status_code == 400
+
+
+def test_contributor_can_edit_own_entry_not_others(client):
+    # owner shares an asset with a member; member contributes, then edits their own entry
+    client.post("/api/auth/register", json={"email": "m@b.com", "display_name": "Priya", "password": "pw12345"})
+    client.post("/api/auth/logout")
+    _register(client, "o@b.com")  # owner
+    pid = client.post("/api/plans", json={"name": "Plot", "currency": "INR", "total_price": "10,00,000"}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{pid}/members", json={"email": "m@b.com"})
+    owner_entry = client.post(f"/api/plans/{pid}/payments", json={
+        "amount": "1,00,000", "method": "upi", "funding_source": "savings"}).get_json()["state"]["ledger"][0]["id"]
+    client.post("/api/auth/logout")
+    client.post("/api/auth/login", json={"email": "m@b.com", "password": "pw12345"})
+    client.post(f"/api/invitations/{pid}/accept")
+    # member logs their own contribution
+    r = client.post(f"/api/plans/{pid}/payments", json={"amount": "2,00,000", "method": "cash", "funding_source": "savings"})
+    own_entry = r.get_json()["state"]["ledger"][0]["id"]
+    # member edits their OWN entry → allowed
+    assert client.patch(f"/api/plans/{pid}/entries/{own_entry}", json={"note": "my share"}).status_code == 200
+    assert client.delete(f"/api/plans/{pid}/entries/{own_entry}").status_code == 200
+    # member edits the OWNER's entry → forbidden
+    assert client.patch(f"/api/plans/{pid}/entries/{owner_entry}", json={"note": "x"}).status_code == 403
+    assert client.delete(f"/api/plans/{pid}/entries/{owner_entry}").status_code == 403
+
+
+def test_funding_link_cross_currency(client):
+    _register(client)
+    # USD loan funds an INR asset contribution
+    lid = client.post("/api/plans", json={
+        "type": "loan", "name": "401k Loan", "currency": "USD", "direction": "taken",
+        "interest_type": "yearly", "rate": "7.5", "start_date": "2026-01-01", "tenure_months": 24}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{lid}/loan/disbursements", json={"amount": "35,000", "occurred_at": "2026-01-01T00:00:00"})
+    aid = client.post("/api/plans", json={"name": "1 Acre", "currency": "INR", "total_price": "1,75,00,000"}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{aid}/payments", json={
+        "amount": "10,00,000", "method": "transfer", "funding_source": "loan", "funding_plan_id": lid})
+    st = client.get(f"/api/plans/{lid}").get_json()["state"]
+    # the deployed money stays in ITS currency (INR), not summed into the USD loan
+    assert st["deployed"][0]["currency"] == "INR" and st["deployed"][0]["amount_minor"] == 100000000
+    assert st["deployed_totals"] == [{"currency": "INR", "total_minor": 100000000}]
+    assert st["deployed_total_minor"] == 0   # nothing in the loan's own (USD) currency

@@ -6,6 +6,21 @@
     if (txt != null) e.textContent = txt;
     return e;
   }
+  const AV_COLORS = ["#b06a32", "#3d6b6e", "#7a5ea8", "#5a7a3a", "#a8506a", "#3a6a9a"];
+  // a small circular avatar: the member's photo, or a coloured initial
+  function memberAvatar(m, idx) {
+    const a = el("div");
+    a.style.cssText = "width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;"
+      + "overflow:hidden;color:#fff;font-weight:700;font-size:13px;line-height:1";
+    if (m.avatar) {
+      a.style.backgroundImage = 'url("' + m.avatar + '")';
+      a.style.backgroundSize = "cover"; a.style.backgroundPosition = "center";
+    } else {
+      a.style.background = AV_COLORS[idx % AV_COLORS.length];
+      a.textContent = ((m.display_name || m.email || "?")[0] || "?").toUpperCase();
+    }
+    return a;
+  }
 
   async function mountSharing(planId, box) {
     box.textContent = "";
@@ -22,12 +37,25 @@
     box.appendChild(h);
 
     const list = el("div");
-    for (const m of members) {
+    members.forEach((m, idx) => {
       const row = el("div");
       row.style.display = "flex"; row.style.alignItems = "center"; row.style.gap = "10px";
       row.style.padding = "8px 0"; row.style.borderBottom = "1px solid var(--line)";
+      row.appendChild(memberAvatar(m, idx));
       const nm = el("div");
-      nm.appendChild(el("div", null, m.display_name || m.email));
+      const nameRow = el("div");
+      nameRow.style.display = "flex"; nameRow.style.alignItems = "center"; nameRow.style.gap = "7px";
+      nameRow.appendChild(el("span", null, m.display_name || m.email));
+      if (m.status === "invited") {
+        const pend = el("span", null, "pending");
+        pend.style.fontSize = "10.5px"; pend.style.fontWeight = "700"; pend.style.letterSpacing = ".04em";
+        pend.style.textTransform = "uppercase"; pend.style.padding = "2px 7px"; pend.style.borderRadius = "999px";
+        pend.style.background = "color-mix(in srgb, var(--primary) 18%, transparent)";
+        pend.style.color = "var(--accent-dk)";
+        pend.title = "Invited — awaiting their approval";
+        nameRow.appendChild(pend);
+      }
+      nm.appendChild(nameRow);
       const sub = el("div", "muted", m.email + " · " + m.role); sub.style.fontSize = "12px";
       nm.appendChild(sub);
       row.appendChild(nm);
@@ -41,7 +69,7 @@
         row.appendChild(rm);
       }
       list.appendChild(row);
-    }
+    });
     box.appendChild(list);
 
     if (isOwner) {

@@ -12,6 +12,16 @@
 /* ── asset-detail.html-only rules (shell + detail-panel groups live in app.css) ── */
 .emptypanel{padding:30px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px}
 
+/* ledger (page-specific; .pill/.proof reused from app.css) */
+.ledger .lrow{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:14px 22px;border-top:1px solid var(--line-2);transition:background .2s}
+.ledger .lrow:hover{background:var(--paper-2)}
+.ledger .l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
+.ledger .amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right}
+.ledger .amt.in{color:var(--pos)} .ledger .amt.out{color:var(--ink)}
+.ledger .amt .amt-pct{display:block;font-weight:500;font-size:10.5px;color:var(--ink-faint);margin-top:3px;letter-spacing:.01em}
+.ledger .l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.ledger .l2r{font-size:11px;color:var(--ink-faint);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+
 /* log-payment slide-over (page-specific) */
 .scrim{position:fixed;inset:0;background:rgba(20,16,12,.45);opacity:0;visibility:hidden;transition:opacity .3s var(--ease),visibility .3s;z-index:40}
 .scrim.on{opacity:1;visibility:visible}
@@ -45,14 +55,15 @@
     <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
     <a class="nav-i" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
     <div class="navsec">Money plans</div>
-    <a class="nav-i on" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <a class="nav-i on" href="/app?type=asset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i" href="/app?type=chit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app?type=loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app?type=retirement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
     <div class="navsec">Records</div>
     <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
     <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
     <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+    <a class="nav-i" href="#" style="color:var(--neg)" onclick="event.preventDefault();fetch('/api/auth/logout',{method:'POST'}).finally(function(){location.href='/'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log out</a>
   </aside>
 
   <!-- main -->
@@ -77,6 +88,8 @@
           <div class="panel fade" id="header-panel"></div>
           <!-- installment schedule -->
           <div class="panel fade d1 fill" id="sched-panel"></div>
+          <!-- ledger (3.1) -->
+          <div class="panel fade d1 fill" id="ledger-panel"></div>
         </div>
 
         <!-- RIGHT RAIL -->
@@ -97,21 +110,41 @@
 <div class="scrim" id="scrim"></div>
 <aside class="over" id="over" aria-hidden="true">
   <div class="oh">
-    <div class="eyebrow">New entry</div>
-    <h3>Log a <em>payment</em></h3>
+    <div class="eyebrow" id="oeyebrow">New entry</div>
+    <h3 id="otitle">Log a <em>payment</em></h3>
     <div class="osub" id="osub"></div>
   </div>
   <div class="obody">
     <div class="fld"><label for="amount">Amount</label><input id="amount" placeholder="50,000" inputmode="decimal"></div>
+    <div class="fld"><label for="occurred">Date (when it happened)</label><input id="occurred" type="date"></div>
     <div class="fld"><label for="method">Method</label>
       <select id="method"><option value="transfer">Transfer</option><option value="upi">UPI</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select>
     </div>
     <div class="fld"><label for="fsource">Funding source</label>
       <select id="fsource"><option value="savings">Savings</option><option value="loan">Loan</option><option value="borrowed">Borrowed</option><option value="sold_asset">Sold asset</option><option value="chit_payout">Chit payout</option><option value="other">Other</option></select>
     </div>
+    <div class="fld" id="paidby-fld" style="display:none"><label for="paid-by">Paid by · contributor</label><select id="paid-by"></select></div>
+    <div class="fld" id="fundplan-fld" style="display:none"><label for="fundplan">From which loan</label><select id="fundplan"></select>
+      <div class="hint" style="font-size:11.5px;color:var(--ink-faint)">Links this contribution to the loan it came from — the loan then shows it was deployed here.</div>
+    </div>
     <div class="fld"><label for="note">Note (optional)</label><input id="note" placeholder=""></div>
     <div class="err" id="err"></div>
-    <div class="acts"><button class="save" id="save">Save payment</button><span class="cancel" id="cancel">Cancel</span></div>
+    <div class="acts"><button class="save" id="save">Save payment</button><span class="cancel" id="cancel">Cancel</span><span class="del" id="del-entry" style="display:none;margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
+  </div>
+</aside>
+
+<!-- installment-schedule editor slide-over -->
+<aside class="over" id="sched-over" aria-hidden="true">
+  <div class="oh">
+    <div class="eyebrow">Schedule</div>
+    <h3>Installment <em>schedule</em></h3>
+    <div class="osub">Define planned installments. Saving replaces the schedule; your logged payments re-apply automatically.</div>
+  </div>
+  <div class="obody">
+    <div id="sched-rows" style="display:flex;flex-direction:column;gap:10px"></div>
+    <button type="button" id="sched-addrow" style="align-self:flex-start;background:none;border:1px dashed var(--line);border-radius:9px;padding:8px 12px;color:var(--primary);font-weight:600;font-size:13px;cursor:pointer">+ Add installment</button>
+    <div class="err" id="sched-err"></div>
+    <div class="acts"><button class="save" id="sched-save">Save schedule</button><span class="cancel" id="sched-cancel">Cancel</span></div>
   </div>
 </aside>
 
@@ -122,6 +155,40 @@ const pid = parseInt(location.pathname.split("/").pop(), 10);
 let BASE = "INR";
 let nextDueSeq = null;
 let planName = "";
+let ME_ID = null;        // current user id (from /api/auth/me)
+let MEMBERS = [];        // plan members [{user_id, email, display_name, role}]
+let LOANS = [];          // the user's loan plans — for the "funded from which loan" picker
+
+// ── "From which loan" field: shown when funding source is a loan/borrowed ──
+function fundSrcIsLoan(){ const v=$('fsource').value; return v==='loan'||v==='borrowed'; }
+function fillFundPlan(selectedId){
+  const fld=$('fundplan-fld'), sel=$('fundplan');
+  if(!fundSrcIsLoan() || !LOANS.length){ fld.style.display='none'; return; }
+  fld.style.display='flex';
+  sel.textContent='';
+  const none=document.createElement('option'); none.value=''; none.textContent='— not linked —'; sel.append(none);
+  for(const lp of LOANS){
+    const o=document.createElement('option'); o.value=String(lp.id);
+    o.textContent=lp.name+(lp.counterparty?(' · '+lp.counterparty):'');
+    sel.append(o);
+  }
+  sel.value = (selectedId!=null) ? String(selectedId) : '';
+}
+
+// ── "Paid by · contributor" field: hide for solo plans, else rebuild + select uid ──
+function fillPaidBy(uid){
+  const fld=$('paidby-fld'), sel=$('paid-by');
+  if(MEMBERS.length < 2){ fld.style.display='none'; return; }   // solo plan — no contributor choice
+  fld.style.display='flex';
+  sel.textContent='';
+  for(const m of MEMBERS){
+    const opt=document.createElement('option');
+    opt.value=m.user_id;
+    opt.textContent=(m.display_name||m.email||('User '+m.user_id))+(m.user_id===ME_ID?' (you)':'')+(m.status==='invited'?' (pending)':'');
+    sel.append(opt);
+  }
+  if(uid!=null) sel.value=uid;
+}
 
 // ── currency formatting (real amounts already in BASE; no client-side conversion) ──
 function indGroup(n){n=Math.round(n);let s=Math.abs(n).toString();if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}return (n<0?'-':'')+s;}
@@ -133,6 +200,13 @@ function fmtNum(minor, ccy){
   const v=minor/100;
   return ccy==='INR'?indGroup(v):usGroup(v);
 }
+
+// ── date/time formatting from ISO occurred_at (real data; no fabrication) ──
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function parseISO(s){ if(!s) return null; const d=new Date(s); return isNaN(d.getTime())?null:d; }
+function fmtDay(d){ return String(d.getDate()).padStart(2,'0')+' '+MONTHS[d.getMonth()]+' '+d.getFullYear(); }
+function fmtTime(d){ return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function fmtMonYr(d){ return MONTHS[d.getMonth()]+' '+d.getFullYear(); }
 
 function el(tag, cls, text){
   const e=document.createElement(tag);
@@ -150,6 +224,45 @@ function amtSpan(minor, cls){
   const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(minor), BASE);
   wrap.append(s,n);
   return wrap;
+}
+
+// ── avatars: a circular chip showing the contributor's photo, or a coloured initial ──
+const AV_COLORS=['#b06a32','#3d6b6e','#7a5ea8','#5a7a3a','#a8506a','#3a6a9a'];
+function avatarEl(url, name, size, idx){
+  const s=size||32;
+  const a=el('div','ava-chip');
+  a.style.cssText='width:'+s+'px;height:'+s+'px;border-radius:50%;flex:none;display:grid;place-items:center;'
+    +'overflow:hidden;font-weight:700;color:#fff;line-height:1;font-size:'+Math.round(s*0.42)+'px';
+  if(url){ a.style.backgroundImage='url("'+url+'")'; a.style.backgroundSize='cover'; a.style.backgroundPosition='center'; }
+  else { a.style.background=AV_COLORS[(idx||0)%AV_COLORS.length]; a.textContent=((name||'?')[0]||'?').toUpperCase(); }
+  return a;
+}
+// hover an avatar → reveal a large, clean version in a floating popover
+let __revealEl=null;
+function attachReveal(trigger, url, name){
+  if(!url) return;
+  trigger.style.cursor='zoom-in';
+  function show(){
+    hide();
+    const pop=el('div'); pop.id='ava-reveal';
+    pop.style.cssText='position:fixed;z-index:120;padding:8px;background:var(--card);border:1px solid var(--line);'
+      +'border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.30);pointer-events:none;opacity:0;transition:opacity .14s,transform .14s;transform:scale(.96)';
+    const img=el('div'); img.style.cssText='width:170px;height:170px;border-radius:13px;background-size:cover;background-position:center';
+    img.style.backgroundImage='url("'+url+'")';
+    const cap=el('div',null,name||''); cap.style.cssText='text-align:center;font-size:12px;color:var(--ink-faint);margin-top:7px;font-weight:600';
+    pop.append(img); if(name) pop.append(cap);
+    document.body.append(pop); __revealEl=pop;
+    const r=trigger.getBoundingClientRect();
+    let left=r.left+r.width/2-93, top=r.bottom+10;
+    left=Math.max(10,Math.min(window.innerWidth-196,left));
+    if(top+210>window.innerHeight) top=r.top-220;
+    pop.style.left=left+'px'; pop.style.top=top+'px';
+    requestAnimationFrame(()=>{ pop.style.opacity='1'; pop.style.transform='scale(1)'; });
+  }
+  function hide(){ if(__revealEl){ __revealEl.remove(); __revealEl=null; } }
+  trigger.addEventListener('mouseenter', show);
+  trigger.addEventListener('mouseleave', hide);
+  trigger.addEventListener('click', e=>{ e.stopPropagation(); show(); });
 }
 
 // humanize funding source code → label
@@ -188,13 +301,14 @@ function renderHeader(box, plan, st){
   const head=el('div','planhead');
   const row=el('div','row');
   row.append(el('span', null, 'Progress'));
-  row.append(el('span', null, pct+'% paid · '+paidCount+' of '+insts.length+' installments'));
+  row.append(el('span', null, insts.length ? (pct+'% paid · '+paidCount+' of '+insts.length+' installments') : (pct+'% paid · ad-hoc payments')));
   head.append(row);
   const bar=el('div','bigbar'); const i=el('i'); i.dataset.w=pct;
   bar.append(i);
   const ticks=[25,50,75];
   for(const tk of ticks){ const s=el('span','tick'); s.style.left=tk+'%'; bar.append(s); }
   head.append(bar);
+
   box.append(head);
 }
 
@@ -204,17 +318,35 @@ function renderSchedule(box, st){
   const insts = st.installments || [];
   const ph=el('div','ph');
   const t=el('div','t','Installment schedule'); t.style.fontSize='16px';
-  ph.append(t, el('div','meta','planned vs paid'));
+  const right=el('div'); right.style.cssText='display:flex;align-items:center;gap:12px';
+  right.append(el('div','meta', insts.length ? 'planned vs paid' : 'as funds arrive'));
+  const edBtn=el('span','proof', insts.length ? '✎ edit schedule' : '+ add schedule'); edBtn.style.cursor='pointer'; edBtn.tabIndex=0; edBtn.setAttribute('role','button');
+  edBtn.addEventListener('click', ()=>openSched(insts));
+  edBtn.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openSched(insts); } });
+  right.append(edBtn);
+  ph.append(t, right);
   box.append(ph);
   const sched=el('div','sched fillrows');
-  if(!insts.length){ sched.append(el('div','emptypanel','No schedule set.')); box.append(sched); return; }
+  if(!insts.length){ sched.append(el('div','emptypanel','No fixed schedule — payments are logged as funds arrive.')); box.append(sched); return; }
   for(const it of insts){
     const dotCls = it.status==='paid'?'paid':(it.status==='partial'?'part':'due');
     const srow=el('div','srow');
     const dot=el('span','dot '+dotCls);
     dot.textContent = it.status==='paid'?'✓':(it.status==='partial'?'~':String(it.seq));
     const si=el('div','si');
-    si.append(el('div','nm','Installment #'+it.seq));
+    const nm=el('div','nm');
+    nm.append(document.createTextNode('Installment #'+it.seq));
+    // 3.4: derive a real "short ₹X" badge on partial installments (planned − applied)
+    if(it.status==='partial'){
+      const shortMinor = (it.planned_amount_minor||0) - (it.applied_minor||0);
+      if(shortMinor>0){
+        const badge=el('span','rollbadge'); badge.style.marginLeft='8px';
+        const bs=el('span','symword'); bs.textContent='short '+sym(BASE);
+        const bn=el('span'); bn.textContent=fmtNum(shortMinor, BASE);
+        badge.append(bs,bn); nm.append(badge);
+      }
+    }
+    si.append(nm);
     const statusLabel = it.status==='paid'?'paid in full':(it.status==='partial'?'part-paid':'due');
     si.append(el('div','mt',statusLabel));
     const sv=el('div','sv');
@@ -225,6 +357,117 @@ function renderSchedule(box, st){
     sched.append(srow);
   }
   box.append(sched);
+}
+
+// ── ledger (3.1): list state.ledger newest-first ──
+let LEDGER_EDIT=false;
+function renderLedger(box, st){
+  box.textContent='';
+  const rows = st.ledger || [];
+  // map each contributor's user_id → colour index (matches the Contributors bar/avatars)
+  const colorByUid={};
+  (st.contributors||[]).forEach((c,i)=>{ colorByUid[c.user_id]=i; });
+  const shared = (st.contributors||[]).length>1 || MEMBERS.length>1;
+
+  const ph=el('div','ph');
+  const t=el('div','t','Ledger'); t.style.fontSize='16px';
+  const right=el('div'); right.style.cssText='display:flex;align-items:center;gap:12px';
+  right.append(el('div','meta', rows.length+(rows.length===1?' entry':' entries')));
+  // single Edit toggle in the headline (replaces the per-row ✎)
+  if(rows.some(r=>r.id!=null)){
+    const editBtn=el('span','proof', LEDGER_EDIT?'✓ done':'✎ edit');
+    editBtn.style.cssText='cursor:pointer;user-select:none'; editBtn.tabIndex=0; editBtn.setAttribute('role','button');
+    if(LEDGER_EDIT){ editBtn.style.color='var(--accent-dk)'; editBtn.style.fontWeight='700'; }
+    const toggle=()=>{ LEDGER_EDIT=!LEDGER_EDIT; renderLedger(box, st); };
+    editBtn.addEventListener('click', toggle);
+    editBtn.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+    right.append(editBtn);
+  }
+  ph.append(t, right);
+  box.append(ph);
+
+  if(LEDGER_EDIT){
+    const hint=el('div',null,'Select a row to edit it.');
+    hint.style.cssText='font-size:12px;color:var(--accent-dk);padding:10px 22px 0;font-weight:600';
+    box.append(hint);
+  }
+
+  const ledger=el('div','ledger fillrows');
+  if(!rows.length){ ledger.append(el('div','emptypanel','No ledger entries yet.')); box.append(ledger); return; }
+  const sorted = rows.slice().sort((a,b)=>{
+    const da=parseISO(a.occurred_at), db=parseISO(b.occurred_at);
+    if(da&&db) return db-da; if(db) return 1; if(da) return -1; return 0;
+  });
+  for(const lr of sorted){
+    const row=el('div','lrow'); row.tabIndex=0;
+    const editable = lr.id!=null;
+    const ttl = lr.note || (lr.kind!=null && lr.kind!=='' ? srcLabel(lr.kind) : 'Payment');
+    row.append(el('div','l1', ttl));
+    const out = lr.direction==='out';
+    const amt=el('div','amt '+(out?'out':'in'));
+    const sgn=el('span','symword'); sgn.textContent=(out?'−':'+')+sym(BASE);
+    const num=el('span'); num.textContent=fmtNum(Math.abs(lr.amount_minor||0), BASE);
+    amt.append(sgn,num);
+    // quiet "% of total" line beneath the amount (share of the plan total)
+    const tot = st.total_price_minor||0;
+    if(tot>0){
+      const raw = Math.abs(lr.amount_minor||0)*100/tot;
+      const pctTxt = (raw>0 && raw<1) ? '<1% of total' : (Math.round(raw)+'% of total');
+      amt.append(el('span','amt-pct', pctTxt));
+    }
+    row.append(amt);
+
+    // l2 — date · time, then (on shared plans) the contributor's avatar + name
+    const l2=el('div','l2'); l2.style.cssText='display:flex;align-items:center;gap:6px;flex-wrap:wrap';
+    const d=parseISO(lr.occurred_at);
+    let dtxt = d ? (fmtDay(d)+' · '+fmtTime(d)) : '—';
+    const cd=parseISO(lr.created_at);
+    if(cd && d && fmtDay(cd)!==fmtDay(d)) dtxt += ' · logged '+fmtDay(cd);
+    l2.append(el('span', null, dtxt));
+    if(shared && lr.paid_by_name){
+      l2.append(el('span', null, '·'));
+      const av=avatarEl(lr.paid_by_avatar, lr.paid_by_name, 18, colorByUid[lr.logged_by_user_id]||0);
+      attachReveal(av, lr.paid_by_avatar, lr.paid_by_name);
+      l2.append(av, el('span', null, lr.paid_by_name));
+    }
+    row.append(l2);
+
+    // l2r — method + funding pills + status + proof (no per-row edit anymore)
+    const l2r=el('div','l2r');
+    if(lr.method) l2r.append(el('span','pill m', lr.method));
+    if(lr.funding_source) l2r.append(el('span','pill f', srcLabel(lr.funding_source)));
+    // provenance link: this payment came from a specific loan → jump to it
+    if(lr.funding_plan_id && lr.funding_plan_name){
+      const link=el('a','pill', '↗ '+lr.funding_plan_name);
+      link.href='/'+(lr.funding_plan_type||'loan')+'/'+lr.funding_plan_id;
+      link.title='Funded by this loan — open it';
+      link.style.cssText='text-decoration:none;color:var(--accent-dk);border-color:color-mix(in srgb,var(--primary) 38%,transparent)';
+      link.addEventListener('click', e=>e.stopPropagation());   // don't trigger row edit-mode
+      l2r.append(link);
+    }
+    if(lr.amount_status && lr.amount_status!=='agreed'){
+      const isC=lr.amount_status==='countered';
+      const chip=el('span','pill aconf', isC?'⇄ counter-proposed':'⚠ unconfirmed');
+      chip.style.background='color-mix(in srgb,#d98a00 16%,transparent)';
+      chip.style.color='#a96a00'; chip.style.borderColor='color-mix(in srgb,#d98a00 38%,transparent)';
+      if(isC && lr.counter_amount_minor!=null) chip.title='Proposed: '+sym(BASE)+fmtNum(lr.counter_amount_minor,BASE);
+      else chip.title='Awaiting the contributor’s confirmation — act from the dashboard';
+      l2r.append(chip);
+    }
+    if(lr.has_proof) l2r.append(el('span','proof','▣ proof'));
+    if(LEDGER_EDIT && editable) l2r.append(el('span','proof','✎'));
+    row.append(l2r);
+
+    // edit-mode: the whole row is the edit affordance
+    if(LEDGER_EDIT && editable){
+      row.style.cursor='pointer';
+      row.style.boxShadow='inset 3px 0 0 var(--accent-dk)';
+      row.addEventListener('click', ()=>openEdit(lr));
+      row.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openEdit(lr); } });
+    }
+    ledger.append(row);
+  }
+  box.append(ledger);
 }
 
 // ── funding sources ──
@@ -292,22 +535,35 @@ function renderContributors(box, st, myUserId){
     contrib.append(el('div','emptypanel','Just you so far.'));
     box.append(contrib); return;
   }
-  const sharebar=el('div','sharebar');
+  // Clean proportional share bar — colour only, NO cramped inline labels. Each person's
+  // colour matches their row below (which carries the name + %), so a 19% slice never
+  // has to squeeze text. Segments grow on reveal via the existing [data-w] animation.
+  const sharebar=el('div');
+  sharebar.style.cssText='display:flex;height:12px;border-radius:7px;overflow:hidden;background:var(--paper-2);margin:4px 0 16px;gap:2px';
   cs.forEach((c,idx)=>{
-    const seg=el('span','seg '+(idx===0?'you':'priya'));
-    seg.dataset.w=(c.pct||0);
-    seg.textContent=(c.display_name||('User '+c.user_id))+' '+(c.pct||0)+'%';
+    const seg=el('div'); seg.dataset.w=(c.pct||0);
+    seg.style.cssText='height:100%;width:0;border-radius:4px;background:'+AV_COLORS[idx%AV_COLORS.length]
+      +';transition:width .85s cubic-bezier(.22,1,.36,1)';
+    seg.title=(c.display_name||('User '+c.user_id))+' · '+(c.pct||0)+'%';
     sharebar.append(seg);
   });
   contrib.append(sharebar);
+
   cs.forEach((c,idx)=>{
     const name=c.display_name||('User '+c.user_id);
     const isMe = (myUserId!=null && c.user_id===myUserId);
     const person=el('div','cperson');
-    const av=el('span','av '+(idx===0?'y':'p')); av.textContent=(name[0]||'?').toUpperCase();
+    const av=avatarEl(c.avatar, name, 38, idx);
+    av.style.boxShadow='0 0 0 2px '+AV_COLORS[idx%AV_COLORS.length];   // ring ties to bar colour
+    attachReveal(av, c.avatar, name);
     person.append(av);
     const mid=el('div');
-    mid.append(el('div','nm', (isMe?'You · ':'')+name));
+    const nm=el('div','nm', (isMe?'You · ':'')+name);
+    if(c.unconfirmed){
+      const w=el('span',null,' ⚠'); w.title='Has an amount awaiting confirmation';
+      w.style.color='#a96a00'; nm.append(w);
+    }
+    mid.append(nm);
     person.append(mid);
     const rt=el('div','rt');
     rt.append(amtSpan(c.paid_minor,'a'));
@@ -331,8 +587,66 @@ function renderMembers(box){
 }
 
 // ── slide-over open/close ──
-function openOver(){ $('err').textContent=''; $('scrim').classList.add('on'); $('over').classList.add('on'); $('over').setAttribute('aria-hidden','false'); $('amount').focus(); }
+let editId=null;
+function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function setTitle(pre, emword){ const h=$('otitle'); h.textContent=pre+' '; const e=el('em'); e.textContent=emword; h.append(e); }
+function showOver(){ $('err').textContent=''; $('scrim').classList.add('on'); $('over').classList.add('on'); $('over').setAttribute('aria-hidden','false'); }
+function openOver(){ // NEW payment
+  editId=null; setTitle('Log a','payment'); $('oeyebrow').textContent='New entry'; $('save').textContent='Save payment';
+  $('amount').value=''; $('note').value=''; $('method').value='transfer'; $('fsource').value='savings'; $('occurred').value=todayISO();
+  $('del-entry').style.display='none';   // no delete when logging a new entry
+  fillPaidBy(ME_ID);                      // default contributor = current user
+  fillFundPlan(null);
+  showOver(); $('amount').focus();
+}
+function openEdit(lr){ // EDIT existing entry
+  editId=lr.id; setTitle('Edit','entry'); $('oeyebrow').textContent='Edit'; $('save').textContent='Save changes';
+  $('amount').value=(Math.abs(lr.amount_minor||0)/100);
+  $('note').value=lr.note||'';
+  if(lr.method) $('method').value=lr.method;
+  if(lr.funding_source) $('fsource').value=lr.funding_source;
+  $('occurred').value=(lr.occurred_at||'').slice(0,10)||todayISO();
+  $('del-entry').style.display='inline';  // delete available when editing
+  fillPaidBy(lr.logged_by_user_id);       // preselect the entry's existing contributor
+  fillFundPlan(lr.funding_plan_id);       // preselect the source loan (if any)
+  showOver(); $('amount').focus();
+}
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
+
+// ── installment-schedule editor (POST /installments replaces the schedule) ──
+function schedRow(amount, dateISO){
+  const row=el('div'); row.className='sched-erow'; row.style.cssText='display:grid;grid-template-columns:1fr 150px 26px;gap:8px;align-items:center';
+  const amt=el('input'); amt.className='s-amt'; amt.placeholder='2,50,000'; amt.inputMode='decimal'; if(amount!=null&&amount!=='') amt.value=amount;
+  const dt=el('input'); dt.className='s-date'; dt.type='date'; if(dateISO) dt.value=dateISO;
+  [amt,dt].forEach(inp=>{ inp.style.cssText='font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)'; });
+  const rm=el('span'); rm.textContent='×'; rm.title='remove'; rm.style.cssText='cursor:pointer;color:var(--ink-faint);font-size:18px;text-align:center';
+  rm.addEventListener('click', ()=>row.remove());
+  row.append(amt, dt, rm);
+  return row;
+}
+function openSched(insts){
+  $('sched-err').textContent='';
+  const box=$('sched-rows'); box.textContent='';
+  if(insts && insts.length){ for(const it of insts){ box.append(schedRow((it.planned_amount_minor||0)/100, (it.due_date||'').slice(0,10))); } }
+  else { box.append(schedRow('', '')); }
+  $('scrim').classList.add('on'); $('sched-over').classList.add('on'); $('sched-over').setAttribute('aria-hidden','false');
+  const first=box.querySelector('.s-amt'); if(first) first.focus();
+}
+function closeSched(){ $('scrim').classList.remove('on'); $('sched-over').classList.remove('on'); $('sched-over').setAttribute('aria-hidden','true'); }
+$('sched-addrow').addEventListener('click', ()=>{ $('sched-rows').append(schedRow('', '')); });
+$('sched-cancel').addEventListener('click', closeSched);
+$('sched-save').addEventListener('click', async ()=>{
+  $('sched-err').textContent='';
+  const items=[];
+  for(const row of $('sched-rows').querySelectorAll('.sched-erow')){
+    const amt=row.querySelector('.s-amt').value.trim();
+    if(amt==='') continue;
+    items.push({ amount: amt, due_date: row.querySelector('.s-date').value || null });
+  }
+  const r = await fetch('/api/plans/'+pid+'/installments', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({installments: items}) });
+  if(r.ok){ closeSched(); boot(); return; }
+  const e = await r.json().catch(()=>({})); $('sched-err').textContent = e.detail || e.error || 'Could not save schedule.';
+});
 
 // ── boot ──
 async function boot(){
@@ -340,7 +654,12 @@ async function boot(){
   if(me.status===401){ window.location.href='/'; return; }
   const user=(await me.json()).user;
   const myUserId = user.id;
+  ME_ID = user.id;
   $('ava-init').textContent=((user.display_name||'?')[0]||'?').toUpperCase();
+  if(user.avatar){ const a=$('avatar'); a.style.backgroundImage='url("'+user.avatar+'")'; a.classList.add('has-img'); }
+
+  // members list (owner + shared) — used by the "Paid by · contributor" field
+  MEMBERS = (await fetch('/api/plans/'+pid+'/members').then(r=>r.json()).catch(()=>({}))).members || [];
 
   const r = await fetch('/api/plans/'+pid);
   if(r.status===401){ window.location.href='/'; return; }
@@ -357,7 +676,22 @@ async function boot(){
   document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));
 
   $('name').textContent = plan.name;
-  $('sub').textContent = 'Assets · '+plan.status+' · '+BASE;
+  // header meta (3.3): "created <date> · joint with <name> · INR" — only real parts.
+  (function(){
+    const parts=['Assets'];
+    const cd = parseISO(plan.created_at);              // created_at may be absent → skip honestly
+    if(cd) parts.push('created '+fmtDay(cd));
+    else if(plan.status) parts.push(plan.status);
+    const cs = st.contributors || [];
+    if(cs.length>1){                                    // joint only if a real 2nd contributor exists
+      const other = cs.find(c => (myUserId==null || c.user_id!==myUserId) && c.display_name);
+      const nm = other && other.display_name;
+      parts.push(nm ? ('joint with '+nm) : 'joint');     // name only if real display_name
+    }
+    parts.push(BASE);
+    // built from text only; names assigned via textContent on the element below
+    $('sub').textContent = parts.join(' · ');
+  })();
 
   // slide-over sub text (built via textContent; name is dynamic)
   let subText = 'against '+plan.name;
@@ -366,14 +700,16 @@ async function boot(){
 
   renderHeader($('header-panel'), plan, st);
   renderSchedule($('sched-panel'), st);
+  renderLedger($('ledger-panel'), st);
   renderFunding($('fund-panel'), st);
   renderContributors($('contrib-panel'), st, myUserId);
   renderMembers($('members-panel'));
 
-  // sidebar counts from /api/plans
+  // sidebar counts from /api/plans (+ stash loan plans for the "from which loan" picker)
   try{
     const plansResp = await fetch('/api/plans').then(x=>x.json());
     const plans = plansResp.plans || [];
+    LOANS = plans.filter(p=>p.type==='loan');
     const by=(t)=>plans.filter(p=>p.type===t).length||'';
     $('ct-asset').textContent=by('asset');
     $('ct-chit').textContent=by('chit');
@@ -396,24 +732,42 @@ $('curtog').addEventListener('click', async (e)=>{
 
 // ── log-payment slide-over wiring ──
 $('logbtn').addEventListener('click', openOver);
+$('fsource').addEventListener('change', ()=>fillFundPlan($('fundplan')?$('fundplan').value:null));
 $('cancel').addEventListener('click', closeOver);
-$('scrim').addEventListener('click', closeOver);
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeOver(); });
+$('scrim').addEventListener('click', ()=>{ closeOver(); closeSched(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeSched(); } });
 $('save').addEventListener('click', async ()=>{
   $('err').textContent='';
+  const occ = $('occurred').value ? $('occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift
   const body = { amount: $('amount').value, method: $('method').value,
-                 funding_source: $('fsource').value, note: $('note').value || null };
-  const r = await fetch('/api/plans/'+pid+'/payments', {
-    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-  if(r.ok){ closeOver(); $('amount').value=''; $('note').value=''; boot(); return; }
+                 funding_source: $('fsource').value, note: $('note').value || null,
+                 occurred_at: occ };
+  if($('paidby-fld').style.display!=='none') body.paid_by = $('paid-by').value;  // contributor tag (shared plans)
+  // funding-from-loan link: set when the loan picker is shown; clear it on edit otherwise
+  if($('fundplan-fld').style.display!=='none') body.funding_plan_id = $('fundplan').value || null;
+  else if(editId) body.funding_plan_id = null;
+  const url = editId ? ('/api/plans/'+pid+'/entries/'+editId) : ('/api/plans/'+pid+'/payments');
+  const r = await fetch(url, { method: editId ? 'PATCH' : 'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if(r.ok){ closeOver(); boot(); return; }
   const e = await r.json().catch(()=>({}));
-  $('err').textContent = e.detail || e.error || 'Could not log payment.';
+  $('err').textContent = e.detail || e.error || (editId?'Could not save changes.':'Could not log payment.');
+});
+$('del-entry').addEventListener('click', async ()=>{
+  if(!editId) return;
+  if(!confirm('Delete this entry? This cannot be undone.')) return;
+  $('err').textContent='';
+  const r = await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'DELETE' });
+  if(r.ok){ closeOver(); boot(); return; }
+  const e = await r.json().catch(()=>({}));
+  $('err').textContent = e.detail || e.error || 'Could not delete.';
 });
 
-// ── profile photo upload (localStorage, display-only) ──
-(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
+// ── topbar avatar: display-only here; photo is set/cropped in Settings ──
+(function(){var av=document.getElementById("avatar");if(!av)return;try{localStorage.removeItem("khata_avatar");}catch(e){}var inp=av.querySelector("input");if(inp)inp.disabled=true;av.title="Edit photo in Settings";av.style.cursor="pointer";av.addEventListener("click",function(e){e.preventDefault();window.location.href="/settings";});})();
 
 boot();
 </script>
+<script src="/static/assets/nav.js" defer></script>
 </body>
 </html>

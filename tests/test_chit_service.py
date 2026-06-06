@@ -64,6 +64,45 @@ def test_auction_dividend_math():
     assert d["prize_minor"] == 90000000                # chit value − bid = 9,00,000
 
 
+def test_schedule_paid_due_upcoming(ctx):
+    s, u = ctx
+    p = _chit(s, u)  # 20-month chit from 2026-01-01, subscription 50,000
+    # record 3 contributions → first 3 months paid
+    for d in (1, 2, 3):
+        log_chit_entry(s, plan=p, user_id=u.id, kind="chit_contribution",
+                       amount_minor=5000000, occurred_at=_dt(d))
+    s.commit()
+    # as_of mid-run: 2026-05 → months 0..4 have arrived (Jan..May), 3 paid, 2 overdue
+    st = chit_state(s, p.chit, as_of=date(2026, 5, 15))
+    assert st["term_months"] == 20
+    assert len(st["schedule"]) == 20
+    statuses = [r["status"] for r in st["schedule"]]
+    assert statuses[:3] == ["paid", "paid", "paid"]
+    assert statuses[3] == "due" and statuses[4] == "due"      # Apr, May arrived, unpaid
+    assert statuses[5] == "upcoming"                          # Jun not yet
+    assert st["schedule"][0]["period_start"] == "2026-01-01"
+    assert st["schedule"][1]["period_start"] == "2026-02-01"
+    assert st["next_due_month"] == 3
+    assert st["next_due_date"] == "2026-04-01"
+    assert st["months_behind"] == 2                           # Apr + May overdue
+    assert st["schedule"][0]["expected_minor"] == 5000000
+
+
+def test_schedule_fully_paid(ctx):
+    s, u = ctx
+    p = create_chit_plan(s, owner_id=u.id, name="C", currency="INR",
+                         chit_value_minor=100000000, n_members=3, commission_bps=0,
+                         start_date=date(2026, 1, 1))
+    for d in (1, 2, 3):
+        log_chit_entry(s, plan=p, user_id=u.id, kind="chit_contribution",
+                       amount_minor=int(100000000 / 3), occurred_at=_dt(d))
+    s.commit()
+    st = chit_state(s, p.chit, as_of=date(2026, 6, 1))
+    assert [r["status"] for r in st["schedule"]] == ["paid", "paid", "paid"]
+    assert st["next_due_month"] is None and st["next_due_date"] is None
+    assert st["months_behind"] == 0
+
+
 def test_validation(ctx):
     s, u = ctx
     with pytest.raises(ValidationError):

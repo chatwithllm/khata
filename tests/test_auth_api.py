@@ -125,3 +125,31 @@ def test_update_profile_api(client):
     assert r.status_code == 200 and r.get_json()["user"]["display_name"] == "New Name"
     assert client.post("/api/auth/profile", json={"display_name": "  "}).status_code == 400
     assert client.get("/api/auth/me").get_json()["user"]["has_password"] is True
+
+
+_PNG = ("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAA"
+        "C0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
+
+
+def test_avatar_set_clear_and_in_me(client):
+    client.post("/api/auth/register", json={
+        "email": "a@b.com", "display_name": "Arjun", "password": "pw12345"})
+    assert client.get("/api/auth/me").get_json()["user"]["avatar"] is None
+    # set a (tiny) image data URL
+    r = client.post("/api/auth/avatar", json={"avatar": _PNG})
+    assert r.status_code == 200 and r.get_json()["user"]["avatar"] == _PNG
+    assert client.get("/api/auth/me").get_json()["user"]["avatar"] == _PNG
+    # clear it
+    assert client.post("/api/auth/avatar", json={"avatar": None}).get_json()["user"]["avatar"] is None
+
+
+def test_avatar_rejects_non_image_and_oversize(client):
+    client.post("/api/auth/register", json={
+        "email": "a@b.com", "display_name": "Arjun", "password": "pw12345"})
+    assert client.post("/api/auth/avatar", json={"avatar": "not-a-data-url"}).status_code == 400
+    big = "data:image/png;base64," + ("A" * 200001)
+    assert client.post("/api/auth/avatar", json={"avatar": big}).status_code == 413
+
+
+def test_avatar_requires_auth(client):
+    assert client.post("/api/auth/avatar", json={"avatar": _PNG}).status_code == 401

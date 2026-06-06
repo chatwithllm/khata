@@ -12,9 +12,37 @@
 <style>
 /* ── app.html-only rules (shared shell + detail-panel groups live in app.css) ── */
 
+/* pending share invitations banner */
+#invites{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+#invites:empty{display:none;margin:0}
+.invite{background:linear-gradient(180deg,color-mix(in srgb,var(--primary) 9%,var(--card)),var(--card));border:1px solid color-mix(in srgb,var(--primary) 40%,var(--line));border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.invite .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:color-mix(in srgb,var(--primary) 20%,transparent);color:var(--accent-dk);flex:none}
+.invite .itxt{flex:1;min-width:200px}
+.invite .itxt .it1{font-weight:600;font-size:14px}
+.invite .itxt .it1 b{font-weight:700}
+.invite .itxt .it2{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:3px}
+.invite .iacts{display:flex;gap:8px;flex:none}
+.invite .iacts button{font:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:9px;cursor:pointer;border:1px solid var(--line);transition:.15s}
+.invite .iacts .acc{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.invite .iacts .acc:hover{opacity:.88}
+.invite .iacts .dec{background:transparent;color:var(--ink-faint)}
+.invite .iacts .dec:hover{border-color:var(--neg);color:var(--neg)}
+.invite .iacts button:disabled{opacity:.5;cursor:default}
+/* amount-confirmation cards reuse .invite; warm amber accent to read as "needs your number" */
+#confirms{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+#confirms:empty{display:none;margin:0}
+.invite.confirm{background:linear-gradient(180deg,color-mix(in srgb,#d98a00 11%,var(--card)),var(--card));border-color:color-mix(in srgb,#d98a00 42%,var(--line))}
+.invite.confirm .ic{background:color-mix(in srgb,#d98a00 20%,transparent);color:#a96a00}
+.invite .iamt{margin-top:6px;display:flex;gap:8px}
+.invite .iamt input{font:inherit;font-size:13px;padding:7px 11px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:150px}
+.invite .iamt button{font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:var(--paper)}
+
 /* stat cards */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 @media(max-width:900px){.stats{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.stats{grid-template-columns:1fr}.stat .v{font-size:26px}}
+/* loans list: drop the secondary interest/mo column on phones (outstanding stays) */
+@media(max-width:560px){.pr-icol{display:none}}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:.6s}
 .stat .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;display:flex;align-items:center;gap:7px}
 .stat .v{font-family:"Fraunces",serif;font-weight:600;font-size:30px;letter-spacing:-.02em;margin-top:8px;line-height:1}
@@ -61,14 +89,15 @@
     <a class="nav-i on" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
     <a class="nav-i" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
     <div class="navsec">Money plans</div>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
-    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <a class="nav-i" href="/app?type=asset" data-nav="asset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i" href="/app?type=chit" data-nav="chit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app?type=loan" data-nav="loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app?type=retirement" data-nav="retirement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
     <div class="navsec">Records</div>
     <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
     <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
     <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+    <a class="nav-i" id="logout-link" href="#" style="color:var(--neg)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log out</a>
   </aside>
 
   <!-- main -->
@@ -86,10 +115,14 @@
     </div>
 
     <div class="content">
+      <!-- pending share invitations (populated by boot) -->
+      <div id="invites"></div>
+      <!-- per-entry amount confirmations awaiting this user (populated by boot) -->
+      <div id="confirms"></div>
       <!-- stat row -->
       <div class="stats">
-        <div class="stat hero-stat fade"><div class="k">Net worth</div><div class="v"><span class="cur" id="nw-cur">₹</span><span id="networth">—</span></div><div class="d up" style="color:var(--accent-dk)">across all plans</div></div>
-        <div class="stat fade d1"><div class="k">Paid to date</div><div class="v"><span class="cur" id="paid-cur">₹</span><span id="paid">—</span></div><div class="d up">into your asset plans</div></div>
+        <div class="stat hero-stat fade"><div class="k">Net position</div><div class="v"><span class="cur" id="nw-cur">₹</span><span id="networth">—</span></div><div class="d up" style="color:var(--accent-dk)">across all plans</div></div>
+        <div class="stat fade d1"><div class="k">Paid to date</div><div class="v"><span class="cur" id="paid-cur">₹</span><span id="paid">—</span></div><div class="d up" id="paid-d">into your asset plans</div></div>
         <div class="stat fade d2"><div class="k">I owe</div><div class="v"><span class="cur" id="iowe-cur">₹</span><span id="iowe">—</span></div><div class="d dn">loans you've taken</div></div>
         <div class="stat fade d3"><div class="k">Owed to me</div><div class="v"><span class="cur" id="owed-cur">₹</span><span id="owed">—</span></div><div class="d up">loans given + chit dividends</div></div>
       </div>
@@ -99,7 +132,7 @@
         <div>
           <div class="panel fade d2" id="featured"></div>
           <div class="panel plist fade d3" style="margin-top:22px">
-            <div class="ph"><div class="t" style="font-size:16px">Your plans</div><div class="meta" id="plans-meta"></div></div>
+            <div class="ph"><div class="t" id="plans-title" style="font-size:16px">Your plans</div><div class="meta" id="plans-meta"></div></div>
             <div id="plans"></div>
           </div>
         </div>
@@ -112,6 +145,22 @@
 </div>
 
 <script>
+// When arriving with ?type=<asset|chit|loan|retirement>, hide the dashboard-only
+// widgets SYNCHRONOUSLY before first paint, so they don't flash before the focused
+// list renders. (boot() also reasserts this once data loads.)
+(function(){
+  const tf = new URLSearchParams(location.search).get('type');
+  // sidebar highlight — set the active item synchronously so it doesn't flash
+  // "Dashboard" (hardcoded in the static HTML) before switching to the type.
+  document.querySelectorAll('.side .nav-i').forEach(n=>n.classList.remove('on'));
+  const active = tf ? document.querySelector('.side .nav-i[data-nav="'+tf+'"]')
+                    : document.querySelector('.side .nav-i[href="/app"]');
+  if(active) active.classList.add('on');
+  if(!tf) return;
+  const hide = (sel)=>{ const e=document.querySelector(sel); if(e) e.style.display='none'; };
+  hide('.stats'); hide('#featured'); hide('#rightcol');
+  const g=document.querySelector('.grid2'); if(g) g.style.gridTemplateColumns='1fr';
+})();
 const $ = (id) => document.getElementById(id);
 let BASE = "INR";
 
@@ -151,6 +200,34 @@ function el(tag, cls, text){
   return e;
 }
 
+// ── per-plan meta line (differentiates rows in the list before opening) ──
+const LOAN_KIND_SHORT={personal:'Personal',gold:'Gold',home:'Home',vehicle:'Vehicle',education:'Education',business:'Business',other:'Other'};
+function planMeta(p){
+  const parts=[];
+  if(p.type==='loan'){
+    if(p.kind && LOAN_KIND_SHORT[p.kind]) parts.push(LOAN_KIND_SHORT[p.kind]);
+    if(p.counterparty) parts.push((p.direction==='given'?'to ':'from ')+p.counterparty);
+    else if(p.direction) parts.push(p.direction==='given'?'lent out':'borrowed');
+    if(p.rate_bps && p.interest_type && p.interest_type!=='none') parts.push((p.rate_bps/100)+'%'+(p.interest_type==='monthly'?'/mo':'/yr'));
+  } else if(p.type==='holding'){
+    if(p.asset_class) parts.push(p.asset_class);
+    if(p.symbol) parts.push(p.symbol);
+  } else if(p.type==='chit'){
+    if(p.n_members) parts.push(p.n_members+' members');
+  } else if(p.type==='retirement'){
+    if(p.current_age && p.retirement_age) parts.push(p.current_age+'→'+p.retirement_age+' yrs');
+  }
+  parts.push(p.currency||'');
+  if(p.role && p.role!=='owner') parts.push(p.role);
+  return parts.filter(Boolean).join(' · ');
+}
+// monthly interest on a loan = outstanding × rate (yearly → /12). Minor units.
+function monthlyInterestMinor(po, rate_bps, itype){
+  if(!po || !rate_bps || !itype || itype==='none') return 0;
+  if(itype==='monthly') return Math.round(po*rate_bps/10000);   // rate is already per-month
+  return Math.round(po*rate_bps/120000);                        // yearly → per-month
+}
+
 // ── featured asset panel ──
 function renderFeatured(box, plan, state){
   box.textContent='';
@@ -170,7 +247,7 @@ function renderFeatured(box, plan, state){
   function amt(minor,label){const d=el('div');const n=el('div','n');n.append(amtSpan(minor));d.append(n,el('div','l',label));return d;}
   amts.append(amt(paid,'Paid'), amt(rem,'Remaining'), amt(total,'Total'));
   head.append(amts);
-  const bar=el('div','bigbar'); const i=el('i'); i.dataset.w=pct; bar.append(i); head.append(bar);
+  const bar=el('div','bigbar'); const i=el('i'); i.dataset.w=pct; i.style.background='linear-gradient(90deg,var(--primary),var(--primary-deep))'; bar.append(i); head.append(bar);
   const row=el('div','row');
   row.append(el('span', null, pct+'% paid · '+paidCount+' of '+insts.length+' installments'));
   row.append(el('span', null, state.next_due_seq?('next due · #'+state.next_due_seq):'all installments cleared'));
@@ -201,6 +278,46 @@ function renderFeatured(box, plan, state){
   }
   if(!insts.length){ sched.append(el('div','emptypanel','No installments scheduled.')); }
   box.append(sched);
+  // NOTE: the per-asset ledger lives on the asset detail page (/asset/:id), not the
+  // dashboard — rendering every row here stacked into an endless wall on mobile.
+}
+
+// format an ISO occurred_at into "DD Mon · HH:MM"
+function fmtDate(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  if(isNaN(d)) return String(iso);
+  const day=String(d.getDate()).padStart(2,'0');
+  const mon=d.toLocaleString('en-US',{month:'short'});
+  const hh=String(d.getHours()).padStart(2,'0');
+  const mm=String(d.getMinutes()).padStart(2,'0');
+  return day+' '+mon+' · '+hh+':'+mm;
+}
+
+// ── stat card #2 "Paid to date" month-delta subtitle ──
+// derives a REAL "most recent month with out-payments" figure from the featured
+// asset ledger; labels it with that month's actual name (not "this month").
+function setPaidMonthDelta(ledger){
+  const sub=$('paid-d');
+  if(!sub || !Array.isArray(ledger)) return;
+  const outs=ledger.filter(r=>r && r.direction==='out' && r.occurred_at && r.amount_minor!=null);
+  if(!outs.length) return; // leave existing honest text
+  // most recent YYYY-MM among out-payments
+  let latestKey='';
+  for(const r of outs){
+    const key=String(r.occurred_at).slice(0,7); // YYYY-MM
+    if(key>latestKey) latestKey=key;
+  }
+  if(!latestKey) return;
+  let sum=0;
+  for(const r of outs){ if(String(r.occurred_at).slice(0,7)===latestKey) sum+=Math.abs(r.amount_minor); }
+  const [y,m]=latestKey.split('-');
+  const monthName=new Date(Number(y), Number(m)-1, 1).toLocaleString('en-US',{month:'long'});
+  sub.textContent='';
+  sub.append(document.createTextNode('▲ '));
+  sub.append(amtSpan(sum));
+  sub.append(document.createTextNode(' · '+monthName+' '+y));
+  sub.classList.add('up');
 }
 
 function renderFeaturedEmpty(box){
@@ -247,6 +364,12 @@ function chitPanel(c){
   const ph=el('div','ph');
   const t=el('div','t'); t.append(el('span','tag chit','Chit'), document.createTextNode(' '));
   const nm=el('span'); nm.textContent=c.plan.name; t.append(nm);
+  // real-signal badges: Auction (commission>0), Organizer (owner role)
+  const badges=el('div'); badges.style.cssText='display:inline-flex;gap:6px;margin-left:8px';
+  const pill=(txt)=>{ const s=el('span'); s.textContent=txt; s.style.cssText='font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)'; return s; };
+  if((st.commission_bps||0)>0) badges.append(pill('Auction'));
+  if(((window.__roleById||{})[c.plan.id])==='owner') badges.append(pill('Organizer'));
+  if(badges.children.length) t.append(badges);
   ph.append(t, el('div','meta', st.n_members+' members'));
   p.append(ph);
   const body=el('div','chit-body');
@@ -295,15 +418,150 @@ function loanGivenPanel(g){
   const rows=el('div','fillrows'); rows.style.padding='18px 22px';
   const splitBox=el('div'); splitBox.style.cssText='display:flex;justify-content:space-between;align-items:flex-end';
   const L=el('div');
-  L.append(el('div', null, 'Principal outstanding')).style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600';
+  const lLbl=el('div', null, 'Principal outstanding'); lLbl.style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600'; L.append(lLbl);
   const lv=el('div'); lv.style.cssText='font-family:Fraunces,serif;font-weight:600;font-size:28px;color:var(--pos);line-height:1;margin-top:5px'; lv.append(amtSpan(st.principal_outstanding_minor)); L.append(lv);
   const R=el('div'); R.style.textAlign='right';
-  R.append(el('div', null, 'Interest due')).style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600';
+  const rLbl=el('div', null, 'Interest due'); rLbl.style.cssText='font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600'; R.append(rLbl);
   const rv=el('div','mono'); rv.style.cssText='font-weight:700;font-size:17px;color:var(--primary-deep);margin-top:5px'; rv.append(amtSpan(st.interest_due_minor)); R.append(rv);
+  splitBox.style.borderBottom='1px solid var(--line-2)';
+  splitBox.style.paddingBottom='14px';
   splitBox.append(L,R);
   rows.append(splitBox);
+
+  // tranche rows: disbursement ledger entries (oldest first), couple of them
+  const disb=(st.ledger||[]).filter(r=>r.kind==='disbursement')
+    .sort((a,b)=>String(a.occurred_at||'').localeCompare(String(b.occurred_at||'')));
+  if(disb.length){
+    const tr=el('div'); tr.style.cssText='margin-top:14px;display:grid;gap:9px';
+    disb.forEach((r,i)=>{
+      const line=el('div'); line.style.cssText='display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink-soft)';
+      line.append(el('span', null, '▸ '+(r.note||'Tranche')+' · '+fmtDate(r.occurred_at).split(' · ')[0]));
+      const v=el('span','mono'); v.style.fontWeight='600';
+      if(i>0) v.append(document.createTextNode('+'));
+      v.append(amtSpan(r.amount_minor));
+      line.append(v);
+      tr.append(line);
+    });
+    rows.append(tr);
+  }
+
+  // foot: interest received
+  if(st.interest_paid_minor!==undefined && st.interest_paid_minor!==null){
+    const foot=el('div','chit-foot');
+    foot.style.cssText='border-top:1px solid var(--line-2);margin-top:13px;padding-top:12px';
+    const f1=el('span'); f1.append(document.createTextNode('interest received · '));
+    const b=el('b'); b.append(amtSpan(st.interest_paid_minor)); f1.append(b);
+    foot.append(f1);
+    rows.append(foot);
+  }
+
   p.append(rows);
   return p;
+}
+
+// ── pending share invitations ──
+const PLAN_TYPE_LABEL={asset:'asset plan',loan:'loan',holding:'holding',chit:'chit fund',retirement:'retirement plan'};
+const artLabel=(t)=>{const l=PLAN_TYPE_LABEL[t]||'plan';return (/^[aeiou]/i.test(l)?'an ':'a ')+l;};
+async function renderInvites(){
+  const box=$('invites'); if(!box) return;
+  let invs=[];
+  try{ invs=(await fetch('/api/invitations').then(r=>r.json())).invitations||[]; }catch(_){ return; }
+  box.textContent='';
+  invs.forEach(inv=>{
+    const card=el('div','invite');
+    const ic=el('div','ic'); ic.innerHTML='';
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('width','19');svg.setAttribute('height','19');svg.setAttribute('viewBox','0 0 24 24');
+    svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2');
+    const pa=document.createElementNS('http://www.w3.org/2000/svg','path');
+    pa.setAttribute('d','M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2');svg.appendChild(pa);
+    const ci=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ci.setAttribute('cx','9');ci.setAttribute('cy','7');ci.setAttribute('r','4');svg.appendChild(ci);
+    const p2=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p2.setAttribute('d','M19 8v6M22 11h-6');svg.appendChild(p2);
+    ic.appendChild(svg);
+
+    const txt=el('div','itxt');
+    const t1=el('div','it1');
+    const by=el('b',null,inv.shared_by||inv.shared_by_email||'Someone');
+    t1.append(by, document.createTextNode(' shared '+artLabel(inv.plan_type)+' with you'));
+    const t2=el('div','it2', '“'+inv.plan_name+'” · '+(inv.role||'contributor')+' · awaiting your approval');
+    txt.append(t1,t2);
+
+    const acts=el('div','iacts');
+    const acc=el('button','acc','Accept'); const dec=el('button','dec','Decline');
+    const respond=async(accept)=>{
+      acc.disabled=true; dec.disabled=true;
+      try{
+        const r=await fetch('/api/invitations/'+inv.plan_id+'/'+(accept?'accept':'decline'),{method:'POST'});
+        if(r.ok){ card.remove(); if(accept) location.reload(); }
+        else { acc.disabled=false; dec.disabled=false; }
+      }catch(_){ acc.disabled=false; dec.disabled=false; }
+    };
+    acc.addEventListener('click',()=>respond(true));
+    dec.addEventListener('click',()=>respond(false));
+    acts.append(acc,dec);
+    card.append(ic,txt,acts);
+    box.appendChild(card);
+  });
+}
+
+// ── per-entry amount confirmations ──
+function svgIcon(paths){
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width','19');svg.setAttribute('height','19');svg.setAttribute('viewBox','0 0 24 24');
+  svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2');
+  paths.forEach(d=>{const p=document.createElementNS('http://www.w3.org/2000/svg','path');p.setAttribute('d',d);svg.appendChild(p);});
+  return svg;
+}
+async function renderConfirms(){
+  const box=$('confirms'); if(!box) return;
+  let cs=[];
+  try{ cs=(await fetch('/api/confirmations').then(r=>r.json())).confirmations||[]; }catch(_){ return; }
+  box.textContent='';
+  cs.forEach(c=>{
+    const card=el('div','invite confirm');
+    const ic=el('div','ic'); ic.appendChild(svgIcon(['M12 1v22','M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6']));
+    const txt=el('div','itxt');
+    const t1=el('div','it1');
+    const cur=PLAN_TYPE_LABEL[c.plan_type]||'plan';
+    if(c.your_role==='contributor'){
+      t1.append(el('b',null,c.from_name||'The owner'),
+        document.createTextNode(' attributed '+fmt(c.amount_minor,c.currency)+' to you'));
+    }else{
+      t1.append(el('b',null,c.from_name||'A contributor'),
+        document.createTextNode(' proposes '+fmt(c.counter_amount_minor,c.currency)+
+          ' (you recorded '+fmt(c.amount_minor,c.currency)+')'));
+    }
+    const t2=el('div','it2','“'+c.plan_name+'” · '+cur+' · needs your confirmation');
+    txt.append(t1,t2);
+
+    const acts=el('div','iacts');
+    const primary=el('button','acc', c.your_role==='owner' ? ('Accept '+fmt(c.counter_amount_minor,c.currency)) : 'Confirm');
+    const counter=el('button','dec', c.your_role==='owner' ? 'Counter' : 'Propose correction');
+    acts.append(primary,counter);
+
+    // inline amount entry for the counter/propose action
+    const amtBox=el('div','iamt'); amtBox.style.display='none'; amtBox.style.flexBasis='100%';
+    const inp=el('input'); inp.placeholder='e.g. 2,50,000';
+    const send=el('button',null,'Send'); amtBox.append(inp,send);
+
+    const post=async(body, btns)=>{
+      btns.forEach(b=>b.disabled=true);
+      try{
+        const r=await fetch('/api/plans/'+c.plan_id+'/entries/'+c.entry_id+'/amount',{
+          method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        if(r.ok){ card.remove(); location.reload(); }
+        else { btns.forEach(b=>b.disabled=false); }
+      }catch(_){ btns.forEach(b=>b.disabled=false); }
+    };
+    primary.addEventListener('click',()=>post({action: c.your_role==='owner'?'accept':'confirm'},[primary,counter]));
+    counter.addEventListener('click',()=>{ amtBox.style.display=amtBox.style.display==='none'?'flex':'none'; inp.focus(); });
+    send.addEventListener('click',()=>{ if(inp.value.trim()) post({action:'counter',amount:inp.value.trim()},[send]); });
+
+    card.append(ic,txt,acts,amtBox);
+    box.appendChild(card);
+  });
 }
 
 // ── boot ──
@@ -311,6 +569,8 @@ async function boot(){
   const me = await fetch('/api/auth/me');
   if(me.status===401){ window.location.href='/'; return; }
   const user=(await me.json()).user;
+  renderInvites();
+  renderConfirms();
   const name=user.display_name||'there';
   const h=new Date().getHours();
   const part = h<12?'morning':(h<17?'afternoon':'evening');
@@ -323,6 +583,10 @@ async function boot(){
     fetch('/api/plans').then(r=>r.json()),
   ]);
   BASE = nw.base_currency || 'INR';
+  // role per plan id (from /api/dashboard) — used for the chit "Organizer" badge
+  const roleById = {};
+  (dash.plans || []).forEach(p => { roleById[p.id] = p.role; });
+  window.__roleById = roleById;
   document.documentElement.dataset.cur = BASE.toLowerCase();
   // currency toggle highlight
   document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));
@@ -344,26 +608,163 @@ async function boot(){
   $('ct-loan').textContent=by('loan');
   $('ct-retirement').textContent=by('retirement');
 
-  // "your plans" list
-  const pmeta=$('plans-meta'); pmeta.textContent=plans.length+(plans.length===1?' plan':' plans');
+  // "your plans" list — filtered by ?type=<asset|chit|loan|retirement> from the sidebar
+  const typeFilter = new URLSearchParams(location.search).get('type');
+  const TLABEL = {asset:'Assets', chit:'Chit funds', loan:'Loans', retirement:'401(k)'};
+  const shown = typeFilter ? plans.filter(p=>p.type===typeFilter) : plans;
+  // highlight the active sidebar item (Dashboard when no filter)
+  document.querySelectorAll('.side .nav-i').forEach(n=>n.classList.remove('on'));
+  if(typeFilter){ const navEl=document.querySelector('.side .nav-i[data-nav="'+typeFilter+'"]'); if(navEl) navEl.classList.add('on'); }
+  else { const dash=document.querySelector('.side .nav-i[href="/app"]'); if(dash) dash.classList.add('on'); }
+  const ptitle=$('plans-title'); if(ptitle) ptitle.textContent = typeFilter ? (TLABEL[typeFilter]||'Plans') : 'Your plans';
+  const pmeta=$('plans-meta'); pmeta.textContent = shown.length+(shown.length===1?' plan':' plans');
+  // Focused list view when a type is picked: hide the dashboard widgets (stat cards,
+  // featured panel, liabilities/lent) so it's a clean list, not "the dashboard".
+  if(typeFilter){
+    const stats=document.querySelector('.stats'); if(stats) stats.style.display='none';
+    if($('featured')) $('featured').style.display='none';
+    if($('rightcol')) $('rightcol').style.display='none';
+    const g=document.querySelector('.grid2'); if(g) g.style.gridTemplateColumns='1fr';
+    const pl=$('plans') && $('plans').closest('.panel'); if(pl) pl.style.marginTop='0';
+    // greeting sub reflects the view
+    const sub=$('sub'); if(sub) sub.textContent = (TLABEL[typeFilter]||'Plans')+' · '+shown.length+(shown.length===1?' plan':' plans');
+  }
   const plist=$('plans');
-  if(!plans.length){
+  if(!shown.length){
     const e=el('div','emptypanel');
-    e.append(document.createTextNode('No plans yet — '));
+    e.append(document.createTextNode(typeFilter ? ('No '+(TLABEL[typeFilter]||'plans').toLowerCase()+' yet — ') : 'No plans yet — '));
     const a=el('a'); a.href='/create'; a.textContent='create one'; e.append(a);
     plist.append(e);
   } else {
-    for(const p of plans){
+    const fillLoans=[];
+    function makeRow(p, groupAgg){
       const row=document.createElement('a'); row.className='prow'; row.href='/'+p.type+'/'+p.id;
       const left=el('div');
       const l1=el('div','l1'); l1.append(el('span','tag '+p.type, p.type), document.createTextNode(' '));
-      const pn=el('span'); pn.textContent=p.name; l1.append(pn); left.append(l1);
-      left.append(el('div','l2', (p.currency||'')+' · '+(p.role||'owner')));
+      const pn=el('span'); pn.textContent=p.name; l1.append(pn);
+      // a small category chip on loans so two same-named loans still differ at a glance
+      if(p.type==='loan' && p.kind && p.kind!=='personal'){
+        const chip=el('span', null, (LOAN_KIND_SHORT[p.kind]||p.kind));
+        chip.style.cssText='font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:color-mix(in srgb,var(--primary) 14%,transparent);color:var(--accent-dk)';
+        l1.append(chip);
+      }
+      left.append(l1);
+      const l2el=el('div','l2', planMeta(p)); left.append(l2el);
+      const right=el('div'); right.style.cssText='display:flex;align-items:center;gap:26px;justify-content:flex-end';
+      // interest/mo column (loans only — the cashflow direction)
+      const intCol=el('div','pr-icol'); intCol.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:104px';
+      const intAmt=el('div'); intAmt.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:13px';
+      if(p.type==='loan'){ const il=el('div',null,'interest/mo'); il.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono"'; intCol.append(intAmt, il); }
+      // outstanding column
+      const outCol=el('div'); outCol.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:112px';
+      const amt=el('div'); amt.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px';
       const ar=el('div','arrow','→');
-      row.append(left, ar);
+      outCol.append(amt, ar);
+      if(p.type==='loan') right.append(intCol, outCol); else right.append(outCol);
+      row.append(left, right);
       plist.append(row);
+      if(p.type==='loan'||p.type==='asset') fillLoans.push({p, amt, intAmt, outCol, ar, l2el, groupAgg});
     }
+    // section header for a loan direction group, returns its live subtotal elements
+    function groupHeader(label, sub, accent, first){
+      const h=el('div'); h.style.cssText='display:flex;align-items:baseline;justify-content:space-between;padding:'+(first?'4px':'16px')+' 22px 8px';
+      if(!first) h.style.borderTop='1px solid var(--line-2)';
+      const lft=el('div'); lft.style.cssText='display:flex;align-items:baseline;gap:8px';
+      const lab=el('span',null,label); lab.style.cssText='font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:'+accent;
+      const s=el('span',null,sub); s.style.cssText='font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"';
+      lft.append(lab,s);
+      const tw=el('div'); tw.style.cssText='display:flex;align-items:baseline;gap:26px';
+      const intTot=el('div','pr-icol'); intTot.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:12px;min-width:104px;text-align:right;color:'+accent;
+      const outTot=el('div'); outTot.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:13px;min-width:112px;text-align:right;color:'+accent;
+      tw.append(intTot, outTot);
+      h.append(lft, tw); plist.append(h);
+      return {outEl:outTot, intEl:intTot};
+    }
+    let aggs=[];
+    if(typeFilter==='loan'){
+      const taken=shown.filter(p=>p.direction==='taken');
+      const given=shown.filter(p=>p.direction==='given');
+      if(pmeta) pmeta.textContent = taken.length+' borrowed · '+given.length+' lent';
+      const groups=[
+        {arr:taken, label:'Borrowed', sub:'you owe', accent:'var(--neg)', taken:true},
+        {arr:given, label:'Lent out', sub:'owed to you', accent:'var(--pos)', taken:false},
+      ];
+      let first=true;
+      for(const g of groups){
+        if(!g.arr.length) continue;
+        const els=groupHeader(g.label, g.sub, g.accent, first); first=false;
+        const agg={sum:0, interest:0, outEl:els.outEl, intEl:els.intEl, ccy:'INR', taken:g.taken};
+        aggs.push(agg);
+        g.arr.forEach(p=> makeRow(p, agg));
+      }
+    } else {
+      for(const p of shown) makeRow(p, null);
+    }
+    // enrich rows with derived state — loans: outstanding + LTV + interest cashflow;
+    // assets: amount paid + % progress + remaining + joint contributors
+    Promise.all(fillLoans.map(async ({p, amt, intAmt, outCol, ar, l2el, groupAgg})=>{
+      try{
+        const d=await fetch('/api/plans/'+p.id).then(r=>r.json());
+        const st=d.state||{}; const ccy=st.currency||p.currency;
+        const cap=el('div'); cap.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono"';
+
+        if(p.type==='asset'){
+          const total=st.total_price_minor||0, paid=st.paid_to_date_minor||0, rem=st.remaining_minor||0;
+          const pct = total ? Math.round(paid*100/total) : 0;
+          amt.textContent = fmt(paid, ccy);
+          cap.textContent = pct+'% paid'+(rem>0 ? ' · '+fmt(rem,ccy)+' left' : ' · complete');
+          cap.style.color = rem<=0 ? 'var(--pos)' : 'var(--ink-faint)';
+          outCol.insertBefore(cap, ar);
+          // richer meta: total price + schedule/ad-hoc + joint contributors
+          const bits=[fmt(total,ccy)+' total'];
+          const insts=(st.installments||[]).length;
+          bits.push(insts ? insts+' installments' : 'ad-hoc');
+          const cs=st.contributors||[];
+          if(cs.length>1){ bits.push('joint · '+cs.map(c=>c.display_name).filter(Boolean).join(' + ')); }
+          if(l2el) l2el.textContent = bits.join(' · ');
+          return;
+        }
+
+        // loan
+        const out=st.principal_outstanding_minor||0;
+        amt.textContent = fmt(out, ccy);
+        const ltv = st.gold_collateral && st.gold_collateral.ltv_pct;
+        if(ltv!=null){
+          if(ltv>100){ cap.textContent='⚠ LTV '+ltv+'%'; cap.style.color='var(--neg)';
+                       cap.title='Loan exceeds the recorded gold value — check the weight / value / principal'; }
+          else { cap.textContent='LTV '+ltv+'%';
+                 cap.style.color = ltv>75 ? '#a96a00' : (ltv<=60 ? 'var(--pos)' : 'var(--ink-faint)'); }
+        } else { cap.textContent='outstanding'; }
+        outCol.insertBefore(cap, ar);
+        const mi=monthlyInterestMinor(out, p.rate_bps, p.interest_type);
+        const taken=(p.direction!=='given');
+        if(!mi){ intAmt.textContent='—'; intAmt.style.color='var(--ink-faint)'; }
+        else { intAmt.textContent=(taken?'−':'+')+fmt(mi, ccy); intAmt.style.color=taken?'var(--neg)':'var(--pos)'; }
+        if(groupAgg){
+          groupAgg.sum+=out; groupAgg.interest+=mi; groupAgg.ccy=ccy;
+          groupAgg.outEl.textContent=fmt(groupAgg.sum, ccy);
+          groupAgg.intEl.textContent=(groupAgg.taken?'−':'+')+fmt(groupAgg.interest, ccy)+'/mo';
+        }
+      }catch(e){}
+    })).then(()=>{
+      // net monthly interest position (lent earnings − borrowed cost)
+      if(typeFilter!=='loan' || !aggs.length) return;
+      let paid=0, earned=0, ccy='INR';
+      aggs.forEach(a=>{ if(a.taken) paid+=a.interest; else earned+=a.interest; ccy=a.ccy||ccy; });
+      const net=earned-paid;
+      const nr=el('div'); nr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:2px solid var(--line);background:var(--paper-2)';
+      const lab=el('span',null,'Net interest / month'); lab.style.cssText='font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint)';
+      const v=el('div'); v.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:15px;display:flex;align-items:baseline;gap:8px';
+      const num=el('span');
+      const note=el('span'); note.style.cssText='font-size:11px;font-weight:600;text-transform:none;letter-spacing:0';
+      if(net>0){ num.textContent='+'+fmt(net,ccy)+'/mo'; num.style.color='var(--pos)'; note.textContent='you come out ahead'; note.style.color='var(--pos)'; }
+      else if(net<0){ num.textContent='−'+fmt(-net,ccy)+'/mo'; num.style.color='var(--neg)'; note.textContent='net cost — you pay out'; note.style.color='var(--neg)'; }
+      else { num.textContent=fmt(0,ccy)+'/mo'; num.style.color='var(--ink-faint)'; note.textContent='flat'; }
+      v.append(num, note);
+      nr.append(lab, v); plist.append(nr);
+    });
   }
+  if(typeFilter){ const panel=plist.closest('.panel'); if(panel) panel.scrollIntoView({behavior:'smooth', block:'center'}); }
 
   // featured asset
   const assets = plans.filter(p=>p.type==='asset');
@@ -373,6 +774,8 @@ async function boot(){
     try{
       const d=await fetch('/api/plans/'+assets[0].id).then(r=>r.json());
       renderFeatured(featBox, d.plan, d.state);
+      try{ setPaidMonthDelta(d.state && d.state.ledger); }
+      catch(err){ console.error('paid month-delta failed', err); }
     }catch(e){ renderFeaturedEmpty(featBox); }
   } else {
     renderFeaturedEmpty(featBox);
@@ -395,9 +798,20 @@ async function boot(){
     if(dir==='taken') taken.push(d);
     else if(dir==='given') given.push(d);
   }
-  if(taken.length) right.append(liabPanel(taken));
-  for(const p of chitPlans){ const d=details[p.id]; if(d) right.append(chitPanel(d)); }
-  for(const d of given){ right.append(loanGivenPanel(d)); }
+  // order: chit, then liabilities, then lent (given)
+  // each panel append is isolated so one failing panel can't blank the column
+  for(const p of chitPlans){
+    try{ const d=details[p.id]; if(d) right.append(chitPanel(d)); }
+    catch(err){ console.error('chitPanel failed for plan '+p.id, err); }
+  }
+  if(taken.length){
+    try{ right.append(liabPanel(taken)); }
+    catch(err){ console.error('liabPanel failed', err); }
+  }
+  for(const d of given){
+    try{ right.append(loanGivenPanel(d)); }
+    catch(err){ console.error('loanGivenPanel failed for plan '+(d&&d.plan&&d.plan.id), err); }
+  }
   if(!right.children.length){
     const p=el('div','panel fade d3');
     const ph=el('div','ph'); ph.append(el('div','t','Activity'), el('div','meta','')); ph.querySelector('.t').style.fontSize='16px';
@@ -422,10 +836,17 @@ $('curtog').addEventListener('click', async (e)=>{
   location.reload();
 });
 
+// ── log out ──
+(function(){ var lo=document.getElementById('logout-link'); if(!lo) return;
+  lo.addEventListener('click', async function(e){ e.preventDefault();
+    try{ await fetch('/api/auth/logout',{method:'POST'}); }catch(_){}
+    window.location.href='/'; }); })();
+
 // ── profile photo upload (localStorage, display-only) ──
-(function(){var av=document.getElementById("avatar");if(!av)return;var inp=av.querySelector("input"),KEY="khata_avatar";function apply(u){av.style.backgroundImage="url("+u+")";av.classList.add("has-img");}try{var s=localStorage.getItem(KEY);if(s)apply(s);}catch(e){}inp.addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){apply(r.result);try{localStorage.setItem(KEY,r.result);}catch(e){}};r.readAsDataURL(f);});})();
+(function(){var av=document.getElementById("avatar");if(!av)return;try{localStorage.removeItem("khata_avatar");}catch(e){}var inp=av.querySelector("input");if(inp)inp.disabled=true;av.title="Edit photo in Settings";av.style.cursor="pointer";av.addEventListener("click",function(e){e.preventDefault();window.location.href="/settings";});fetch("/api/auth/me").then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&d.user&&d.user.avatar){av.style.backgroundImage='url("'+d.user.avatar+'")';av.classList.add("has-img");}else{av.style.backgroundImage="";av.classList.remove("has-img");}}).catch(function(){});})();
 
 boot();
 </script>
+<script src="/static/assets/nav.js" defer></script>
 </body>
 </html>

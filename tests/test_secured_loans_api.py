@@ -41,9 +41,12 @@ def _quoted_holding_worth_1cr(client):
 
 
 def _disbursed_loan_6l(client):
-    """Taken loan disbursed ₹6,00,000."""
+    """Taken loan disbursed ₹6,00,000. Explicit past occurred_at so the disbursement is
+    never seen as 'future' — default now()=UTC can land a day ahead of local date.today()
+    on machines whose TZ is behind UTC, which would zero out principal_outstanding."""
     lid = _make_loan(client).get_json()["plan"]["id"]
-    client.post(f"/api/plans/{lid}/loan/disbursements", json={"amount": "6,00,000"})
+    client.post(f"/api/plans/{lid}/loan/disbursements",
+                json={"amount": "6,00,000", "occurred_at": "2026-01-01T00:00:00"})
     return lid
 
 
