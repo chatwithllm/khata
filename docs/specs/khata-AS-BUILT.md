@@ -261,6 +261,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Asset ledger: each row shows its share of the plan total as a quiet "X% of total" line under the amount (right-aligned, muted; "<1% of total" for tiny entries). Client-side, no API change.
 - 2026-06-05 — Profile pictures: server-side `users.avatar` + crop tool (drag/zoom) in Settings; contributor tiles + ledger rows show avatars (hover reveals full photo); contributors share bar redesigned (no cramped labels); ledger edit moved to a single header toggle (was per-row). `POST /api/auth/avatar`, asset_state avatar fields, migration c9a3avatar01. Also fixed a TZ-flaky secured-loan test (explicit occurred_at).
 - 2026-06-05 — Asset detail: removed the broken "Recent pace" banner (₹-crore explosion on sub-day gaps, low-value extrapolation). KPIs + progress bar + schedule already carry the facts.
 - 2026-06-05 — Whole-instance backup & restore: in-app JSON download/upload (merge by email + FK remap, pre-restore auto-save) + CLI raw-SQLite backup.sh/restore.sh (replace). `GET /api/backup`, `POST /api/restore`, Settings → Data panel.

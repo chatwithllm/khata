@@ -18,6 +18,7 @@
 .ledger .l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
 .ledger .amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right}
 .ledger .amt.in{color:var(--pos)} .ledger .amt.out{color:var(--ink)}
+.ledger .amt .amt-pct{display:block;font-weight:500;font-size:10.5px;color:var(--ink-faint);margin-top:3px;letter-spacing:.01em}
 .ledger .l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
 .ledger .l2r{font-size:11px;color:var(--ink-faint);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
 
@@ -387,6 +388,13 @@ function renderLedger(box, st){
     const sgn=el('span','symword'); sgn.textContent=(out?'−':'+')+sym(BASE);
     const num=el('span'); num.textContent=fmtNum(Math.abs(lr.amount_minor||0), BASE);
     amt.append(sgn,num);
+    // quiet "% of total" line beneath the amount (share of the plan total)
+    const tot = st.total_price_minor||0;
+    if(tot>0){
+      const raw = Math.abs(lr.amount_minor||0)*100/tot;
+      const pctTxt = (raw>0 && raw<1) ? '<1% of total' : (Math.round(raw)+'% of total');
+      amt.append(el('span','amt-pct', pctTxt));
+    }
     row.append(amt);
 
     // l2 — date · time, then (on shared plans) the contributor's avatar + name
