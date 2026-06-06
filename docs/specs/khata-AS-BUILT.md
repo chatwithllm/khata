@@ -140,6 +140,12 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-05 — Removed the asset "Recent pace" banner.** It extrapolated a monthly rate from the last 2–3
+  inter-payment gaps; when payments were <1 day apart the `30.44/avgGapDays` factor exploded (saw ₹54+
+  crore/mo), and the extrapolation was low-value for irregular asset buying regardless. An animated-trajectory
+  replacement was tried and rejected (chart read as clutter, not insight). Removed entirely — the KPIs
+  (paid/remaining/total), progress bar ("63% paid · 5 of 8 installments"), and the schedule panel (due dates)
+  already carry the facts. `derivePace`/`renderTrajectory` deleted from asset-detail.html.
 - **2026-06-05 — Whole-instance backup & restore (data portability).** "Your data is yours" — two paths,
   both shipping. (1) **In-app JSON**: `GET /api/backup` downloads a single versioned snapshot of every table
   (`services/backup.export_all` — generic over the mapper, robust to schema changes); `POST /api/restore`
@@ -239,6 +245,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-05 — Asset detail: removed the broken "Recent pace" banner (₹-crore explosion on sub-day gaps, low-value extrapolation). KPIs + progress bar + schedule already carry the facts.
 - 2026-06-05 — Whole-instance backup & restore: in-app JSON download/upload (merge by email + FK remap, pre-restore auto-save) + CLI raw-SQLite backup.sh/restore.sh (replace). `GET /api/backup`, `POST /api/restore`, Settings → Data panel.
 - 2026-06-05 — Chit monthly contribution schedule + next-due reminder (chit_state.schedule/next_due_date/months_behind; chit-detail month-grid panel). Derived, no schema change.
 - 2026-06-05 — Per-entry contribution-amount agreement: a tagged contributor confirms or counter-proposes the amount attributed to them; owner accepts or re-counters until both agree. `ledger_entries.amount_status`/`counter_amount_minor` + `/api/confirmations` + `POST .../entries/<id>/amount`. Interim amount counts toward totals, flagged unconfirmed.

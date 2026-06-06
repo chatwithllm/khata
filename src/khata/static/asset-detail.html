@@ -249,58 +249,7 @@ function renderHeader(box, plan, st){
   for(const tk of ticks){ const s=el('span','tick'); s.style.left=tk+'%'; bar.append(s); }
   head.append(bar);
 
-  // 3.6: derived pace banner — computed client-side from real out-direction ledger payments.
-  const paceEl = derivePace(st);
-  if(paceEl) head.append(paceEl);
-
   box.append(head);
-}
-
-// ── 3.6 pace/projection: derive ONLY from real ledger data ──
-function derivePace(st){
-  const outs = (st.ledger||[])
-    .filter(r => r.direction==='out' && (r.amount_minor||0)>0 && parseISO(r.occurred_at))
-    .sort((a,b)=>parseISO(b.occurred_at)-parseISO(a.occurred_at));   // newest first
-  if(outs.length < 2) return null;                                   // need ≥2 real payments
-  const last = outs.slice(0, Math.min(3, outs.length));              // last up to 3 payments
-  const avgAmt = last.reduce((s,r)=>s + (r.amount_minor||0), 0) / last.length;
-  // cadence: avg gap (days) between consecutive payments across the sampled window
-  const dates = last.map(r=>parseISO(r.occurred_at));
-  let gaps=0, gapCount=0;
-  for(let i=0;i<dates.length-1;i++){ gaps += (dates[i]-dates[i+1])/86400000; gapCount++; }
-  const avgGapDays = gapCount ? gaps/gapCount : 0;
-  // monthly pace = avg payment amount scaled by (≈30.44 days / avg cadence)
-  const perMonth = avgGapDays>0 ? avgAmt * (30.44/avgGapDays) : avgAmt;
-
-  const wrap=el('div','pace');
-  // icon
-  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-  svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('fill','none');
-  svg.setAttribute('stroke','currentColor'); svg.setAttribute('stroke-width','2');
-  const p=document.createElementNS('http://www.w3.org/2000/svg','path');
-  p.setAttribute('d','M3 17l6-6 4 4 8-8'); svg.append(p);
-  wrap.append(svg);
-
-  const span=el('span');
-  span.append(document.createTextNode('Recent pace '));
-  const b=el('b');
-  const bs=el('span','symword'); bs.textContent=sym(BASE);
-  const bn=el('span'); bn.textContent=fmtNum(Math.round(perMonth), BASE);
-  b.append(bs,bn,document.createTextNode('/mo'));
-  span.append(b);
-  span.append(document.createTextNode(' · derived from last '+last.length+' payments'));
-
-  // projected finish — only if we have a real remaining + positive monthly pace
-  const rem = st.remaining_minor||0;
-  if(rem>0 && perMonth>0){
-    const monthsLeft = rem / perMonth;
-    const finish=new Date(); finish.setMonth(finish.getMonth()+Math.ceil(monthsLeft));
-    span.append(document.createTextNode(' → projected finish '));
-    const fb=el('b', null, fmtMonYr(finish));
-    span.append(fb);
-  }
-  wrap.append(span);
-  return wrap;
 }
 
 // ── installment schedule ──
