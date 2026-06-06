@@ -56,6 +56,14 @@ button:focus-visible,a:focus-visible,.lrow:focus-visible,.thumb:focus-visible{ou
 .nav-i:hover{background:var(--line-2);color:var(--ink)}
 .nav-i.on{background:var(--ink);color:var(--paper)}
 .nav-i .ct{margin-left:auto;font-size:11px;font-family:"JetBrains Mono";opacity:.7}
+/* drawer-only currency switch (injected by nav.js) — shown only in the mobile drawer,
+   where the topbar currency toggle is hidden. Hidden on desktop (topbar toggle wins). */
+.side-cur{display:none;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.side-cur-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:0 11px 8px}
+.side-cur-row{display:flex;gap:8px;padding:0 11px}
+.side-cur-row button{flex:1;font:inherit;font-size:13.5px;font-weight:600;padding:9px 0;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink-soft);cursor:pointer;transition:.2s}
+.side-cur-row button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.side-cur-row button:disabled{opacity:.6}
 
 /* topbar */
 .main{min-width:0}
@@ -211,6 +219,7 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
   .side{position:fixed;top:0;left:0;z-index:60;width:max(240px,72vw);max-width:300px;height:100vh;overflow-y:auto;
         transform:translateX(-100%);box-shadow:0 0 50px -6px rgba(20,16,12,.4);transition:transform .32s var(--ease)}
   .app.nav-open .side{transform:none}
+  .side-cur{display:block}
   .hamburger{display:inline-flex}
   .top{padding:12px 16px}
   .top h1{font-size:19px}
