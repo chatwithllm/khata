@@ -2,7 +2,7 @@ from datetime import date, datetime, timezone
 
 from flask import Blueprint, current_app, g, jsonify, request
 
-from ..models import Plan, User
+from ..models import Plan, User, LedgerEntry
 from ..money import format_minor, pct_to_bps, to_micro, to_minor
 from ..services import assets, chits, feed, holdings, loans, retirement, sharing
 from ..services.assets import PlanError
@@ -131,6 +131,23 @@ def _gold_collateral(data, currency):
         "rate_basis": data.get("gold_rate_basis") or "per_gram",
         "value_minor": to_minor(data.get("gold_value"), currency) if data.get("gold_value") else None,
     }
+
+
+def _editable_entry(user, plan_id, entry_id):
+    """Resolve a ledger entry the user may edit/delete: the plan must be accessible, and
+    the user must be the plan OWNER or the entry's own contributor (logged_by_user_id) —
+    so a contributor can manage their own contribution. Returns (plan, entry, is_owner, err)."""
+    plan, err = _accessible_plan(user, plan_id)
+    if err:
+        return None, None, False, err
+    entry = g.db.get(LedgerEntry, entry_id)
+    if entry is None or entry.plan_id != plan.id:
+        return None, None, False, (jsonify(error="not_found"), 404)
+    is_owner = (user.id == plan.owner_user_id)
+    if not is_owner and user.id != entry.logged_by_user_id:
+        return None, None, False, (jsonify(error="forbidden",
+                                           detail="only the owner or this entry's contributor can edit it"), 403)
+    return plan, entry, is_owner, None
 
 
 def _funding_plan_id(data, user):
@@ -334,7 +351,7 @@ def update_entry(plan_id, entry_id):
     user = current_user()
     if user is None:
         return jsonify(error="unauthenticated"), 401
-    plan, err = _owned_plan(user, plan_id)   # owner-only mutation
+    plan, entry, is_owner, err = _editable_entry(user, plan_id, entry_id)   # owner OR contributor
     if err:
         return err
     data = request.get_json(silent=True) or {}
@@ -347,7 +364,8 @@ def update_entry(plan_id, entry_id):
         for k in ("method", "funding_source", "note"):
             if k in data:
                 fields[k] = data.get(k)
-        if "paid_by" in data:
+        # only the owner may re-attribute an entry to a different contributor
+        if "paid_by" in data and is_owner:
             fields["logged_by_user_id"] = _payer_uid(plan, data, plan.owner_user_id)
         if "funding_plan_id" in data:
             fields["funding_plan_id"] = _funding_plan_id(data, user)
@@ -364,7 +382,7 @@ def delete_entry(plan_id, entry_id):
     user = current_user()
     if user is None:
         return jsonify(error="unauthenticated"), 401
-    plan, err = _owned_plan(user, plan_id)   # owner-only
+    plan, entry, is_owner, err = _editable_entry(user, plan_id, entry_id)   # owner OR contributor
     if err:
         return err
     try:
