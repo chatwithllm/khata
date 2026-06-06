@@ -40,6 +40,9 @@
 /* stat cards */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 @media(max-width:900px){.stats{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.stats{grid-template-columns:1fr}.stat .v{font-size:26px}}
+/* loans list: drop the secondary interest/mo column on phones (outstanding stays) */
+@media(max-width:560px){.pr-icol{display:none}}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:.6s}
 .stat .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;display:flex;align-items:center;gap:7px}
 .stat .v{font-family:"Fraunces",serif;font-weight:600;font-size:30px;letter-spacing:-.02em;margin-top:8px;line-height:1}
@@ -683,7 +686,7 @@ async function boot(){
       const l2el=el('div','l2', planMeta(p)); left.append(l2el);
       const right=el('div'); right.style.cssText='display:flex;align-items:center;gap:26px;justify-content:flex-end';
       // interest/mo column (loans only — the cashflow direction)
-      const intCol=el('div'); intCol.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:104px';
+      const intCol=el('div','pr-icol'); intCol.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:104px';
       const intAmt=el('div'); intAmt.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:13px';
       if(p.type==='loan'){ const il=el('div',null,'interest/mo'); il.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono"'; intCol.append(intAmt, il); }
       // outstanding column
@@ -705,7 +708,7 @@ async function boot(){
       const s=el('span',null,sub); s.style.cssText='font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"';
       lft.append(lab,s);
       const tw=el('div'); tw.style.cssText='display:flex;align-items:baseline;gap:26px';
-      const intTot=el('div'); intTot.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:12px;min-width:104px;text-align:right;color:'+accent;
+      const intTot=el('div','pr-icol'); intTot.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:12px;min-width:104px;text-align:right;color:'+accent;
       const outTot=el('div'); outTot.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:13px;min-width:112px;text-align:right;color:'+accent;
       tw.append(intTot, outTot);
       h.append(lft, tw); plist.append(h);
@@ -878,5 +881,6 @@ $('curtog').addEventListener('click', async (e)=>{
 
 boot();
 </script>
+<script src="/static/assets/nav.js" defer></script>
 </body>
 </html>
