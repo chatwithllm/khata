@@ -446,14 +446,22 @@ function renderLedger(box, st){
     const l2r=el('div','l2r');
     if(lr.method) l2r.append(el('span','pill m', lr.method));
     if(lr.funding_source) l2r.append(el('span','pill f', srcLabel(lr.funding_source)));
-    // provenance link: this payment came from a specific loan → jump to it
+    // provenance: this payment came from a specific loan. Only a navigable link when
+    // the viewer can actually open that loan (owner/active member); otherwise a plain
+    // tag — still meaningful provenance, but not a dead link to a 403/404 for a contributor.
     if(lr.funding_plan_id && lr.funding_plan_name){
-      const link=el('a','pill', '↗ '+lr.funding_plan_name);
-      link.href='/'+(lr.funding_plan_type||'loan')+'/'+lr.funding_plan_id;
-      link.title='Funded by this loan — open it';
-      link.style.cssText='text-decoration:none;color:var(--accent-dk);border-color:color-mix(in srgb,var(--primary) 38%,transparent)';
-      link.addEventListener('click', e=>e.stopPropagation());   // don't trigger row edit-mode
-      l2r.append(link);
+      const accessible = lr.funding_plan_accessible;
+      const tag=el(accessible?'a':'span','pill', '↗ '+lr.funding_plan_name);
+      tag.style.cssText='text-decoration:none;color:var(--accent-dk);border-color:color-mix(in srgb,var(--primary) 38%,transparent)';
+      if(accessible){
+        tag.href='/'+(lr.funding_plan_type||'loan')+'/'+lr.funding_plan_id;
+        tag.title='Funded by this loan — open it';
+        tag.addEventListener('click', e=>e.stopPropagation());   // don't trigger row edit-mode
+      }else{
+        tag.title='Funded by this loan (owned by another member)';
+        tag.style.opacity='.7'; tag.style.cursor='default';
+      }
+      l2r.append(tag);
     }
     if(lr.amount_status && lr.amount_status!=='agreed'){
       const isC=lr.amount_status==='countered';

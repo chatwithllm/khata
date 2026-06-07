@@ -98,3 +98,30 @@ def test_net_position_unconverted_when_no_rate(ctx):
     r = net_position(s, u.id)
     assert r["i_owe_minor"] == 0                       # nothing convertible
     assert r["unconverted"]["INR"]["i_owe_minor"] == 10000000  # surfaced, not lost
+
+
+def test_asset_funding_link_accessible_only_for_loan_members(ctx):
+    from khata.models import User
+    from khata.services.assets import create_asset_plan, log_payment, asset_state
+    from khata.services.loans import create_loan_plan
+    from khata.services import sharing
+    s, owner = ctx
+    other = User(email="c@d.com", display_name="Chamu", password_hash="x")
+    s.add(other); s.flush()
+    # owner's loan (the funding source) + asset; pay the asset funded by the loan
+    loan = create_loan_plan(s, owner_id=owner.id, name="401k Loan", currency="INR",
+                            direction="taken", interest_type="none", rate_bps=0,
+                            start_date=date(2026, 1, 1))
+    asset = create_asset_plan(s, owner_id=owner.id, name="1 Acre", currency="INR",
+                              total_price_minor=10000000)
+    log_payment(s, plan=asset, user_id=owner.id, amount_minor=1000000, occurred_at=_dt(),
+                method="cash", funding_source="loan", funding_plan_id=loan.id)
+    # add `other` as an ACTIVE contributor on the ASSET (but NOT on the loan)
+    sharing.add_member(s, plan=asset, email="c@d.com")
+    sharing.respond_invitation(s, user_id=other.id, plan_id=asset.id, accept=True)
+    s.commit()
+    row_owner = asset_state(s, asset, viewer_id=owner.id)["ledger"][0]
+    row_other = asset_state(s, asset, viewer_id=other.id)["ledger"][0]
+    assert row_owner["funding_plan_id"] == loan.id
+    assert row_owner["funding_plan_accessible"] is True       # owner can open the loan
+    assert row_other["funding_plan_accessible"] is False      # contributor cannot
