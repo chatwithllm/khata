@@ -243,4 +243,9 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
   .kpi{border-right:none;border-bottom:1px solid var(--line)}
   .kpi:last-child{border-bottom:none}
   .kpi .n{font-size:24px}
+  /* featured-asset 3-up amounts: spread evenly + smaller so long ₹ values breathe */
+  .planhead{padding:16px 18px}
+  .planhead .amts{gap:8px;justify-content:space-between}
+  .planhead .amts div .n{font-size:16px}
+  .planhead .amts div .l{font-size:10px;margin-top:2px}
 }

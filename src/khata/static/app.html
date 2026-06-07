@@ -40,7 +40,15 @@
 /* stat cards */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 @media(max-width:900px){.stats{grid-template-columns:1fr 1fr}}
-@media(max-width:520px){.stats{grid-template-columns:1fr}.stat .v{font-size:26px}}
+@media(max-width:520px){
+  .stats{grid-template-columns:1fr 1fr;gap:12px}
+  .stat.hero-stat,.stat.d1{grid-column:1/-1}      /* net position + paid: full width */
+  .stat{padding:15px 16px}
+  .stat .v{font-size:27px}
+  .stat.d2 .v,.stat.d3 .v{font-size:21px}          /* I owe / Owed: half-width, smaller */
+  .stat.d2 .v .cur,.stat.d3 .v .cur{font-size:13px}
+  .stat.d2 .d,.stat.d3 .d{font-size:10.5px}
+}
 /* loans list: drop the secondary interest/mo column on phones (outstanding stays).
    !important to beat the inline display:flex set on the column. */
 @media(max-width:560px){.pr-icol{display:none!important}}
@@ -283,30 +291,34 @@ function renderFeatured(box, plan, state){
   head.append(row);
   box.append(head);
 
-  const ph2=el('div','ph'); ph2.style.borderTop='1px solid var(--line)';
-  ph2.append(el('div','t','Installment schedule'), el('div','meta','planned vs paid'));
-  ph2.querySelector('.t').style.fontSize='15px';
-  box.append(ph2);
+  // Only show the installment schedule when there IS one. For ad-hoc assets the
+  // planhead row already says "ad-hoc payments · no fixed schedule" — a whole empty
+  // "No installments scheduled" panel is just dead space on a phone.
+  if(insts.length){
+    const ph2=el('div','ph'); ph2.style.borderTop='1px solid var(--line)';
+    ph2.append(el('div','t','Installment schedule'), el('div','meta','planned vs paid'));
+    ph2.querySelector('.t').style.fontSize='15px';
+    box.append(ph2);
 
-  const sched=el('div','sched');
-  for(const it of insts){
-    const dotCls = it.status==='paid'?'paid':(it.status==='partial'?'part':'due');
-    const srow=el('div','srow');
-    const dot=el('span','dot '+dotCls);
-    dot.textContent = it.status==='paid'?'✓':(it.status==='partial'?'~':String(it.seq));
-    const si=el('div','si');
-    si.append(el('div','nm','Installment #'+it.seq));
-    const statusLabel = it.status==='paid'?'paid in full':(it.status==='partial'?'part paid':'due');
-    si.append(el('div','mt',statusLabel));
-    const sv=el('div','sv');
-    const pa=el('div','pa'); pa.append(amtSpan(it.applied_minor,ccy)); if(it.status==='due') pa.style.color='var(--ink-faint)';
-    const pl=el('div','pl'); pl.append(document.createTextNode('planned '), amtSpan(it.planned_amount_minor,ccy));
-    sv.append(pa,pl);
-    srow.append(dot,si,sv);
-    sched.append(srow);
+    const sched=el('div','sched');
+    for(const it of insts){
+      const dotCls = it.status==='paid'?'paid':(it.status==='partial'?'part':'due');
+      const srow=el('div','srow');
+      const dot=el('span','dot '+dotCls);
+      dot.textContent = it.status==='paid'?'✓':(it.status==='partial'?'~':String(it.seq));
+      const si=el('div','si');
+      si.append(el('div','nm','Installment #'+it.seq));
+      const statusLabel = it.status==='paid'?'paid in full':(it.status==='partial'?'part paid':'due');
+      si.append(el('div','mt',statusLabel));
+      const sv=el('div','sv');
+      const pa=el('div','pa'); pa.append(amtSpan(it.applied_minor,ccy)); if(it.status==='due') pa.style.color='var(--ink-faint)';
+      const pl=el('div','pl'); pl.append(document.createTextNode('planned '), amtSpan(it.planned_amount_minor,ccy));
+      sv.append(pa,pl);
+      srow.append(dot,si,sv);
+      sched.append(srow);
+    }
+    box.append(sched);
   }
-  if(!insts.length){ sched.append(el('div','emptypanel','No installments scheduled.')); }
-  box.append(sched);
   // NOTE: the per-asset ledger lives on the asset detail page (/asset/:id), not the
   // dashboard — rendering every row here stacked into an endless wall on mobile.
 }
