@@ -10,7 +10,7 @@ from ..money import SUPPORTED_CURRENCIES
 
 DIRECTIONS = {"given", "taken"}
 INTEREST_TYPES = {"none", "monthly", "yearly"}
-LOAN_ENTRY_KINDS = {"interest_payment", "principal_repayment"}
+LOAN_ENTRY_KINDS = {"interest_payment", "principal_repayment", "fee"}
 # Loan categories — convey nature + what backs the loan. The secured ones imply collateral
 # even before a holding is linked (a gold loan is backed by gold, a home loan by property).
 LOAN_KINDS = {"personal", "gold", "home", "vehicle", "education", "business", "other"}
@@ -372,6 +372,7 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
             if e.kind == "principal_repayment"]
     interest_paid = sum(e.amount_minor for e in plan.ledger_entries
                         if e.kind == "interest_payment")
+    fees_paid = sum(e.amount_minor for e in plan.ledger_entries if e.kind == "fee")
     principal_outstanding = (sum(a for dt, a in disb if dt <= as_of)
                              - sum(a for dt, a in prin if dt <= as_of))
 
@@ -487,6 +488,7 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
         "interest_accrued_minor": interest_accrued,
         "interest_paid_minor": interest_paid,
         "interest_due_minor": interest_due,
+        "fees_paid_minor": fees_paid,
         "total_minor": max(0, principal_outstanding) + interest_due,
         "as_of": as_of.isoformat(),
         "schedule": schedule,
