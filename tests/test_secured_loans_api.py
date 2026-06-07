@@ -156,3 +156,24 @@ def test_me_exposes_is_operator(client):
     _register(client)  # first user → operator
     body = client.get("/api/auth/me").get_json()
     assert body["is_operator"] is True
+
+
+def test_loan_fee_entry_and_interest_backfill(client):
+    _register(client)
+    # a taken loan
+    pid = _make_loan(client, direction="taken").get_json()["plan"]["id"]
+    client.post(f"/api/plans/{pid}/loan/disbursements",
+                json={"amount": "5,00,000", "occurred_at": "2026-01-01T12:00:00"})
+    # fee entry (processing/upfront)
+    rf = client.post(f"/api/plans/{pid}/loan/entries",
+                     json={"kind": "fee", "amount": "5,000", "occurred_at": "2026-01-01T12:00:00",
+                           "note": "Processing fee"})
+    assert rf.status_code in (200, 201), rf.get_json()
+    # backfill interest paid for a PAST month
+    ri = client.post(f"/api/plans/{pid}/loan/entries",
+                     json={"kind": "interest_payment", "amount": "3,000",
+                           "occurred_at": "2026-02-01T12:00:00"})
+    assert ri.status_code in (200, 201), ri.get_json()
+    st = client.get(f"/api/plans/{pid}").get_json()["state"]
+    assert st["fees_paid_minor"] == 500000          # ₹5,000
+    assert st["interest_paid_minor"] == 300000      # ₹3,000 recorded for a past month

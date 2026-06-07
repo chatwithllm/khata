@@ -71,7 +71,7 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 ## 5. Enums (authoritative)
 - currencies `{INR, USD}` · payment methods `{cash, upi, transfer, cheque}` · funding sources
   `{savings, loan, borrowed, sold_asset, chit_payout, other}` · loan direction `{given, taken}` ·
-  interest_type `{none, monthly, yearly}` · loan kind `{personal, gold, home, vehicle, education, business, other}` · loan entry kinds `{interest_payment, principal_repayment}`
+  interest_type `{none, monthly, yearly}` · loan kind `{personal, gold, home, vehicle, education, business, other}` · loan entry kinds `{interest_payment, principal_repayment, fee}`
   (+ `disbursement` via its own endpoint) · asset_class `{gold, silver, equity, mf, cash, other}` ·
   chit kinds `{chit_contribution, chit_dividend, chit_prize}` · membership status `{invited, active, declined}` ·
   entry amount_status `{agreed, pending, countered}`.
@@ -332,6 +332,15 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-07 — Loan fees + interest backfill. New `fee` loan entry kind (direction follows
+  the loan: out on a taken loan, in on a given one); `loan_state.fees_paid_minor` surfaces
+  total fees, shown in the Glance panel. Create-loan form has a "Processing / upfront fee"
+  field (logs a dated fee entry at start). Interest paid/received for past months already
+  worked via Add-entry + the "When" date (the month schedule marks paid months); now the
+  Interest entry option + ledger row read "Interest paid" on a taken loan / "Interest
+  received" on a given one. Asset funding-link tag (`↗ loan`) is navigable only when the
+  viewer can open that loan (`asset_state.ledger[].funding_plan_accessible`); a contributor
+  who isn't on the loan sees a plain provenance tag, not a dead link.
 - 2026-06-06 — QA hardening pass (multi-currency + correctness). Currency: `fx.get_rate`
   inverse-rate fallback + `GET /api/fx-rates`; `dashboard.net_position` and the dashboard
   UI convert each plan to base and surface an `unconverted` per-currency bucket (net

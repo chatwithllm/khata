@@ -288,6 +288,9 @@
             <div class="fld" id="ratefld" hidden><label>Rate %</label><input class="inp mono" id="rate" placeholder="8.5"></div>
           </div>
           <div class="frow">
+            <div class="fld"><label>Processing / upfront fee (optional)</label><input class="inp mono" id="fee" placeholder="e.g. 5,000" inputmode="decimal"></div>
+          </div>
+          <div class="frow">
             <div class="fld"><label>Start date</label><input class="inp" id="start_date" type="date"></div>
             <div class="fld"><label>Tenure (months)</label><input class="inp mono" id="tenure_months" placeholder="optional"></div>
           </div>
@@ -730,6 +733,7 @@ async function submitPlan(){
   // as dated disbursements, supporting later top-ups/tranches).
   const loanPrincipal = (type === "loan") ? ($("principal").value || "").trim() : "";
   const startDate = (type === "loan") ? ($("start_date").value || "") : "";
+  const loanFee = (type === "loan") ? (($("fee") && $("fee").value) || "").trim() : "";
   const r = await fetch("/api/plans", { method: "POST", headers: { "Content-Type": "application/json" },
                                         body: JSON.stringify(payload()) });
   if(r.status === 401){ window.location.href = "/"; return; }
@@ -741,6 +745,11 @@ async function submitPlan(){
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: loanPrincipal, occurred_at: startDate ? startDate + "T12:00:00" : null, note: "Opening principal" }) });
       if(!dr.ok){ const e = await dr.json().catch(() => ({})); $("err").textContent = "Loan created, but principal failed: " + (e.detail || e.error || "try adding it on the loan page."); }
+    }
+    if(type === "loan" && plan.id != null && loanFee){
+      await fetch("/api/plans/" + plan.id + "/loan/entries", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "fee", amount: loanFee, occurred_at: startDate ? startDate + "T12:00:00" : null, note: "Processing fee" }) }).catch(() => {});
     }
     const route = ROUTE[plan.type] || "/app";
     window.location.href = (plan.id != null && ROUTE[plan.type]) ? route + plan.id : "/app";

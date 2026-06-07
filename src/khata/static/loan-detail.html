@@ -28,6 +28,7 @@
 .ledger .lrow.t-disb::before{background:var(--accent)}
 .ledger .lrow.t-int::before{background:var(--primary)}
 .ledger .lrow.t-prn::before{background:var(--ink)}
+.ledger .lrow.t-fee::before{background:var(--neg)}
 .ledger .l1{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14px}
 .ledger .amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right;white-space:nowrap}
 .ledger .amt.in{color:var(--pos)}
@@ -38,6 +39,7 @@
 .ledger .pill.k-int{border-color:transparent;background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary-deep)}
 .ledger .pill.k-prn{border-color:transparent;background:color-mix(in srgb,var(--ink) 12%,transparent);color:var(--ink)}
 .ledger .pill.k-disb{border-color:transparent;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.ledger .pill.k-fee{border-color:transparent;background:color-mix(in srgb,var(--neg) 14%,transparent);color:var(--neg)}
 .ledger .proof{font-size:10px;color:var(--primary-deep);font-weight:600;display:inline-flex;gap:3px;align-items:center}
 
 /* capped/scrolling schedule body (tenure can be long) */
@@ -179,7 +181,7 @@
   </div>
   <div class="obody">
     <div class="fld"><label for="etype">Type</label>
-      <select id="etype"><option value="disbursement">Disbursement (tranche)</option><option value="interest_payment">Interest payment</option><option value="principal_repayment">Principal repayment</option></select>
+      <select id="etype"><option value="disbursement">Disbursement (tranche)</option><option value="interest_payment">Interest payment</option><option value="principal_repayment">Principal repayment</option><option value="fee">Fee (processing / upfront)</option></select>
     </div>
     <div class="fld"><label for="amount">Amount</label><input id="amount" placeholder="50,000" inputmode="decimal"></div>
     <div class="fld" id="methodfld"><label for="method">Method</label>
@@ -456,6 +458,10 @@ function renderGlance(box, plan, st){
   }
   // Principal = principal_outstanding_minor
   frowAmt('Principal', po, false);
+  // interest settled to date (paid on a taken loan, received on a given one)
+  if(st.interest_paid_minor) frowAmt('Interest '+interestWord(st.direction), st.interest_paid_minor, false);
+  // upfront / processing fees logged on this loan
+  if(st.fees_paid_minor) frowAmt('Fees', st.fees_paid_minor, false);
   // Security = linked collateral → its name; else the loan kind's implied collateral
   // (a gold/home/vehicle loan is backed by that asset even without a holding linked);
   // personal/education/business default to unsecured.
@@ -498,7 +504,10 @@ const LEDGER_KIND={
   disbursement:{label:'Disbursement', cls:'t-disb', pill:'k-disb', pillText:'disbursement'},
   interest_payment:{label:'Interest payment', cls:'t-int', pill:'k-int', pillText:'interest'},
   principal_repayment:{label:'Principal prepayment', cls:'t-prn', pill:'k-prn', pillText:'principal'},
+  fee:{label:'Fee', cls:'t-fee', pill:'k-fee', pillText:'fee'},
 };
+// interest entry reads "paid" on a loan you took, "received" on one you gave
+function interestWord(direction){ return direction==='given' ? 'received' : 'paid'; }
 // "2025-05-20T10:00:00" -> "20 May · 10:00"
 function fmtLedgerDate(iso){
   if(!iso) return '';
@@ -526,7 +535,8 @@ function renderLedger(box, st){
   for(const it of rows){
     const meta2=LEDGER_KIND[it.kind] || {label:(it.kind||'entry'), cls:'', pill:'', pillText:(it.kind||'entry')};
     const lrow=el('div','lrow'+(meta2.cls?' '+meta2.cls:''));
-    lrow.append(el('div','l1', meta2.label));
+    const rowLabel = it.kind==='interest_payment' ? ('Interest '+interestWord(st.direction)) : meta2.label;
+    lrow.append(el('div','l1', rowLabel));
     // amount: in=positive/green, out=negative/ink
     const isIn=it.direction==='in';
     const amt=el('div','amt '+(isIn?'in':'out'));
@@ -1242,6 +1252,9 @@ async function boot(){
   $('name').textContent = plan.name;
   $('sub').textContent = 'Loans · '+dirWord(st.direction)+' · '+plan.status+' · '+BASE;
   $('osub').textContent = 'against '+plan.name;
+  // interest entry option follows direction: "Interest paid" (taken) / "received" (given)
+  const _io=document.querySelector('#etype option[value="interest_payment"]');
+  if(_io) _io.textContent='Interest '+interestWord(st.direction);
 
   renderHeader($('header-panel'), plan, st);
   renderLedger($('ledger-panel'), st);
