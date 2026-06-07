@@ -10,6 +10,19 @@ def create_app(config: Config | None = None) -> Flask:
     app.config["SECRET_KEY"] = cfg.secret_key
     app.config["KHATA"] = cfg
 
+    # When served behind a trusted HTTPS reverse proxy, trust its forwarded headers so
+    # request.scheme is "https", and mark the session cookie Secure. Opt-in via
+    # KHATA_SECURE_COOKIES so direct-http testing on :5057 keeps working (a Secure
+    # cookie is never sent over http -> would silently break login).
+    if cfg.secure_cookies:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+        app.config.update(
+            SESSION_COOKIE_SECURE=True,
+            SESSION_COOKIE_HTTPONLY=True,
+            SESSION_COOKIE_SAMESITE="Lax",
+        )
+
     from .services.auth import verify_google_credential
     app.config["GOOGLE_VERIFIER"] = verify_google_credential
 

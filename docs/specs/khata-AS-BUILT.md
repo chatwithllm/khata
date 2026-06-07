@@ -29,7 +29,8 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 - `src/khata/`: `models/` · `services/` (domain logic, returns plain dicts) · `api/` (Flask blueprints,
   JSON) · `web.py` (serves static pages) · `static/` (HTML/CSS/JS) · `money.py` · `config.py` · `db.py`.
 - App factory: `create_app(cfg)`. Config from env: `KHATA_SECRET_KEY`, `KHATA_DATABASE_URL`,
-  `KHATA_ENV`, `KHATA_GOOGLE_CLIENT_ID` (optional), `KHATA_PRICE_FEED` (optional).
+  `KHATA_ENV`, `KHATA_GOOGLE_CLIENT_ID` (optional), `KHATA_PRICE_FEED` (optional),
+  `KHATA_SECURE_COOKIES` (optional — behind an HTTPS reverse proxy).
 - Frontend rule **K4 (XSS):** all dynamic DOM via `createElement` + `textContent`; **never** `innerHTML`
   on user/API data. Pages: `ledger.css` (landing/marketing, `.landing`-scoped animations) + `app.css`
   (app shell + detail panels); `sharing.js` (`mountSharing`). HTML served `Cache-Control: no-store`.
@@ -332,6 +333,10 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-07 — Enabled Google Sign-In (already built). Set KHATA_GOOGLE_CLIENT_ID to
+  reveal the button + /api/auth/google. New KHATA_SECURE_COOKIES=1 flag: when behind an
+  HTTPS reverse proxy, applies ProxyFix (trust X-Forwarded-Proto/Host) + marks the
+  session cookie Secure/HttpOnly/SameSite=Lax. Runbook: docs/google-signin-setup.md.
 - 2026-06-07 — Loan fees + interest backfill. New `fee` loan entry kind (direction follows
   the loan: out on a taken loan, in on a given one); `loan_state.fees_paid_minor` surfaces
   total fees, shown in the Glance panel. Create-loan form has a "Processing / upfront fee"

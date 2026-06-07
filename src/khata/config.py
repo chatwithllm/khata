@@ -7,5 +7,6 @@ class Config:
         self.database_url = os.environ.get("KHATA_DATABASE_URL", "sqlite:///khata.db")
         self.env = os.environ.get("KHATA_ENV", "development")
         self.google_client_id = os.environ.get("KHATA_GOOGLE_CLIENT_ID")
+        self.secure_cookies = os.environ.get("KHATA_SECURE_COOKIES", "").strip().lower() in {"1", "true", "yes"}
         self.price_feed = os.environ.get("KHATA_PRICE_FEED")
         self.testing = False
