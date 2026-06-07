@@ -73,6 +73,8 @@ def _summary(plan: Plan) -> dict:
 
 
 def _detail(plan: Plan) -> dict:
+    _u = current_user()
+    viewer_id = _u.id if _u else None
     if plan.type == "loan":
         state = loans.loan_state(g.db, plan.loan, as_of=date.today())
     elif plan.type == "holding":
@@ -82,7 +84,7 @@ def _detail(plan: Plan) -> dict:
     elif plan.type == "retirement":
         state = retirement.retirement_state(g.db, plan.retirement)
     else:
-        state = assets.asset_state(g.db, plan)
+        state = assets.asset_state(g.db, plan, viewer_id=viewer_id)
     return {"plan": _summary(plan), "state": state}
 
 

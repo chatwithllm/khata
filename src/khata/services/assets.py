@@ -241,7 +241,16 @@ def list_plans(session: Session, owner_id) -> list[Plan]:
         select(Plan).where(Plan.owner_user_id == owner_id).order_by(Plan.created_at.desc())))
 
 
-def asset_state(session: Session, plan: Plan) -> dict:
+def _viewer_can_access(fp: Plan, viewer_id) -> bool:
+    """Owner or active member of the funding plan — i.e. the viewer can actually open it."""
+    if viewer_id is None or fp is None:
+        return False
+    if fp.owner_user_id == viewer_id:
+        return True
+    return any(m.user_id == viewer_id and m.status == "active" for m in fp.memberships)
+
+
+def asset_state(session: Session, plan: Plan, viewer_id: int | None = None) -> dict:
     total = plan.asset.total_price_minor if plan.asset is not None else 0
     outs = [e for e in plan.ledger_entries if e.direction == "out"]
     paid = sum(e.amount_minor for e in outs)
@@ -301,7 +310,8 @@ def asset_state(session: Session, plan: Plan) -> dict:
             _users[e.logged_by_user_id] = (_u.display_name, _u.avatar) if _u else (None, None)
         if e.funding_plan_id and e.funding_plan_id not in _fplans:
             _fp = session.get(Plan, e.funding_plan_id)
-            _fplans[e.funding_plan_id] = (_fp.name, _fp.type) if _fp else (None, None)
+            _fplans[e.funding_plan_id] = ((_fp.name, _fp.type, _viewer_can_access(_fp, viewer_id))
+                                          if _fp else (None, None, False))
     ledger = [
         {"id": e.id, "kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
          "created_at": e.created_at.isoformat() if e.created_at else None,
@@ -312,8 +322,9 @@ def asset_state(session: Session, plan: Plan) -> dict:
          "paid_by_name": _users.get(e.logged_by_user_id, (None, None))[0],
          "paid_by_avatar": _users.get(e.logged_by_user_id, (None, None))[1],
          "funding_plan_id": e.funding_plan_id,
-         "funding_plan_name": _fplans.get(e.funding_plan_id, (None, None))[0],
-         "funding_plan_type": _fplans.get(e.funding_plan_id, (None, None))[1],
+         "funding_plan_name": _fplans.get(e.funding_plan_id, (None, None, False))[0],
+         "funding_plan_type": _fplans.get(e.funding_plan_id, (None, None, False))[1],
+         "funding_plan_accessible": _fplans.get(e.funding_plan_id, (None, None, False))[2],
          "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor}
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
     ]
