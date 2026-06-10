@@ -1,0 +1,63 @@
+{
+  "project": "Khata → Expo React Native (iPhone)",
+  "branch": "feat/mobile-app",
+  "updated": "2026-06-09T01:00:00",
+  "phases": [
+    { "title": "Phase 0 — Backend token + CORS", "status": "done", "note": "committed fe0080f · 251 tests green",
+      "tasks": [
+        { "t": "Bearer token on login/register/google", "s": "done" },
+        { "t": "current_user() accepts Authorization: Bearer", "s": "done" },
+        { "t": "CORS for /api/*", "s": "done" },
+        { "t": "Token authenticates with no cookie (test)", "s": "done" }
+      ]
+    },
+    { "title": "Phase 1 — Scaffold Expo", "status": "done", "note": "SDK 56, expo-router, TS",
+      "tasks": [
+        { "t": "create-expo-app mobile/", "s": "done" },
+        { "t": "deps: react-query, secure-store, auth-session, image-picker", "s": "done" },
+        { "t": "api/client.ts + auth/session.ts + config.ts", "s": "done" }
+      ]
+    },
+    { "title": "Phase 2 — Auth flow", "status": "done", "note": "email/password + Google hook",
+      "tasks": [
+        { "t": "login.tsx (email/password + register)", "s": "done" },
+        { "t": "useGoogleSignIn hook", "s": "done" },
+        { "t": "AuthContext + root auth gate", "s": "done" }
+      ]
+    },
+    { "title": "Phase 3 — Theme + money", "status": "done", "note": "ported from web CSS + app.html",
+      "tasks": [
+        { "t": "theme/tokens.ts (paper/ink palette)", "s": "done" },
+        { "t": "money/format.ts (INR/USD grouping)", "s": "done" }
+      ]
+    },
+    { "title": "Phase 4 — Core tabs", "status": "done", "note": "5 tabs",
+      "tasks": [
+        { "t": "dashboard (index)", "s": "done" },
+        { "t": "networth", "s": "done" },
+        { "t": "holdings", "s": "done" },
+        { "t": "analysis (hold-vs-sell calculator)", "s": "done" },
+        { "t": "settings (profile, base currency, logout)", "s": "done" }
+      ]
+    },
+    { "title": "Phase 5 — Plan detail + create", "status": "done", "note": "generic detail renderer for all 5 types",
+      "tasks": [
+        { "t": "plan/[type]/[id] detail", "s": "done" },
+        { "t": "create-plan modal (per-type fields)", "s": "done" }
+      ]
+    },
+    { "title": "Phase 6 — Native features", "status": "todo", "note": "deferred to v1.1 (read+create app is usable without)",
+      "tasks": [
+        { "t": "avatar upload (image-picker)", "s": "todo" },
+        { "t": "backup export/restore", "s": "todo" }
+      ]
+    },
+    { "title": "Verify", "status": "done", "note": "tsc clean + iOS bundle export clean",
+      "tasks": [
+        { "t": "tsc --noEmit clean", "s": "done" },
+        { "t": "expo export ios bundles clean (no missing modules)", "s": "done" },
+        { "t": "on-device smoke (needs updated backend running)", "s": "todo" }
+      ]
+    }
+  ]
+}

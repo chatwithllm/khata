@@ -143,6 +143,13 @@ mobile/
 
 ## Implementation Checklist
 
+> **Build status (2026-06-09):** Phases 0–5 **complete**; verify gate **passed**
+> (`tsc --noEmit` clean + `expo export ios` bundles with no missing modules). Phase 6
+> (avatar/backup native) **deferred to v1.1** — the read + create app is usable without it.
+> Remaining: on-device smoke test against the updated backend. Live tracker:
+> `docs/web-to-mobile/mobile-build-status.json` (served at `:5099/dashboard.html`).
+> App lives in `mobile/`. Phases 1–5 checklist items below are all done.
+
 **Phase 0 — Backend prep (blocker) ✅ DONE 2026-06-09**
 - [x] Add bearer-token issue on `POST /login`, `/register`, `/google` in `src/khata/api/auth.py` — `[from-code]`
 - [x] Accept `Authorization: Bearer` in auth — `[from-code]`

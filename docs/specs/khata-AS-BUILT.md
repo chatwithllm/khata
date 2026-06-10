@@ -334,6 +334,13 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-09 — Expo React Native iPhone app (`mobile/`, web-to-mobile Phases 1–5). Native
+  client over the existing REST API: bearer-token auth in Keychain (expo-secure-store), email/
+  password + Google sign-in, 5 bottom tabs (dashboard, holdings, net worth, hold-vs-sell
+  analysis, settings), generic plan-detail screen for all 5 plan types, and a create-plan modal.
+  TanStack Query for data; theme tokens + INR/USD money formatting ported verbatim from the web
+  CSS/JS for parity. `tsc` clean, iOS bundle exports clean. Phase 6 (avatar/backup native pickers)
+  deferred to v1.1. The Flask backend is unchanged beyond the Phase-0 token/CORS work below.
 - 2026-06-09 — Mobile bearer-token auth + API CORS (web-to-mobile Phase 0). `current_user()`
   now accepts `Authorization: Bearer <token>` in addition to the session cookie, so the whole
   API works for a native client unchanged. login/register/google return a stateless
