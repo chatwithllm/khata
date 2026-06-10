@@ -1,5 +1,6 @@
 from flask import Blueprint, current_app, g, jsonify, request, session
 
+from ..tokens import issue_token, read_token
 from ..services.auth import (
     register_user,
     authenticate_user,
@@ -22,11 +23,28 @@ def _user_json(user: User) -> dict:
             "has_password": bool(user.password_hash), "avatar": user.avatar}
 
 
+def _bearer_uid():
+    """User id from an Authorization: Bearer <token> header, if present and valid."""
+    header = request.headers.get("Authorization", "")
+    if not header.startswith("Bearer "):
+        return None
+    token = header[len("Bearer "):].strip()
+    return read_token(current_app.config["SECRET_KEY"], token)
+
+
 def current_user():
+    # Web clients carry the session cookie; mobile clients carry a bearer token.
+    # Either one identifies the user — the rest of the API is auth-mechanism-agnostic.
     uid = session.get("user_id")
+    if uid is None:
+        uid = _bearer_uid()
     if uid is None:
         return None
     return g.db.get(User, uid)
+
+
+def _token_for(user: User) -> str:
+    return issue_token(current_app.config["SECRET_KEY"], user.id)
 
 
 @bp.post("/register")
@@ -47,7 +65,7 @@ def register():
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
     session["user_id"] = user.id
-    return jsonify(user=_user_json(user)), 201
+    return jsonify(user=_user_json(user), token=_token_for(user)), 201
 
 
 @bp.post("/login")
@@ -58,7 +76,7 @@ def login():
     except InvalidCredentialsError:
         return jsonify(error="invalid_credentials"), 401
     session["user_id"] = user.id
-    return jsonify(user=_user_json(user)), 200
+    return jsonify(user=_user_json(user), token=_token_for(user)), 200
 
 
 @bp.post("/logout")
@@ -154,4 +172,4 @@ def google_login():
         g.db.rollback()
         return jsonify(error="invalid_token"), 401
     session["user_id"] = user.id
-    return jsonify(user=_user_json(user), created=created), 200
+    return jsonify(user=_user_json(user), created=created, token=_token_for(user)), 200
