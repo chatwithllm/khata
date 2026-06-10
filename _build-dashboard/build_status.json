@@ -1,0 +1,23 @@
+{
+  "project": "Khata Landing Site",
+  "status": "complete",
+  "phase": "Done — verified, live on LAN",
+  "current_task": "Complete",
+  "tasks_total": 8,
+  "tasks_done": 8,
+  "tasks": [
+    {"id": 1, "name": "Stand up build dashboard (live on :4178)", "status": "done"},
+    {"id": 2, "name": "Design system — palette, type, motion language", "status": "done"},
+    {"id": 3, "name": "Page skeleton + Lenis smooth scroll", "status": "done"},
+    {"id": 4, "name": "3D hero — ledger assembly scene (three.js)", "status": "done"},
+    {"id": 5, "name": "Scroll-scrubbed camera + GSAP ScrollTrigger pinning", "status": "done"},
+    {"id": 6, "name": "Content sections — features, plan types, privacy, CTA", "status": "done"},
+    {"id": 7, "name": "Responsive + reduced-motion fallback + a11y pass", "status": "done"},
+    {"id": 8, "name": "Perf pass (lazy 3D, 60fps verify) + SRI hashes + final review", "status": "done"}
+  ],
+  "blocked": false,
+  "blocked_reason": null,
+  "last_commit": null,
+  "open_issues": 1,
+  "updated_at": "2026-06-10T00:00:00Z"
+}
