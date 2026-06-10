@@ -334,6 +334,11 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-09 — Mobile Phase 6 native features. Settings now has avatar pick→square-crop→
+  256px JPEG (expo-image-picker + image-manipulator, kept <200KB for the `/api/auth/avatar`
+  cap) with display + remove, and an operator-only Backup & restore card (export → share
+  sheet via expo-file-system + expo-sharing; restore → expo-document-picker → POST /api/restore).
+  Gated on `/api/auth/me` `is_operator` (now surfaced through AuthContext). No backend changes.
 - 2026-06-09 — Expo React Native iPhone app (`mobile/`, web-to-mobile Phases 1–5). Native
   client over the existing REST API: bearer-token auth in Keychain (expo-secure-store), email/
   password + Google sign-in, 5 bottom tabs (dashboard, holdings, net worth, hold-vs-sell

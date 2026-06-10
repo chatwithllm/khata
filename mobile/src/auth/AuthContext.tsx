@@ -15,6 +15,7 @@ type Status = 'loading' | 'authenticated' | 'unauthenticated';
 type AuthContextValue = {
   status: Status;
   user: User | null;
+  isOperator: boolean;
   signIn: (fn: () => Promise<AuthResponse>) => Promise<void>;
   signOut: () => Promise<void>;
   setUser: (u: User) => void;
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<Status>('loading');
   const [user, setUserState] = useState<User | null>(null);
+  const [isOperator, setIsOperator] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -34,8 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       try {
-        const { user } = await authApi.me();
+        const { user, is_operator } = await authApi.me();
         setUserState(user);
+        setIsOperator(is_operator);
         setStatus('authenticated');
       } catch {
         await clearToken();
@@ -49,6 +52,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await setToken(res.token);
     setUserState(res.user);
     setStatus('authenticated');
+    // login/register/google don't return is_operator — fetch it from /me.
+    try {
+      const { is_operator } = await authApi.me();
+      setIsOperator(is_operator);
+    } catch {
+      setIsOperator(false);
+    }
   }, []);
 
   const signOut = useCallback(async () => {
@@ -59,12 +69,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     await clearToken();
     setUserState(null);
+    setIsOperator(false);
     setStatus('unauthenticated');
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, signIn, signOut, setUser: setUserState }),
-    [status, user, signIn, signOut],
+    () => ({ status, user, isOperator, signIn, signOut, setUser: setUserState }),
+    [status, user, isOperator, signIn, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

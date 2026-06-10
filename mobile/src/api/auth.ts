@@ -31,3 +31,8 @@ export function logout() {
 export function updateProfile(display_name: string) {
   return api<{ user: User }>('/api/auth/profile', { method: 'POST', body: { display_name } });
 }
+
+/** avatar: a `data:image/...;base64,...` URL (≤200 KB), or null to clear. */
+export function setAvatar(avatar: string | null) {
+  return api<{ user: User }>('/api/auth/avatar', { method: 'POST', body: { avatar } });
+}
