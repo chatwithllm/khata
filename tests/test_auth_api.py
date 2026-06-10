@@ -153,3 +153,62 @@ def test_avatar_rejects_non_image_and_oversize(client):
 
 def test_avatar_requires_auth(client):
     assert client.post("/api/auth/avatar", json={"avatar": _PNG}).status_code == 401
+
+
+# --- mobile bearer-token auth (Phase 0) -------------------------------------
+
+def _fresh_app():
+    cfg = Config()
+    cfg.database_url = "sqlite:///:memory:"
+    app = create_app(cfg)
+    app.config["TESTING"] = True
+    Base.metadata.create_all(app.config["ENGINE"])
+    return app
+
+
+def test_login_returns_token_and_authenticates_without_cookie():
+    app = _fresh_app()
+    setup = app.test_client()
+    setup.post("/api/auth/register", json={
+        "email": "a@b.com", "display_name": "Arjun", "password": "pw12345"})
+    r = setup.post("/api/auth/login", json={"email": "a@b.com", "password": "pw12345"})
+    token = r.get_json()["token"]
+    assert token
+
+    # A brand-new client has no session cookie — only the bearer token.
+    mobile = app.test_client()
+    r = mobile.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    assert r.get_json()["user"]["email"] == "a@b.com"
+    # ...and a protected non-auth endpoint also accepts the token.
+    assert mobile.get("/api/dashboard",
+                      headers={"Authorization": f"Bearer {token}"}).status_code == 200
+
+
+def test_register_and_google_return_token():
+    app = _fresh_app()
+    c = app.test_client()
+    assert c.post("/api/auth/register", json={
+        "email": "a@b.com", "display_name": "A", "password": "pw12345"}).get_json()["token"]
+
+    claims = {"sub": "z-9", "email": "z@b.com", "email_verified": True, "name": "Z"}
+    gc = _google_client(lambda cred, cid: claims)
+    assert gc.post("/api/auth/google", json={"credential": "fake"}).get_json()["token"]
+
+
+def test_bearer_rejects_garbage_and_missing():
+    app = _fresh_app()
+    c = app.test_client()
+    assert c.get("/api/auth/me").status_code == 401
+    assert c.get("/api/auth/me",
+                 headers={"Authorization": "Bearer not-a-real-token"}).status_code == 401
+    assert c.get("/api/auth/me", headers={"Authorization": "Bearer "}).status_code == 401
+
+
+def test_api_cors_headers_and_preflight(client):
+    r = client.get("/api/auth/config")
+    assert r.headers["Access-Control-Allow-Origin"] == "*"
+    assert "Authorization" in r.headers["Access-Control-Allow-Headers"]
+    pre = client.open("/api/dashboard", method="OPTIONS")
+    assert pre.status_code == 204
+    assert pre.headers["Access-Control-Allow-Origin"] == "*"

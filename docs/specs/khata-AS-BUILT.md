@@ -106,6 +106,7 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 **Auth** (`/api/auth/*`): POST register · login · logout · google · password · profile · **avatar**
 (`{avatar: <data-url|null>}` — validates `data:image/` prefix + ~200 KB cap; clears on null) · GET config
 (`{google_client_id}`) · me (`{user:{id,email,display_name,has_password,avatar}}`).
+**Dual auth:** every protected route resolves the user via `current_user()`, which accepts **either** the web session cookie **or** an `Authorization: Bearer <token>` header (for the mobile client). register/login/google responses include `token` (stateless, `itsdangerous`-signed user id, 30-day expiry; `src/khata/tokens.py`). `/api/*` carries permissive CORS (wildcard origin, `Authorization`+`Content-Type` headers, OPTIONS preflight → 204; no Allow-Credentials).
 **Plans** (`/api/plans*`): GET `""` (list) · GET `/<id>` (`{plan, state}`) · **PATCH `/<id>`** (edit plan / loan terms — owner) · **DELETE `/<id>`** (delete whole plan — owner) · POST `""` (create, dispatches
 on `type`) · POST `/<id>/installments` · POST `/<id>/payments` (asset; accepts **occurred_at**) ·
 **PATCH/DELETE `/<id>/entries/<entry_id>`** (edit / delete a ledger entry — owner-only; edit takes amount/
@@ -333,6 +334,20 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-09 — Expo React Native iPhone app (`mobile/`, web-to-mobile Phases 1–5). Native
+  client over the existing REST API: bearer-token auth in Keychain (expo-secure-store), email/
+  password + Google sign-in, 5 bottom tabs (dashboard, holdings, net worth, hold-vs-sell
+  analysis, settings), generic plan-detail screen for all 5 plan types, and a create-plan modal.
+  TanStack Query for data; theme tokens + INR/USD money formatting ported verbatim from the web
+  CSS/JS for parity. `tsc` clean, iOS bundle exports clean. Phase 6 (avatar/backup native pickers)
+  deferred to v1.1. The Flask backend is unchanged beyond the Phase-0 token/CORS work below.
+- 2026-06-09 — Mobile bearer-token auth + API CORS (web-to-mobile Phase 0). `current_user()`
+  now accepts `Authorization: Bearer <token>` in addition to the session cookie, so the whole
+  API works for a native client unchanged. login/register/google return a stateless
+  `itsdangerous`-signed token (new `src/khata/tokens.py`, 30-day expiry, no DB table). `/api/*`
+  gets permissive CORS (wildcard origin, OPTIONS→204) via `after_request`/`before_request` in
+  `__init__.py` — no flask-cors dep. Web cookie auth untouched. Groundwork for the Expo iPhone
+  app (plan: docs/web-to-mobile/2026-06-09-web-to-mobile-plan.md). 5 new tests, 251 total green.
 - 2026-06-07 — Enabled Google Sign-In (already built). Set KHATA_GOOGLE_CLIENT_ID to
   reveal the button + /api/auth/google. New KHATA_SECURE_COOKIES=1 flag: when behind an
   HTTPS reverse proxy, applies ProxyFix (trust X-Forwarded-Proto/Host) + marks the

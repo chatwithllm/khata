@@ -1,4 +1,4 @@
-from flask import Flask, g, jsonify
+from flask import Flask, g, jsonify, request
 
 from .config import Config
 from .db import make_engine, make_session_factory
@@ -33,6 +33,25 @@ def create_app(config: Config | None = None) -> Flask:
     SessionLocal = make_session_factory(engine)
     app.config["ENGINE"] = engine
     app.config["SESSION_FACTORY"] = SessionLocal
+
+    # The mobile client calls the JSON API cross-origin (it isn't served from this
+    # host). Native iOS/Android don't enforce CORS, but Expo web and the dev tools
+    # do, so allow the API surface to be called from any origin with a bearer token.
+    # Auth is by Authorization header, never by cross-origin cookie, so we do NOT
+    # set Allow-Credentials and a wildcard origin is safe.
+    @app.after_request
+    def _api_cors(resp):
+        if request.path.startswith("/api/"):
+            resp.headers["Access-Control-Allow-Origin"] = "*"
+            resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+            resp.headers["Access-Control-Allow-Headers"] = "Authorization, Content-Type"
+            resp.headers["Access-Control-Max-Age"] = "86400"
+        return resp
+
+    @app.before_request
+    def _cors_preflight():
+        if request.method == "OPTIONS" and request.path.startswith("/api/"):
+            return ("", 204)
 
     @app.before_request
     def _open_session():

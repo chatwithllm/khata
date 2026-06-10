@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Khata Mobile — Build Dashboard</title>
+<style>
+  :root{--paper:#F7F1E6;--card:#FFFDF8;--ink:#241B16;--soft:#4A4035;--faint:#8C8068;
+        --line:#DBCDB0;--primary:#C05E1B;--pos:#1F6B53;--neg:#A6321F;--r:16px}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:24px}
+  .wrap{max-width:760px;margin:0 auto}
+  h1{font-size:24px;margin:0 0 2px;color:var(--primary)}
+  .meta{color:var(--faint);font-size:13px;margin-bottom:18px}
+  .bar{height:10px;background:#E7DCC6;border-radius:999px;overflow:hidden;margin:10px 0 22px}
+  .bar>i{display:block;height:100%;background:var(--primary);transition:width .4s}
+  .phase{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+         padding:14px 16px;margin-bottom:12px;box-shadow:0 16px 36px -28px rgba(28,24,19,.5)}
+  .ph-head{display:flex;align-items:center;gap:10px;font-weight:700}
+  .pill{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+        padding:3px 9px;border-radius:999px;color:#fff}
+  .done{background:var(--pos)}.doing{background:var(--primary)}.todo{background:#B8AC94}
+  .note{color:var(--faint);font-size:12px;font-weight:500}
+  ul{list-style:none;margin:10px 0 0;padding:0}
+  li{display:flex;align-items:center;gap:8px;padding:3px 0;color:var(--soft);font-size:14px}
+  .tick{width:18px;text-align:center}
+  .s-done{color:var(--pos)} .s-doing{color:var(--primary)} .s-todo{color:var(--faint)}
+  .li-done{color:var(--ink)} .li-todo{color:var(--faint)}
+  .foot{color:var(--faint);font-size:12px;margin-top:16px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="title">Khata Mobile — Build</h1>
+  <div class="meta" id="meta">loading…</div>
+  <div class="bar"><i id="prog" style="width:0"></i></div>
+  <div id="phases"></div>
+  <div class="foot">auto-refreshes every 3s · source: mobile-build-status.json</div>
+</div>
+<script>
+const TICK = {done:'✓', doing:'▸', todo:'○'};
+async function load(){
+  try{
+    const r = await fetch('mobile-build-status.json?_=' + Date.now());
+    const d = await r.json();
+    document.getElementById('title').textContent = d.project;
+    let total=0, done=0;
+    d.phases.forEach(p => p.tasks.forEach(t => { total++; if(t.s==='done') done++; }));
+    const pct = total ? Math.round(done/total*100) : 0;
+    document.getElementById('meta').textContent =
+      `${d.branch} · ${done}/${total} tasks · ${pct}% · updated ${d.updated.replace('T',' ').slice(0,16)}`;
+    document.getElementById('prog').style.width = pct + '%';
+    document.getElementById('phases').innerHTML = d.phases.map(p => `
+      <div class="phase">
+        <div class="ph-head">
+          <span class="pill ${p.status}">${p.status}</span>
+          <span>${p.title}</span>
+        </div>
+        ${p.note ? `<div class="note">${p.note}</div>` : ''}
+        <ul>${p.tasks.map(t => `
+          <li class="li-${t.s==='done'?'done':'todo'}">
+            <span class="tick s-${t.s}">${TICK[t.s]||'○'}</span>${t.t}
+          </li>`).join('')}</ul>
+      </div>`).join('');
+  }catch(e){
+    document.getElementById('meta').textContent = 'status file not reachable: ' + e;
+  }
+}
+load(); setInterval(load, 3000);
+</script>
+</body>
+</html>
