@@ -334,14 +334,14 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
-- 2026-06-10 — Marketing landing site (`site/index.html`, self-contained static page — no build
-  step, matches app's static convention). "Bound ledger" editorial design (Fraunces/Newsreader/
-  Spline Sans Mono; ink/ivory/sindoor/gold). Scroll-scrubbed 3D hero: 1,300 instanced ledger
-  entries chaos→ruled-grid→gold sum beam with net-worth count-up; three.js (lazy ESM) + GSAP
-  ScrollTrigger + Lenis via SRI-pinned CDN. prefers-reduced-motion static fallback, mobile
-  instance/DPR cuts, headless-verified (0 console errors, no h-overflow, 60fps mobile-viewport).
-  Build dashboard convention in `_build-dashboard/` (status JSON + self-polling dashboard +
-  serve script, :4178 dashboard / :4180 site).
+- 2026-06-10 — Marketing landing page served by the app at `GET /welcome`
+  (`src/khata/static/welcome.html`, self-contained — no build step; root `/` sign-in unchanged).
+  "Bound ledger" editorial design (Fraunces/Newsreader/Spline Sans Mono; ink/ivory/sindoor/gold).
+  Scroll-scrubbed 3D hero: 1,300 instanced ledger entries chaos→ruled-grid→gold sum beam with
+  net-worth count-up; three.js (lazy ESM) + GSAP ScrollTrigger + Lenis via SRI-pinned CDN.
+  prefers-reduced-motion static fallback, mobile instance/DPR cuts, headless-verified (0 console
+  errors, no h-overflow, 60fps mobile-viewport). Nav/CTA "Sign in" links to `/`. Build dashboard
+  convention in `_build-dashboard/` (status JSON + self-polling dashboard + serve script, :4178).
 - 2026-06-09 — Expo React Native iPhone app (`mobile/`, web-to-mobile Phases 1–5). Native
   client over the existing REST API: bearer-token auth in Keychain (expo-secure-store), email/
   password + Google sign-in, 5 bottom tabs (dashboard, holdings, net worth, hold-vs-sell
