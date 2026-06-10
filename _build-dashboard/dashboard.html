@@ -1,0 +1,97 @@
+<!doctype html>
+<!--
+  Khata Landing Site — live build dashboard.
+  Self-contained: polls ./build_status.json every 2s. No dependencies.
+  Serve:  python3 -m http.server 4178 --bind 0.0.0.0 --directory _build-dashboard
+  View:   http://<lan-ip>:4178/dashboard.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khata Landing — Build Dashboard</title>
+<style>
+  :root{
+    --bg:#0d0b08; --panel:#171310; --line:#2a241d;
+    --ink:#ece4d6; --dim:#8d8273; --gold:#d4a843; --green:#7fb069;
+    --red:#c4564a; --amber:#d49043;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--bg);color:var(--ink);padding:28px;min-height:100vh}
+  h1{font-size:18px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+  .sub{color:var(--dim);font-size:12px;margin-top:4px}
+  .wrap{max-width:860px;margin:0 auto}
+  .row{display:flex;gap:14px;margin-top:20px;flex-wrap:wrap}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;flex:1;min-width:150px}
+  .card b{display:block;font-size:26px;margin-top:6px;font-weight:600}
+  .card span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .bar{height:10px;background:var(--line);border-radius:5px;overflow:hidden;margin-top:22px}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#e8c878);transition:width .6s ease;border-radius:5px}
+  ul{list-style:none;margin-top:22px;display:flex;flex-direction:column;gap:8px}
+  li{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 14px;font-size:13px;display:flex;align-items:center;gap:10px}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .pending .dot{background:var(--dim)} .pending{color:var(--dim)}
+  .in_progress .dot{background:var(--gold);animation:pulse 1.2s infinite}
+  .done .dot{background:var(--green)}
+  .blocked-task .dot{background:var(--red)}
+  @keyframes pulse{50%{opacity:.3}}
+  .state{margin-top:20px;padding:12px 16px;border-radius:8px;font-size:13px;display:none}
+  .state.show{display:block}
+  #stale{background:#2b2008;border:1px solid var(--amber);color:var(--amber)}
+  #blocked{background:#2b110d;border:1px solid var(--red);color:var(--red)}
+  footer{margin-top:26px;color:var(--dim);font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Khata Landing — Build</h1>
+  <div class="sub" id="phase">loading…</div>
+
+  <div class="row">
+    <div class="card"><span>Progress</span><b id="count">–</b></div>
+    <div class="card"><span>Current task</span><b id="task" style="font-size:15px;line-height:1.4">–</b></div>
+    <div class="card"><span>Last commit</span><b id="commit" style="font-size:13px;line-height:1.4">–</b></div>
+    <div class="card"><span>Open issues</span><b id="issues">–</b></div>
+  </div>
+
+  <div class="bar"><i id="fill" style="width:0%"></i></div>
+
+  <div class="state" id="blocked">⛔ BLOCKED: <span id="blockreason"></span></div>
+  <div class="state" id="stale">⚠ STALE — no status update in over 3 minutes; build may have stopped.</div>
+
+  <ul id="list"></ul>
+  <footer>polls build_status.json every 2s · <span id="updated">–</span></footer>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+async function tick(){
+  try{
+    const r = await fetch('./build_status.json?t=' + Date.now());
+    const s = await r.json();
+    $('phase').textContent = s.phase + ' · ' + s.status;
+    $('count').textContent = s.tasks_done + ' / ' + s.tasks_total;
+    $('task').textContent = s.current_task || '–';
+    $('commit').textContent = s.last_commit || '–';
+    $('issues').textContent = s.open_issues;
+    $('fill').style.width = (100 * s.tasks_done / s.tasks_total) + '%';
+    $('updated').textContent = 'updated ' + s.updated_at;
+    const list = $('list'); list.textContent = '';
+    for(const t of s.tasks){
+      const li = document.createElement('li');
+      li.className = t.status === 'blocked' ? 'blocked-task' : t.status;
+      const dot = document.createElement('i'); dot.className = 'dot';
+      li.appendChild(dot);
+      li.appendChild(document.createTextNode(t.id + '. ' + t.name));
+      list.appendChild(li);
+    }
+    $('blocked').classList.toggle('show', !!s.blocked);
+    if(s.blocked) $('blockreason').textContent = s.blocked_reason || '';
+    const age = Date.now() - Date.parse(s.updated_at);
+    $('stale').classList.toggle('show', isFinite(age) && age > 180000);
+  }catch(e){ $('phase').textContent = 'cannot read build_status.json — ' + e.message; }
+}
+tick(); setInterval(tick, 2000);
+</script>
+</body>
+</html>

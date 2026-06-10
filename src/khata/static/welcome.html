@@ -1,0 +1,566 @@
+<!doctype html>
+<!--
+  Khata — marketing landing page.
+  Self-contained static page (matches Khata's no-build static convention).
+  3D: three.js (ESM CDN) · Scroll: GSAP ScrollTrigger + Lenis (CDN).
+  Serve any static way, e.g.:  python3 -m http.server 4180 --directory site
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khata — every rupee, every dollar, one ledger</title>
+<meta name="description" content="Khata is a privacy-first, self-hosted money ledger for the patterns budgeting apps can't model: installment assets, chit funds, loans, holdings and 401(k) — multi-currency, multi-user, yours.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2314100a'/%3E%3Cpath d='M8 7v18M8 16l9-9M11 13l10 12' stroke='%23d4a843' stroke-width='2.6' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,700&family=Spline+Sans+Mono:wght@300;400;500&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   KHATA LANDING — "the bound ledger" design system
+   Old bahi-khata (cloth-bound Indian ledger) meets modern
+   editorial fintech. Ink, ivory, sindoor red, gold leaf.
+   ============================================================ */
+:root{
+  --ink:        #14100a;   /* page dark */
+  --ink-2:      #1d1810;
+  --ivory:      #f4edde;   /* paper */
+  --ivory-dim:  #cfc5ae;
+  --mute:       #8d8268;
+  --gold:       #d4a843;
+  --gold-soft:  #e8c878;
+  --sindoor:    #c4452e;   /* vermillion — the ledger's binding thread */
+  --green:      #7fb069;
+  --rule:       #2c251a;
+  --serif: "Fraunces", Georgia, serif;
+  --body:  "Newsreader", Georgia, serif;
+  --mono:  "Spline Sans Mono", ui-monospace, monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:auto}
+body{
+  background:var(--ink); color:var(--ivory);
+  font-family:var(--body); font-weight:300; line-height:1.6;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+::selection{background:var(--sindoor); color:var(--ivory)}
+a{color:inherit}
+a:focus-visible, button:focus-visible{outline:2px solid var(--gold); outline-offset:3px}
+
+/* grain overlay — paper tooth over everything */
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:90; opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+/* ── top band ───────────────────────────────────────────── */
+.band{
+  position:fixed; top:0; left:0; right:0; z-index:80;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:18px 4vw; mix-blend-mode:difference;
+}
+.wordmark{font-family:var(--serif); font-weight:600; font-size:22px; letter-spacing:.02em; text-decoration:none}
+.wordmark small{font-family:var(--mono); font-weight:300; font-size:10px; letter-spacing:.3em; display:block; color:var(--ivory-dim); text-transform:uppercase; margin-top:2px}
+.band nav{display:flex; gap:26px; font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase}
+.band nav a{text-decoration:none; opacity:.75; transition:opacity .25s}
+.band nav a:hover{opacity:1}
+@media(max-width:680px){ .band nav a:not(.cta-mini){display:none} }
+
+/* ── hero (pinned 3D) ───────────────────────────────────── */
+#hero{position:relative; height:430vh}
+#stage{position:sticky; top:0; height:100vh; overflow:hidden}
+#c3d{position:absolute; inset:0; width:100%; height:100%; display:block}
+.hero-copy{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  justify-content:center; align-items:flex-start; padding:0 7vw;
+  pointer-events:none; z-index:5;
+}
+.kicker{
+  font-family:var(--mono); font-size:12px; letter-spacing:.34em; text-transform:uppercase;
+  color:var(--sindoor); margin-bottom:22px; display:flex; align-items:center; gap:14px;
+}
+.kicker::before{content:""; width:42px; height:1px; background:var(--sindoor)}
+h1{
+  font-family:var(--serif); font-weight:300; font-size:clamp(44px, 7.2vw, 104px);
+  line-height:1.02; letter-spacing:-.015em; max-width:11ch;
+}
+h1 em{font-style:italic; font-weight:400; color:var(--gold-soft)}
+.hero-sub{
+  margin-top:30px; max-width:44ch; font-size:clamp(16px,1.4vw,20px); color:var(--ivory-dim);
+}
+.scroll-cue{
+  position:absolute; bottom:34px; left:7vw; font-family:var(--mono); font-size:10px;
+  letter-spacing:.3em; text-transform:uppercase; color:var(--mute); display:flex; align-items:center; gap:12px;
+}
+.scroll-cue i{display:block; width:1px; height:38px; background:linear-gradient(var(--gold),transparent); animation:cue 1.8s ease-in-out infinite}
+@keyframes cue{50%{transform:scaleY(.4); transform-origin:top}}
+
+/* mid-scroll annotations that fade in/out during the 3D sequence */
+.stagenote{
+  position:absolute; z-index:5; pointer-events:none; opacity:0;
+  font-family:var(--mono); font-size:clamp(11px,1vw,13px); letter-spacing:.22em;
+  text-transform:uppercase; color:var(--ivory-dim);
+}
+.stagenote b{color:var(--gold); font-weight:500}
+#note-chaos{top:18%; right:8vw; text-align:right}
+#note-order{bottom:20%; left:7vw}
+
+/* net-worth reveal at end of sequence */
+.networth{
+  position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center;
+  align-items:center; text-align:center; z-index:5; pointer-events:none; opacity:0;
+}
+.networth .nw-label{font-family:var(--mono); font-size:11px; letter-spacing:.4em; text-transform:uppercase; color:var(--mute)}
+.networth .nw-figure{
+  font-family:var(--serif); font-weight:300; font-size:clamp(54px,8vw,130px);
+  color:var(--ivory); margin:10px 0 6px; font-variant-numeric:tabular-nums; letter-spacing:-.02em;
+}
+.networth .nw-figure span{color:var(--gold)}
+.networth .nw-sub{font-family:var(--mono); font-size:13px; color:var(--ivory-dim); letter-spacing:.08em}
+.networth .nw-sub b{color:var(--green); font-weight:500}
+
+/* ── shared section scaffolding ─────────────────────────── */
+section{position:relative}
+.shell{max-width:1180px; margin:0 auto; padding:0 6vw}
+.sec-head{display:grid; grid-template-columns:auto 1fr; gap:28px; align-items:baseline; padding:110px 0 64px}
+.sec-no{font-family:var(--mono); font-size:12px; color:var(--sindoor); letter-spacing:.3em}
+.sec-title{font-family:var(--serif); font-weight:300; font-size:clamp(34px,4.4vw,64px); line-height:1.05; letter-spacing:-.01em; max-width:18ch}
+.sec-title em{font-style:italic; color:var(--gold-soft)}
+
+/* ── 01 · patterns (plan types) ─────────────────────────── */
+#patterns{background:linear-gradient(var(--ink), var(--ink-2))}
+.ledger-rows{border-top:1px solid var(--rule)}
+.lrow{
+  display:grid; grid-template-columns:64px 1fr 1.2fr auto; gap:4vw; align-items:center;
+  padding:34px 0; border-bottom:1px solid var(--rule); transition:background .3s;
+}
+.lrow:hover{background:rgba(212,168,67,.04)}
+.lrow .ln{font-family:var(--mono); font-size:12px; color:var(--mute)}
+.lrow h3{font-family:var(--serif); font-weight:400; font-size:clamp(22px,2.4vw,32px); letter-spacing:-.01em}
+.lrow p{color:var(--ivory-dim); font-size:15.5px; max-width:46ch}
+.lrow .tag{
+  font-family:var(--mono); font-size:10px; letter-spacing:.22em; text-transform:uppercase;
+  border:1px solid var(--rule); padding:7px 13px; border-radius:99px; color:var(--mute); white-space:nowrap;
+}
+.lrow:hover .tag{border-color:var(--gold); color:var(--gold)}
+@media(max-width:760px){ .lrow{grid-template-columns:1fr; gap:10px; padding:28px 0} .lrow .ln{display:none} .lrow .tag{justify-self:start} }
+
+/* ── 02 · privacy ───────────────────────────────────────── */
+#privacy{background:var(--ivory); color:var(--ink)}
+#privacy .sec-no{color:var(--sindoor)}
+#privacy .sec-title em{color:var(--sindoor)}
+.privacy-grid{display:grid; grid-template-columns:1.1fr .9fr; gap:6vw; padding-bottom:130px; align-items:start}
+.privacy-lede{font-size:clamp(19px,1.9vw,26px); font-weight:300; line-height:1.5; max-width:30ch; font-family:var(--serif)}
+.privacy-points{display:flex; flex-direction:column; gap:0; border-top:1px solid #d8cdb4}
+.ppoint{padding:26px 0; border-bottom:1px solid #d8cdb4; display:grid; grid-template-columns:30px 1fr; gap:18px}
+.ppoint .pm{font-family:var(--mono); color:var(--sindoor); font-size:13px}
+.ppoint h4{font-family:var(--serif); font-weight:600; font-size:18px; margin-bottom:6px}
+.ppoint p{color:#5a5240; font-size:15px}
+@media(max-width:760px){ .privacy-grid{grid-template-columns:1fr} }
+
+/* ── 03 · currencies / multiuser strip ──────────────────── */
+#flow{overflow:hidden; padding:130px 0; border-bottom:1px solid var(--rule)}
+.tickerline{
+  white-space:nowrap; font-family:var(--serif); font-weight:300;
+  font-size:clamp(40px,6vw,92px); line-height:1.25; letter-spacing:-.01em;
+}
+.tickerline em{font-style:italic; color:var(--gold-soft)}
+.tickerline .sep{color:var(--sindoor); padding:0 .35em}
+.flow-sub{display:flex; gap:5vw; flex-wrap:wrap; margin-top:54px}
+.flow-sub div{max-width:34ch}
+.flow-sub h5{font-family:var(--mono); font-size:11px; letter-spacing:.28em; text-transform:uppercase; color:var(--gold); margin-bottom:10px}
+.flow-sub p{color:var(--ivory-dim); font-size:15px}
+
+/* ── 04 · cta ───────────────────────────────────────────── */
+#cta{padding:150px 0 60px; text-align:center}
+#cta .sec-title{margin:0 auto 18px}
+#cta p{color:var(--ivory-dim); max-width:46ch; margin:0 auto 44px}
+.cta-row{display:flex; gap:18px; justify-content:center; flex-wrap:wrap}
+.btn{
+  font-family:var(--mono); font-size:12px; letter-spacing:.22em; text-transform:uppercase;
+  padding:18px 36px; border-radius:99px; text-decoration:none; transition:all .25s; border:1px solid var(--rule);
+}
+.btn-gold{background:var(--gold); color:var(--ink); border-color:var(--gold); font-weight:500}
+.btn-gold:hover{background:var(--gold-soft); transform:translateY(-2px)}
+.btn-ghost{color:var(--ivory-dim)}
+.btn-ghost:hover{border-color:var(--gold); color:var(--gold)}
+.selfhost{
+  margin:64px auto 0; max-width:560px; text-align:left; background:var(--ink-2);
+  border:1px solid var(--rule); border-radius:12px; overflow:hidden;
+}
+.selfhost header{padding:12px 18px; border-bottom:1px solid var(--rule); font-family:var(--mono); font-size:10px; letter-spacing:.25em; text-transform:uppercase; color:var(--mute); display:flex; gap:8px; align-items:center}
+.selfhost header i{width:8px;height:8px;border-radius:50%;background:var(--sindoor);display:inline-block}
+.selfhost pre{padding:20px 22px; font-family:var(--mono); font-size:13px; line-height:1.9; color:var(--ivory-dim); overflow-x:auto}
+.selfhost pre b{color:var(--gold); font-weight:400}
+
+footer{padding:70px 0 44px; border-top:1px solid var(--rule); margin-top:110px}
+footer .shell{display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:18px}
+footer p{font-family:var(--mono); font-size:11px; color:var(--mute); letter-spacing:.12em}
+footer p b{color:var(--sindoor); font-weight:400}
+
+/* reveal-on-scroll primitives (CSS-driven, JS toggles .vis) */
+.rv{opacity:0; transform:translateY(34px); transition:opacity .9s cubic-bezier(.2,.6,.2,1), transform .9s cubic-bezier(.2,.6,.2,1)}
+.rv.vis{opacity:1; transform:none}
+.rv.d1{transition-delay:.1s} .rv.d2{transition-delay:.2s} .rv.d3{transition-delay:.3s}
+
+/* reduced motion — kill scrub/pin/3D, show static composition */
+@media (prefers-reduced-motion: reduce){
+  #hero{height:100vh}
+  #c3d, .scroll-cue i, .stagenote{display:none}
+  .hero-copy{position:relative}
+  .networth{display:none}
+  .rv{opacity:1; transform:none; transition:none}
+}
+</style>
+</head>
+<body>
+
+<header class="band">
+  <a class="wordmark" href="#">खाता Khata<small>the bound ledger</small></a>
+  <nav aria-label="Page">
+    <a href="#patterns">Patterns</a>
+    <a href="#privacy">Privacy</a>
+    <a href="#flow">Currencies</a>
+    <a href="#cta">Self-host</a>
+    <a href="/" class="cta-mini">Sign in</a>
+  </nav>
+</header>
+
+<!-- ════ HERO — scroll-scrubbed 3D ledger assembly ════ -->
+<section id="hero" aria-label="Introduction">
+  <div id="stage">
+    <canvas id="c3d" aria-hidden="true"></canvas>
+
+    <div class="hero-copy" id="herocopy">
+      <p class="kicker">Privacy-first · self-hosted · yours</p>
+      <h1>Every rupee, every dollar, <em>one ledger.</em></h1>
+      <p class="hero-sub">Khata models the money real life actually has — installment assets,
+        chit funds, loans given and taken, gold in the locker, the 401(k) at work —
+        and binds it into a single trustworthy book.</p>
+    </div>
+
+    <p class="stagenote" id="note-chaos">your money today —<br><b>scattered across apps, notebooks, memory</b></p>
+    <p class="stagenote" id="note-order"><b>entry by entry</b> — the ledger binds it</p>
+
+    <div class="networth" id="networth" aria-hidden="true">
+      <p class="nw-label">Net worth · one number</p>
+      <p class="nw-figure"><span>₹</span><span id="nwval">0</span></p>
+      <p class="nw-sub">≈ $51,300 · gold + chits + loans + holdings · <b>all converted, nothing hidden</b></p>
+    </div>
+
+    <p class="scroll-cue"><i></i> Scroll — watch it bind</p>
+  </div>
+</section>
+
+<!-- ════ 01 · PATTERNS ════ -->
+<section id="patterns" aria-labelledby="t-patterns">
+  <div class="shell">
+    <div class="sec-head">
+      <span class="sec-no">01</span>
+      <h2 class="sec-title rv" id="t-patterns">The money your budgeting app <em>can't model.</em></h2>
+    </div>
+    <div class="ledger-rows">
+      <div class="lrow rv">
+        <span class="ln">001</span>
+        <h3>Asset purchases, paid your way</h3>
+        <p>Irregular installments that roll forward when life happens. Proof attached to every payment. Joint contributors with real ownership shares.</p>
+        <span class="tag">Installments · proof</span>
+      </div>
+      <div class="lrow rv d1">
+        <span class="ln">002</span>
+        <h3>Chit funds, finally legible</h3>
+        <p>Pure rotation or auction. Dividends, commission, your true net position — whether you organize the chit or just hold a hand in it.</p>
+        <span class="tag">Rotation · auction</span>
+      </div>
+      <div class="lrow rv d2">
+        <span class="ln">003</span>
+        <h3>Loans, both directions</h3>
+        <p>Given or taken, secured on gold or unsecured on trust. EMI or bullet, interest tiers, fees, backfilled history. The collateral knows its LTV.</p>
+        <span class="tag">EMI · collateral</span>
+      </div>
+      <div class="lrow rv d3">
+        <span class="ln">004</span>
+        <h3>Holdings at live prices</h3>
+        <p>Gold, silver, cash, stocks — marked to market with unrealized gain and a hold-vs-sell read, so the locker is a position, not a mystery.</p>
+        <span class="tag">Mark-to-market</span>
+      </div>
+      <div class="lrow rv d3">
+        <span class="ln">005</span>
+        <h3>401(k), maximized</h3>
+        <p>A contribution planner that keeps the full employer match and reads your loan-offset options — retirement money treated as part of the same book.</p>
+        <span class="tag">Match · planner</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ 02 · PRIVACY ════ -->
+<section id="privacy" aria-labelledby="t-privacy">
+  <div class="shell">
+    <div class="sec-head">
+      <span class="sec-no">02</span>
+      <h2 class="sec-title rv" id="t-privacy">Your ledger lives <em>in your house.</em></h2>
+    </div>
+    <div class="privacy-grid">
+      <p class="privacy-lede rv">A khata was never a service. It was a book you kept, bound in cloth,
+        that no one else could read. This one is the same — just faster at arithmetic.</p>
+      <div class="privacy-points">
+        <div class="ppoint rv"><span class="pm">¶1</span><div>
+          <h4>Self-hosted, single file</h4>
+          <p>One SQLite file on hardware you own. Back it up by copying it. No cloud, no account with us — there is no “us” server.</p>
+        </div></div>
+        <div class="ppoint rv d1"><span class="pm">¶2</span><div>
+          <h4>Multi-user, on your terms</h4>
+          <p>Family members sign in locally or with Google — to <em>your</em> instance. Shared plans carry contributor attribution and ownership shares.</p>
+        </div></div>
+        <div class="ppoint rv d2"><span class="pm">¶3</span><div>
+          <h4>Money math you can audit</h4>
+          <p>Integer minor units, banker-grade rounding, balances derived from entries — never stored, never drifting. The test suite is part of the product.</p>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ 03 · CURRENCIES ════ -->
+<section id="flow" aria-labelledby="t-flow">
+  <div class="shell">
+    <h2 class="tickerline rv" id="t-flow">₹ <em>and</em> $ <span class="sep">·</span> one book <span class="sep">·</span> <em>your</em> rate</h2>
+    <div class="flow-sub">
+      <div class="rv d1">
+        <h5>Genuinely multi-currency</h5>
+        <p>Hold gold in rupees and a 401(k) in dollars. The dashboard converts everything to your base currency at rates you set — and tells you plainly when it can't.</p>
+      </div>
+      <div class="rv d2">
+        <h5>Two worlds, one family</h5>
+        <p>Built for households that live across countries — where a chit in Hyderabad and a paycheck in Houston belong on the same page.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ 04 · CTA ════ -->
+<section id="cta" aria-labelledby="t-cta">
+  <div class="shell">
+    <h2 class="sec-title rv" id="t-cta">Bind your own <em>khata.</em></h2>
+    <p class="rv d1">Open source, Flask + SQLite, runs on anything from a Raspberry Pi to the laptop in the drawer.</p>
+    <div class="cta-row rv d2">
+      <a class="btn btn-gold" href="https://github.com/chatwithllm/khata">Get the code</a>
+      <a class="btn btn-ghost" href="/">Sign in to your khata</a>
+    </div>
+    <div class="selfhost rv d3">
+      <header><i></i> self-host in four lines</header>
+      <pre><b>git</b> clone https://github.com/chatwithllm/khata && cd khata
+<b>python3</b> -m venv .venv && .venv/bin/pip install -r requirements.txt
+<b>PYTHONPATH=src</b> .venv/bin/alembic upgrade head
+<b>PYTHONPATH=src</b> .venv/bin/python wsgi.py   <i style="color:var(--mute)"># → http://localhost:5050</i></pre>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="shell">
+    <p>खाता <b>·</b> khata — ledger, account, the book that is kept</p>
+    <p>self-hosted · open source · no telemetry</p>
+  </div>
+</footer>
+
+<!-- ── libs (CDN, deferred) ── -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" integrity="sha384-Z3REaz79l2IaAZqJsSABtTbhjgOUYyV3p90XNnAPCSHg3EMTz1fouunq9WZRtj3d" crossorigin="anonymous" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js" integrity="sha384-tKsJDT6PlUI0pSBt9/sBKJluKgA19/a6mBrDsZaXotLB4ZYfMGM6xt6/WgGpYhTm" crossorigin="anonymous" defer></script>
+
+<script type="module">
+/* ============================================================
+   Scroll-scrubbed 3D — "the binding of the ledger"
+   Stage A (p 0.00–0.35): 1,200 entries drift as chaos in ink-dark space
+   Stage B (p 0.35–0.72): entries fly to their ruled positions; camera
+                          dollies in along a gentle arc as the book forms
+   Stage C (p 0.72–1.00): the ledger compresses to one gold beam — the
+                          net-worth figure counts up in the DOM overlay
+   All driven by one progress uniform from GSAP ScrollTrigger (scrub).
+   three.js is imported lazily so first paint never waits on it.
+   ============================================================ */
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const mobile  = matchMedia('(max-width: 760px)').matches;
+
+/* reveal-on-scroll for the editorial sections (cheap, no lib needed) */
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting){ e.target.classList.add('vis'); io.unobserve(e.target); }
+}), {threshold:.18});
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+if (!reduced) init3D();
+
+async function init3D(){
+  const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
+
+  /* wait for gsap/lenis defer scripts */
+  await new Promise(r => {
+    const t = setInterval(() => { if (window.gsap && window.ScrollTrigger && window.Lenis){ clearInterval(t); r(); } }, 30);
+  });
+  gsap.registerPlugin(ScrollTrigger);
+
+  /* Lenis smooth scroll, wired into ScrollTrigger's clock */
+  const lenis = new Lenis({ lerp: .09, smoothWheel: true });
+  lenis.on('scroll', ScrollTrigger.update);
+  gsap.ticker.add(t => lenis.raf(t * 1000));
+  gsap.ticker.lagSmoothing(0);
+
+  /* ---- renderer / scene ---- */
+  const canvas = document.getElementById('c3d');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, powerPreference:'high-performance' });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 2));
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x14100a, 0.018);
+  const cam = new THREE.PerspectiveCamera(42, 1, .1, 400);
+
+  const COUNT = mobile ? 650 : 1300;
+  const COLS = 26, ROWS = Math.ceil(COUNT / COLS);
+
+  /* per-instance: chaos position, ledger-grid position, stagger hash */
+  const chaos = new Float32Array(COUNT * 3);
+  const grid  = new Float32Array(COUNT * 3);
+  const hash  = new Float32Array(COUNT);
+  const rnd = (a,b) => a + Math.random() * (b - a);
+  for (let i = 0; i < COUNT; i++){
+    /* chaos: a loose torus-ish cloud the camera starts inside */
+    const th = rnd(0, Math.PI*2), R = rnd(14, 60);
+    chaos[i*3]   = Math.cos(th) * R;
+    chaos[i*3+1] = rnd(-26, 26);
+    chaos[i*3+2] = Math.sin(th) * R - 20;
+    /* grid: ruled ledger page, slightly receding in z like bound leaves */
+    const cx = i % COLS, cyR = Math.floor(i / COLS);
+    grid[i*3]   = (cx - COLS/2) * 2.05 + (cyR % 2 ? .5 : 0);
+    grid[i*3+1] = (ROWS/2 - cyR) * 1.32;
+    grid[i*3+2] = -Math.sin(cx / COLS * Math.PI) * 2.2;   /* page curl */
+    hash[i] = Math.random();
+  }
+
+  /* entries: thin ruled slips — gold credits, sindoor debits */
+  const geo = new THREE.BoxGeometry(1.5, .42, .06);
+  const mat = new THREE.MeshBasicMaterial({ vertexColors:false });
+  const mesh = new THREE.InstancedMesh(geo, mat, COUNT);
+  const gold = new THREE.Color(0xd4a843), red = new THREE.Color(0xc4452e), dim = new THREE.Color(0x6b5e3f);
+  for (let i = 0; i < COUNT; i++)
+    mesh.setColorAt(i, hash[i] > .82 ? red : (hash[i] > .45 ? gold : dim));
+  mesh.instanceColor.needsUpdate = true;
+  scene.add(mesh);
+
+  /* the final beam — one glowing sum line */
+  const beam = new THREE.Mesh(
+    new THREE.BoxGeometry(56, .22, .22),
+    new THREE.MeshBasicMaterial({ color: 0xe8c878, transparent:true, opacity:0 })
+  );
+  beam.position.set(0, 0, 0);
+  scene.add(beam);
+
+  /* dust points for depth */
+  const dn = mobile ? 250 : 600;
+  const dpos = new Float32Array(dn*3);
+  for (let i = 0; i < dn*3; i++) dpos[i] = rnd(-90, 90);
+  const dust = new THREE.Points(
+    new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(dpos, 3)),
+    new THREE.PointsMaterial({ color:0x8d8268, size:.18, transparent:true, opacity:.5 })
+  );
+  scene.add(dust);
+
+  /* ---- scrub state ---- */
+  const state = { p: 0 };
+  const ease = t => t<.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;     /* easeInOutQuad */
+  const clamp01 = v => Math.min(1, Math.max(0, v));
+  const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(),
+        P = new THREE.Vector3(), S = new THREE.Vector3(1,1,1);
+
+  let tNow = 0;
+  function layout(){
+    const p = state.p;
+    /* stage windows */
+    const a = clamp01(p / .35);                 /* chaos breathing  */
+    const b = clamp01((p - .35) / .37);         /* assembly         */
+    const c = clamp01((p - .72) / .28);         /* compression      */
+
+    for (let i = 0; i < COUNT; i++){
+      const h = hash[i];
+      /* per-entry stagger inside assembly window */
+      const bi = ease(clamp01(b * 1.6 - h * .6));
+      let x = chaos[i*3] + Math.sin(tNow*.4 + h*9) * (1-bi) * 1.6;
+      let y = chaos[i*3+1] + Math.cos(tNow*.5 + h*7) * (1-bi) * 1.6;
+      let z = chaos[i*3+2];
+      x += (grid[i*3]   - x) * bi;
+      y += (grid[i*3+1] - y) * bi;
+      z += (grid[i*3+2] - z) * bi;
+      /* stage C: rows sweep into the beam line */
+      if (c > 0){
+        const ci = ease(clamp01(c * 1.5 - h * .5));
+        y += (0 - y) * ci;
+        z += (0 - z) * ci;
+      }
+      P.set(x, y, z);
+      const tumble = (1 - bi) * (1 - c);
+      E.set(Math.sin(tNow*.6 + h*20) * tumble, h*6.28*tumble, Math.cos(tNow*.4 + h*13)*tumble*.6);
+      Q.setFromEuler(E);
+      const sc = 1 - c * .85;                    /* entries shrink into the beam */
+      S.set(sc, sc, sc);
+      M.compose(P, Q, S);
+      mesh.setMatrixAt(i, M);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+
+    /* camera: inside the chaos → pull back & around → settle front-on */
+    const swing = Math.sin(b * Math.PI) * 14;                       /* arc during assembly */
+    cam.position.set(
+      swing,
+      8 * (1-a) + 2 * (1-c),
+      14 + a * 26 + b * 8 - c * 6
+    );
+    cam.lookAt(0, 0, 0);
+
+    /* beam + dust */
+    beam.material.opacity = c * c;
+    beam.scale.x = .15 + c * .85;
+    dust.material.opacity = .5 * (1 - c);
+  }
+
+  /* ---- DOM choreography on the same scrub ---- */
+  const $ = id => document.getElementById(id);
+  function dom(){
+    const p = state.p;
+    $('herocopy').style.opacity = clamp01(1 - (p - .06) / .14);
+    $('herocopy').style.transform = `translateY(${ -p * 120 }px)`;
+    $('note-chaos').style.opacity = clamp01((p - .10) / .08) * clamp01((.34 - p) / .08);
+    $('note-order').style.opacity = clamp01((p - .40) / .08) * clamp01((.68 - p) / .08);
+    const nw = clamp01((p - .80) / .12);
+    const el = $('networth');
+    el.style.opacity = nw;
+    el.setAttribute('aria-hidden', nw < .5);
+    /* count-up: ₹ 48,20,000 in Indian digit grouping */
+    const target = 4820000;
+    const v = Math.round(target * ease(nw));
+    $('nwval').textContent = v.toLocaleString('en-IN');
+    document.querySelector('.scroll-cue').style.opacity = clamp01(1 - p / .08);
+  }
+
+  ScrollTrigger.create({
+    trigger: '#hero', start: 'top top', end: 'bottom bottom', scrub: .6,
+    onUpdate: st => { state.p = st.progress; dom(); }
+  });
+
+  /* ---- resize + RAF ---- */
+  function size(){
+    const w = innerWidth, h = innerHeight;
+    renderer.setSize(w, h, false);
+    cam.aspect = w / h; cam.updateProjectionMatrix();
+  }
+  addEventListener('resize', size); size();
+
+  renderer.setAnimationLoop(t => {
+    tNow = t / 1000;
+    layout();
+    renderer.render(scene, cam);
+  });
+  dom();
+}
+</script>
+</body>
+</html>

@@ -20,6 +20,15 @@ def test_landing_served(client):
     assert b"Khata" in r.data
 
 
+def test_welcome_marketing_page_served(client):
+    r = client.get("/welcome")
+    assert r.status_code == 200
+    body = r.data.decode()
+    for needle in ["one ledger", "Self-host", "chit", 'href="/"',
+                   "prefers-reduced-motion", "c3d"]:
+        assert needle in body
+
+
 def test_features_page_lists_limitations(client):
     r = client.get("/features")
     assert r.status_code == 200

@@ -21,6 +21,12 @@ def landing():
     return send_from_directory(_static_dir(), "index.html")
 
 
+@bp.get("/welcome")
+def welcome():
+    # Marketing/landing site — standalone static page, shared by link.
+    return send_from_directory(_static_dir(), "welcome.html")
+
+
 @bp.get("/app")
 def app_shell():
     return send_from_directory(_static_dir(), "app.html")
