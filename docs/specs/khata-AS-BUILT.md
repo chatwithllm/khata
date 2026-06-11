@@ -349,6 +349,12 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-11 — Topbar avatar → profile dropdown. The account avatar in the topbar now opens a standard
+  profile menu (signed-in name + email, Settings link, Log out) instead of jumping straight to Settings.
+  Shared `static/assets/profile-menu.js` (`mountProfileMenu()`, K4-safe; outside-click/Escape close; hides
+  the legacy camera-upload overlay and fills the initial). Replaced the per-page inline avatar IIFE across
+  8 app pages (dashboard + holdings + analysis + 5 detail pages); Settings page keeps its in-place photo
+  uploader. Dropdown styles in `app.css` (`.pmenu*`).
 - 2026-06-11 — Admin role + user management (Phase A of admin/backup work). New `users.is_admin` +
   `users.disabled` (migration `de8admin01`; first user bootstrapped admin). Admin-only `/api/admin`
   blueprint: list users, promote/demote admin, disable/re-enable login, reset a user's password,
