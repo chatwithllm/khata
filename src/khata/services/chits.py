@@ -107,7 +107,9 @@ def chit_state(session: Session, chit: Chit, as_of: date | None = None) -> dict:
 
     ledger = [{"id": e.id, "kind": e.kind, "direction": e.direction, "amount_minor": e.amount_minor,
                "created_at": e.created_at.isoformat() if e.created_at else None,
-               "occurred_at": e.occurred_at.isoformat(), "note": e.note}
+               "occurred_at": e.occurred_at.isoformat(), "note": e.note,
+               "has_proof": bool(e.proof_ref) or bool(e.attachments),
+               "attachment_count": len(e.attachments)}
               for e in plan.ledger_entries if e.kind in CHIT_KINDS]
     return {
         "currency": plan.currency, "chit_value_minor": chit.chit_value_minor,

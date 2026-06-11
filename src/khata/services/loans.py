@@ -475,7 +475,8 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
          "created_at": e.created_at.isoformat() if e.created_at else None,
          "occurred_at": e.occurred_at.isoformat(), "method": e.method,
          "funding_source": e.funding_source, "note": e.note,
-         "has_proof": bool(e.proof_ref),
+         "has_proof": bool(e.proof_ref) or bool(e.attachments),
+         "attachment_count": len(e.attachments),
          "logged_by_user_id": e.logged_by_user_id, "paid_by_name": _names.get(e.logged_by_user_id),
          "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor}
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)

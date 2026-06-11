@@ -9,6 +9,9 @@ def create_app(config: Config | None = None) -> Flask:
     cfg = config or Config()
     app.config["SECRET_KEY"] = cfg.secret_key
     app.config["KHATA"] = cfg
+    # Hard ceiling on request bodies: attachment files cap at 25 MB (services/attachments);
+    # allow headroom for multipart overhead. Bigger bodies are rejected at the WSGI layer.
+    app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024
 
     # When served behind a trusted HTTPS reverse proxy, trust its forwarded headers so
     # request.scheme is "https", and mark the session cookie Secure. Opt-in via
@@ -98,5 +101,8 @@ def create_app(config: Config | None = None) -> Flask:
 
     from .api.feed import bp as feed_bp
     app.register_blueprint(feed_bp)
+
+    from .api.attachments import bp as attachments_bp
+    app.register_blueprint(attachments_bp)
 
     return app
