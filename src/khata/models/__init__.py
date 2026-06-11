@@ -9,3 +9,4 @@ from .fx import FxRate  # noqa: F401
 from .chit import Chit  # noqa: F401
 from .retirement import Retirement  # noqa: F401
 from .attachment import Attachment  # noqa: F401
+from .backup_config import BackupConfig  # noqa: F401

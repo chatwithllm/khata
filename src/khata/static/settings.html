@@ -41,6 +41,19 @@
 .ubtn.danger{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 35%,var(--line))}
 .ubtn.danger:hover{background:color-mix(in srgb,var(--neg) 8%,transparent)}
 @media(max-width:560px){ .urow .uacts{flex-basis:100%} .ubtn{flex:1 1 auto;min-height:40px} }
+/* automatic-backups controls */
+.autobk-sep{height:1px;background:var(--line);margin:18px 2px 4px}
+.ph2{font-weight:700;font-size:15px;color:var(--ink)}
+.bk-toggle{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
+.bk-toggle input{width:18px;height:18px;accent-color:var(--primary)}
+.bklist{display:flex;flex-direction:column;gap:7px;margin-top:6px}
+.bkrow{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);flex-wrap:wrap}
+.bkrow .bkname{font-family:"JetBrains Mono";font-size:12px;color:var(--ink);flex:1 1 160px;overflow:hidden;text-overflow:ellipsis}
+.bkrow .bkmeta{font-size:11px;color:var(--ink-faint)}
+.bkrow .bkacts{display:flex;gap:7px;flex:none}
+.bkrow a,.bkrow button{font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--ink-soft);cursor:pointer;text-decoration:none;font-family:inherit}
+.bkrow button.danger{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 35%,var(--line))}
+.bk-empty{font-size:12px;color:var(--ink-faint);padding:2px 0}
 </style>
 </head>
 <body>
@@ -134,6 +147,21 @@
               <div class="fld"><label for="restorefile">Backup file (.json)</label><input id="restorefile" type="file" accept="application/json,.json"></div>
               <div class="msg" id="rmsg"></div>
               <div class="acts"><button class="alt" id="dorestore">Restore from file</button></div>
+
+              <!-- automatic backups -->
+              <div class="autobk-sep"></div>
+              <div class="ph2">Automatic backups</div>
+              <div class="hint">The server keeps timestamped snapshots on its own disk, pruned to the limit below. <span id="bk-sched-note"></span></div>
+              <label class="bk-toggle"><input type="checkbox" id="bk-enabled"> <span>Enable automatic backups</span></label>
+              <div class="row2">
+                <div class="fld"><label for="bk-freq">Frequency</label><select id="bk-freq"><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div>
+                <div class="fld"><label for="bk-hour">Run at (hour, 0–23)</label><input id="bk-hour" type="number" min="0" max="23" inputmode="numeric"></div>
+              </div>
+              <div class="fld"><label for="bk-retention">Keep last N backups</label><input id="bk-retention" type="number" min="1" max="365" inputmode="numeric"></div>
+              <div class="msg" id="bk-msg"></div>
+              <div class="acts"><button class="save" id="bk-save">Save schedule</button><button class="alt" id="bk-run">Back up now</button></div>
+              <div class="hint" id="bk-last" style="margin-top:6px"></div>
+              <div class="bklist" id="bk-list"></div>
             </div>
           </div>
 
@@ -215,7 +243,7 @@ async function load(){
   const meJson=await me.json();
   const u=meJson.user;
   // backup/restore rewrite the WHOLE instance — operator only (others get 403)
-  if(meJson.is_operator && $('datapanel')) $('datapanel').style.display='';
+  if(meJson.is_operator && $('datapanel')){ $('datapanel').style.display=''; loadBackupSchedule(); }
   // user management — admins only
   if(u.is_admin && $('adminpanel')){ $('adminpanel').style.display=''; renderAdmin(u.id); }
   $('display_name').value=u.display_name || '';
@@ -307,6 +335,57 @@ $('dorestore').addEventListener('click', async ()=>{
       show($('rmsg'), false, j.detail || j.error || 'Restore failed.');
     }
   }catch(e){ show($('rmsg'), false, 'Restore failed.'); }
+  finally{ btn.disabled=false; }
+});
+
+// ── automatic backups (admin) ──
+function _humanSize(n){ if(n<1024)return n+' B'; if(n<1048576)return (n/1024).toFixed(0)+' KB'; return (n/1048576).toFixed(1)+' MB'; }
+function renderBackupList(items){
+  const box=$('bk-list'); box.textContent='';
+  if(!items.length){ box.append(_el('div','bk-empty','No automatic backups yet.')); return; }
+  items.forEach(b=>{
+    const row=_el('div','bkrow');
+    row.append(_el('div','bkname', b.filename));
+    row.append(_el('div','bkmeta', _humanSize(b.size)+' · '+(b.created_at||'').slice(0,16).replace('T',' ')));
+    const acts=_el('div','bkacts');
+    const dl=_el('a',null,'Download'); dl.href='/api/admin/backups/'+b.filename; dl.setAttribute('download','');
+    const del=_el('button','danger','Delete');
+    del.onclick=async()=>{ if(!confirm('Delete '+b.filename+'?'))return; const r=await fetch('/api/admin/backups/'+b.filename,{method:'DELETE'}); if(r.ok) loadBackupSchedule(); else show($('bk-msg'),false,'Could not delete.'); };
+    acts.append(dl, del); row.append(acts); box.append(row);
+  });
+}
+function _fillBackupConfig(c){
+  $('bk-enabled').checked=!!c.enabled;
+  $('bk-freq').value=c.frequency||'daily';
+  $('bk-hour').value=(c.hour!=null?c.hour:3);
+  $('bk-retention').value=(c.retention!=null?c.retention:14);
+  $('bk-sched-note').textContent = c.scheduler_running ? '' : '(Scheduler is off on this server — backups run only when you click “Back up now”.)';
+  var last = c.last_run_at ? ('Last run: '+c.last_run_at.slice(0,16).replace('T',' ')+(c.last_status?(' — '+c.last_status):'')) : 'Never run automatically yet.';
+  $('bk-last').textContent = last;
+}
+async function loadBackupSchedule(){
+  try{
+    const r=await fetch('/api/admin/backup-config'); if(!r.ok) return;
+    const d=await r.json();
+    _fillBackupConfig(d.config);
+    renderBackupList(d.backups||[]);
+  }catch(e){}
+}
+$('bk-save').addEventListener('click', async ()=>{
+  const body={ enabled:$('bk-enabled').checked, frequency:$('bk-freq').value,
+               hour:parseInt($('bk-hour').value,10), retention:parseInt($('bk-retention').value,10) };
+  const { ok, j } = await post('/api/admin/backup-config', body);
+  if(ok){ _fillBackupConfig(j.config); show($('bk-msg'), true, 'Schedule saved.'); }
+  else show($('bk-msg'), false, j.detail || 'Could not save.');
+});
+$('bk-run').addEventListener('click', async ()=>{
+  const btn=$('bk-run'); btn.disabled=true; show($('bk-msg'), true, 'Backing up…');
+  try{
+    const r=await fetch('/api/admin/backup-run',{method:'POST'});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok){ show($('bk-msg'), true, 'Backup created: '+j.filename+(j.pruned?(' ('+j.pruned+' old pruned)'):'')+'.'); loadBackupSchedule(); }
+    else show($('bk-msg'), false, j.detail || 'Backup failed.');
+  }catch(e){ show($('bk-msg'), false, 'Backup failed.'); }
   finally{ btn.disabled=false; }
 });
 
