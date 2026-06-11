@@ -334,6 +334,15 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-11 — Production deploy runbook (`scripts/deploy-prod.sh`): one-shot SSH deploy to the prod
+  box (Debian 12). rsync code from a clean `main` checkout → `~/khata/app`; build venv + install deps;
+  carry real data via a consistent `sqlite3 .backup` snapshot (**first run only — never overwrites an
+  existing prod DB**); write `~/khata/.env.prod` (secret + Google id, chmod 600); `alembic upgrade head`;
+  gunicorn smoke-boot; emit a systemd unit. Debian gotcha: box ships no `python3-venv`/`pip` and apt was
+  unavailable, so the venv is created `--without-pip` and pip is bootstrapped via `get-pip.py` (no sudo).
+  Live at `https://khata.npalakurla.com` behind the user's nginx TLS proxy (X-Forwarded-Proto https);
+  `KHATA_SECURE_COOKIES=1` set only after the proxy was confirmed live. systemd `enable --now` (survives
+  reboot, `Restart=always`). The marketing page (below) ships in the same deploy at `/welcome`.
 - 2026-06-10 — Marketing landing page served by the app at `GET /welcome`
   (`src/khata/static/welcome.html`, self-contained — no build step; root `/` sign-in unchanged).
   "Bound ledger" editorial design (Fraunces/Newsreader/Spline Sans Mono; ink/ivory/sindoor/gold).
