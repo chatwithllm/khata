@@ -344,6 +344,9 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-11 — Proof attachments mobile polish: the "+ Add file" / "📷 Take photo" controls were cramped
+  on phones — now equal-width flex buttons on their own full-width row with 44–46px touch targets, wrapping
+  to stacked full-width when too narrow (`app.css` `.att-add`/`.att-btn` + a `max-width:560px` block).
 - 2026-06-11 — Ledger-entry attachments (supporting proof): upload photos / PDFs / Office docs or
   **take a photo** (rear camera on phones) against any ledger entry, in the entry-edit drawer of the
   asset / loan / chit detail pages. New `attachments` table (blob bytes in the DB; mime by magic bytes,
