@@ -267,3 +267,20 @@ a{color:inherit;text-decoration:none}
   .landing .cta-row{flex-wrap:wrap;gap:10px}
   .landing header h1{font-size:30px}
 }
+
+/* ── touch + keyboard ergonomics (responsive pass) ──
+   Comfortable tap targets on touch devices; visible focus for keyboard users.
+   pointer:coarse only — desktop pointer layouts are untouched. */
+:where(button,a,input,select,textarea):focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:8px}
+@media(pointer:coarse){
+  .nav a.link,a.link{display:inline-flex;align-items:center;min-height:44px;min-width:44px;justify-content:center}
+  .landing .nav-links a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px}
+  .landing .curtog button{padding:10px 12px}
+  .landing .btn-alt{min-height:44px}
+  .nav .brand,.landing .brand,.landing .site-foot .foot-brand{display:inline-flex;align-items:center;min-height:44px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px}
+}
+/* landing micro-type floor on phones (10px → 11px for readability) */
+@media(max-width:640px){
+  .landing .tag,.landing .ledger-tag{font-size:11px}
+}

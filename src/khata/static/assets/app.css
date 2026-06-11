@@ -286,3 +286,17 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
   .att-tile img,.att-doc{height:72px}
   .att-btn{font-size:14px;min-height:46px}
 }
+
+/* ── touch ergonomics + phone micro-type floor (responsive pass) ── */
+@media(pointer:coarse){
+  /* .proof is a tappable text control inside ledger rows — expand its hit area
+     without shifting layout (padding offset by negative margin) */
+  .proof{padding:12px 8px;margin:-12px -8px}
+  /* sharing panel Add button (base styles inline in sharing.js) */
+  button.btn{min-height:44px;min-width:64px}
+}
+@media(max-width:560px){
+  /* 10px micro-type → 11px floor for readability on phones */
+  .tag,.pill,.proof,.rollbadge{font-size:11px}
+  .att-doc .att-name,.att-size{font-size:10.5px}
+}

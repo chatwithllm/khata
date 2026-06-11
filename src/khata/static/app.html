@@ -88,6 +88,8 @@
 
 .emptypanel{padding:34px 22px;text-align:center;color:var(--ink-faint)}
 .emptypanel a{color:var(--primary-deep);font-weight:600}
+/* phone micro-type floor (responsive pass) */
+@media(max-width:560px){ .stat.d2 .d,.stat.d3 .d{font-size:11px} }
 </style>
 </head>
 <body>
@@ -726,7 +728,7 @@ async function boot(){
       // interest/mo column (loans only — the cashflow direction)
       const intCol=el('div','pr-icol'); intCol.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:104px';
       const intAmt=el('div'); intAmt.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:13px';
-      if(p.type==='loan'){ const il=el('div',null,'interest/mo'); il.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono"'; intCol.append(intAmt, il); }
+      if(p.type==='loan'){ const il=el('div',null,'interest/mo'); il.style.cssText='font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"'; intCol.append(intAmt, il); }
       // outstanding column
       const outCol=el('div'); outCol.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:112px';
       const amt=el('div'); amt.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px';
@@ -778,7 +780,7 @@ async function boot(){
       try{
         const d=await fetch('/api/plans/'+p.id).then(r=>r.json());
         const st=d.state||{}; const ccy=st.currency||p.currency;
-        const cap=el('div'); cap.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono"';
+        const cap=el('div'); cap.style.cssText='font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"';
 
         if(p.type==='asset'){
           const total=st.total_price_minor||0, paid=st.paid_to_date_minor||0, rem=st.remaining_minor||0;

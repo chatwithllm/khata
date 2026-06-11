@@ -80,6 +80,11 @@
       input.style.border = "1px solid var(--line)"; input.style.borderRadius = "9px";
       input.style.background = "var(--card)"; input.style.color = "var(--ink)";
       const btn = el("button", "btn", "Add");
+      // detail pages have no .btn stylesheet rule — style inline (flex:none so the
+      // row can't squeeze it below tap size)
+      btn.style.cssText = "flex:none;font-family:inherit;font-size:14px;font-weight:600;"
+        + "padding:9px 18px;border:none;border-radius:9px;cursor:pointer;"
+        + "background:var(--primary);color:#fff";
       const err = el("div", "err");
       err.style.color = "var(--neg)"; err.style.fontSize = "13px"; err.style.minHeight = "16px"; err.style.marginTop = "6px";
       btn.addEventListener("click", async () => {
