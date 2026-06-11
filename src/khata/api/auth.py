@@ -20,7 +20,8 @@ bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 def _user_json(user: User) -> dict:
     return {"id": user.id, "email": user.email, "display_name": user.display_name,
-            "has_password": bool(user.password_hash), "avatar": user.avatar}
+            "has_password": bool(user.password_hash), "avatar": user.avatar,
+            "is_admin": user.is_admin}
 
 
 def _bearer_uid():
@@ -40,7 +41,12 @@ def current_user():
         uid = _bearer_uid()
     if uid is None:
         return None
-    return g.db.get(User, uid)
+    user = g.db.get(User, uid)
+    # A disabled account's live session/token stops resolving — an immediate, reversible
+    # lockout without deleting any data.
+    if user is not None and user.disabled:
+        return None
+    return user
 
 
 def _token_for(user: User) -> str:
@@ -75,6 +81,8 @@ def login():
         user = authenticate_user(g.db, email=data.get("email", ""), password=data.get("password", ""))
     except InvalidCredentialsError:
         return jsonify(error="invalid_credentials"), 401
+    if user.disabled:
+        return jsonify(error="account_disabled", detail="this account has been disabled by an admin"), 403
     session["user_id"] = user.id
     return jsonify(user=_user_json(user), token=_token_for(user)), 200
 
@@ -171,5 +179,7 @@ def google_login():
     except (GoogleAuthError, ValueError):
         g.db.rollback()
         return jsonify(error="invalid_token"), 401
+    if user.disabled:
+        return jsonify(error="account_disabled", detail="this account has been disabled by an admin"), 403
     session["user_id"] = user.id
     return jsonify(user=_user_json(user), created=created, token=_token_for(user)), 200

@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from ..models import User
@@ -34,8 +34,12 @@ def register_user(session: Session, *, email: str, display_name: str, password: 
     existing = session.scalar(select(User).where(User.email == email))
     if existing is not None:
         raise EmailTakenError(email)
+    # The first user to register on a fresh instance is bootstrapped as admin (the person
+    # who stood the instance up). Mirrors migration de8admin01 for instances created from
+    # metadata rather than migrations.
+    first = session.scalar(select(func.count()).select_from(User)) == 0
     user = User(email=email, display_name=display_name.strip() or email,
-                password_hash=hash_password(password))
+                password_hash=hash_password(password), is_admin=first)
     session.add(user)
     session.flush()
     return user
@@ -110,7 +114,8 @@ def login_with_google(session: Session, *, claims: dict) -> tuple[User, bool]:
         return existing, False
 
     name = (claims.get("name") or "").strip() or email
-    user = User(email=email, display_name=name, password_hash=None, google_sub=sub)
+    first = session.scalar(select(func.count()).select_from(User)) == 0   # first user → admin
+    user = User(email=email, display_name=name, password_hash=None, google_sub=sub, is_admin=first)
     session.add(user)
     session.flush()
     return user, True

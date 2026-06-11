@@ -38,7 +38,12 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 ## 4. Data model (12 tables)
 - **users**: id, email, display_name, password_hash?, google_sub?, base_currency, **avatar?** (cropped
   square profile photo as a `data:image/...` URL, set via the crop tool; stored server-side so every member
-  sees each contributor's photo and it travels with backups), created_at. Migration `c9a3avatar01`.
+  sees each contributor's photo and it travels with backups), **is_admin**, **disabled**, created_at.
+  Migrations `c9a3avatar01` (avatar), `de8admin01` (is_admin/disabled — bootstraps the first user as admin).
+  **is_admin** = manage users + backup/restore (see §11); the first user to register is auto-admin (in
+  `register_user`/`login_with_google` and via the migration). **disabled** = a reversible login block:
+  `authenticate_user`/Google login return 403 `account_disabled` and `current_user` stops resolving a
+  disabled user's live session, without deleting any data.
 - **plans** (spine): id, owner_user_id, **type** (asset|loan|holding|chit|retirement), name, currency,
   status, created_at. 1:1 → asset/loan/holding/chit/retirement; 1:N → installments, ledger_entries,
   memberships.
@@ -344,6 +349,23 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-11 — Topbar avatar → profile dropdown. The account avatar in the topbar now opens a standard
+  profile menu (signed-in name + email, Settings link, Log out) instead of jumping straight to Settings.
+  Shared `static/assets/profile-menu.js` (`mountProfileMenu()`, K4-safe; outside-click/Escape close; hides
+  the legacy camera-upload overlay and fills the initial). Replaced the per-page inline avatar IIFE across
+  8 app pages (dashboard + holdings + analysis + 5 detail pages); Settings page keeps its in-place photo
+  uploader. Dropdown styles in `app.css` (`.pmenu*`).
+- 2026-06-11 — Admin role + user management (Phase A of admin/backup work). New `users.is_admin` +
+  `users.disabled` (migration `de8admin01`; first user bootstrapped admin). Admin-only `/api/admin`
+  blueprint: list users, promote/demote admin, disable/re-enable login, reset a user's password,
+  delete a user + cascade their owned plans. Hard invariant in `services/admin.py`: always keep ≥1
+  enabled admin (demote/disable/delete of the last admin is refused); can't disable/delete yourself.
+  Disabled accounts are blocked at login (`403 account_disabled`) and their live session stops
+  resolving (`current_user`). The legacy backup "operator" gate now resolves to `is_admin OR legacy`
+  so admins inherit backup/restore. Settings → **Admin · users** panel (shown to admins) with avatars,
+  badges, and per-user actions (typed-DELETE confirm). `/api/auth/me` + `_user_json` expose `is_admin`.
+  Email-invite (Phase C) intentionally deferred — Google sign-in can't send mail (needs the restricted
+  `gmail.send` scope), so invites will be a copy-a-link flow, optional Gmail-SMTP auto-send later.
 - 2026-06-11 — Proof attachments mobile polish: the "+ Add file" / "📷 Take photo" controls were cramped
   on phones — now equal-width flex buttons on their own full-width row with 44–46px touch targets, wrapping
   to stacked full-width when too narrow (`app.css` `.att-add`/`.att-btn` + a `max-width:560px` block).

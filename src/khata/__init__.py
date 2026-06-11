@@ -105,4 +105,7 @@ def create_app(config: Config | None = None) -> Flask:
     from .api.attachments import bp as attachments_bp
     app.register_blueprint(attachments_bp)
 
+    from .api.admin import bp as admin_bp
+    app.register_blueprint(admin_bp)
+
     return app

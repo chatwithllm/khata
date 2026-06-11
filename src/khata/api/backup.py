@@ -14,10 +14,12 @@ bp = Blueprint("backup", __name__, url_prefix="/api")
 
 def _is_operator(user) -> bool:
     """Backup/restore expose and rewrite the WHOLE instance (every user, incl. password
-    hashes so logins survive a restore). That power must not be available to any logged-in
-    member on a shared/family instance — only the operator. Operator = the emails in
-    KHATA_OPERATOR_EMAILS (comma-separated) if set, else the first registered user (the
-    person who stood the instance up). Keeps self-hosted single-user setups zero-config."""
+    hashes so logins survive a restore). Restricted to an ADMIN (`users.is_admin`). For
+    backward compatibility the legacy operator definition still grants access:
+    KHATA_OPERATOR_EMAILS (comma-separated) if set, else the first registered user. The
+    de8admin01 migration bootstraps that first user as an admin, so the two converge."""
+    if getattr(user, "is_admin", False) and not getattr(user, "disabled", False):
+        return True
     allow = os.environ.get("KHATA_OPERATOR_EMAILS", "").strip()
     if allow:
         emails = {e.strip().lower() for e in allow.split(",") if e.strip()}

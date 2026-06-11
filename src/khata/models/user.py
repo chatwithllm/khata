@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import String, DateTime, Text
+from sqlalchemy import String, DateTime, Text, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db import Base
@@ -24,6 +24,12 @@ class User(Base):
     # tool. Stored server-side so every member sees each contributor's photo, and so it
     # travels with a backup. Capped small (~256px) at the API layer.
     avatar: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Admin can manage users + run backup/restore (see services/admin.py). The first
+    # registered user is bootstrapped admin by migration de8admin01.
+    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    # A disabled account cannot sign in and its live session stops resolving (current_user
+    # returns None) — data is retained, the block is reversible.
+    disabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     def __repr__(self) -> str:
