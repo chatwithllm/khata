@@ -65,6 +65,8 @@ body::after{
 .band nav a{text-decoration:none; opacity:.75; transition:opacity .25s}
 .band nav a:hover{opacity:1}
 @media(max-width:680px){ .band nav a:not(.cta-mini){display:none} }
+/* touch devices: comfortable tap height for band nav links */
+@media(pointer:coarse){ .band nav a{display:inline-flex; align-items:center; min-height:44px} }
 
 /* ── hero (pinned 3D) ───────────────────────────────────── */
 #hero{position:relative; height:430vh}
@@ -144,6 +146,8 @@ section{position:relative}
 }
 .lrow:hover .tag{border-color:var(--gold); color:var(--gold)}
 @media(max-width:760px){ .lrow{grid-template-columns:1fr; gap:10px; padding:28px 0} .lrow .ln{display:none} .lrow .tag{justify-self:start} }
+/* phone micro-type floor */
+@media(max-width:640px){ .lrow .tag{font-size:11px} }
 
 /* ── 02 · privacy ───────────────────────────────────────── */
 #privacy{background:var(--ivory); color:var(--ink)}

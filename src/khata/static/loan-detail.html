@@ -92,6 +92,13 @@
 .planacts svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .planacts .planedit:hover{border-color:var(--primary);color:var(--primary-deep)}
 .planacts .plandel:hover{border-color:var(--neg);color:var(--neg);background:color-mix(in srgb,var(--neg) 6%,transparent)}
+/* touch devices: comfortable tap sizes (responsive pass) */
+@media(pointer:coarse){
+  .planacts .planedit,.planacts .plandel{min-height:44px;padding:10px 14px}
+}
+@media(max-width:560px){
+  .ledger .pill,.ledger .proof{font-size:11px}
+}
 .ph-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
 /* delete-loan button inside the terms slide-over */
 .acts .delloan{margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600;font-size:14px}
@@ -905,7 +912,7 @@ function drawCompare(res, data){
     nm.append(el('span',null,r.label||('Offer '+ci)));
     if(ci>0){ const rm=el('span',null,'×'); rm.title='remove'; rm.style.cssText='cursor:pointer;color:var(--ink-faint);font-size:16px;margin-left:2px'; rm.addEventListener('click', ()=>{ _cmpOffers.splice(ci-1,1); fetchCompare(); }); nm.append(rm); }
     th.append(nm);
-    if(ci===0){ const sub=el('div',null,'baseline'); sub.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:2px'; th.append(sub); }
+    if(ci===0){ const sub=el('div',null,'baseline'); sub.style.cssText='font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:2px'; th.append(sub); }
     htr.append(th);
   });
   thead.append(htr); tbl.append(thead);
@@ -915,7 +922,7 @@ function drawCompare(res, data){
     const tr=el('tr');
     const kc=el('td'); kc.style.cssText='padding:10px;color:var(--ink-faint);'+(m.emph?'font-weight:700;color:var(--ink);':'');
     kc.append(document.createTextNode(m.k));
-    if(m.hint){ const h=el('div',null,m.hint); h.style.cssText='font-size:10px;color:var(--ink-faint);font-weight:400;font-family:"JetBrains Mono"'; kc.append(h); }
+    if(m.hint){ const h=el('div',null,m.hint); h.style.cssText='font-size:11px;color:var(--ink-faint);font-weight:400;font-family:"JetBrains Mono"'; kc.append(h); }
     tr.append(kc);
     rows.forEach(r=>{
       const td=el('td'); td.style.cssText='padding:10px;text-align:right;font-family:"JetBrains Mono";'+(m.emph?'font-weight:700;font-size:14px;':'')+((r.best&&showBest)?'background:color-mix(in srgb,var(--pos) 6%,transparent);':'');

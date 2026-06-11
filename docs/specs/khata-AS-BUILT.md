@@ -353,6 +353,27 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-11 — Responsive pass (phone/tablet/desktop, evidence-first audit via headless Chrome at
+  320/375/768/1440 across all 14 pages — zero horizontal overflow found; fixes confined to touch
+  targets and micro-type). All tap-size fixes ship under `@media(pointer:coarse)` so desktop pointer
+  layouts are untouched; phone type floors apply ≤640px (≤560px in-app). Changes: `assets/sharing.js`
+  Add button gets `flex:none` (flex row squeezed it to 28px); `assets/ledger.css` gains coarse 44px
+  min-heights for nav/footer links, ₹/$ toggle, `.btn`, brand links + `:where(...):focus-visible`
+  outline + landing tag 11px floor; `settings.html` invite-row buttons were unstyled (selector
+  mismatch `.acts .save` vs `.inv-link .save`) — selectors extended, backup checkbox 22px,
+  coarse 44px block for backup-row/user-row actions; `loan-detail.html` Edit/Delete pills 44px coarse
+  + pill/proof 11px floor; `assets/app.css` `.proof` (✎ edit-schedule) tap-area expanded via
+  padding+negative margin (no layout shift) + micro-type floors (tag/pill/proof/rollbadge 11px);
+  `join.html` + `welcome.html` footer/band-nav links 44px coarse + focus-visible on join. Round 2 (after
+  re-audit): sharing.js Add button was fully unstyled on detail pages (no `.btn` rule outside ledger.css)
+  — now styled inline (primary pill) + coarse `button.btn` 44px in app.css; landing `.nav-links a` +
+  `a.link` get coarse `min-width:44px`; sub-11px stragglers floored to 11px ≤560px in `app.html`,
+  `create-plan.html`, `holding-detail.html`, `chit-detail.html`, `retirement-detail.html` (page styles
+  win over app.css, so floors live per-page) and four 10px JS `cssText` captions bumped to 11px
+  (app.html ×2, loan-detail.html ×2). Settings backup checkbox stays 22px — it sits inside a 44px-min
+  `.bk-toggle` label, which is the tap target. Verified headless: zero overflow at 320/375/768/1440 on
+  all 14 pages, all touch targets ≥30px (44px coarse minimums), type floor 11px; 288 tests pass. No
+  logic or desktop-visual changes beyond the 1px caption bump.
 - 2026-06-11 — Invite links (Phase C of admin/backup work — copy-link flow, no SMTP). An admin generates a
   signed join link for an email (`POST /api/admin/invites` → `/join?token=…`, 7-day expiry) and shares it
   however they like; Google sign-in can't send mail (restricted `gmail.send` scope), so no email is sent

@@ -20,10 +20,10 @@
 .msg{font-size:13px;min-height:18px}
 .msg.ok{color:var(--pos)} .msg.err{color:var(--neg)}
 .acts{display:flex;gap:12px;align-items:center;margin-top:2px}
-.acts .save{font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;box-shadow:0 8px 18px -10px var(--primary);transition:transform .2s}
-.acts .save:hover{transform:translateY(-2px)}
-.acts .alt{font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;background:var(--card);color:var(--ink-soft);border:1px solid var(--line);cursor:pointer}
-.acts .alt:hover{border-color:var(--primary);color:var(--ink)}
+.acts .save,.inv-link .save{font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;box-shadow:0 8px 18px -10px var(--primary);transition:transform .2s;font-family:inherit;flex:none}
+.acts .save:hover,.inv-link .save:hover{transform:translateY(-2px)}
+.acts .alt,.bk-invite-row .alt{font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;background:var(--card);color:var(--ink-soft);border:1px solid var(--line);cursor:pointer;font-family:inherit;flex:none}
+.acts .alt:hover,.bk-invite-row .alt:hover{border-color:var(--primary);color:var(--ink)}
 /* admin user-management list */
 .userlist{display:flex;flex-direction:column;gap:10px}
 .urow{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);flex-wrap:wrap}
@@ -44,8 +44,8 @@
 /* automatic-backups controls */
 .autobk-sep{height:1px;background:var(--line);margin:18px 2px 4px}
 .ph2{font-weight:700;font-size:15px;color:var(--ink)}
-.bk-toggle{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
-.bk-toggle input{width:18px;height:18px;accent-color:var(--primary)}
+.bk-toggle{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;min-height:44px}
+.bk-toggle input{width:22px;height:22px;accent-color:var(--primary)}
 .bklist{display:flex;flex-direction:column;gap:7px;margin-top:6px}
 .bkrow{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);flex-wrap:wrap}
 .bkrow .bkname{font-family:"JetBrains Mono";font-size:12px;color:var(--ink);flex:1 1 160px;overflow:hidden;text-overflow:ellipsis}
@@ -58,6 +58,10 @@
 .bk-invite-row input{flex:1 1 200px;font-family:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
 .inv-link{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .inv-link input{flex:1 1 220px;font-family:"JetBrains Mono";font-size:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--ivory);color:var(--ink)}
+/* touch devices: comfortable tap sizes (responsive pass) */
+@media(pointer:coarse){
+  .bk-invite-row .alt,.inv-link .save,.bkrow a,.bkrow button,.ubtn{min-height:44px}
+}
 </style>
 </head>
 <body>
