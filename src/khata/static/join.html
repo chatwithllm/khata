@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Join Khata</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{--ink:#14100a;--ink-soft:#4a4034;--ink-faint:#8a7d68;--ivory:#f4edde;--card:#fffdf7;--line:#e4d9c2;--sindoor:#c4452e;--gold:#d4a843}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--ivory);color:var(--ink);font-family:"Hanken Grotesk",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:34px 30px;box-shadow:0 24px 60px -28px rgba(20,16,10,.35)}
+    .eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--sindoor);font-weight:500}
+    h1{font-family:"Fraunces",serif;font-weight:600;font-size:28px;margin:8px 0 4px;line-height:1.15}
+    h1 em{font-style:italic;color:var(--sindoor)}
+    .sub{font-size:14px;color:var(--ink-soft);margin-bottom:22px}
+    .invited{font-family:"JetBrains Mono",monospace;font-size:13px;background:var(--ivory);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--ink);margin-bottom:18px;word-break:break-all}
+    label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700;margin-bottom:6px}
+    input{width:100%;font-family:inherit;font-size:15px;padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--ink);margin-bottom:14px}
+    input:focus{outline:none;border-color:var(--sindoor)}
+    .btn{width:100%;font-family:inherit;font-weight:600;font-size:15px;padding:13px;border-radius:12px;background:var(--sindoor);color:#fff;border:none;cursor:pointer}
+    .btn:hover{filter:brightness(1.05)}
+    .btn:disabled{opacity:.6;cursor:default}
+    .msg{font-size:13px;min-height:18px;margin:10px 0 2px}
+    .msg.err{color:var(--sindoor)}
+    .msg.ok{color:#2f7d4f}
+    .or{display:flex;align-items:center;gap:12px;color:var(--ink-faint);font-size:12px;margin:18px 0}
+    .or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+    #google-area{display:none}
+    .alt{text-align:center;font-size:13px;color:var(--ink-soft);margin-top:18px}
+    .alt a{color:var(--sindoor);font-weight:600;text-decoration:none}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="eyebrow">You're invited</div>
+    <h1>Join your <em>khata</em></h1>
+    <div class="sub" id="sub">Set up your account to start tracking together.</div>
+
+    <div id="form-wrap">
+      <div class="invited" id="invited"></div>
+      <label for="name">Your name</label>
+      <input id="name" placeholder="e.g. Anjali" autocomplete="name">
+      <label for="pw">Choose a password</label>
+      <input id="pw" type="password" placeholder="at least 6 characters" autocomplete="new-password">
+      <div class="msg" id="err"></div>
+      <button class="btn" id="create">Create account &amp; sign in</button>
+
+      <div class="or" id="g-or" style="display:none">or</div>
+      <div id="google-area"><div id="g_btn"></div></div>
+    </div>
+
+    <div class="alt" id="alt"></div>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const token = new URLSearchParams(location.search).get("token") || "";
+
+async function init(){
+  if(!token){ return invalid("This invite link is missing its token."); }
+  let info = {};
+  try { info = await (await fetch("/api/auth/invite?token=" + encodeURIComponent(token))).json(); }
+  catch(_){ return invalid("Could not check this invite. Try again later."); }
+  if(!info.valid){ return invalid("This invite link is invalid or has expired. Ask your admin for a new one."); }
+  if(info.already_member){
+    $("form-wrap").classList.add("hidden");
+    $("sub").textContent = "This email already has an account.";
+    $("alt").innerHTML = "";
+    const a = document.createElement("a"); a.href = "/"; a.textContent = "Go to sign in";
+    $("alt").append(a);
+    return;
+  }
+  $("invited").textContent = info.email;
+  $("name").focus();
+  setupGoogle();
+  const a = document.createElement("a"); a.href = "/"; a.textContent = "Sign in";
+  $("alt").append(document.createTextNode("Already have an account? "), a);
+}
+
+function invalid(text){
+  $("form-wrap").classList.add("hidden");
+  $("sub").className = "msg err"; $("sub").textContent = text;
+  const a = document.createElement("a"); a.href = "/"; a.textContent = "Go to home";
+  $("alt").append(a);
+}
+
+$("create").addEventListener("click", async () => {
+  $("err").className = "msg"; $("err").textContent = "";
+  const name = $("name").value.trim(), pw = $("pw").value;
+  if(!name){ return fail("Enter your name."); }
+  if((pw||"").length < 6){ return fail("Password must be at least 6 characters."); }
+  $("create").disabled = true; $("err").className = "msg ok"; $("err").textContent = "Creating your account…";
+  try{
+    const r = await fetch("/api/auth/accept-invite", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ token, display_name: name, password: pw }),
+    });
+    if(r.ok){ window.location.href = "/app"; return; }
+    const e = await r.json().catch(()=>({}));
+    if(e.error === "already_member"){ window.location.href = "/"; return; }
+    fail(e.detail || "Could not create your account.");
+  }catch(_){ fail("Something went wrong. Try again."); }
+  finally{ $("create").disabled = false; }
+});
+function fail(t){ $("err").className = "msg err"; $("err").textContent = t; }
+
+// Continue with Google — links by the verified Google email (only if configured).
+async function setupGoogle(){
+  let cid = null;
+  try { cid = (await (await fetch("/api/auth/config")).json()).google_client_id; } catch(_){}
+  if(!cid) return;
+  $("g-or").style.display = "flex";
+  $("google-area").style.display = "block";
+  const s = document.createElement("script");
+  s.src = "https://accounts.google.com/gsi/client"; s.async = true;
+  s.onload = () => {
+    google.accounts.id.initialize({ client_id: cid, callback: onGoogle });
+    google.accounts.id.renderButton($("g_btn"), { theme:"outline", size:"large", width:340 });
+  };
+  document.head.appendChild(s);
+}
+async function onGoogle(resp){
+  const r = await fetch("/api/auth/google", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ credential: resp.credential }),
+  });
+  if(r.ok){ window.location.href = "/app"; return; }
+  fail("Google sign-in failed.");
+}
+
+init();
+</script>
+</body>
+</html>

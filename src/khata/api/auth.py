@@ -1,6 +1,6 @@
 from flask import Blueprint, current_app, g, jsonify, request, session
 
-from ..tokens import issue_token, read_token
+from ..tokens import issue_token, read_token, read_invite
 from ..services.auth import (
     register_user,
     authenticate_user,
@@ -183,3 +183,39 @@ def google_login():
         return jsonify(error="account_disabled", detail="this account has been disabled by an admin"), 403
     session["user_id"] = user.id
     return jsonify(user=_user_json(user), created=created, token=_token_for(user)), 200
+
+
+@bp.get("/invite")
+def invite_info():
+    """Peek at a join token (before accepting) so the join page can show the email and
+    whether that account already exists."""
+    email = read_invite(current_app.config["SECRET_KEY"], request.args.get("token", ""))
+    if email is None:
+        return jsonify(valid=False, error="invalid_or_expired"), 200
+    existing = g.db.scalar(User.__table__.select().where(User.email == email)) is not None
+    return jsonify(valid=True, email=email, already_member=existing), 200
+
+
+@bp.post("/accept-invite")
+def accept_invite():
+    """Create the invited account (email bound by the signed token) and sign in. If the
+    email already has an account, tell them to sign in instead."""
+    data = request.get_json(silent=True) or {}
+    email = read_invite(current_app.config["SECRET_KEY"], data.get("token", ""))
+    if email is None:
+        return jsonify(error="invalid_or_expired", detail="this invite link is invalid or has expired"), 400
+    if g.db.scalar(User.__table__.select().where(User.email == email)) is not None:
+        return jsonify(error="already_member", detail="an account with this email already exists — just sign in"), 409
+    try:
+        user = register_user(g.db, email=email,
+                             display_name=data.get("display_name", ""),
+                             password=data.get("password", ""))
+        g.db.commit()
+    except EmailTakenError:
+        g.db.rollback()
+        return jsonify(error="already_member"), 409
+    except AuthError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    session["user_id"] = user.id
+    return jsonify(user=_user_json(user), token=_token_for(user)), 201

@@ -27,6 +27,12 @@ def welcome():
     return send_from_directory(_static_dir(), "welcome.html")
 
 
+@bp.get("/join")
+def join():
+    # Invite-link landing — reads ?token, lets the invited user set up their account.
+    return send_from_directory(_static_dir(), "join.html")
+
+
 @bp.get("/app")
 def app_shell():
     return send_from_directory(_static_dir(), "app.html")

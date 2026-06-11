@@ -5,11 +5,14 @@ enforces the "always keep one enabled admin" invariant and the no-self-footgun r
 """
 import os
 from datetime import datetime
+from urllib.parse import urljoin
 
 from flask import Blueprint, Response, current_app, g, jsonify, request
 
+from ..models import User
 from ..services import admin, backup_store
 from ..services.admin import AdminError
+from ..tokens import issue_invite
 from .auth import current_user
 
 bp = Blueprint("admin", __name__, url_prefix="/api/admin")
@@ -75,6 +78,24 @@ def reset_password(user_id):
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(ok=True), 200
+
+
+@bp.post("/invites")
+def create_invite(user_id=None):
+    """Mint a signed join link for an email. The admin shares the link however they like
+    (no email is sent from the server). The recipient opens it and sets up their account."""
+    _, err = _require_admin()
+    if err:
+        return err
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    if "@" not in email or "." not in email.split("@")[-1]:
+        return jsonify(error="invalid", detail="enter a valid email"), 400
+    existing = g.db.query(User).filter(User.email == email).first()
+    token = issue_invite(current_app.config["SECRET_KEY"], email)
+    join_url = urljoin(request.url_root, "join") + "?token=" + token
+    return jsonify(email=email, token=token, join_url=join_url, expires_in_days=7,
+                   already_member=existing is not None), 200
 
 
 @bp.delete("/users/<int:user_id>")
