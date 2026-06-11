@@ -24,6 +24,23 @@
 .acts .save:hover{transform:translateY(-2px)}
 .acts .alt{font-weight:600;font-size:14px;padding:10px 18px;border-radius:10px;background:var(--card);color:var(--ink-soft);border:1px solid var(--line);cursor:pointer}
 .acts .alt:hover{border-color:var(--primary);color:var(--ink)}
+/* admin user-management list */
+.userlist{display:flex;flex-direction:column;gap:10px}
+.urow{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);flex-wrap:wrap}
+.urow .uava{width:38px;height:38px;border-radius:50%;background:var(--primary);color:var(--paper);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;background-size:cover;background-position:center;flex:none}
+.urow .uinfo{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1 1 180px}
+.urow .uname{font-weight:600;font-size:14.5px;color:var(--ink);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.urow .uemail{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono";overflow:hidden;text-overflow:ellipsis}
+.ubadge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:999px}
+.ubadge.admin{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary-deep,var(--primary))}
+.ubadge.you{background:color-mix(in srgb,var(--ink) 10%,transparent);color:var(--ink-soft)}
+.ubadge.off{background:color-mix(in srgb,var(--neg) 14%,transparent);color:var(--neg)}
+.uacts{display:flex;gap:7px;flex-wrap:wrap;flex:none}
+.ubtn{font-size:12px;font-weight:600;padding:7px 11px;border-radius:9px;border:1px solid var(--line);background:none;color:var(--ink-soft);cursor:pointer;font-family:inherit;min-height:34px}
+.ubtn:hover{border-color:var(--primary);color:var(--ink)}
+.ubtn.danger{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 35%,var(--line))}
+.ubtn.danger:hover{background:color-mix(in srgb,var(--neg) 8%,transparent)}
+@media(max-width:560px){ .urow .uacts{flex-basis:100%} .ubtn{flex:1 1 auto;min-height:40px} }
 </style>
 </head>
 <body>
@@ -119,6 +136,16 @@
               <div class="acts"><button class="alt" id="dorestore">Restore from file</button></div>
             </div>
           </div>
+
+          <!-- Admin: user management (admins only) -->
+          <div class="panel fade d4 fill" id="adminpanel" style="display:none">
+            <div class="ph"><div class="t" style="font-size:16px">Admin · users</div><div class="meta">who can access</div></div>
+            <div class="pbody">
+              <div class="hint">Everyone on this instance. <strong>Disable</strong> blocks sign-in but keeps data (reversible); <strong>delete</strong> removes the user and the plans they own.</div>
+              <div id="userlist" class="userlist"></div>
+              <div class="msg" id="amsg"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -134,6 +161,54 @@ async function post(path, body){
   return { ok:r.ok, j };
 }
 
+// ── admin · user management (K4: all DOM via createElement/textContent) ──
+function _el(tag, cls, text){ const n=document.createElement(tag); if(cls)n.className=cls; if(text!=null)n.textContent=text; return n; }
+async function adminAct(path, body, meId, okMsg){
+  const { ok, j } = await post(path, body);
+  if(ok){ if(okMsg) show($('amsg'), true, okMsg); renderAdmin(meId); }
+  else show($('amsg'), false, j.detail || 'Action failed.');
+}
+async function renderAdmin(meId){
+  const r=await fetch('/api/admin/users'); if(!r.ok) return;
+  const users=(await r.json()).users;
+  const box=$('userlist'); box.textContent='';
+  users.forEach(u=>{
+    const row=_el('div','urow');
+    const av=_el('div','uava');
+    if(u.avatar){ av.style.backgroundImage='url("'+u.avatar+'")'; } else { av.textContent=((u.display_name||'?')[0]||'?').toUpperCase(); }
+    const info=_el('div','uinfo');
+    const name=_el('div','uname'); name.append(_el('span',null,u.display_name||u.email));
+    if(u.id===meId) name.append(_el('span','ubadge you','you'));
+    if(u.is_admin) name.append(_el('span','ubadge admin','admin'));
+    if(u.disabled) name.append(_el('span','ubadge off','disabled'));
+    info.append(name, _el('div','uemail',u.email));
+    row.append(av, info);
+    const acts=_el('div','uacts');
+    if(u.id!==meId){
+      const adm=_el('button','ubtn', u.is_admin?'Remove admin':'Make admin');
+      adm.onclick=()=>adminAct('/api/admin/users/'+u.id+'/admin', {is_admin:!u.is_admin}, meId);
+      const dis=_el('button','ubtn', u.disabled?'Enable':'Disable');
+      dis.onclick=()=>adminAct('/api/admin/users/'+u.id+'/disable', {disabled:!u.disabled}, meId);
+      const rst=_el('button','ubtn','Reset password');
+      rst.onclick=()=>{ const p=prompt('New password for '+(u.display_name||u.email)+' (min 6 chars):'); if(p) adminAct('/api/admin/users/'+u.id+'/reset-password', {password:p}, meId, 'Password reset — share it with them.'); };
+      const del=_el('button','ubtn danger','Delete');
+      del.onclick=async()=>{
+        if(!confirm('Delete '+(u.display_name||u.email)+'?\nThis removes the user and the '+u.owned_plans+' plan(s) they own. Cannot be undone.')) return;
+        if(prompt('Type DELETE to confirm')!=='DELETE') return;
+        const r=await fetch('/api/admin/users/'+u.id, {method:'DELETE'});
+        const j=await r.json().catch(()=>({}));
+        if(r.ok){ show($('amsg'), true, 'Deleted ('+j.plans_deleted+' plan(s) removed).'); renderAdmin(meId); }
+        else show($('amsg'), false, j.detail || 'Could not delete.');
+      };
+      acts.append(adm, dis, rst, del);
+    } else {
+      acts.append(_el('span','uemail','— your account'));
+    }
+    row.append(acts);
+    box.append(row);
+  });
+}
+
 async function load(){
   const me=await fetch('/api/auth/me');
   if(me.status===401){ window.location.href='/'; return; }
@@ -141,6 +216,8 @@ async function load(){
   const u=meJson.user;
   // backup/restore rewrite the WHOLE instance — operator only (others get 403)
   if(meJson.is_operator && $('datapanel')) $('datapanel').style.display='';
+  // user management — admins only
+  if(u.is_admin && $('adminpanel')){ $('adminpanel').style.display=''; renderAdmin(u.id); }
   $('display_name').value=u.display_name || '';
   $('ava-init').textContent=((u.display_name||'?')[0]||'?').toUpperCase();
   if(window.__applyAvatar) window.__applyAvatar(u.avatar);
