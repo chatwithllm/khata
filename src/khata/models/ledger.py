@@ -41,3 +41,6 @@ class LedgerEntry(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     plan: Mapped["Plan"] = relationship(back_populates="ledger_entries", foreign_keys=[plan_id])
+    attachments: Mapped[list["Attachment"]] = relationship(
+        back_populates="entry", cascade="all, delete-orphan",
+        order_by="Attachment.created_at")

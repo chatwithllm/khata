@@ -211,6 +211,7 @@
     <div class="fld" id="edit-paidby-fld" style="display:none"><label for="edit-paid-by">Paid by · contributor</label>
       <select id="edit-paid-by"></select>
     </div>
+    <div class="fld" id="proof-fld"><label>Proof (optional)</label><div id="proof-mount"></div></div>
     <div class="err" id="edit-err"></div>
     <div class="acts"><button class="save" id="edit-save">Save changes</button><span class="cancel" id="edit-cancel">Cancel</span><span class="del" id="del-entry" style="margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
   </div>
@@ -283,6 +284,7 @@
 </aside>
 
 <script src="/static/assets/sharing.js"></script>
+<script src="/static/assets/attach.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const pid = parseInt(location.pathname.split("/").pop(), 10);
@@ -1146,6 +1148,8 @@ function openEdit(it){
   $('edit-occurred').value=(it.occurred_at||'').slice(0,10);
   if(MEMBERS.length>1){ $('edit-paidby-fld').style.display='flex'; fillPaidBy($('edit-paid-by'), it.logged_by_user_id); }
   else { $('edit-paidby-fld').style.display='none'; }
+  mountAttachments($('proof-mount'), { planId: pid, entryId: it.id,
+    canModify: (ME_ID!=null), onChange: ()=>{ boot(); } });
   $('scrim').classList.add('on'); $('edit-over').classList.add('on'); $('edit-over').setAttribute('aria-hidden','false'); $('edit-amount').focus();
 }
 function closeEdit(){ $('scrim').classList.remove('on'); $('edit-over').classList.remove('on'); $('edit-over').setAttribute('aria-hidden','true'); }

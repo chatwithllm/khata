@@ -263,12 +263,14 @@
     <div class="fld"><label for="edit-amount">Amount</label><input id="edit-amount" placeholder="16,667" inputmode="decimal"></div>
     <div class="fld"><label for="edit-occurred">Date (when it happened)</label><input id="edit-occurred" type="date"></div>
     <div class="fld"><label for="edit-note">Note (optional)</label><input id="edit-note" placeholder="month 6 subscription"></div>
+    <div class="fld" id="proof-fld"><label>Proof (optional)</label><div id="proof-mount"></div></div>
     <div class="err" id="edit-err"></div>
     <div class="acts"><button class="save" id="edit-save">Save changes</button><span class="cancel" id="edit-cancel">Cancel</span><span class="del" id="del-entry" style="margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
   </div>
 </aside>
 
 <script src="/static/assets/sharing.js"></script>
+<script src="/static/assets/attach.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const pid = parseInt(location.pathname.split("/").pop(), 10);
@@ -760,6 +762,8 @@ function openEdit(e){
   $('edit-note').value=e.note||'';
   $('edit-occurred').value=(e.occurred_at||'').slice(0,10);
   $('edit-osub').textContent='in '+($('name').textContent||'this chit');
+  mountAttachments($('proof-mount'), { planId: pid, entryId: e.id,
+    canModify: true, onChange: ()=>{ boot(); } });
   $('scrim').classList.add('on'); $('edit-over').classList.add('on'); $('edit-over').setAttribute('aria-hidden','false');
   $('edit-amount').focus();
 }

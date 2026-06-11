@@ -8,20 +8,22 @@ same file duplicates plans (no natural key); callers should warn the user.
 
 The raw-SQLite CLI path (scripts/backup.sh / restore.sh) is the exact-replace alternative.
 """
+import base64
 from datetime import datetime, date, timezone
 
 from sqlalchemy import select, inspect
-from sqlalchemy import DateTime, Date
+from sqlalchemy import DateTime, Date, LargeBinary
 from sqlalchemy.orm import Session
 
 from ..models import (User, Plan, AssetPurchase, Loan, Holding, Chit, Retirement,
-                      Installment, LedgerEntry, PlanMembership, FxRate)
+                      Installment, LedgerEntry, PlanMembership, FxRate, Attachment)
 
 BACKUP_VERSION = 1
 
-# Export order = FK dependency order (parents before children).
+# Export order = FK dependency order (parents before children). Attachment follows
+# LedgerEntry (its parent) so a restore can remap entry ids before inserting blobs.
 EXPORT_MODELS = [User, Plan, AssetPurchase, Loan, Holding, Chit, Retirement,
-                 Installment, LedgerEntry, PlanMembership, FxRate]
+                 Installment, LedgerEntry, Attachment, PlanMembership, FxRate]
 
 # Plan sub-tables keyed 1:1 by plan_id (no own surrogate id).
 PLAN_SUBTABLES = [("asset_purchases", AssetPurchase), ("loans", Loan),
@@ -35,6 +37,8 @@ class BackupError(Exception):
 def _ser(v):
     if isinstance(v, (datetime, date)):
         return v.isoformat()
+    if isinstance(v, (bytes, bytearray)):
+        return base64.b64encode(v).decode("ascii")   # blobs (attachment bytes)
     return v
 
 
@@ -62,6 +66,8 @@ def _parse(model, raw: dict) -> dict:
                 v = datetime.fromisoformat(v)
             elif isinstance(t, Date):
                 v = date.fromisoformat(v)
+            elif isinstance(t, LargeBinary):
+                v = base64.b64decode(v)               # blobs (attachment bytes)
         out[k] = v
     return out
 
@@ -87,7 +93,8 @@ def import_merge(session: Session, data: dict) -> dict:
     t = data["tables"]
     stats = {"users_created": 0, "users_matched": 0, "plans": 0, "asset_purchases": 0,
              "loans": 0, "holdings": 0, "chits": 0, "retirements": 0,
-             "installments": 0, "ledger_entries": 0, "memberships": 0, "fx_rates": 0}
+             "installments": 0, "ledger_entries": 0, "attachments": 0,
+             "memberships": 0, "fx_rates": 0}
 
     # --- users: match by email, reuse or create ---
     user_map: dict[int, int] = {}
@@ -134,14 +141,27 @@ def import_merge(session: Session, data: dict) -> dict:
             continue
         session.add(Installment(**f)); stats["installments"] += 1
 
-    # --- ledger entries ---
+    # --- ledger entries (keep old->new id map so attachments can remap) ---
+    entry_map: dict[int, int] = {}
     for r in t.get("ledger_entries", []):
-        f = _parse(LedgerEntry, r); f.pop("id", None)
+        f = _parse(LedgerEntry, r); old = f.pop("id", None)
         f["plan_id"] = plan_map.get(f.get("plan_id"))
         f["logged_by_user_id"] = user_map.get(f.get("logged_by_user_id"))
         if f["plan_id"] is None or f["logged_by_user_id"] is None:
             continue
-        session.add(LedgerEntry(**f)); stats["ledger_entries"] += 1
+        ne = LedgerEntry(**f); session.add(ne); session.flush()
+        if old is not None:
+            entry_map[old] = ne.id
+        stats["ledger_entries"] += 1
+
+    # --- attachments (blob proof; remap to the new entry + uploader) ---
+    for r in t.get("attachments", []):
+        f = _parse(Attachment, r); f.pop("id", None)
+        f["ledger_entry_id"] = entry_map.get(f.get("ledger_entry_id"))
+        f["uploaded_by_user_id"] = user_map.get(f.get("uploaded_by_user_id"))
+        if f["ledger_entry_id"] is None or f["uploaded_by_user_id"] is None:
+            continue
+        session.add(Attachment(**f)); stats["attachments"] += 1
 
     # --- memberships (plans are new, so no (plan,user) collision) ---
     for r in t.get("plan_memberships", []):

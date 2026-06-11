@@ -35,7 +35,7 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   on user/API data. Pages: `ledger.css` (landing/marketing, `.landing`-scoped animations) + `app.css`
   (app shell + detail panels); `sharing.js` (`mountSharing`). HTML served `Cache-Control: no-store`.
 
-## 4. Data model (11 tables)
+## 4. Data model (12 tables)
 - **users**: id, email, display_name, password_hash?, google_sub?, base_currency, **avatar?** (cropped
   square profile photo as a `data:image/...` URL, set via the crop tool; stored server-side so every member
   sees each contributor's photo and it travels with backups), created_at. Migration `c9a3avatar01`.
@@ -67,6 +67,16 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   from the invitee until they accept (→ `active`). Decline → `declined` (hidden, re-invitable —
   re-inviting a declined user resets them to `invited`). Migration `b7a1m3status1`
   (server_default `active` so pre-existing rows keep working).
+- **attachments** (supporting proof on a ledger entry): id, **ledger_entry_id** (FK→ledger_entries,
+  ON DELETE CASCADE), uploaded_by_user_id, filename, **mime** (decided by MAGIC BYTES, never the
+  extension), size, **sha256**, **data** (`LargeBinary` blob — bytes live in the DB so the one-file
+  JSON backup keeps round-tripping; the backup serializer base64-encodes the blob on export/import),
+  created_at. Allowlist: images (jpeg/png/gif/webp/heic), PDF, Office (docx/xlsx/pptx + legacy OLE);
+  a bare zip is rejected. 25 MB/file cap; photos are downscaled client-side (drops EXIF/GPS). Lights
+  the `▣ proof` tag (`has_proof = proof_ref OR attachments`) and `attachment_count` on the entry.
+  Access: owner OR the entry's contributor may upload/delete; any shared member may view. Served from
+  `/api/attachments/<id>` with the stored mime (images/PDF inline, else download), membership-gated,
+  `X-Content-Type-Options: nosniff`. Migration `dd7attach01`.
 - **fx_rates**: id, base_currency, quote_currency, rate_micro, as_of?.
 
 ## 5. Enums (authoritative)
@@ -334,6 +344,16 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-11 — Ledger-entry attachments (supporting proof): upload photos / PDFs / Office docs or
+  **take a photo** (rear camera on phones) against any ledger entry, in the entry-edit drawer of the
+  asset / loan / chit detail pages. New `attachments` table (blob bytes in the DB; mime by magic bytes,
+  not extension; 25 MB cap; client-side image downscale drops EXIF/GPS). API: `attachments` blueprint —
+  `GET/POST /api/plans/<pid>/entries/<eid>/attachments`, `GET/DELETE /api/attachments/<id>` (served with
+  the stored mime, images/PDF inline, membership-gated, `nosniff`). Lights the existing `▣ proof` tag
+  (`has_proof = proof_ref OR attachments`) + `attachment_count`. Backup serializer base64s the blob so the
+  one-file JSON backup still round-trips (verified). Shared `static/assets/attach.js` (`mountAttachments`,
+  K4-safe createElement render). Migration `dd7attach01`. Finishes the long-promised "attach the receipt,
+  screenshot, or chat — timestamped proof" from the marketing page.
 - 2026-06-11 — Production deploy runbook (`scripts/deploy-prod.sh`): one-shot SSH deploy to the prod
   box (Debian 12). rsync code from a clean `main` checkout → `~/khata/app`; build venv + install deps;
   carry real data via a consistent `sqlite3 .backup` snapshot (**first run only — never overwrites an

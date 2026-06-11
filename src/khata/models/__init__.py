@@ -8,3 +8,4 @@ from .holding import Holding  # noqa: F401
 from .fx import FxRate  # noqa: F401
 from .chit import Chit  # noqa: F401
 from .retirement import Retirement  # noqa: F401
+from .attachment import Attachment  # noqa: F401
