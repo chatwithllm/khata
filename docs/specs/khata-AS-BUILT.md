@@ -353,6 +353,16 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-11 — Invite links (Phase C of admin/backup work — copy-link flow, no SMTP). An admin generates a
+  signed join link for an email (`POST /api/admin/invites` → `/join?token=…`, 7-day expiry) and shares it
+  however they like; Google sign-in can't send mail (restricted `gmail.send` scope), so no email is sent
+  from the server. The link opens `join.html` (served at `GET /join`): it peeks the token (`GET
+  /api/auth/invite`), shows the bound email, and the recipient sets a name + password — or Continue with
+  Google — via `POST /api/auth/accept-invite` (email is taken from the signed token, not the client; existing
+  email → 409 "sign in instead"). Stateless signed tokens reuse `itsdangerous` (`tokens.issue_invite`/
+  `read_invite`, salt `khata-invite-v1`) — no DB table. Settings → Admin panel gains an "Invite someone" box
+  (email → Create invite link → Copy). Note: registration is still open; invites are a pre-addressed
+  convenience, not (yet) an access gate. 8 new tests.
 - 2026-06-11 — Automatic scheduled backups (Phase B of admin/backup work). New `backup_config` singleton
   (migration `df9backup01`) + in-app **APScheduler** (`khata/scheduler.py`, hourly tick, env-gated by
   `KHATA_ENABLE_SCHEDULER=1` so tests never spawn threads). Backups are whole-instance JSON snapshots

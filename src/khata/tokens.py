@@ -17,9 +17,35 @@ _SALT = "khata-mobile-bearer-v1"
 # leaked token expires on its own. The client refreshes by logging in again.
 _MAX_AGE_SECONDS = 30 * 24 * 60 * 60
 
+# Invite links carry the invited email, signed, with a shorter life. A separate salt so
+# an invite token can never be mistaken for a bearer token.
+_INVITE_SALT = "khata-invite-v1"
+_INVITE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
+
 
 def _serializer(secret_key: str) -> URLSafeTimedSerializer:
     return URLSafeTimedSerializer(secret_key, salt=_SALT)
+
+
+def _invite_serializer(secret_key: str) -> URLSafeTimedSerializer:
+    return URLSafeTimedSerializer(secret_key, salt=_INVITE_SALT)
+
+
+def issue_invite(secret_key: str, email: str) -> str:
+    """Signed join token carrying the invited (normalized) email."""
+    return _invite_serializer(secret_key).dumps({"email": (email or "").strip().lower()})
+
+
+def read_invite(secret_key: str, token: str) -> str | None:
+    """Return the invited email from a valid token, or None if missing/invalid/expired."""
+    if not token:
+        return None
+    try:
+        data = _invite_serializer(secret_key).loads(token, max_age=_INVITE_MAX_AGE_SECONDS)
+    except (BadSignature, SignatureExpired):
+        return None
+    email = data.get("email")
+    return email if isinstance(email, str) and email else None
 
 
 def issue_token(secret_key: str, user_id: int) -> str:
