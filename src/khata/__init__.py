@@ -1,3 +1,5 @@
+import os
+
 from flask import Flask, g, jsonify, request
 
 from .config import Config
@@ -107,5 +109,11 @@ def create_app(config: Config | None = None) -> Flask:
 
     from .api.admin import bp as admin_bp
     app.register_blueprint(admin_bp)
+
+    # Automatic-backup scheduler — opt-in via env so tests never spawn threads. Enabled
+    # by run-app.sh (dev) and the prod .env.prod.
+    if os.environ.get("KHATA_ENABLE_SCHEDULER") == "1":
+        from .scheduler import start_scheduler
+        start_scheduler(app)
 
     return app

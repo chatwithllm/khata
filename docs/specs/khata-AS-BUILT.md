@@ -83,6 +83,10 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   `/api/attachments/<id>` with the stored mime (images/PDF inline, else download), membership-gated,
   `X-Content-Type-Options: nosniff`. Migration `dd7attach01`.
 - **fx_rates**: id, base_currency, quote_currency, rate_micro, as_of?.
+- **backup_config** (singleton, id=1): enabled, frequency (`daily`|`weekly`), hour (0–23 server-local),
+  retention (keep last N), last_run_at, last_status. Drives the in-app automatic-backup scheduler
+  (migration `df9backup01`; NOT included in backup exports — it's instance-local). `last_run_at` doubles
+  as the cross-worker claim token (`backup_store.claim_due`) so two gunicorn workers never double-back-up.
 
 ## 5. Enums (authoritative)
 - currencies `{INR, USD}` · payment methods `{cash, upi, transfer, cheque}` · funding sources
@@ -349,6 +353,17 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-11 — Automatic scheduled backups (Phase B of admin/backup work). New `backup_config` singleton
+  (migration `df9backup01`) + in-app **APScheduler** (`khata/scheduler.py`, hourly tick, env-gated by
+  `KHATA_ENABLE_SCHEDULER=1` so tests never spawn threads). Backups are whole-instance JSON snapshots
+  written to `backups/auto-<stamp>.json` (0o600), pruned to `retention` (default 14). `services/backup_store.py`:
+  write/prune/list + a pure `is_due`/`claim_threshold` decision and an atomic `claim_due` (UPDATE on
+  `last_run_at`) so the two gunicorn workers never produce a double backup. Admin API: `GET/POST
+  /api/admin/backup-config` (enabled · daily/weekly · hour 0–23 · retention 1–365), `POST /api/admin/backup-run`
+  (manual), `GET/DELETE /api/admin/backups/<name>` (download/delete, `auto-*.json` name allowlist — no path
+  traversal). Settings → Data panel gains the **Automatic backups** controls (toggle, frequency, hour,
+  retention, last-run/status, Back-up-now, list with download/delete). New dep `APScheduler==3.10.4`.
+  Phase C (email invites) still deferred.
 - 2026-06-11 — Topbar avatar → profile dropdown. The account avatar in the topbar now opens a standard
   profile menu (signed-in name + email, Settings link, Log out) instead of jumping straight to Settings.
   Shared `static/assets/profile-menu.js` (`mountProfileMenu()`, K4-safe; outside-click/Escape close; hides
