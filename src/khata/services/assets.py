@@ -83,7 +83,8 @@ def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred
 def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
                         amount_minor=None, occurred_at=None, method=None,
                         funding_source=None, note=None, logged_by_user_id=None,
-                        acting_user_id=None, funding_plan_id=_UNSET) -> LedgerEntry:
+                        acting_user_id=None, funding_plan_id=_UNSET,
+                        fx_rate_micro=None) -> LedgerEntry:
     """Edit an existing ledger entry in-place (owner-only at the API layer).
     Only the provided fields change; kind/direction stay immutable. Derived
     balances recompute on the next *_state call (balances are never stored).
@@ -116,6 +117,11 @@ def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
         entry.logged_by_user_id = logged_by_user_id
     if funding_plan_id is not _UNSET:
         entry.funding_plan_id = funding_plan_id      # may be None to unlink
+    if fx_rate_micro is not None:
+        # rate is metadata about the entry — editing it never touches amount,
+        # amount_status, or the confirmation loop (spec §4)
+        entry.fx_rate_micro = fx_rate_micro
+        entry.fx_counter_currency = fx.counter_currency_for(entry.currency)
     if amount_changed or attrib_changed:
         entry.amount_status = _amount_status_for(entry.logged_by_user_id, acting_user_id)
         entry.counter_amount_minor = None

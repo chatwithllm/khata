@@ -192,3 +192,23 @@ def test_chit_entry_snapshots(ctx):
                        amount_minor=500_000, occurred_at=_dt())
     assert e.fx_rate_micro == 12_500
     assert e.fx_counter_currency == "USD"
+
+
+# ---------------------------------------------------------------------------
+# Task 6: PATCH — edit the snapshot rate
+# ---------------------------------------------------------------------------
+
+from khata.services.assets import update_ledger_entry
+
+
+def test_update_entry_rate_only_leaves_amount_and_status(ctx):
+    s, u, plan = ctx
+    e = log_payment(s, plan=plan, user_id=u.id, amount_minor=100, occurred_at=_dt(),
+                    method="upi", funding_source="savings")
+    assert e.amount_status == "agreed"
+    update_ledger_entry(s, plan=plan, entry_id=e.id, acting_user_id=u.id,
+                        fx_rate_micro=22_222)
+    assert e.fx_rate_micro == 22_222
+    assert e.fx_counter_currency == "USD"   # set even when creation left it NULL
+    assert e.amount_minor == 100            # untouched
+    assert e.amount_status == "agreed"      # rate edit never re-opens confirmation

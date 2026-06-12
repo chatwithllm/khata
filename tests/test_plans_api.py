@@ -472,3 +472,18 @@ def test_payment_invalid_fx_rate_is_422(client):
             "amount": "1,000", "method": "upi", "funding_source": "savings",
             "fx_rate_micro": bad})
         assert r.status_code == 422, f"{bad!r} should be 422, got {r.status_code}"
+
+
+def test_patch_entry_fx_rate(client):
+    _register(client)
+    pid = client.post("/api/plans", json={
+        "name": "P", "currency": "INR", "total_price": "1,00,000"}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{pid}/payments", json={
+        "amount": "1,000", "method": "upi", "funding_source": "savings"})
+    eid = client.get(f"/api/plans/{pid}").get_json()["state"]["ledger"][0]["id"]
+    r = client.patch(f"/api/plans/{pid}/entries/{eid}", json={"fx_rate_micro": 11_364})
+    assert r.status_code == 200
+    assert client.patch(f"/api/plans/{pid}/entries/{eid}",
+                        json={"fx_rate_micro": -1}).status_code == 422
+    assert client.patch(f"/api/plans/{pid}/entries/{eid}",
+                        json={"fx_rate_micro": "x"}).status_code == 422

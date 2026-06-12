@@ -394,8 +394,13 @@ def update_entry(plan_id, entry_id):
             fields["logged_by_user_id"] = _payer_uid(plan, data, plan.owner_user_id)
         if "funding_plan_id" in data:
             fields["funding_plan_id"] = _funding_plan_id(data, user)
+        if "fx_rate_micro" in data:
+            fields["fx_rate_micro"] = _fx_rate_arg(data)
         assets.update_ledger_entry(g.db, plan=plan, entry_id=entry_id, acting_user_id=user.id, **fields)
         g.db.commit()
+    except _FxRateArgError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 422
     except (PlanError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
