@@ -12,6 +12,7 @@ import {
   TextInput,
   TextInputProps,
   TextProps,
+  useWindowDimensions,
   View,
   ViewProps,
 } from 'react-native';
@@ -28,17 +29,21 @@ export function Screen({
   scroll?: boolean;
   refreshControl?: React.ReactElement<any>;
 }) {
+  const { width } = useWindowDimensions();
+  // iPad / wide windows: cap the content column at 720pt and centre it via horizontal
+  // padding. Phones (width < 700) keep the standard 16pt gutter, unchanged.
+  const padH = width >= 700 ? Math.max(spacing.lg, (width - 720) / 2) : spacing.lg;
   if (!scroll) {
     return (
       <SafeAreaView style={styles.screen} edges={['top']}>
-        {children}
+        <View style={{ flex: 1, paddingHorizontal: padH }}>{children}</View>
       </SafeAreaView>
     );
   }
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.scrollBody}
+        contentContainerStyle={[styles.scrollBody, { paddingHorizontal: padH }]}
         refreshControl={refreshControl}
         keyboardShouldPersistTaps="handled"
       >
