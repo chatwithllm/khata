@@ -266,6 +266,7 @@
     <div class="fld"><label for="edit-amount">Amount</label><input id="edit-amount" placeholder="16,667" inputmode="decimal"></div>
     <div class="fld"><label for="edit-occurred">Date (when it happened)</label><input id="edit-occurred" type="date"></div>
     <div class="fld"><label for="edit-note">Note (optional)</label><input id="edit-note" placeholder="month 6 subscription"></div>
+    <div class="fld" id="edit-fxrate-fld"><label for="edit-fxrate">FX rate · 1 USD = ₹</label><input id="edit-fxrate" placeholder="88.00" inputmode="decimal"></div>
     <div class="fld" id="proof-fld"><label>Proof (optional)</label><div id="proof-mount"></div></div>
     <div class="err" id="edit-err"></div>
     <div class="acts"><button class="save" id="edit-save">Save changes</button><span class="cancel" id="edit-cancel">Cancel</span><span class="del" id="del-entry" style="margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
@@ -274,6 +275,7 @@
 
 <script src="/static/assets/sharing.js"></script>
 <script src="/static/assets/attach.js"></script>
+<script src="/static/assets/fx.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const pid = parseInt(location.pathname.split("/").pop(), 10);
@@ -587,6 +589,8 @@ function renderLedger(box, st){
     const ss=el('span','symword'); ss.textContent=pfx+sym(BASE); aw.append(ss);
     const nn=el('span'); nn.textContent=fmtNum(Math.abs(e.amount_minor), BASE); aw.append(nn);
     amt.append(aw);
+    const fxl = fxLine(e, BASE);
+    if(fxl) amt.append(fxl);
     // ✎ edit affordance — opens the edit slide-over pre-filled from this entry
     if(e.id!=null){
       const edit=el('span','proof','✎ edit');
@@ -764,6 +768,8 @@ function openEdit(e){
   $('edit-amount').value=(Math.abs(e.amount_minor||0)/100);
   $('edit-note').value=e.note||'';
   $('edit-occurred').value=(e.occurred_at||'').slice(0,10);
+  $('edit-fxrate').value = fxNaturalFromMicro(e.fx_rate_micro, BASE);
+  $('edit-fxrate').dataset.initial = $('edit-fxrate').value;
   $('edit-osub').textContent='in '+($('name').textContent||'this chit');
   mountAttachments($('proof-mount'), { planId: pid, entryId: e.id,
     canModify: true, onChange: ()=>{ boot(); } });
@@ -888,6 +894,12 @@ $('edit-save').addEventListener('click', async ()=>{
   $('edit-err').textContent='';
   const occ = $('edit-occurred').value ? $('edit-occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift
   const body={ amount:$('edit-amount').value, occurred_at:occ, note:($('edit-note').value || null) };
+  // explicit FX rate: send only when edited and non-empty (clearing = leave unchanged)
+  const fv=$('edit-fxrate').value.trim();
+  if(fv && fv!==$('edit-fxrate').dataset.initial){
+    const micro=fxMicroFromNatural(fv, BASE);
+    if(micro) body.fx_rate_micro = micro;
+  }
   const r=await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   if(r.ok){ closeEdit(); boot(); return; }
   const e=await r.json().catch(()=>({}));

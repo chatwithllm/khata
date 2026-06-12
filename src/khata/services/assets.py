@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from ..models import Plan, AssetPurchase, Installment, LedgerEntry, User
 from ..money import SUPPORTED_CURRENCIES
+from . import fx
 
 METHODS = {"cash", "upi", "transfer", "cheque"}
 SOURCES = {"savings", "loan", "borrowed", "sold_asset", "chit_payout", "other"}
@@ -59,7 +60,7 @@ def set_installments(session: Session, *, plan: Plan, items) -> None:
 
 def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred_at,
                 method, funding_source, direction="out", proof_ref=None, note=None,
-                acting_user_id=None, funding_plan_id=None) -> LedgerEntry:
+                acting_user_id=None, funding_plan_id=None, fx_rate_micro=None) -> LedgerEntry:
     if amount_minor <= 0:
         raise ValidationError("amount must be > 0")
     if method not in METHODS:
@@ -75,13 +76,15 @@ def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred
                         funding_plan_id=funding_plan_id)
     session.add(entry)
     session.flush()
+    fx.snapshot_entry_rate(session, entry, explicit_rate_micro=fx_rate_micro)
     return entry
 
 
 def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
                         amount_minor=None, occurred_at=None, method=None,
                         funding_source=None, note=None, logged_by_user_id=None,
-                        acting_user_id=None, funding_plan_id=_UNSET) -> LedgerEntry:
+                        acting_user_id=None, funding_plan_id=_UNSET,
+                        fx_rate_micro=None) -> LedgerEntry:
     """Edit an existing ledger entry in-place (owner-only at the API layer).
     Only the provided fields change; kind/direction stay immutable. Derived
     balances recompute on the next *_state call (balances are never stored).
@@ -114,6 +117,11 @@ def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
         entry.logged_by_user_id = logged_by_user_id
     if funding_plan_id is not _UNSET:
         entry.funding_plan_id = funding_plan_id      # may be None to unlink
+    if fx_rate_micro is not None:
+        # rate is metadata about the entry — editing it never touches amount,
+        # amount_status, or the confirmation loop (spec §4)
+        entry.fx_rate_micro = fx_rate_micro
+        entry.fx_counter_currency = fx.counter_currency_for(entry.currency)
     if amount_changed or attrib_changed:
         entry.amount_status = _amount_status_for(entry.logged_by_user_id, acting_user_id)
         entry.counter_amount_minor = None
@@ -326,7 +334,10 @@ def asset_state(session: Session, plan: Plan, viewer_id: int | None = None) -> d
          "funding_plan_name": _fplans.get(e.funding_plan_id, (None, None, False))[0],
          "funding_plan_type": _fplans.get(e.funding_plan_id, (None, None, False))[1],
          "funding_plan_accessible": _fplans.get(e.funding_plan_id, (None, None, False))[2],
-         "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor}
+         "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor,
+         "fx_rate_micro": e.fx_rate_micro, "fx_counter_currency": e.fx_counter_currency,
+         "counter_value_minor": (fx.convert(e.amount_minor, rate_micro=e.fx_rate_micro)
+                                 if e.fx_rate_micro else None)}
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
     ]
 

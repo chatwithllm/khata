@@ -4,7 +4,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from ..models import Plan, User, LedgerEntry
 from ..money import format_minor, pct_to_bps, to_micro, to_minor
-from ..services import assets, chits, feed, holdings, loans, retirement, sharing
+from ..services import assets, chits, feed, fx, holdings, loans, retirement, sharing
 from ..services.assets import PlanError
 from ..services.loans import LoanError
 from ..services.holdings import HoldingError
@@ -33,13 +33,33 @@ def _parse_dt(v):
     return dt
 
 
+class _FxRateArgError(ValueError):
+    """Invalid explicit fx_rate_micro — maps to 422 (not the generic 400)."""
+
+
+def _fx_rate_arg(data):
+    """Optional explicit snapshot rate from the client: a positive int
+    (counter-per-entry ×1e6) or None. bool is an int in Python — reject it."""
+    v = data.get("fx_rate_micro")
+    if v is None:
+        return None
+    if isinstance(v, bool) or not isinstance(v, int) or v <= 0:
+        raise _FxRateArgError("fx_rate_micro must be a positive integer (×1e6)")
+    return v
+
+
 def _entry_json(entry, plan):
     return {"id": entry.id, "kind": entry.kind, "direction": entry.direction,
             "amount_minor": entry.amount_minor,
             "amount_display": format_minor(entry.amount_minor, plan.currency),
             "occurred_at": entry.occurred_at.isoformat(),
             "quantity_micro": entry.quantity_micro,
-            "method": entry.method, "funding_source": entry.funding_source}
+            "method": entry.method, "funding_source": entry.funding_source,
+            # FX snapshot (same trio as the state ledgers — counter value DERIVED)
+            "fx_rate_micro": entry.fx_rate_micro,
+            "fx_counter_currency": entry.fx_counter_currency,
+            "counter_value_minor": (fx.convert(entry.amount_minor, rate_micro=entry.fx_rate_micro)
+                                    if entry.fx_rate_micro else None)}
 
 
 def _summary(plan: Plan) -> dict:
@@ -340,8 +360,12 @@ def payment(plan_id):
             g.db, plan=plan, user_id=_payer_uid(plan, data, user.id), amount_minor=amount, occurred_at=occurred,
             method=data.get("method", ""), funding_source=data.get("funding_source", ""),
             proof_ref=data.get("proof_ref"), note=data.get("note"), acting_user_id=user.id,
-            funding_plan_id=_funding_plan_id(data, user))
+            funding_plan_id=_funding_plan_id(data, user),
+            fx_rate_micro=_fx_rate_arg(data))
         g.db.commit()
+    except _FxRateArgError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 422
     except (PlanError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
@@ -375,8 +399,13 @@ def update_entry(plan_id, entry_id):
             fields["logged_by_user_id"] = _payer_uid(plan, data, plan.owner_user_id)
         if "funding_plan_id" in data:
             fields["funding_plan_id"] = _funding_plan_id(data, user)
+        if "fx_rate_micro" in data:
+            fields["fx_rate_micro"] = _fx_rate_arg(data)
         assets.update_ledger_entry(g.db, plan=plan, entry_id=entry_id, acting_user_id=user.id, **fields)
         g.db.commit()
+    except _FxRateArgError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 422
     except (PlanError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
@@ -441,8 +470,12 @@ def loan_disbursement(plan_id):
             g.db, plan=plan, user_id=_payer_uid(plan, data, user.id),
             amount_minor=to_minor(data.get("amount", ""), plan.currency),
             occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"),
-            acting_user_id=user.id)
+            acting_user_id=user.id,
+            fx_rate_micro=_fx_rate_arg(data))
         g.db.commit()
+    except _FxRateArgError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 422
     except (LoanError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
@@ -551,8 +584,12 @@ def holding_buy(plan_id):
             g.db, plan=plan, user_id=user.id,
             quantity_micro=to_micro(data.get("quantity", "")),
             amount_minor=to_minor(data.get("amount", ""), plan.currency),
-            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"))
+            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"),
+            fx_rate_micro=_fx_rate_arg(data))
         g.db.commit()
+    except _FxRateArgError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 422
     except (HoldingError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
@@ -576,8 +613,12 @@ def holding_sell(plan_id):
             g.db, plan=plan, user_id=user.id,
             quantity_micro=to_micro(data.get("quantity", "")),
             amount_minor=to_minor(data.get("amount", ""), plan.currency),
-            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"))
+            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"),
+            fx_rate_micro=_fx_rate_arg(data))
         g.db.commit()
+    except _FxRateArgError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 422
     except (HoldingError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
@@ -702,8 +743,12 @@ def loan_entry(plan_id):
             g.db, plan=plan, user_id=_payer_uid(plan, data, user.id), kind=data.get("kind", ""),
             amount_minor=to_minor(data.get("amount", ""), plan.currency),
             occurred_at=_parse_dt(data.get("occurred_at")),
-            method=data.get("method"), note=data.get("note"), acting_user_id=user.id)
+            method=data.get("method"), note=data.get("note"), acting_user_id=user.id,
+            fx_rate_micro=_fx_rate_arg(data))
         g.db.commit()
+    except _FxRateArgError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 422
     except (LoanError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
@@ -726,8 +771,12 @@ def chit_entry(plan_id):
         entry = chits.log_chit_entry(
             g.db, plan=plan, user_id=user.id, kind=data.get("kind", ""),
             amount_minor=to_minor(data.get("amount", ""), plan.currency),
-            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"))
+            occurred_at=_parse_dt(data.get("occurred_at")), note=data.get("note"),
+            fx_rate_micro=_fx_rate_arg(data))
         g.db.commit()
+    except _FxRateArgError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 422
     except (ChitError, ValueError, TypeError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400

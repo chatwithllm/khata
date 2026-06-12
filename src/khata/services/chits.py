@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..models import Plan, Chit, LedgerEntry
 from ..money import SUPPORTED_CURRENCIES
+from . import fx
 
 CHIT_KINDS = {"chit_contribution", "chit_dividend", "chit_prize"}
 
@@ -49,7 +50,7 @@ def create_chit_plan(session: Session, *, owner_id, name, currency, chit_value_m
     return plan
 
 
-def log_chit_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor, occurred_at, note=None) -> LedgerEntry:
+def log_chit_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor, occurred_at, note=None, fx_rate_micro=None) -> LedgerEntry:
     if kind not in CHIT_KINDS:
         raise ValidationError(f"unknown chit kind: {kind}")
     if amount_minor <= 0:
@@ -59,6 +60,7 @@ def log_chit_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor,
                         amount_minor=amount_minor, currency=plan.currency, occurred_at=occurred_at, note=note)
     plan.ledger_entries.append(entry)
     session.flush()
+    fx.snapshot_entry_rate(session, entry, explicit_rate_micro=fx_rate_micro)
     return entry
 
 
@@ -109,7 +111,10 @@ def chit_state(session: Session, chit: Chit, as_of: date | None = None) -> dict:
                "created_at": e.created_at.isoformat() if e.created_at else None,
                "occurred_at": e.occurred_at.isoformat(), "note": e.note,
                "has_proof": bool(e.proof_ref) or bool(e.attachments),
-               "attachment_count": len(e.attachments)}
+               "attachment_count": len(e.attachments),
+               "fx_rate_micro": e.fx_rate_micro, "fx_counter_currency": e.fx_counter_currency,
+               "counter_value_minor": (fx.convert(e.amount_minor, rate_micro=e.fx_rate_micro)
+                                       if e.fx_rate_micro else None)}
               for e in plan.ledger_entries if e.kind in CHIT_KINDS]
     return {
         "currency": plan.currency, "chit_value_minor": chit.chit_value_minor,

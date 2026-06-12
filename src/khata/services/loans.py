@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..models import Plan, Loan, LedgerEntry, User
 from ..money import SUPPORTED_CURRENCIES
+from . import fx
 
 DIRECTIONS = {"given", "taken"}
 INTEREST_TYPES = {"none", "monthly", "yearly"}
@@ -135,7 +136,7 @@ def _direction_for(loan_direction: str, kind: str) -> str:
 
 
 def add_disbursement(session: Session, *, plan: Plan, user_id, amount_minor, occurred_at,
-                     note=None, acting_user_id=None) -> LedgerEntry:
+                     note=None, acting_user_id=None, fx_rate_micro=None) -> LedgerEntry:
     if amount_minor <= 0:
         raise ValidationError("amount must be > 0")
     from .assets import _amount_status_for
@@ -146,11 +147,12 @@ def add_disbursement(session: Session, *, plan: Plan, user_id, amount_minor, occ
                         amount_status=_amount_status_for(user_id, acting_user_id))
     session.add(entry)
     session.flush()
+    fx.snapshot_entry_rate(session, entry, explicit_rate_micro=fx_rate_micro)
     return entry
 
 
 def log_loan_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor, occurred_at,
-                   method=None, note=None, acting_user_id=None) -> LedgerEntry:
+                   method=None, note=None, acting_user_id=None, fx_rate_micro=None) -> LedgerEntry:
     if kind not in LOAN_ENTRY_KINDS:
         raise ValidationError(f"unknown loan entry kind: {kind}")
     if amount_minor <= 0:
@@ -163,6 +165,7 @@ def log_loan_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor,
                         amount_status=_amount_status_for(user_id, acting_user_id))
     session.add(entry)
     session.flush()
+    fx.snapshot_entry_rate(session, entry, explicit_rate_micro=fx_rate_micro)
     return entry
 
 
@@ -478,7 +481,10 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
          "has_proof": bool(e.proof_ref) or bool(e.attachments),
          "attachment_count": len(e.attachments),
          "logged_by_user_id": e.logged_by_user_id, "paid_by_name": _names.get(e.logged_by_user_id),
-         "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor}
+         "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor,
+         "fx_rate_micro": e.fx_rate_micro, "fx_counter_currency": e.fx_counter_currency,
+         "counter_value_minor": (fx.convert(e.amount_minor, rate_micro=e.fx_rate_micro)
+                                 if e.fx_rate_micro else None)}
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
     ]
 

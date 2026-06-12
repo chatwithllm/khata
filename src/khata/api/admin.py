@@ -4,13 +4,16 @@ Gated by `services.admin.is_admin`. All routes 403 for non-admins. The service l
 enforces the "always keep one enabled admin" invariant and the no-self-footgun rules.
 """
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 from urllib.parse import urljoin
 
 from flask import Blueprint, Response, current_app, g, jsonify, request
+from sqlalchemy import select
 
-from ..models import User
+from ..models import LedgerEntry, User
 from ..services import admin, backup_store
+from ..services import fx, fx_live
 from ..services.admin import AdminError
 from ..tokens import issue_invite
 from .auth import current_user
@@ -221,3 +224,42 @@ def delete_backup(name):
         return jsonify(error="not_found"), 404
     os.remove(path)
     return jsonify(ok=True), 200
+
+
+@bp.post("/fx-backfill")
+def fx_backfill():
+    """One-time idempotent FX backfill: stamp every NULL-rate ledger entry with
+    the frankfurter rate of its occurred_at date (weekend → nearest prior
+    business day). PROD DB WRITE — run manually, once, with explicit user
+    authorization (spec §7). Safe to re-run: non-NULL entries are skipped."""
+    _, err = _require_admin()
+    if err:
+        return err
+    skipped = len(g.db.scalars(
+        select(LedgerEntry.id).where(LedgerEntry.fx_rate_micro.is_not(None))).all())
+    entries = g.db.scalars(
+        select(LedgerEntry).where(LedgerEntry.fx_rate_micro.is_(None))).all()
+    if not entries:
+        return jsonify(filled=0, skipped=skipped, no_rate=0), 200
+    days = sorted(e.occurred_at.date() for e in entries)
+    # ONE range call: frankfurter base=USD → INR-per-USD per business day.
+    # Start 7 days early so rate_for_date can bridge a weekend/holiday-dated
+    # earliest entry (range lookups, unlike single-date, don't auto-bridge).
+    inr_per_usd = fx_live.fetch_range(days[0] - timedelta(days=7), days[-1], "USD", "INR")
+    micro2 = fx_live.MICRO * fx_live.MICRO
+    filled = no_rate = 0
+    for e in entries:
+        rate = fx_live.rate_for_date(inr_per_usd, e.occurred_at.date())
+        if not rate or e.currency not in ("INR", "USD"):
+            no_rate += 1
+            continue
+        if e.currency == "USD":
+            e.fx_rate_micro = rate                      # counter INR-per-USD, direct
+        else:
+            # INR entry → counter USD-per-INR = inverse, exact Decimal
+            e.fx_rate_micro = int((Decimal(micro2) / rate).quantize(
+                Decimal(1), rounding=ROUND_HALF_UP))
+        e.fx_counter_currency = fx.counter_currency_for(e.currency)
+        filled += 1
+    g.db.commit()
+    return jsonify(filled=filled, skipped=skipped, no_rate=no_rate), 200

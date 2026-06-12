@@ -173,6 +173,28 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-11 — Per-entry FX rate snapshots (live currency conversion).** Every ledger entry now
+  freezes the exchange rate at log time so its counter-currency value is exact forever (spec
+  `docs/specs/2026-06-11-fx-snapshot-design.md`). `ledger_entries.fx_rate_micro` (counter-per-entry
+  ×1e6) + `fx_counter_currency` + single-row `fx_refresh_state` claim table, migration `fxsnapshot01`.
+  New stdlib-only `services/fx_live.py` frankfurter.app client (ECB daily fixes; swallows every
+  failure → None/{}; NOTE its direction is quote-per-base — the OPPOSITE of `fx.get_rate`'s
+  base-per-quote). Snapshot fallback chain in `fx.snapshot_entry_rate`: explicit client rate →
+  live fetch for the entry's occurred_at date → stored Settings rate → NULL (never blocks a save).
+  Hooked into all six entry-creating services (asset payment, loan disbursement/entry, holding
+  buy/sell, chit entry). API: create + PATCH entry accept `fx_rate_micro` (positive int else 422);
+  PATCH is metadata-only — editing the rate never re-opens amount confirmation. The counter value is
+  always DERIVED via `fx.convert` (`counter_value_minor` in state ledgers), never stored. Dashboard
+  paid-to-date converts per-entry: same-currency passthrough → entry snapshot → current rate (NULL
+  entries keep old behavior). Hourly scheduler tick claims one daily refresh atomically across
+  gunicorn workers (`fx.claim_daily_refresh`, claim released on fetch failure for same-day retry)
+  and stores USD/INR via `fx.set_rate` in the Settings-compatible direction. Admin
+  `POST /api/admin/fx-backfill` stamps historical NULL-rate entries from ONE frankfurter range call
+  (weekend → walk back ≤7 days; INR entries get the exact Decimal inverse) — **prod DB write: run
+  once, manually, only on explicit user authorization**. UI: `assets/fx.js` renders a quiet mono
+  "$568.20 @ ₹88.00/$" line under ledger amounts on asset/loan/chit detail; the three edit forms
+  gain an FX-rate field prefilled in natural direction (1 USD = ₹) that PATCHes only when edited
+  non-empty; Settings FX hint documents the daily auto-refresh.
 - **2026-06-06 — Tablet & mobile responsive shell.** The fixed 240px sidebar became an **off-canvas drawer** at ≤880px: a hamburger (injected into every topbar by the shared `static/assets/nav.js`) toggles `.nav-open` on `.app`, sliding the sidebar in over a scrim (Esc / scrim / nav-tap closes). Topbar shrinks + the greeting truncates so the actions stay; content/panel padding reduces; `.kpis` and dashboard `.stats` stack to one column on phones; the loans list drops its secondary interest/mo column (`.pr-icol`) on phones. `nav.js` added to all app pages (guards on `.app`/`.top`/`.side`); responsive `@media` overrides kept at the END of app.css so they beat the base shell rules. (Landing page already had its own responsive.)
 - **2026-06-06 — Fund a contribution from a loan (cross-plan money chain).** Real flow: you borrow ₹10L → it becomes your asset contribution → you repay the loan. The asset payment now links to its source loan via `ledger_entries.funding_plan_id` (link-only — the loan disbursement and the asset payment stay separate real events; no double-count). Asset log-payment shows a **“from which loan”** picker when funding source is loan/borrowed; the asset ledger row shows a **“↗ <loan>”** link; loan-detail gains a **“Deployed into”** panel listing where the borrowed money went + total put to work. Payoff is the existing principal_repayment flow. `loan_state` gains `deployed[]`/`deployed_total_minor`; `asset_state.ledger` rows gain `funding_plan_id/name/type`. (Plan.ledger_entries relationship pinned to plan_id FK to disambiguate the new second FK.)
 - **2026-06-06 — Differentiable plan rows in the list (esp. loans).** The dashboard "Your plans" / filtered
@@ -353,6 +375,15 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-11 — FX rate snapshots: every ledger entry freezes its exchange rate at log time
+  (`fx_rate_micro`/`fx_counter_currency`, migration `fxsnapshot01`), editable later (PATCH, 422 on
+  bad rate, never re-opens confirmation). Live rates from frankfurter.app (`services/fx_live.py`,
+  fallback chain explicit→live→Settings→NULL); hourly scheduler claims one daily USD/INR refresh
+  atomically (`fx_refresh_state`); dashboard paid-to-date converts per-entry snapshot-first; admin
+  `POST /api/admin/fx-backfill` for historical entries (prod write — manual, once, on explicit
+  authorization). UI: fx line under ledger amounts (asset/loan/chit) via `assets/fx.js`, FX-rate
+  field in the three edit forms, Settings hint notes the daily ECB refresh. Spec
+  `docs/specs/2026-06-11-fx-snapshot-design.md`; full detail in §9.
 - 2026-06-11 — Responsive pass (phone/tablet/desktop, evidence-first audit via headless Chrome at
   320/375/768/1440 across all 14 pages — zero horizontal overflow found; fixes confined to touch
   targets and micro-type). All tap-size fixes ship under `@media(pointer:coarse)` so desktop pointer

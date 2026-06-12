@@ -1,10 +1,12 @@
+from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
-from sqlalchemy import select
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
-from ..models import FxRate
+from ..models import FxRate, FxRefreshState
 from ..money import SUPPORTED_CURRENCIES
+from . import fx_live
 
 MICRO = 1_000_000
 
@@ -72,3 +74,68 @@ def set_rate(session: Session, *, base: str, quote: str, rate_micro: int, as_of)
     session.add(row)
     session.flush()
     return row
+
+
+def counter_currency_for(currency: str) -> str:
+    """The other member of SUPPORTED_CURRENCIES. Two-currency assumption lives
+    HERE only (spec §3): if support grows, this becomes the user's base currency."""
+    others = SUPPORTED_CURRENCIES - {(currency or "").upper()}
+    return next(iter(others))
+
+
+def snapshot_entry_rate(session: Session, entry, explicit_rate_micro: int | None = None) -> None:
+    """Stamp entry.fx_rate_micro / fx_counter_currency (counter-per-entry ×1e6).
+    Fallback chain: explicit client rate > frankfurter at occurred_at date >
+    stored manual rate (inverted to entry→counter) > None. Never raises —
+    entry creation must not block on FX (spec §3, §9)."""
+    counter = counter_currency_for(entry.currency)
+    rate = int(explicit_rate_micro) if explicit_rate_micro else None
+    if rate is None:
+        try:
+            rate = fx_live.fetch_rate(entry.occurred_at.date(),
+                                      base=entry.currency, quote=counter)
+        except Exception:
+            rate = None
+    if rate is None:
+        # get_rate(X, Y) = X-per-Y; counter-per-entry = get_rate(counter, entry ccy).
+        # Handles inversion of the canonical INR/USD row internally.
+        rate = get_rate(session, counter, entry.currency)
+    if rate:
+        entry.fx_rate_micro = rate
+        entry.fx_counter_currency = counter
+
+
+def _refresh_state(session: Session) -> "FxRefreshState":
+    """Get-or-create the single claim row (id=1). create_all'd DBs have no seed row."""
+    row = session.get(FxRefreshState, 1)
+    if row is None:
+        row = FxRefreshState(id=1)
+        session.add(row)
+        session.commit()
+    return row
+
+
+def refresh_last_run(session: Session) -> "datetime | None":
+    return _refresh_state(session).last_run_at
+
+
+def claim_daily_refresh(session: Session, *, now: datetime) -> bool:
+    """Atomically claim today's live-FX refresh (mirrors backup_store.claim_due):
+    the UPDATE's WHERE makes exactly one concurrent caller win per calendar day."""
+    _refresh_state(session)
+    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    res = session.execute(
+        update(FxRefreshState).where(
+            FxRefreshState.id == 1,
+            or_(FxRefreshState.last_run_at.is_(None),
+                FxRefreshState.last_run_at < start_of_day),
+        ).values(last_run_at=now))
+    session.commit()
+    return res.rowcount == 1
+
+
+def release_refresh_claim(session: Session, *, previous) -> None:
+    """Give the slot back after a failed fetch so a later hourly tick retries today."""
+    session.execute(update(FxRefreshState).where(FxRefreshState.id == 1)
+                    .values(last_run_at=previous))
+    session.commit()

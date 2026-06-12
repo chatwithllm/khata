@@ -451,3 +451,43 @@ def test_funding_link_cross_currency(client):
     assert st["deployed"][0]["currency"] == "INR" and st["deployed"][0]["amount_minor"] == 100000000
     assert st["deployed_totals"] == [{"currency": "INR", "total_minor": 100000000}]
     assert st["deployed_total_minor"] == 0   # nothing in the loan's own (USD) currency
+
+
+def test_payment_with_explicit_fx_rate(client):
+    _register(client)
+    pid = client.post("/api/plans", json={
+        "name": "P", "currency": "INR", "total_price": "1,00,000"}).get_json()["plan"]["id"]
+    r = client.post(f"/api/plans/{pid}/payments", json={
+        "amount": "50,000", "method": "upi", "funding_source": "savings",
+        "fx_rate_micro": 11_364})
+    assert r.status_code == 201
+    state = r.get_json()["state"]
+    row = state["ledger"][0]
+    assert row["fx_rate_micro"] == 11_364
+    assert row["fx_counter_currency"] == "USD"
+
+
+def test_payment_invalid_fx_rate_is_422(client):
+    _register(client)
+    pid = client.post("/api/plans", json={
+        "name": "P", "currency": "INR", "total_price": "1,00,000"}).get_json()["plan"]["id"]
+    for bad in (0, -5, "88", 1.5, True):
+        r = client.post(f"/api/plans/{pid}/payments", json={
+            "amount": "1,000", "method": "upi", "funding_source": "savings",
+            "fx_rate_micro": bad})
+        assert r.status_code == 422, f"{bad!r} should be 422, got {r.status_code}"
+
+
+def test_patch_entry_fx_rate(client):
+    _register(client)
+    pid = client.post("/api/plans", json={
+        "name": "P", "currency": "INR", "total_price": "1,00,000"}).get_json()["plan"]["id"]
+    client.post(f"/api/plans/{pid}/payments", json={
+        "amount": "1,000", "method": "upi", "funding_source": "savings"})
+    eid = client.get(f"/api/plans/{pid}").get_json()["state"]["ledger"][0]["id"]
+    r = client.patch(f"/api/plans/{pid}/entries/{eid}", json={"fx_rate_micro": 11_364})
+    assert r.status_code == 200
+    assert client.patch(f"/api/plans/{pid}/entries/{eid}",
+                        json={"fx_rate_micro": -1}).status_code == 422
+    assert client.patch(f"/api/plans/{pid}/entries/{eid}",
+                        json={"fx_rate_micro": "x"}).status_code == 422
