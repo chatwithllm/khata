@@ -274,6 +274,7 @@
 
 <script src="/static/assets/sharing.js"></script>
 <script src="/static/assets/attach.js"></script>
+<script src="/static/assets/fx.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const pid = parseInt(location.pathname.split("/").pop(), 10);
@@ -587,6 +588,8 @@ function renderLedger(box, st){
     const ss=el('span','symword'); ss.textContent=pfx+sym(BASE); aw.append(ss);
     const nn=el('span'); nn.textContent=fmtNum(Math.abs(e.amount_minor), BASE); aw.append(nn);
     amt.append(aw);
+    const fxl = fxLine(e, BASE);
+    if(fxl) amt.append(fxl);
     // ✎ edit affordance — opens the edit slide-over pre-filled from this entry
     if(e.id!=null){
       const edit=el('span','proof','✎ edit');

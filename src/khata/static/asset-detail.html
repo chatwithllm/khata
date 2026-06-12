@@ -162,6 +162,7 @@
 
 <script src="/static/assets/sharing.js"></script>
 <script src="/static/assets/attach.js"></script>
+<script src="/static/assets/fx.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const pid = parseInt(location.pathname.split("/").pop(), 10);
@@ -428,6 +429,8 @@ function renderLedger(box, st){
       const pctTxt = (raw>0 && raw<1) ? '<1% of total' : (Math.round(raw)+'% of total');
       amt.append(el('span','amt-pct', pctTxt));
     }
+    const fxl = fxLine(lr, BASE);
+    if(fxl) amt.append(fxl);
     row.append(amt);
 
     // l2 — date · time, then (on shared plans) the contributor's avatar + name
