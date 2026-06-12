@@ -381,6 +381,20 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-12 — Loan-detail honors the global primary-currency preference. Previously the
+  loan-detail page pinned its display to the loan's native currency (`BASE = plan.currency`)
+  and the currency toggle was hidden — so an INR loan stayed ₹ even when the dashboard
+  primary currency was USD. Now the page keeps `BASE` = the loan's native currency (for
+  semantics: collateral-holding filter, per-entry fx editing, the `· INR` truth label) and
+  adds a separate display layer: `DISP` = the user's `base_currency` preference, `FXR_MICRO`
+  = the BASE→DISP rate (from `/api/fx-rates`; factor = DISP-per-BASE, inverting the stored
+  rate when only the reverse is on file), and `conv(minor)`. The amount chokepoints
+  (`amtSpan`, the gold "rate at loan time") convert native→display, so principal, interest,
+  ledger, the repayment schedule incl. running-due/owed, glance, and collateral all follow
+  the toggle. The **payoff projection panel stays native** — its inputs (`extra`/`lump`) feed
+  native-currency server math. The currency toggle is re-enabled (same `/api/base-currency`
+  POST + reload as the dashboard). No fx rate on file → graceful fallback to native. No
+  backend change.
 - 2026-06-12 — Loan running totals. `loan_state` schedule rows now carry `cum_due_minor`
   (cumulative unpaid interest through that month, net of payments), `principal_minor` (the
   month's opening principal), and `total_owed_minor` (principal + cumulative pending). The
