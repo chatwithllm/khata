@@ -752,7 +752,9 @@ async function boot(){
       const outTot=el('div'); outTot.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:13px;min-width:112px;text-align:right;color:'+accent;
       tw.append(intTot, outTot);
       h.append(lft, tw); plist.append(h);
-      return {outEl:outTot, intEl:intTot};
+      const subrow=el('div'); subrow.style.cssText='display:flex;justify-content:flex-end;padding:0 22px 8px;font-family:"JetBrains Mono";font-size:11px;color:var(--ink-faint)';
+      plist.append(subrow);
+      return {outEl:outTot, intEl:intTot, subEl:subrow};
     }
     let aggs=[];
     if(typeFilter==='loan'){
@@ -767,7 +769,7 @@ async function boot(){
       for(const g of groups){
         if(!g.arr.length) continue;
         const els=groupHeader(g.label, g.sub, g.accent, first); first=false;
-        const agg={sum:0, interest:0, outEl:els.outEl, intEl:els.intEl, ccy:'INR', taken:g.taken};
+        const agg={sum:0, interest:0, pend:0, owed:0, outEl:els.outEl, intEl:els.intEl, subEl:els.subEl, ccy:'INR', taken:g.taken};
         aggs.push(agg);
         g.arr.forEach(p=> makeRow(p, agg));
       }
@@ -810,6 +812,12 @@ async function boot(){
                  cap.style.color = ltv>75 ? '#a96a00' : (ltv<=60 ? 'var(--pos)' : 'var(--ink-faint)'); }
         } else { cap.textContent='outstanding'; }
         outCol.insertBefore(cap, ar);
+        const idue=st.interest_due_minor||0, owed=st.total_minor||0;
+        if(idue>0){
+          const pc=el('div'); pc.style.cssText='font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"';
+          pc.textContent='pending int '+fmtB(idue,ccy)+' · owed '+fmtB(owed,ccy);
+          outCol.insertBefore(pc, ar);
+        }
         const mi=monthlyInterestMinor(out, p.rate_bps, p.interest_type);
         const taken=(p.direction!=='given');
         if(!mi){ intAmt.textContent='—'; intAmt.style.color='var(--ink-faint)'; }
@@ -817,8 +825,10 @@ async function boot(){
         if(groupAgg){
           // accumulate in BASE so a cross-currency subtotal is valid (not a raw sum)
           groupAgg.sum+=toBase(out,ccy)[0]; groupAgg.interest+=toBase(mi,ccy)[0]; groupAgg.ccy=BASE;
+          groupAgg.pend+=toBase(idue,ccy)[0]; groupAgg.owed+=toBase(owed,ccy)[0];
           groupAgg.outEl.textContent=fmt(groupAgg.sum, BASE);
           groupAgg.intEl.textContent=(groupAgg.taken?'−':'+')+fmt(groupAgg.interest, BASE)+'/mo';
+          groupAgg.subEl.textContent='pending int '+fmt(groupAgg.pend, BASE)+' · owed '+fmt(groupAgg.owed, BASE);
         }
       }catch(e){}
     })).then(()=>{
