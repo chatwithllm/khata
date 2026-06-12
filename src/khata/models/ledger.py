@@ -38,6 +38,11 @@ class LedgerEntry(Base):
     # toward plan totals; this status only flags attribution accuracy.
     amount_status: Mapped[str] = mapped_column(String(12), nullable=False, server_default="agreed")
     counter_amount_minor: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # FX snapshot: counter-currency units per 1 entry-currency unit, ×1e6, captured at
+    # log time (editable later). NULL = no rate known. The counter value is always
+    # DERIVED (services/fx.convert) — never stored. See docs/specs/2026-06-11-fx-snapshot-design.md.
+    fx_rate_micro: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    fx_counter_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     plan: Mapped["Plan"] = relationship(back_populates="ledger_entries", foreign_keys=[plan_id])
