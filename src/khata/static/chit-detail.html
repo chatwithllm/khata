@@ -162,6 +162,13 @@
 .acts .cancel:hover{color:var(--ink)}
 /* phone micro-type floor (responsive pass) */
 @media(max-width:560px){ .chit-badges .pill,.over .eyebrow{font-size:11px} }
+/* plan-level actions (delete) — ghost button, right of the meta (loan-detail pattern) */
+.planacts{display:flex;gap:8px;align-items:center;flex:none}
+.planacts .plandel{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer;user-select:none;transition:border-color .2s,color .2s,background .2s}
+.planacts svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.planacts .plandel:hover{border-color:var(--neg);color:var(--neg);background:color-mix(in srgb,var(--neg) 6%,transparent)}
+@media(pointer:coarse){ .planacts .plandel{min-height:44px;padding:10px 14px} }
+.ph-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -327,7 +334,15 @@ function renderHeader(box, plan, st, isOwner){
   const nm=el('span'); nm.textContent=plan.name; t.append(nm);
   if(st.won) t.append(el('span','wonbadge','Prize won'));
   const commPct=(st.commission_bps/100);
-  ph.append(t, el('div','meta', 'auction · monthly'));
+  const SVGNS='http://www.w3.org/2000/svg';
+  const icon=(d)=>{ const s=document.createElementNS(SVGNS,'svg'); s.setAttribute('viewBox','0 0 24 24'); const p=document.createElementNS(SVGNS,'path'); p.setAttribute('d',d); s.append(p); return s; };
+  const actBtn=(cls, label, dPath, fn)=>{ const b=el('span',cls); b.tabIndex=0; b.setAttribute('role','button'); b.append(icon(dPath), document.createTextNode(label));
+    b.addEventListener('click', fn); b.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); fn(); } }); return b; };
+  const acts=el('div','planacts');
+  acts.append(actBtn('plandel','Delete','M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6', deletePlan));
+  const right=el('div','ph-right');
+  right.append(el('div','meta', 'auction · monthly'), acts);
+  ph.append(t, right);
   box.append(ph);
 
   // 7.1: badge pills backed by REAL signals only — never an invented role.
@@ -802,6 +817,15 @@ function renderNotFound(){
   card.append(back);
   wrap.append(card);
   content.append(wrap);
+}
+
+// ── delete the whole chit plan ──
+async function deletePlan(){
+  if(!confirm('Delete this chit and all its entries? This cannot be undone.')) return;
+  const r = await fetch('/api/plans/'+pid, { method:'DELETE' });
+  if(r.ok){ window.location.href='/app'; return; }
+  const e = await r.json().catch(()=>({}));
+  alert(e.detail || e.error || 'Could not delete this chit.');
 }
 
 // ── boot ──

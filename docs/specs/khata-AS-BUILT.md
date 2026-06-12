@@ -379,6 +379,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-11 — Plan Delete button added to asset, chit, holding, and retirement detail pages (loan-detail already had it). All five detail pages now show a ghost Delete button in the page header, visible to any viewer; `DELETE /api/plans/<id>` enforces owner-only (a member's click receives an error alert). Closes the gap that left restore-duplicated assets undeletable.
 - 2026-06-11 — Restore is now replace (wipe + load), was merge. `POST /api/restore` wipes every backed-up
   table then loads verbatim (original ids preserved); re-importing a backup no longer duplicates plans.
   `backup_config`/`fx_refresh_state` left untouched; backups with no users rejected (400); operator
