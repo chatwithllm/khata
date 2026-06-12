@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..models import FxRate
 from ..money import SUPPORTED_CURRENCIES
+from . import fx_live
 
 MICRO = 1_000_000
 
@@ -72,3 +73,32 @@ def set_rate(session: Session, *, base: str, quote: str, rate_micro: int, as_of)
     session.add(row)
     session.flush()
     return row
+
+
+def counter_currency_for(currency: str) -> str:
+    """The other member of SUPPORTED_CURRENCIES. Two-currency assumption lives
+    HERE only (spec §3): if support grows, this becomes the user's base currency."""
+    others = SUPPORTED_CURRENCIES - {(currency or "").upper()}
+    return next(iter(others))
+
+
+def snapshot_entry_rate(session: Session, entry, explicit_rate_micro: int | None = None) -> None:
+    """Stamp entry.fx_rate_micro / fx_counter_currency (counter-per-entry ×1e6).
+    Fallback chain: explicit client rate > frankfurter at occurred_at date >
+    stored manual rate (inverted to entry→counter) > None. Never raises —
+    entry creation must not block on FX (spec §3, §9)."""
+    counter = counter_currency_for(entry.currency)
+    rate = int(explicit_rate_micro) if explicit_rate_micro else None
+    if rate is None:
+        try:
+            rate = fx_live.fetch_rate(entry.occurred_at.date(),
+                                      base=entry.currency, quote=counter)
+        except Exception:
+            rate = None
+    if rate is None:
+        # get_rate(X, Y) = X-per-Y; counter-per-entry = get_rate(counter, entry ccy).
+        # Handles inversion of the canonical INR/USD row internally.
+        rate = get_rate(session, counter, entry.currency)
+    if rate:
+        entry.fx_rate_micro = rate
+        entry.fx_counter_currency = counter
