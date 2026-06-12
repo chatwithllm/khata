@@ -1,9 +1,10 @@
+from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 
-from sqlalchemy import select
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
-from ..models import FxRate
+from ..models import FxRate, FxRefreshState
 from ..money import SUPPORTED_CURRENCIES
 from . import fx_live
 
@@ -102,3 +103,39 @@ def snapshot_entry_rate(session: Session, entry, explicit_rate_micro: int | None
     if rate:
         entry.fx_rate_micro = rate
         entry.fx_counter_currency = counter
+
+
+def _refresh_state(session: Session) -> "FxRefreshState":
+    """Get-or-create the single claim row (id=1). create_all'd DBs have no seed row."""
+    row = session.get(FxRefreshState, 1)
+    if row is None:
+        row = FxRefreshState(id=1)
+        session.add(row)
+        session.commit()
+    return row
+
+
+def refresh_last_run(session: Session) -> "datetime | None":
+    return _refresh_state(session).last_run_at
+
+
+def claim_daily_refresh(session: Session, *, now: datetime) -> bool:
+    """Atomically claim today's live-FX refresh (mirrors backup_store.claim_due):
+    the UPDATE's WHERE makes exactly one concurrent caller win per calendar day."""
+    _refresh_state(session)
+    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    res = session.execute(
+        update(FxRefreshState).where(
+            FxRefreshState.id == 1,
+            or_(FxRefreshState.last_run_at.is_(None),
+                FxRefreshState.last_run_at < start_of_day),
+        ).values(last_run_at=now))
+    session.commit()
+    return res.rowcount == 1
+
+
+def release_refresh_claim(session: Session, *, previous) -> None:
+    """Give the slot back after a failed fetch so a later hourly tick retries today."""
+    session.execute(update(FxRefreshState).where(FxRefreshState.id == 1)
+                    .values(last_run_at=previous))
+    session.commit()
