@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from ..models import Plan, AssetPurchase, Installment, LedgerEntry, User
 from ..money import SUPPORTED_CURRENCIES
+from . import fx
 
 METHODS = {"cash", "upi", "transfer", "cheque"}
 SOURCES = {"savings", "loan", "borrowed", "sold_asset", "chit_payout", "other"}
@@ -59,7 +60,7 @@ def set_installments(session: Session, *, plan: Plan, items) -> None:
 
 def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred_at,
                 method, funding_source, direction="out", proof_ref=None, note=None,
-                acting_user_id=None, funding_plan_id=None) -> LedgerEntry:
+                acting_user_id=None, funding_plan_id=None, fx_rate_micro=None) -> LedgerEntry:
     if amount_minor <= 0:
         raise ValidationError("amount must be > 0")
     if method not in METHODS:
@@ -75,6 +76,7 @@ def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred
                         funding_plan_id=funding_plan_id)
     session.add(entry)
     session.flush()
+    fx.snapshot_entry_rate(session, entry, explicit_rate_micro=fx_rate_micro)
     return entry
 
 

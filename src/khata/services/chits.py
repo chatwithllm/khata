@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..models import Plan, Chit, LedgerEntry
 from ..money import SUPPORTED_CURRENCIES
+from . import fx
 
 CHIT_KINDS = {"chit_contribution", "chit_dividend", "chit_prize"}
 
@@ -49,7 +50,7 @@ def create_chit_plan(session: Session, *, owner_id, name, currency, chit_value_m
     return plan
 
 
-def log_chit_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor, occurred_at, note=None) -> LedgerEntry:
+def log_chit_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor, occurred_at, note=None, fx_rate_micro=None) -> LedgerEntry:
     if kind not in CHIT_KINDS:
         raise ValidationError(f"unknown chit kind: {kind}")
     if amount_minor <= 0:
@@ -59,6 +60,7 @@ def log_chit_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor,
                         amount_minor=amount_minor, currency=plan.currency, occurred_at=occurred_at, note=note)
     plan.ledger_entries.append(entry)
     session.flush()
+    fx.snapshot_entry_rate(session, entry, explicit_rate_micro=fx_rate_micro)
     return entry
 
 

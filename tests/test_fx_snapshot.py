@@ -59,6 +59,8 @@ def test_fx_refresh_state_roundtrip(s):
     assert row.last_run_at is None
 
 
+from datetime import date
+
 from khata.models import LedgerEntry as LE
 from khata.services import fx
 from khata.services.fx import counter_currency_for, set_rate, snapshot_entry_rate
@@ -129,3 +131,64 @@ def test_snapshot_usd_entry_gets_inr_counter(ctx):
     snapshot_entry_rate(s, e)
     assert e.fx_rate_micro == 88_000_000
     assert e.fx_counter_currency == "INR"
+
+
+# ---------------------------------------------------------------------------
+# Task 4: hook tests — every entry-creation path must stamp fx snapshot
+# ---------------------------------------------------------------------------
+
+from khata.services.assets import log_payment
+from khata.services.chits import create_chit_plan, log_chit_entry
+from khata.services.holdings import add_buy, create_holding_plan
+from khata.services.loans import add_disbursement, create_loan_plan, log_loan_entry
+
+
+def test_log_payment_snapshots(ctx):
+    s, u, plan = ctx
+    set_rate(s, base="INR", quote="USD", rate_micro=80_000_000, as_of=_dt())
+    e = log_payment(s, plan=plan, user_id=u.id, amount_minor=100, occurred_at=_dt(),
+                    method="upi", funding_source="savings")
+    assert e.fx_rate_micro == 12_500          # stored-rate fallback, USD-per-INR
+    assert e.fx_counter_currency == "USD"
+
+
+def test_log_payment_explicit_rate(ctx):
+    s, u, plan = ctx
+    e = log_payment(s, plan=plan, user_id=u.id, amount_minor=100, occurred_at=_dt(),
+                    method="upi", funding_source="savings", fx_rate_micro=11_111)
+    assert e.fx_rate_micro == 11_111
+
+
+def test_holding_buy_snapshots(ctx):
+    s, u, _ = ctx
+    set_rate(s, base="INR", quote="USD", rate_micro=80_000_000, as_of=_dt())
+    hp = create_holding_plan(s, owner_id=u.id, name="Gold", currency="INR",
+                             asset_class="gold", unit="gram")
+    e = add_buy(s, plan=hp, user_id=u.id, quantity_micro=1_000_000,
+                amount_minor=700_000, occurred_at=_dt())
+    assert e.fx_rate_micro == 12_500
+    assert e.fx_counter_currency == "USD"
+
+
+def test_loan_entries_snapshot(ctx):
+    s, u, _ = ctx
+    set_rate(s, base="INR", quote="USD", rate_micro=80_000_000, as_of=_dt())
+    lp = create_loan_plan(s, owner_id=u.id, name="GL", currency="INR", direction="taken",
+                          interest_type="none", rate_bps=0, start_date=date(2026, 1, 1))
+    d = add_disbursement(s, plan=lp, user_id=u.id, amount_minor=10_000_000, occurred_at=_dt())
+    r = log_loan_entry(s, plan=lp, user_id=u.id, kind="principal_repayment",
+                       amount_minor=1_000_000, occurred_at=_dt())
+    assert d.fx_rate_micro == 12_500 and d.fx_counter_currency == "USD"
+    assert r.fx_rate_micro == 12_500 and r.fx_counter_currency == "USD"
+
+
+def test_chit_entry_snapshots(ctx):
+    s, u, _ = ctx
+    set_rate(s, base="INR", quote="USD", rate_micro=80_000_000, as_of=_dt())
+    cp = create_chit_plan(s, owner_id=u.id, name="Chit", currency="INR",
+                          chit_value_minor=100_000_000, n_members=20,
+                          commission_bps=500, start_date=date(2026, 1, 1))
+    e = log_chit_entry(s, plan=cp, user_id=u.id, kind="chit_contribution",
+                       amount_minor=500_000, occurred_at=_dt())
+    assert e.fx_rate_micro == 12_500
+    assert e.fx_counter_currency == "USD"

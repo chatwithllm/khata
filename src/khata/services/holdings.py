@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from ..models import Plan, Holding, LedgerEntry
 from ..money import SUPPORTED_CURRENCIES
+from . import fx
 
 MICRO = 1_000_000
 ASSET_CLASSES = {"gold", "silver", "equity", "mf", "cash", "other"}
@@ -43,7 +44,7 @@ def _qty_held_micro(plan: Plan) -> int:
 
 
 def _add_entry(session, plan, *, user_id, kind, direction, quantity_micro, amount_minor,
-               occurred_at, note) -> LedgerEntry:
+               occurred_at, note, fx_rate_micro=None) -> LedgerEntry:
     if quantity_micro is None or amount_minor is None:
         raise ValidationError("quantity and amount are required")
     if quantity_micro <= 0:
@@ -57,23 +58,24 @@ def _add_entry(session, plan, *, user_id, kind, direction, quantity_micro, amoun
     # when holding_state is read between mutations (avoids stale-collection reads).
     plan.ledger_entries.append(entry)
     session.flush()
+    fx.snapshot_entry_rate(session, entry, explicit_rate_micro=fx_rate_micro)
     return entry
 
 
 def add_buy(session: Session, *, plan: Plan, user_id, quantity_micro, amount_minor, occurred_at,
-            note=None) -> LedgerEntry:
+            note=None, fx_rate_micro=None) -> LedgerEntry:
     return _add_entry(session, plan, user_id=user_id, kind="buy", direction="out",
                       quantity_micro=quantity_micro, amount_minor=amount_minor,
-                      occurred_at=occurred_at, note=note)
+                      occurred_at=occurred_at, note=note, fx_rate_micro=fx_rate_micro)
 
 
 def add_sell(session: Session, *, plan: Plan, user_id, quantity_micro, amount_minor, occurred_at,
-             note=None) -> LedgerEntry:
+             note=None, fx_rate_micro=None) -> LedgerEntry:
     if quantity_micro is not None and quantity_micro > _qty_held_micro(plan):
         raise ValidationError("cannot sell more than currently held")
     return _add_entry(session, plan, user_id=user_id, kind="sell", direction="in",
                       quantity_micro=quantity_micro, amount_minor=amount_minor,
-                      occurred_at=occurred_at, note=note)
+                      occurred_at=occurred_at, note=note, fx_rate_micro=fx_rate_micro)
 
 
 def set_quote(session: Session, *, plan: Plan, price_minor, as_of) -> Holding:

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..models import Plan, Loan, LedgerEntry, User
 from ..money import SUPPORTED_CURRENCIES
+from . import fx
 
 DIRECTIONS = {"given", "taken"}
 INTEREST_TYPES = {"none", "monthly", "yearly"}
@@ -135,7 +136,7 @@ def _direction_for(loan_direction: str, kind: str) -> str:
 
 
 def add_disbursement(session: Session, *, plan: Plan, user_id, amount_minor, occurred_at,
-                     note=None, acting_user_id=None) -> LedgerEntry:
+                     note=None, acting_user_id=None, fx_rate_micro=None) -> LedgerEntry:
     if amount_minor <= 0:
         raise ValidationError("amount must be > 0")
     from .assets import _amount_status_for
@@ -146,11 +147,12 @@ def add_disbursement(session: Session, *, plan: Plan, user_id, amount_minor, occ
                         amount_status=_amount_status_for(user_id, acting_user_id))
     session.add(entry)
     session.flush()
+    fx.snapshot_entry_rate(session, entry, explicit_rate_micro=fx_rate_micro)
     return entry
 
 
 def log_loan_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor, occurred_at,
-                   method=None, note=None, acting_user_id=None) -> LedgerEntry:
+                   method=None, note=None, acting_user_id=None, fx_rate_micro=None) -> LedgerEntry:
     if kind not in LOAN_ENTRY_KINDS:
         raise ValidationError(f"unknown loan entry kind: {kind}")
     if amount_minor <= 0:
@@ -163,6 +165,7 @@ def log_loan_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor,
                         amount_status=_amount_status_for(user_id, acting_user_id))
     session.add(entry)
     session.flush()
+    fx.snapshot_entry_rate(session, entry, explicit_rate_micro=fx_rate_micro)
     return entry
 
 
