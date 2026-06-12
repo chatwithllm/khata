@@ -273,3 +273,48 @@ def test_collateral_ltv_rounds_half_up(ctx):
     s.commit()
     st = loan_state(s, lp.loan, as_of=date(2026, 6, 1))
     assert st["collateral"]["ltv_pct"] == 67
+
+
+def test_schedule_running_totals_no_payments(ctx):
+    s, u = ctx
+    plan = _loan(s, u, rate_bps=200, start_date=date(2026, 1, 1))  # 2%/mo
+    add_disbursement(s, plan=plan, user_id=u.id, amount_minor=10000000, occurred_at=_dt(2026, 1, 1))
+    st = loan_state(s, plan.loan, as_of=date(2026, 4, 1))  # 3 complete months, 200000 minor/mo accrued
+    sch = st["schedule"]
+    # cumulative unpaid interest grows 200000 → 400000 → 600000 minor
+    assert [r["cum_due_minor"] for r in sch] == [200000, 400000, 600000]
+    for r in sch:
+        assert r["principal_minor"] == 10000000          # principal flat (no repayment)
+        assert r["total_owed_minor"] == r["principal_minor"] + r["cum_due_minor"]
+
+
+def test_schedule_running_due_reflects_payments(ctx):
+    s, u = ctx
+    plan = _loan(s, u, rate_bps=200, start_date=date(2026, 1, 1))  # 2%/mo
+    add_disbursement(s, plan=plan, user_id=u.id, amount_minor=10000000, occurred_at=_dt(2026, 1, 1))
+    log_loan_entry(s, plan=plan, user_id=u.id, kind="interest_payment",
+                   amount_minor=300000, occurred_at=_dt(2026, 2, 1))  # pay 300000 minor
+    st = loan_state(s, plan.loan, as_of=date(2026, 4, 1))  # 600000 accrued − 300000 paid (minor)
+    sch = st["schedule"]
+    # month 0 fully paid through (cum 0); month 1 half-paid (cum 100000); month 2 unpaid (cum 300000)
+    assert [r["cum_due_minor"] for r in sch] == [0, 100000, 300000]  # payment reduces pending vs 200k/400k/600k
+    for r in sch:
+        assert r["total_owed_minor"] == r["principal_minor"] + r["cum_due_minor"]
+
+
+def test_schedule_principal_minor_tracks_repayment(ctx):
+    s, u = ctx
+    plan = _loan(s, u, rate_bps=200, start_date=date(2026, 1, 1))  # 2%/mo
+    add_disbursement(s, plan=plan, user_id=u.id, amount_minor=20000000, occurred_at=_dt(2026, 1, 1))  # 20000000 minor principal (×100)
+    # repay half the principal at the start of month 2
+    log_loan_entry(s, plan=plan, user_id=u.id, kind="principal_repayment",
+                   amount_minor=10000000, occurred_at=_dt(2026, 3, 1))
+    st = loan_state(s, plan.loan, as_of=date(2026, 4, 1))  # 3 months
+    sch = st["schedule"]
+    # months 0,1 opened at full principal; month 2 opens after the repayment → lower principal_minor
+    assert sch[0]["principal_minor"] == 20000000
+    assert sch[1]["principal_minor"] == 20000000
+    assert sch[2]["principal_minor"] == 10000000
+    # total_owed identity holds on every row regardless of the principal change
+    for r in sch:
+        assert r["total_owed_minor"] == r["principal_minor"] + r["cum_due_minor"]

@@ -398,16 +398,22 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
                 Decimal(1), rounding=ROUND_HALF_UP))
             interest_accrued += expected
             schedule.append({"month_index": m, "period_start": pm.isoformat(),
-                             "expected_minor": expected})
+                             "expected_minor": expected, "principal_minor": opening})
 
     pool = interest_paid
     next_due_month = None
     months_behind = 0
+    cum_due = 0
     for row in schedule:
         expected = row["expected_minor"]
         applied = min(pool, expected)
         pool -= applied
         row["applied_minor"] = applied
+        # Running cumulative UNPAID interest through this month (net of payments applied),
+        # and principal+pending "total owed". All integer minor units — exact.
+        cum_due += expected - applied
+        row["cum_due_minor"] = cum_due
+        row["total_owed_minor"] = row["principal_minor"] + cum_due
         if expected == 0 or applied == expected:
             row["status"] = "paid"
         elif applied > 0:
