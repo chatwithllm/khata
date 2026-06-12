@@ -139,6 +139,7 @@
       <div class="hint" style="font-size:11.5px;color:var(--ink-faint)">Links this contribution to the loan it came from — the loan then shows it was deployed here.</div>
     </div>
     <div class="fld"><label for="note">Note (optional)</label><input id="note" placeholder=""></div>
+    <div class="fld" id="fxrate-fld" style="display:none"><label for="fxrate">FX rate · 1 USD = ₹</label><input id="fxrate" placeholder="88.00" inputmode="decimal"></div>
     <div class="fld" id="proof-fld" style="display:none"><label>Proof (optional)</label><div id="proof-mount"></div></div>
     <div class="err" id="err"></div>
     <div class="acts"><button class="save" id="save">Save payment</button><span class="cancel" id="cancel">Cancel</span><span class="del" id="del-entry" style="display:none;margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
@@ -620,6 +621,7 @@ function openOver(){ // NEW payment
   $('amount').value=''; $('note').value=''; $('method').value='transfer'; $('fsource').value='savings'; $('occurred').value=todayISO();
   $('del-entry').style.display='none';   // no delete when logging a new entry
   $('proof-fld').style.display='none';   // proof attaches to a saved entry, not a draft
+  $('fxrate-fld').style.display='none';
   fillPaidBy(ME_ID);                      // default contributor = current user
   fillFundPlan(null);
   showOver(); $('amount').focus();
@@ -636,6 +638,9 @@ function openEdit(lr){ // EDIT existing entry
   fillFundPlan(lr.funding_plan_id);       // preselect the source loan (if any)
   // proof: attach photos / PDFs / docs to this saved entry (server enforces who may modify)
   $('proof-fld').style.display='';
+  $('fxrate-fld').style.display='';
+  $('fxrate').value = fxNaturalFromMicro(lr.fx_rate_micro, BASE);
+  $('fxrate').dataset.initial = $('fxrate').value;
   mountAttachments($('proof-mount'), { planId: pid, entryId: lr.id,
     canModify: (ME_ID!=null), onChange: ()=>{ boot(); } });
   showOver(); $('amount').focus();
@@ -797,6 +802,14 @@ $('save').addEventListener('click', async ()=>{
   const body = { amount: $('amount').value, method: $('method').value,
                  funding_source: $('fsource').value, note: $('note').value || null,
                  occurred_at: occ };
+  // explicit FX rate: send only when edited and non-empty (clearing = leave unchanged)
+  if(editId && $('fxrate-fld').style.display!=='none'){
+    const fv=$('fxrate').value.trim();
+    if(fv && fv!==$('fxrate').dataset.initial){
+      const micro=fxMicroFromNatural(fv, BASE);
+      if(micro) body.fx_rate_micro = micro;
+    }
+  }
   if($('paidby-fld').style.display!=='none') body.paid_by = $('paid-by').value;  // contributor tag (shared plans)
   // funding-from-loan link: set when the loan picker is shown; clear it on edit otherwise
   if($('fundplan-fld').style.display!=='none') body.funding_plan_id = $('fundplan').value || null;

@@ -216,6 +216,7 @@
     <div class="fld"><label for="edit-amount">Amount</label><input id="edit-amount" placeholder="50,000" inputmode="decimal"></div>
     <div class="fld"><label for="edit-occurred">Date (when it happened)</label><input id="edit-occurred" type="date"></div>
     <div class="fld"><label for="edit-note">Note (optional)</label><input id="edit-note" placeholder=""></div>
+    <div class="fld" id="edit-fxrate-fld"><label for="edit-fxrate">FX rate · 1 USD = ₹</label><input id="edit-fxrate" placeholder="88.00" inputmode="decimal"></div>
     <div class="fld" id="edit-paidby-fld" style="display:none"><label for="edit-paid-by">Paid by · contributor</label>
       <select id="edit-paid-by"></select>
     </div>
@@ -1157,6 +1158,8 @@ function openEdit(it){
   $('edit-amount').value=(Math.abs(it.amount_minor||0)/100);
   $('edit-note').value=it.note||'';
   $('edit-occurred').value=(it.occurred_at||'').slice(0,10);
+  $('edit-fxrate').value = fxNaturalFromMicro(it.fx_rate_micro, BASE);
+  $('edit-fxrate').dataset.initial = $('edit-fxrate').value;
   if(MEMBERS.length>1){ $('edit-paidby-fld').style.display='flex'; fillPaidBy($('edit-paid-by'), it.logged_by_user_id); }
   else { $('edit-paidby-fld').style.display='none'; }
   mountAttachments($('proof-mount'), { planId: pid, entryId: it.id,
@@ -1368,6 +1371,12 @@ $('edit-save').addEventListener('click', async ()=>{
   $('edit-err').textContent='';
   const occ = $('edit-occurred').value ? $('edit-occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift
   const body = { amount:$('edit-amount').value, occurred_at:occ, note:$('edit-note').value || null };
+  // explicit FX rate: send only when edited and non-empty (clearing = leave unchanged)
+  const fv=$('edit-fxrate').value.trim();
+  if(fv && fv!==$('edit-fxrate').dataset.initial){
+    const micro=fxMicroFromNatural(fv, BASE);
+    if(micro) body.fx_rate_micro = micro;
+  }
   if($('edit-paidby-fld').style.display!=='none' && $('edit-paid-by').value){ body.paid_by = $('edit-paid-by').value; }
   const r = await fetch('/api/plans/'+pid+'/entries/'+editId, { method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
   if(r.ok){ closeEdit(); boot(); return; }
