@@ -14,11 +14,15 @@ from decimal import Decimal, ROUND_HALF_UP
 BASE_URL = "https://api.frankfurter.dev/v1"
 TIMEOUT_S = 4
 MICRO = 1_000_000
+# frankfurter sits behind Cloudflare, which 403s the default Python-urllib
+# User-Agent — identify ourselves or every fetch silently fails.
+USER_AGENT = "khata-fx/1.0"
 
 
 def _get_json(url: str):
     try:
-        with urllib.request.urlopen(url, timeout=TIMEOUT_S) as resp:
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
             if getattr(resp, "status", 200) != 200:
                 return None
             return json.loads(resp.read().decode("utf-8"))

@@ -375,6 +375,9 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-11 — Fix: `fx_live` sends a `User-Agent: khata-fx/1.0` header — frankfurter.dev sits behind
+  Cloudflare, which 403s Python's default urllib UA, so every live fetch silently returned None on
+  prod (caught post-deploy: refresh claim kept releasing, rate stayed manual).
 - 2026-06-11 — FX rate snapshots: every ledger entry freezes its exchange rate at log time
   (`fx_rate_micro`/`fx_counter_currency`, migration `fxsnapshot01`), editable later (PATCH, 422 on
   bad rate, never re-opens confirmation). Live rates from frankfurter.app (`services/fx_live.py`,

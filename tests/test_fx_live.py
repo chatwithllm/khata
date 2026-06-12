@@ -20,9 +20,10 @@ class _FakeResp(io.BytesIO):
 
 
 def _patch(monkeypatch, payload=None, status=200, exc=None, capture=None):
-    def fake_urlopen(url, timeout=None):
+    def fake_urlopen(req, timeout=None):
+        # _get_json sends a Request (with User-Agent — Cloudflare 403s the default)
         if capture is not None:
-            capture.append((url, timeout))
+            capture.append((req.full_url, timeout, req.get_header("User-agent")))
         if exc is not None:
             raise exc
         return _FakeResp(payload, status=status)
@@ -33,9 +34,10 @@ def test_fetch_rate_success(monkeypatch):
     calls = []
     _patch(monkeypatch, {"base": "INR", "rates": {"USD": 0.011364}}, capture=calls)
     assert fx_live.fetch_rate(date(2026, 6, 10), "INR", "USD") == 11_364
-    url, timeout = calls[0]
+    url, timeout, ua = calls[0]
     assert url == "https://api.frankfurter.dev/v1/2026-06-10?base=INR&symbols=USD"
     assert timeout == 4
+    assert ua == fx_live.USER_AGENT  # default Python-urllib UA gets a Cloudflare 403
 
 
 def test_fetch_latest_success(monkeypatch):
