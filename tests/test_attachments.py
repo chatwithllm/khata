@@ -10,7 +10,7 @@ from khata.db import Base, make_engine, make_session_factory
 from khata.models import User, Attachment
 from khata.services.assets import create_asset_plan, log_payment
 from khata.services.attachments import add_attachment, AttachmentError, _sniff
-from khata.services.backup import export_all, import_merge
+from khata.services.backup import export_all, import_replace
 from datetime import datetime, timezone
 
 # 1x1 PNG (valid magic bytes).
@@ -187,7 +187,7 @@ def test_backup_export_import_preserves_attachment_bytes():
     Base.metadata.create_all(e2)
     S2 = make_session_factory(e2)
     with S2() as s:
-        stats = import_merge(s, data)
+        stats = import_replace(s, data)
         s.commit()
         assert stats["attachments"] == 1
         att = s.query(Attachment).one()
