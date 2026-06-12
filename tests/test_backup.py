@@ -150,6 +150,25 @@ def test_rejects_backup_with_no_users():
         assert s.query(Plan).count() == 2
 
 
+def test_inconsistent_backup_rows_raise_backup_error_not_integrity_error():
+    # dangling FK (entry -> missing plan) must surface as BackupError (400-able),
+    # never a raw IntegrityError (500). Rollback leaves the instance untouched.
+    S = _fresh()
+    with S() as s:
+        _seed(s)
+        data = _json_roundtrip(export_all(s))
+        data["tables"]["ledger_entries"].append({
+            "id": 9999, "plan_id": 4242, "user_id": 1, "entry_type": "payment",
+            "amount_minor": 100, "currency": "INR",
+            "entry_date": "2026-06-11", "created_at": "2026-06-11T00:00:00+00:00",
+        })
+        with pytest.raises(BackupError, match="ledger_entries"):
+            import_replace(s, data)
+        s.rollback()
+        assert s.query(User).count() == 2
+        assert s.query(Plan).count() == 2
+
+
 def test_fx_rates_replaced_not_duplicated():
     S = _fresh()
     with S() as s:

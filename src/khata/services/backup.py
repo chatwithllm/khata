@@ -16,6 +16,7 @@ from datetime import datetime, date, timezone
 
 from sqlalchemy import select, inspect, delete
 from sqlalchemy import DateTime, Date, LargeBinary
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..models import (User, Plan, AssetPurchase, Loan, Holding, Chit, Retirement,
@@ -108,6 +109,11 @@ def import_replace(session: Session, data: dict) -> dict:
         for raw in t.get(model.__tablename__, []):
             session.add(model(**_parse(model, raw)))
             n += 1
-        session.flush()
+        try:
+            session.flush()
+        except IntegrityError as e:
+            # Hand-edited / corrupt backup (dangling FK, dup id). Surface as a 400-able
+            # BackupError, not a 500 — the caller's rollback leaves the instance untouched.
+            raise BackupError(f"backup contains inconsistent rows in {model.__tablename__!r}") from e
         stats[model.__tablename__] = n
     return stats

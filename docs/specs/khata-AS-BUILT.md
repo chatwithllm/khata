@@ -365,7 +365,9 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   verbatim; pre-restore snapshot auto-saved first); or operator CLI `scripts/backup.sh [DB] [DEST]` (online
   SQLite `.backup`, safe while live) + `scripts/restore.sh BACKUP [DB]` (file replace; stop the app first).
   Auto-saved snapshots land in `<db_dir>/backups/` (gitignored). Back up `khata_app.db` regularly — it's the
-  only source of truth.
+  only source of truth. **After restoring a backup taken on a DIFFERENT instance, rotate `KHATA_SECRET_KEY`**:
+  sessions/bearer tokens signed by the old key stay validly signed and carry raw user ids, so a stale token
+  could map onto a different (foreign) user that now owns that id.
 - **Canonical local instance** (current): port **5057**, code from the `feat/landing-page` worktree,
   data in `khata_app.db`, secret persisted in `.env.app`, restart via `run-app.sh`. HTML is `no-store`
   (always fresh); static edits live on reload; Python edits need a restart. **Not yet** a reboot-surviving
@@ -386,7 +388,9 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
   re-authenticated by email — `logged_out: true` + session cleared if their account isn't in the backup.
   Settings page copy updated ("replaces everything" hint + confirm dialog); success handler redirects to `/`
   on `logged_out`; stats now use `users`/`plans`/`ledger_entries` keys (old `users_created`/`users_matched`
-  gone). Restoring the same file twice is idempotent.
+  gone). Restoring the same file twice is idempotent. Inconsistent backup rows (dangling FK / duplicate id,
+  e.g. a hand-edited file) surface as `BackupError` → 400, not a 500; rollback leaves the instance untouched.
+  Ops note added (§11): rotate `KHATA_SECRET_KEY` after restoring a foreign-instance backup.
 - 2026-06-11 — Fix: `fx_live` sends a `User-Agent: khata-fx/1.0` header — frankfurter.dev sits behind
   Cloudflare, which 403s Python's default urllib UA, so every live fetch silently returned None on
   prod (caught post-deploy: refresh claim kept releasing, rate stayed manual).
