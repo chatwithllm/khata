@@ -481,7 +481,10 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
          "has_proof": bool(e.proof_ref) or bool(e.attachments),
          "attachment_count": len(e.attachments),
          "logged_by_user_id": e.logged_by_user_id, "paid_by_name": _names.get(e.logged_by_user_id),
-         "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor}
+         "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor,
+         "fx_rate_micro": e.fx_rate_micro, "fx_counter_currency": e.fx_counter_currency,
+         "counter_value_minor": (fx.convert(e.amount_minor, rate_micro=e.fx_rate_micro)
+                                 if e.fx_rate_micro else None)}
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
     ]
 

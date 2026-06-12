@@ -461,6 +461,10 @@ def test_payment_with_explicit_fx_rate(client):
         "amount": "50,000", "method": "upi", "funding_source": "savings",
         "fx_rate_micro": 11_364})
     assert r.status_code == 201
+    state = r.get_json()["state"]
+    row = state["ledger"][0]
+    assert row["fx_rate_micro"] == 11_364
+    assert row["fx_counter_currency"] == "USD"
 
 
 def test_payment_invalid_fx_rate_is_422(client):

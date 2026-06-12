@@ -334,7 +334,10 @@ def asset_state(session: Session, plan: Plan, viewer_id: int | None = None) -> d
          "funding_plan_name": _fplans.get(e.funding_plan_id, (None, None, False))[0],
          "funding_plan_type": _fplans.get(e.funding_plan_id, (None, None, False))[1],
          "funding_plan_accessible": _fplans.get(e.funding_plan_id, (None, None, False))[2],
-         "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor}
+         "amount_status": e.amount_status, "counter_amount_minor": e.counter_amount_minor,
+         "fx_rate_micro": e.fx_rate_micro, "fx_counter_currency": e.fx_counter_currency,
+         "counter_value_minor": (fx.convert(e.amount_minor, rate_micro=e.fx_rate_micro)
+                                 if e.fx_rate_micro else None)}
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
     ]
 

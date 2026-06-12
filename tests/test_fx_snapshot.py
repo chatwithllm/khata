@@ -212,3 +212,28 @@ def test_update_entry_rate_only_leaves_amount_and_status(ctx):
     assert e.fx_counter_currency == "USD"   # set even when creation left it NULL
     assert e.amount_minor == 100            # untouched
     assert e.amount_status == "agreed"      # rate edit never re-opens confirmation
+
+
+# ---------------------------------------------------------------------------
+# Task 7: serialization — fx fields + derived counter value in ledger arrays
+# ---------------------------------------------------------------------------
+
+from khata.services.assets import asset_state
+
+
+def test_asset_state_ledger_exposes_fx_fields(ctx):
+    s, u, plan = ctx
+    e = log_payment(s, plan=plan, user_id=u.id, amount_minor=5_000_000, occurred_at=_dt(),
+                    method="upi", funding_source="savings", fx_rate_micro=11_364)
+    log_payment(s, plan=plan, user_id=u.id, amount_minor=100, occurred_at=_dt(),
+                method="upi", funding_source="savings")  # NULL-rate row
+    rows = {r["id"]: r for r in asset_state(s, plan)["ledger"]}
+    snap = rows[e.id]
+    assert snap["fx_rate_micro"] == 11_364
+    assert snap["fx_counter_currency"] == "USD"
+    # ₹50,000.00 × 0.011364 = $568.20 → 56_820 USD-minor (Decimal ROUND_HALF_UP)
+    assert snap["counter_value_minor"] == 56_820
+    null_row = next(r for r in rows.values() if r["id"] != e.id)
+    assert null_row["fx_rate_micro"] is None
+    assert null_row["fx_counter_currency"] is None
+    assert null_row["counter_value_minor"] is None

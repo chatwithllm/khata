@@ -111,7 +111,10 @@ def chit_state(session: Session, chit: Chit, as_of: date | None = None) -> dict:
                "created_at": e.created_at.isoformat() if e.created_at else None,
                "occurred_at": e.occurred_at.isoformat(), "note": e.note,
                "has_proof": bool(e.proof_ref) or bool(e.attachments),
-               "attachment_count": len(e.attachments)}
+               "attachment_count": len(e.attachments),
+               "fx_rate_micro": e.fx_rate_micro, "fx_counter_currency": e.fx_counter_currency,
+               "counter_value_minor": (fx.convert(e.amount_minor, rate_micro=e.fx_rate_micro)
+                                       if e.fx_rate_micro else None)}
               for e in plan.ledger_entries if e.kind in CHIT_KINDS]
     return {
         "currency": plan.currency, "chit_value_minor": chit.chit_value_minor,
