@@ -33,6 +33,18 @@ def net_position(session: Session, user_id: int) -> dict:
                                              "paid_to_date_minor": 0})
             b[_FIELD_TO_KEY[field]] += amount_minor
 
+    def _add_entry(field: str, e):
+        """Per-entry conversion (spec §5): same-currency passthrough; else the
+        entry's own snapshot when it targets base; else the current stored rate
+        (exactly the old behavior — NULL-rate entries don't regress)."""
+        if e.currency == base:
+            totals[field] += e.amount_minor
+            return
+        if e.fx_rate_micro and e.fx_counter_currency == base:
+            totals[field] += fx.convert(e.amount_minor, rate_micro=e.fx_rate_micro)
+            return
+        _add(field, e.currency, e.amount_minor)
+
     for p in owned:
         plans.append({"id": p.id, "type": p.type, "name": p.name,
                       "currency": p.currency, "role": "owner"})
@@ -48,7 +60,7 @@ def net_position(session: Session, user_id: int) -> dict:
         if p.type == "asset":
             for e in p.ledger_entries:
                 if e.direction == "out" and e.logged_by_user_id == user_id:
-                    _add("paid", p.currency, e.amount_minor)
+                    _add_entry("paid", e)
 
     return {
         "base_currency": base,

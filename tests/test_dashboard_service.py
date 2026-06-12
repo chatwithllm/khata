@@ -125,3 +125,32 @@ def test_asset_funding_link_accessible_only_for_loan_members(ctx):
     assert row_owner["funding_plan_id"] == loan.id
     assert row_owner["funding_plan_accessible"] is True       # owner can open the loan
     assert row_other["funding_plan_accessible"] is False      # contributor cannot
+
+
+def test_paid_uses_per_entry_snapshot_with_null_fallback(ctx):
+    s, u = ctx
+    from khata.services.fx import set_rate
+    # current stored rate: ₹90 per $1 — used ONLY for the NULL-rate entry
+    set_rate(s, base="INR", quote="USD", rate_micro=90_000_000, as_of=_dt())
+    plan = create_asset_plan(s, owner_id=u.id, name="US thing", currency="USD",
+                             total_price_minor=100_000)
+    # $100 with a historical snapshot of ₹80/$ → ₹8,000.00 = 800_000 INR-minor
+    log_payment(s, plan=plan, user_id=u.id, amount_minor=10_000, occurred_at=_dt(),
+                method="upi", funding_source="savings", fx_rate_micro=80_000_000)
+    # $100 with no snapshot → current rate ₹90/$ → ₹9,000.00 = 900_000
+    log_payment(s, plan=plan, user_id=u.id, amount_minor=10_000, occurred_at=_dt(),
+                method="upi", funding_source="savings")
+    s.commit()
+    d = net_position(s, u.id)   # user base currency is INR (default)
+    assert d["paid_to_date_minor"] == 800_000 + 900_000
+
+
+def test_paid_same_currency_ignores_snapshot(ctx):
+    s, u = ctx
+    plan = create_asset_plan(s, owner_id=u.id, name="Plot", currency="INR",
+                             total_price_minor=50_000_000)
+    # INR entry with a USD snapshot — base is INR, so the amount passes through raw
+    log_payment(s, plan=plan, user_id=u.id, amount_minor=10_000_000, occurred_at=_dt(),
+                method="upi", funding_source="savings", fx_rate_micro=11_364)
+    s.commit()
+    assert net_position(s, u.id)["paid_to_date_minor"] == 10_000_000
