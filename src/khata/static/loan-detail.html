@@ -139,7 +139,7 @@
         <div class="sub" id="sub">—</div>
       </div>
       <div class="top-right">
-        <div class="curtog" id="curtog" title="Primary currency" style="display:none"><span class="slide"></span><button data-set="INR"><span class="cs">₹</span> INR</button><button data-set="USD"><span class="cs">$</span> USD</button></div>
+        <div class="curtog" id="curtog" title="Primary currency"><span class="slide"></span><button data-set="INR"><span class="cs">₹</span> INR</button><button data-set="USD"><span class="cs">$</span> USD</button></div>
         <button class="addbtn" id="addbtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg> Add entry</button>
         <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init" id="ava-init"></span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
       </div>
@@ -298,10 +298,20 @@
 <script>
 const $ = (id) => document.getElementById(id);
 const pid = parseInt(location.pathname.split("/").pop(), 10);
-let BASE = "INR";
+let BASE = "INR";          // the loan's NATIVE currency (semantic: collateral filter, fx editing, truth label)
+let DISP = "INR";          // the DISPLAY currency (user's global primary-currency preference)
+let FXR_MICRO = 1000000;   // BASE→DISP rate ×1e6 (1.0 = native, no conversion)
+let RATES = {};            // stored fx rates keyed "base>quote" → base-per-quote ×1e6
 let DATA = null;
 let ME_ID = null;
 let MEMBERS = [];
+
+// Convert a native (BASE) minor amount into the display (DISP) currency. When DISP===BASE
+// (no preference / no rate) FXR_MICRO is 1e6 and this is the identity.
+function conv(minor){
+  if(minor===null||minor===undefined) return minor;
+  return Math.round(minor*FXR_MICRO/1000000);
+}
 
 // rebuild a "Paid by · contributor" select from MEMBERS; value=user_id (K4: textContent only)
 function fillPaidBy(selectEl, uid){
@@ -337,9 +347,10 @@ function amtSpan(minor, cls){
   const wrap=document.createElement('span');
   if(cls) wrap.className=cls;
   if(minor===null||minor===undefined){ wrap.textContent='—'; return wrap; }
-  const neg=minor<0;
-  const s=document.createElement('span'); s.className='symword'; s.textContent=(neg?'-':'')+sym(BASE);
-  const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(minor), BASE);
+  const m=conv(minor);
+  const neg=m<0;
+  const s=document.createElement('span'); s.className='symword'; s.textContent=(neg?'-':'')+sym(DISP);
+  const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(m), DISP);
   wrap.append(s,n);
   return wrap;
 }
@@ -487,7 +498,7 @@ function renderGlance(box, plan, st){
     if(gc.qty_micro){ frow('Gold pledged', (gc.qty_micro/1e6)+' '+(gc.unit==='ounce'?'troy oz':'g')); }
     if(gc.rate_minor){
       const bl=gc.rate_basis==='per_10gram'?'10 g':(gc.rate_basis==='per_ounce'?'oz':'g');
-      frow('Rate at loan time', sym(BASE)+fmtNum(gc.rate_minor,BASE)+' / '+bl);
+      frow('Rate at loan time', sym(DISP)+fmtNum(conv(gc.rate_minor),DISP)+' / '+bl);
     }
     if(gc.value_minor){ frowAmt('Collateral value', gc.value_minor); }
     if(gc.ltv_pct!=null){
@@ -1269,9 +1280,28 @@ async function boot(){
 
   const plan=d.plan, st=d.state;
   BASE = plan.currency || 'INR';
-  document.documentElement.dataset.cur = BASE.toLowerCase();
+  // DISP = the user's global primary-currency preference. Convert the loan's native (BASE)
+  // amounts into DISP when a fx rate exists; otherwise show native. The payoff projection
+  // panel always stays native (its inputs feed native-currency server math).
+  DISP = BASE; FXR_MICRO = 1000000; RATES = {};
+  try{
+    const [nw, fxResp] = await Promise.all([
+      fetch('/api/networth').then(r=>r.json()),
+      fetch('/api/fx-rates').then(r=>r.json()).catch(()=>({rates:[]})),
+    ]);
+    (fxResp.rates||[]).forEach(r=>{ RATES[r.base+'>'+r.quote]=r.rate_micro; });
+    const pref = nw && nw.base_currency;
+    if(pref && pref!==BASE){
+      // factor = DISP-per-BASE ×1e6: direct rate, else invert the stored BASE-per-DISP rate
+      const dir=RATES[pref+'>'+BASE];
+      const inv=RATES[BASE+'>'+pref];
+      const rate = dir ? dir : (inv ? Math.round(1e12/inv) : null);
+      if(rate){ DISP=pref; FXR_MICRO=rate; }
+    }
+  }catch(e){}
+  document.documentElement.dataset.cur = DISP.toLowerCase();
   document.title = 'Khata — '+plan.name;
-  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));
+  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===DISP));
 
   $('name').textContent = plan.name;
   $('sub').textContent = 'Loans · '+dirWord(st.direction)+' · '+plan.status+' · '+BASE;
@@ -1309,7 +1339,7 @@ async function boot(){
 $('curtog').addEventListener('click', async (e)=>{
   const b=e.target.closest('button'); if(!b) return;
   const target=b.dataset.set;
-  if(target===BASE) return;
+  if(target===DISP) return;
   await fetch('/api/base-currency',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({currency:target})});
   location.reload();
 });
