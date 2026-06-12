@@ -4,7 +4,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from ..models import Plan, User, LedgerEntry
 from ..money import format_minor, pct_to_bps, to_micro, to_minor
-from ..services import assets, chits, feed, holdings, loans, retirement, sharing
+from ..services import assets, chits, feed, fx, holdings, loans, retirement, sharing
 from ..services.assets import PlanError
 from ..services.loans import LoanError
 from ..services.holdings import HoldingError
@@ -54,7 +54,12 @@ def _entry_json(entry, plan):
             "amount_display": format_minor(entry.amount_minor, plan.currency),
             "occurred_at": entry.occurred_at.isoformat(),
             "quantity_micro": entry.quantity_micro,
-            "method": entry.method, "funding_source": entry.funding_source}
+            "method": entry.method, "funding_source": entry.funding_source,
+            # FX snapshot (same trio as the state ledgers — counter value DERIVED)
+            "fx_rate_micro": entry.fx_rate_micro,
+            "fx_counter_currency": entry.fx_counter_currency,
+            "counter_value_minor": (fx.convert(entry.amount_minor, rate_micro=entry.fx_rate_micro)
+                                    if entry.fx_rate_micro else None)}
 
 
 def _summary(plan: Plan) -> dict:

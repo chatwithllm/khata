@@ -41,7 +41,8 @@ def _fx_tick(app) -> None:
     quote=USD (base-per-quote) — same number, stored Settings-compatible.
     Fetch failure → release the claim (retry next hour) and keep the old rate."""
     SessionLocal = app.config["SESSION_FACTORY"]
-    now = datetime.now()
+    # naive UTC: the claim day boundary is the UTC day (spec §6), stored naive
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     with SessionLocal() as s:
         try:
             prev = fx.refresh_last_run(s)

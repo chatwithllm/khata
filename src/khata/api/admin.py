@@ -4,7 +4,7 @@ Gated by `services.admin.is_admin`. All routes 403 for non-admins. The service l
 enforces the "always keep one enabled admin" invariant and the no-self-footgun rules.
 """
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from urllib.parse import urljoin
 
@@ -242,8 +242,10 @@ def fx_backfill():
     if not entries:
         return jsonify(filled=0, skipped=skipped, no_rate=0), 200
     days = sorted(e.occurred_at.date() for e in entries)
-    # ONE range call: frankfurter base=USD → INR-per-USD per business day
-    inr_per_usd = fx_live.fetch_range(days[0], days[-1], "USD", "INR")
+    # ONE range call: frankfurter base=USD → INR-per-USD per business day.
+    # Start 7 days early so rate_for_date can bridge a weekend/holiday-dated
+    # earliest entry (range lookups, unlike single-date, don't auto-bridge).
+    inr_per_usd = fx_live.fetch_range(days[0] - timedelta(days=7), days[-1], "USD", "INR")
     micro2 = fx_live.MICRO * fx_live.MICRO
     filled = no_rate = 0
     for e in entries:
