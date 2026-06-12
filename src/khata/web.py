@@ -86,3 +86,18 @@ def settings():
 @bp.get("/analysis")
 def analysis():
     return send_from_directory(_static_dir(), "analysis.html")
+
+
+@bp.get("/manifest.webmanifest")
+def manifest():
+    return send_from_directory(_static_dir(), "manifest.webmanifest",
+                               mimetype="application/manifest+json")
+
+
+@bp.get("/sw.js")
+def service_worker():
+    # Served from / (not /static) so its scope covers the whole origin. no-store so a
+    # new worker is picked up immediately on the owner's next visit.
+    resp = send_from_directory(_static_dir(), "sw.js", mimetype="text/javascript")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp

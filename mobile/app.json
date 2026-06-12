@@ -3,12 +3,14 @@
     "name": "Khata",
     "slug": "khata",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "khata",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.npalakurla.khata",
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {

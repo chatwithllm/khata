@@ -372,6 +372,12 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   data in `khata_app.db`, secret persisted in `.env.app`, restart via `run-app.sh`. HTML is `no-store`
   (always fresh); static edits live on reload; Python edits need a restart. **Not yet** a reboot-surviving
   service (launchd) — add when wanted. Back up `khata_app.db` (only source of truth).
+- **App distribution (personal, free):** Khata installs three ways without the App Store —
+  (1) a **PWA** of the web app (`/manifest.webmanifest` + `/sw.js`, injected by `nav.js`):
+  Mac "Add to Dock", iOS "Add to Home Screen"; (2) the **Expo native iOS app** (`mobile/`)
+  sideloaded via **SideStore** on a free Apple ID, auto re-signed over WiFi every ≤7 days —
+  see `mobile/docs/build-ipa.md` + `mobile/docs/sidestore-setup.md`; (3) the web app in any
+  browser. The native app points at `https://khata.npalakurla.com` (bearer-token auth).
 
 ## 12. Process going forward
 **Every enhancement updates this doc** (§9 + the change log) in the same commit as the code — so a
@@ -381,6 +387,15 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-12 — Installable apps (free, no App Store). Added a PWA layer to the web app
+  (`manifest.webmanifest` + `sw.js` served by Flask, tags + SW registered via `nav.js`) →
+  installable on Mac and iOS home screen. The service worker is network-first everywhere
+  (always fresh online; cache is offline fallback only). Prepared the existing Expo app for
+  SideStore sideloading on a free Apple ID: `ios.bundleIdentifier` (`com.npalakurla.khata`),
+  `supportsTablet`, `orientation: default`, prod `API_BASE`, and an iPad content-width cap
+  in the shared `Screen` component. Two runbooks (`mobile/docs/build-ipa.md`,
+  `sidestore-setup.md`) cover the owner-run build + install + weekly WiFi re-sign. Native
+  OTA (`expo-updates`) is documented as future work, not built.
 - 2026-06-12 — Loan-detail honors the global primary-currency preference. Previously the
   loan-detail page pinned its display to the loan's native currency (`BASE = plan.currency`)
   and the currency toggle was hidden — so an INR loan stayed ₹ even when the dashboard
