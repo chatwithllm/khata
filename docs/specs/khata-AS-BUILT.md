@@ -153,9 +153,12 @@ i_owe_minor, owed_to_me_minor, plans:[{id,type,name,currency,role}]}`) · POST b
 **Analysis**: GET `/api/analysis/hold-vs-sell?asset_value&appreciation&borrow&interest&horizon`.
 **Feed** (optional): GET `/api/feed/config` (`{enabled}`).
 **Backup** (`/api`): GET `/backup` → whole-instance JSON snapshot of every table, as a file download
-(`khata-backup-<date>.json`, `no-store`) · POST `/restore` (multipart `file` or raw JSON body) → MERGE the
-backup in (users matched by email, plans+children inserted fresh with remapped FKs), auto-saving a
-pre-restore snapshot first; returns `{ok, stats, pre_restore_saved}`. Both authenticated.
+(`khata-backup-<date>.json`, `no-store`) · POST `/restore` (multipart `file` or raw JSON body) → REPLACE: every
+backed-up table is wiped then loaded verbatim (original ids preserved); backups with no users rejected (400);
+`backup_config` and `fx_refresh_state` are not touched; operator session re-pointed by email after restore —
+if their account isn't in the backup, session is cleared and `logged_out: true` is returned; a pre-restore
+snapshot is auto-saved first; restoring the same file twice is idempotent; returns
+`{ok, stats: {<table>: count, …}, pre_restore_saved, logged_out}`. Both authenticated.
 
 **Authorization:** plan-level mutations are **owner-only** (`_owned_plan`); **ledger-entry** edit/delete are **owner OR the entry's own contributor** (`_editable_entry`); reads are owner-or-**active**-member
 (`_accessible_plan` → `sharing.accessible`, which now requires status `active`, so an invited member
@@ -358,10 +361,13 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   `host=0.0.0.0`, a real `KHATA_SECRET_KEY`, persistent `KHATA_DATABASE_URL=sqlite:///<file>.db`.
 - Schema: `alembic upgrade head` (single linear head). Migrations: batch mode; `server_default` for new
   NOT NULL on existing tables; round-trip verified.
-- **Backup/restore**: in-app (Settings → Data) downloads/uploads a whole-instance JSON; or operator CLI
-  `scripts/backup.sh [DB] [DEST]` (online SQLite `.backup`, safe while live) + `scripts/restore.sh BACKUP [DB]`
-  (file replace; stop the app first). Auto-saved snapshots land in `<db_dir>/backups/` (gitignored). Back up
-  `khata_app.db` regularly — it's the only source of truth.
+- **Backup/restore**: in-app (Settings → Data) downloads/uploads a whole-instance JSON (upload = wipe + load
+  verbatim; pre-restore snapshot auto-saved first); or operator CLI `scripts/backup.sh [DB] [DEST]` (online
+  SQLite `.backup`, safe while live) + `scripts/restore.sh BACKUP [DB]` (file replace; stop the app first).
+  Auto-saved snapshots land in `<db_dir>/backups/` (gitignored). Back up `khata_app.db` regularly — it's the
+  only source of truth. **After restoring a backup taken on a DIFFERENT instance, rotate `KHATA_SECRET_KEY`**:
+  sessions/bearer tokens signed by the old key stay validly signed and carry raw user ids, so a stale token
+  could map onto a different (foreign) user that now owns that id.
 - **Canonical local instance** (current): port **5057**, code from the `feat/landing-page` worktree,
   data in `khata_app.db`, secret persisted in `.env.app`, restart via `run-app.sh`. HTML is `no-store`
   (always fresh); static edits live on reload; Python edits need a restart. **Not yet** a reboot-surviving
@@ -375,6 +381,16 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-11 — Plan Delete button added to asset, chit, holding, and retirement detail pages (loan-detail already had it). All five detail pages now show a ghost Delete button in the page header, visible to any viewer; `DELETE /api/plans/<id>` enforces owner-only (a member's click receives an error alert). Closes the gap that left restore-duplicated assets undeletable.
+- 2026-06-11 — Restore is now replace (wipe + load), was merge. `POST /api/restore` wipes every backed-up
+  table then loads verbatim (original ids preserved); re-importing a backup no longer duplicates plans.
+  `backup_config`/`fx_refresh_state` left untouched; backups with no users rejected (400); operator
+  re-authenticated by email — `logged_out: true` + session cleared if their account isn't in the backup.
+  Settings page copy updated ("replaces everything" hint + confirm dialog); success handler redirects to `/`
+  on `logged_out`; stats now use `users`/`plans`/`ledger_entries` keys (old `users_created`/`users_matched`
+  gone). Restoring the same file twice is idempotent. Inconsistent backup rows (dangling FK / duplicate id,
+  e.g. a hand-edited file) surface as `BackupError` → 400, not a 500; rollback leaves the instance untouched.
+  Ops note added (§11): rotate `KHATA_SECRET_KEY` after restoring a foreign-instance backup.
 - 2026-06-11 — Fix: `fx_live` sends a `User-Agent: khata-fx/1.0` header — frankfurter.dev sits behind
   Cloudflare, which 403s Python's default urllib UA, so every live fetch silently returned None on
   prod (caught post-deploy: refresh claim kept releasing, rate stayed manual).

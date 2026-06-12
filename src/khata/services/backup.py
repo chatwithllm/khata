@@ -1,18 +1,22 @@
 """Whole-instance backup / restore.
 
-Backup = a versioned JSON snapshot of every table (export_all). Restore = a MERGE
-(import_merge): users are matched by email (existing reused, missing created), and all
-plans + their children are inserted as NEW rows with their foreign keys remapped to the
-target instance's ids. Restoring onto a non-empty instance ADDS on top — re-importing the
-same file duplicates plans (no natural key); callers should warn the user.
+Backup = a versioned JSON snapshot of every table (export_all). Restore = a REPLACE
+(import_replace): every backed-up table is wiped, then the backup's rows are inserted
+verbatim — original ids preserved (tables are empty, so nothing needs remapping, and
+stale session cookies / bearer tokens keep pointing at the same person when the backup
+came from this instance). Restoring the same file twice is idempotent.
 
-The raw-SQLite CLI path (scripts/backup.sh / restore.sh) is the exact-replace alternative.
+Operational state stays untouched: backup_config and fx_refresh_state are not part of
+backup files and are never wiped.
+
+The raw-SQLite CLI path (scripts/backup.sh / restore.sh) is the offline alternative.
 """
 import base64
 from datetime import datetime, date, timezone
 
-from sqlalchemy import select, inspect
+from sqlalchemy import select, inspect, delete
 from sqlalchemy import DateTime, Date, LargeBinary
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..models import (User, Plan, AssetPurchase, Loan, Holding, Chit, Retirement,
@@ -24,10 +28,6 @@ BACKUP_VERSION = 1
 # LedgerEntry (its parent) so a restore can remap entry ids before inserting blobs.
 EXPORT_MODELS = [User, Plan, AssetPurchase, Loan, Holding, Chit, Retirement,
                  Installment, LedgerEntry, Attachment, PlanMembership, FxRate]
-
-# Plan sub-tables keyed 1:1 by plan_id (no own surrogate id).
-PLAN_SUBTABLES = [("asset_purchases", AssetPurchase), ("loans", Loan),
-                  ("holdings", Holding), ("chits", Chit), ("retirements", Retirement)]
 
 
 class BackupError(Exception):
@@ -83,105 +83,37 @@ def export_all(session: Session) -> dict:
     return data
 
 
-def import_merge(session: Session, data: dict) -> dict:
-    """Merge a backup into the current instance. Users match by email; everything else
-    is inserted fresh with remapped foreign keys. Returns per-table stats."""
+def import_replace(session: Session, data: dict) -> dict:
+    """Wipe ALL existing data, then load the backup verbatim (ids preserved).
+    Returns per-table insert counts keyed by table name. The caller owns the
+    transaction — any failure raises and a rollback leaves the instance untouched."""
     if not isinstance(data, dict) or "tables" not in data:
         raise BackupError("not a Khata backup file")
     if data.get("version") != BACKUP_VERSION:
         raise BackupError(f"unsupported backup version: {data.get('version')!r}")
     t = data["tables"]
-    stats = {"users_created": 0, "users_matched": 0, "plans": 0, "asset_purchases": 0,
-             "loans": 0, "holdings": 0, "chits": 0, "retirements": 0,
-             "installments": 0, "ledger_entries": 0, "attachments": 0,
-             "memberships": 0, "fx_rates": 0}
+    if not t.get("users"):
+        raise BackupError("backup contains no users — restoring it would brick every login")
 
-    # --- users: match by email, reuse or create ---
-    user_map: dict[int, int] = {}
-    for u in t.get("users", []):
-        email = (u.get("email") or "").strip().lower()
-        existing = session.scalar(select(User).where(User.email == email)) if email else None
-        if existing is not None:
-            user_map[u["id"]] = existing.id
-            stats["users_matched"] += 1
-        else:
-            f = _parse(User, u); f.pop("id", None)
-            nu = User(**f); session.add(nu); session.flush()
-            user_map[u["id"]] = nu.id
-            stats["users_created"] += 1
-
-    # --- plans: insert fresh, remap owner ---
-    plan_map: dict[int, int] = {}
-    for p in t.get("plans", []):
-        f = _parse(Plan, p); old = f.pop("id")
-        f["owner_user_id"] = user_map.get(f.get("owner_user_id"))
-        if f["owner_user_id"] is None:
-            continue  # orphan plan (owner not in backup) — skip rather than break FK
-        np = Plan(**f); session.add(np); session.flush()
-        plan_map[old] = np.id
-        stats["plans"] += 1
-
-    # --- 1:1 plan sub-tables (all plans now exist, so collateral refs remap cleanly) ---
-    for tbl, model in PLAN_SUBTABLES:
-        for r in t.get(tbl, []):
-            f = _parse(model, r)
-            f["plan_id"] = plan_map.get(f.get("plan_id"))
-            if f["plan_id"] is None:
-                continue
-            if tbl == "loans" and f.get("collateral_plan_id") is not None:
-                f["collateral_plan_id"] = plan_map.get(f["collateral_plan_id"])
-            session.add(model(**f)); stats[tbl] += 1
-        session.flush()
-
-    # --- installments ---
-    for r in t.get("installments", []):
-        f = _parse(Installment, r); f.pop("id", None)
-        f["plan_id"] = plan_map.get(f.get("plan_id"))
-        if f["plan_id"] is None:
-            continue
-        session.add(Installment(**f)); stats["installments"] += 1
-
-    # --- ledger entries (keep old->new id map so attachments can remap) ---
-    entry_map: dict[int, int] = {}
-    for r in t.get("ledger_entries", []):
-        f = _parse(LedgerEntry, r); old = f.pop("id", None)
-        f["plan_id"] = plan_map.get(f.get("plan_id"))
-        f["logged_by_user_id"] = user_map.get(f.get("logged_by_user_id"))
-        if f["plan_id"] is None or f["logged_by_user_id"] is None:
-            continue
-        ne = LedgerEntry(**f); session.add(ne); session.flush()
-        if old is not None:
-            entry_map[old] = ne.id
-        stats["ledger_entries"] += 1
-
-    # --- attachments (blob proof; remap to the new entry + uploader) ---
-    for r in t.get("attachments", []):
-        f = _parse(Attachment, r); f.pop("id", None)
-        f["ledger_entry_id"] = entry_map.get(f.get("ledger_entry_id"))
-        f["uploaded_by_user_id"] = user_map.get(f.get("uploaded_by_user_id"))
-        if f["ledger_entry_id"] is None or f["uploaded_by_user_id"] is None:
-            continue
-        session.add(Attachment(**f)); stats["attachments"] += 1
-
-    # --- memberships (plans are new, so no (plan,user) collision) ---
-    for r in t.get("plan_memberships", []):
-        f = _parse(PlanMembership, r); f.pop("id", None)
-        f["plan_id"] = plan_map.get(f.get("plan_id"))
-        f["user_id"] = user_map.get(f.get("user_id"))
-        if f["plan_id"] is None or f["user_id"] is None:
-            continue
-        session.add(PlanMembership(**f)); stats["memberships"] += 1
-
-    # --- fx_rates: global; dedup by (base, quote, as_of) so repeat imports don't pile up ---
-    for r in t.get("fx_rates", []):
-        f = _parse(FxRate, r); f.pop("id", None)
-        dup = session.scalar(select(FxRate).where(
-            FxRate.base_currency == f.get("base_currency"),
-            FxRate.quote_currency == f.get("quote_currency"),
-            FxRate.as_of == f.get("as_of")))
-        if dup is not None:
-            continue
-        session.add(FxRate(**f)); stats["fx_rates"] += 1
-
+    # Wipe children before parents (reverse of the FK-ordered EXPORT_MODELS).
+    # Explicit order — never trust relationship cascade config for this.
+    for model in reversed(EXPORT_MODELS):
+        session.execute(delete(model))
     session.flush()
+
+    # Insert verbatim, parents first. _parse keeps the "id" column, so every row
+    # lands with the id it had when the backup was taken.
+    stats: dict[str, int] = {}
+    for model in EXPORT_MODELS:
+        n = 0
+        for raw in t.get(model.__tablename__, []):
+            session.add(model(**_parse(model, raw)))
+            n += 1
+        try:
+            session.flush()
+        except IntegrityError as e:
+            # Hand-edited / corrupt backup (dangling FK, dup id). Surface as a 400-able
+            # BackupError, not a 500 — the caller's rollback leaves the instance untouched.
+            raise BackupError(f"backup contains inconsistent rows in {model.__tablename__!r}") from e
+        stats[model.__tablename__] = n
     return stats
