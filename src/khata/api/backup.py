@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime, timezone
 
-from flask import Blueprint, Response, current_app, g, jsonify, request
+from flask import Blueprint, Response, current_app, g, jsonify, request, session
 from sqlalchemy import select
 
 from ..models import User
@@ -72,10 +72,10 @@ def download_backup():
 
 @bp.post("/restore")
 def restore_backup():
-    """Merge an uploaded backup into this instance. Operator-only — a restore can create
-    users (with arbitrary password hashes), so an untrusted caller could inject a backdoor
-    account; gating to the operator closes that. Auto-saves a pre-restore snapshot first.
-    Accepts a multipart file field 'file' or a raw JSON body."""
+    """REPLACE this instance's data with an uploaded backup (wipe + load). Operator-only —
+    a restore recreates users with arbitrary password hashes, so an untrusted caller could
+    inject a backdoor account. Auto-saves a pre-restore snapshot first. Accepts a
+    multipart file field 'file' or a raw JSON body."""
     user, err = _require_operator()
     if err:
         return err
@@ -106,7 +106,7 @@ def restore_backup():
         pre_restore_saved = False  # couldn't write the safety file — proceed anyway
 
     try:
-        stats = backup.import_merge(g.db, data)
+        stats = backup.import_replace(g.db, data)
         g.db.commit()
     except backup.BackupError as e:
         g.db.rollback()
@@ -114,5 +114,16 @@ def restore_backup():
     except Exception:
         g.db.rollback()
         raise
+
+    # The restore may have removed or re-id'd the operator's account. Re-point the
+    # session at the restored row (matched by email) — or log them out if it's gone.
+    logged_out = False
+    restored = g.db.scalar(select(User).where(User.email == user.email))
+    if restored is not None:
+        session["user_id"] = restored.id
+    else:
+        session.clear()
+        logged_out = True
     # Note: do NOT leak the absolute server path — just whether the safety net was written.
-    return jsonify(ok=True, stats=stats, pre_restore_saved=pre_restore_saved), 200
+    return jsonify(ok=True, stats=stats, pre_restore_saved=pre_restore_saved,
+                   logged_out=logged_out), 200
