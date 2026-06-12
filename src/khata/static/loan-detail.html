@@ -613,6 +613,12 @@ function renderSchedule(box, st){
     const pa=el('div','pa'); pa.append(amtSpan(it.applied_minor)); if(status==='due') pa.style.color='var(--ink-faint)';
     const pl=el('div','pl'); pl.append(document.createTextNode('expected '), amtSpan(it.expected_minor));
     sv.append(pa,pl);
+    if(it.cum_due_minor!==undefined){
+      const rt=el('div','pl'); rt.style.cssText='font-size:11px;margin-top:4px';
+      rt.append(document.createTextNode('running due '), amtSpan(it.cum_due_minor),
+                document.createTextNode(' · owed '), amtSpan(it.total_owed_minor));
+      sv.append(rt);
+    }
     srow.append(dot,si,sv);
     sched.append(srow);
   }
