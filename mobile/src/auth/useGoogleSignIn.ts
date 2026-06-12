@@ -22,11 +22,22 @@ export function useGoogleSignIn(_webClientIdFromServer: string | null) {
   const available = Boolean(IOS || ANDROID || WEB);
   const [busy, setBusy] = useState(false);
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    iosClientId: IOS,
-    androidClientId: ANDROID,
-    clientId: WEB,
-  });
+  // expo-auth-session's hook THROWS at render if no client id is set for the platform
+  // (e.g. "iosClientId must be defined" on iOS). `available` is derived from build-time
+  // env vars — constant across renders — so calling the hook only when configured is
+  // stable and does not violate the rules of hooks. When unconfigured, the UI hides the
+  // Google button and email/password login still works.
+  let request: ReturnType<typeof Google.useIdTokenAuthRequest>[0] = null;
+  let response: ReturnType<typeof Google.useIdTokenAuthRequest>[1] = null;
+  let promptAsync: ReturnType<typeof Google.useIdTokenAuthRequest>[2] | null = null;
+  if (available) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+      iosClientId: IOS,
+      androidClientId: ANDROID,
+      clientId: WEB,
+    });
+  }
 
   // promptAsync resolves with the redirect result, but the id_token lands in
   // `response`; bridge the two with a deferred resolver.
