@@ -1,0 +1,86 @@
+from datetime import date, datetime, timezone, timedelta
+
+import pytest
+
+from khata.db import Base, make_engine, make_session_factory
+from khata.models import User
+from khata.services.loans import create_loan_plan, add_disbursement
+from khata.services import sharing_links as sl
+
+
+@pytest.fixture
+def ctx():
+    engine = make_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    Session = make_session_factory(engine)
+    with Session() as s:
+        u = User(email="a@b.com", display_name="Arjun", password_hash="x")
+        s.add(u); s.flush()
+        plan = create_loan_plan(s, owner_id=u.id, name="Lent", currency="INR",
+                                direction="given", interest_type="monthly", rate_bps=300,
+                                start_date=date(2023, 12, 12))
+        add_disbursement(s, plan=plan, user_id=u.id, amount_minor=220000000,
+                         occurred_at=datetime(2023, 12, 12, tzinfo=timezone.utc))
+        s.flush()
+        yield s, u, plan
+
+
+def test_create_share_defaults_and_token(ctx):
+    s, u, plan = ctx
+    sh = sl.create_share(s, plan=plan, user_id=u.id, scope="summary", ttl_days=30)
+    s.flush()
+    assert sh.scope == "summary"
+    assert len(sh.token) >= 32 and sh.revoked_at is None
+    assert sh.expires_at > datetime.now(timezone.utc) + timedelta(days=29)
+
+
+def test_create_share_validates(ctx):
+    s, u, plan = ctx
+    with pytest.raises(sl.ShareError):
+        sl.create_share(s, plan=plan, user_id=u.id, scope="bogus", ttl_days=30)
+    with pytest.raises(sl.ShareError):
+        sl.create_share(s, plan=plan, user_id=u.id, scope="full", ttl_days=5)
+
+
+def test_resolve_public_valid_expired_revoked_unknown(ctx):
+    s, u, plan = ctx
+    sh = sl.create_share(s, plan=plan, user_id=u.id, scope="full", ttl_days=7)
+    s.flush()
+    p, scope = sl.resolve_public(s, sh.token)
+    assert p.id == plan.id and scope == "full"
+    with pytest.raises(sl.ShareNotFound):
+        sl.resolve_public(s, "nope-not-a-token")
+    sl.revoke_share(s, plan=plan, share_id=sh.id); s.flush()
+    with pytest.raises(sl.ShareGone):
+        sl.resolve_public(s, sh.token)
+    sh2 = sl.create_share(s, plan=plan, user_id=u.id, scope="full", ttl_days=7)
+    sh2.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1); s.flush()
+    with pytest.raises(sl.ShareGone):
+        sl.resolve_public(s, sh2.token)
+
+
+def test_public_state_redacts_and_scopes(ctx):
+    s, u, plan = ctx
+    full = sl.public_state(s, plan, "full")
+    summ = sl.public_state(s, plan, "summary")
+    import json
+    for env in (full, summ):
+        assert env["plan_type"] == "loan" and env["name"] == "Lent"
+        assert env["scope"] in ("full", "summary")
+    blob = json.dumps(full)
+    assert "@b.com" not in blob and "proof_ref" not in blob
+    assert "members" not in full and "members" not in full.get("state", {})
+    assert "schedule" in full["state"]
+    assert "schedule" not in summ["state"] and "ledger" not in summ["state"]
+
+
+def test_list_and_revoke(ctx):
+    s, u, plan = ctx
+    a = sl.create_share(s, plan=plan, user_id=u.id, scope="summary", ttl_days=7)
+    b = sl.create_share(s, plan=plan, user_id=u.id, scope="full", ttl_days=30)
+    s.flush()
+    rows = sl.list_shares(s, plan)
+    assert len(rows) == 2 and {r["scope"] for r in rows} == {"summary", "full"}
+    sl.revoke_share(s, plan=plan, share_id=a.id); s.flush()
+    rows2 = {r["id"]: r for r in sl.list_shares(s, plan)}
+    assert rows2[a.id]["status"] == "revoked" and rows2[b.id]["status"] == "active"
