@@ -44,8 +44,13 @@ _SUMMARY_DROP = {"schedule", "ledger", "deployed", "deployed_total_minor",
                  "members"}  # members also in _SCRUB_KEYS (stripped from ALL scopes via _scrub)
 
 # Keys / nested keys to scrub for PII regardless of scope
+# PII / cross-plan / internal-workflow keys — stripped from the public view at all scopes
 _SCRUB_KEYS = {"email", "proof_ref", "attachments", "attachment_id", "members",
-               "logged_by_user_id", "plan_id", "funding_plan_id", "note"}
+               "logged_by_user_id", "plan_id", "funding_plan_id", "note",
+               "display_name", "avatar", "user_id", "paid_by_name", "paid_by_avatar",
+               "plan_name", "plan_type", "funding_plan_name", "funding_plan_type",
+               "funding_plan_accessible", "name", "amount_status", "counter_amount_minor",
+               "contributors"}
 
 
 # ---------------------------------------------------------------------------

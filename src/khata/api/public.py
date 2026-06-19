@@ -13,4 +13,6 @@ def public_view(token):
         return jsonify(error="not_found"), 404
     except sharing_links.ShareGone:
         return jsonify(error="gone"), 410
-    return jsonify(sharing_links.public_state(g.db, plan, scope)), 200
+    resp = jsonify(sharing_links.public_state(g.db, plan, scope))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp, 200

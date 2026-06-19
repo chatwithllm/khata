@@ -111,6 +111,35 @@ def test_revoke_wrong_plan_raises(ctx):
         sl.revoke_share(s, plan=other, share_id=sh.id)
 
 
+def test_scrub_strips_all_sensitive_keys():
+    from khata.services.sharing_links import _scrub
+    raw = {
+        "ok_field": 1,
+        "amount_minor": 500,
+        "contributors": [{"user_id": 7, "display_name": "Priya", "avatar": "data:img", "paid_minor": 100}],
+        "deployed": [{"plan_id": 9, "plan_name": "Secret Plan", "plan_type": "asset", "amount_minor": 10}],
+        "collateral": {"plan_id": 3, "name": "Gold Hoard", "value_minor": 999},
+        "ledger": [{"occurred_at": "x", "kind": "interest_payment", "amount_minor": 5,
+                    "paid_by_name": "Priya", "paid_by_avatar": "data:img",
+                    "amount_status": "pending", "counter_amount_minor": 4, "note": "memo",
+                    "logged_by_user_id": 7}],
+        "email": "leak@x.com",
+    }
+    out = _scrub(raw)
+    import json
+    blob = json.dumps(out)
+    for bad in ["Priya", "data:img", "Secret Plan", "Gold Hoard", "leak@x.com", "memo",
+                "user_id", "display_name", "avatar", "plan_name", "collateral_name_marker",
+                "paid_by_name", "paid_by_avatar", "amount_status", "counter_amount_minor",
+                "logged_by_user_id"]:
+        assert bad not in blob, f"leaked: {bad}"
+    # legit data survives
+    assert out["ok_field"] == 1 and out["amount_minor"] == 500
+    assert out["ledger"][0]["amount_minor"] == 5 and out["ledger"][0]["kind"] == "interest_payment"
+    # contributors block removed entirely
+    assert "contributors" not in out
+
+
 def test_expiry_survives_session_reload(tmp_path):
     from datetime import date, datetime, timezone, timedelta
     from khata.db import Base, make_engine, make_session_factory

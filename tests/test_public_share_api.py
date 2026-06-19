@@ -68,6 +68,7 @@ def test_public_view_valid_scoped(client):
     blob = json.dumps(body)
     assert "logged_by_user_id" not in blob
     assert "funding_plan_id" not in blob
+    assert r.headers.get("Cache-Control") == "no-store"
 
 
 def test_public_summary_drops_lines(client):
