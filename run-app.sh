@@ -7,17 +7,13 @@ WT=/tmp/khata-landing            # clean main worktree (auto-managed below)
 PORT=5057
 DB="$ROOT/khata_app.db"          # your real data
 
-# Self-heal the worktree: create or refresh a clean main checkout at $WT so a pruned
-# worktree can't break this launcher. (main is the canonical app — landing-page merged.)
+# Self-heal the worktree: always (re)create a clean main checkout at $WT so a pruned
+# or symlink-path-mismatched worktree can't break this launcher. (main is the canonical
+# app — landing-page merged.) Nuke + prune the stale registration, then force-add.
 git -C "$ROOT" fetch -q origin main || true
+rm -rf "$WT"
 git -C "$ROOT" worktree prune
-if git -C "$ROOT" worktree list --porcelain | grep -q "^worktree $WT$"; then
-  git -C "$WT" fetch -q origin main || true
-  git -C "$WT" checkout -q --detach origin/main
-else
-  rm -rf "$WT"
-  git -C "$ROOT" worktree add -q --detach "$WT" origin/main
-fi
+git -C "$ROOT" worktree add -f --detach "$WT" origin/main
 
 set -a; . "$ROOT/.env.app"; set +a
 export PYTHONPATH="$WT/src" KHATA_DATABASE_URL="sqlite:///$DB" KHATA_ENV=production KHATA_ENABLE_SCHEDULER=1
