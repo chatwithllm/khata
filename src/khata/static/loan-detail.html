@@ -108,6 +108,14 @@
 .pledgerow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--card)}
 .pledgerow:hover{border-color:var(--primary)}
 .pledgerow .ac{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+/* backfill mark buttons (per-row + bulk) */
+.smark{ font:inherit; font-size:12px; padding:4px 10px; border-radius:8px;
+  border:1px solid var(--line); background:transparent; color:var(--ink); cursor:pointer; }
+.smark:hover{ background:color-mix(in srgb, var(--gold) 14%, transparent); }
+.sbulk{ font:inherit; font-size:12px; margin-left:auto; padding:4px 10px;
+  border-radius:8px; border:1px solid var(--line); background:transparent;
+  color:var(--ink); cursor:pointer; }
+.sbulk:hover{ background:color-mix(in srgb, var(--gold) 14%, transparent); }
 </style>
 </head>
 <body>
@@ -608,9 +616,18 @@ function renderSchedule(box, st){
   }
   ph.append(t, el('div','meta', metaText));
   box.append(ph);
+  // Backfill bulk-mark control — show when there are past unpaid months.
+  const behind = st.months_behind||0;
+  if (rows.length && behind > 0) {
+    const bulk = el('button','sbulk','Mark '+markVerb(st)+' through…');
+    bulk.type='button';
+    bulk.addEventListener('click', ()=>openBulk(rows, st));
+    ph.append(bulk);
+  }
   // Tenure can run long (16+ months here) — cap height & scroll past ~7 rows.
   const sched=el('div','sched fillrows'+(rows.length>7?' capscroll':''));
   if(!rows.length){ sched.append(el('div','emptypanel','No interest schedule (interest-free or not yet accruing).')); box.append(sched); return; }
+  const todayIso = new Date().toISOString().slice(0,10);
   for(const it of rows){
     const status=it.status||'due';
     const dotCls = status==='paid'?'paid':(status==='partial'?'part':'due');
@@ -631,9 +648,64 @@ function renderSchedule(box, st){
       sv.append(rt);
     }
     srow.append(dot,si,sv);
+    // Per-row backfill button for past unpaid months.
+    if (it.status !== 'paid' && it.period_start.slice(0,10) <= todayIso) {
+      const remaining = (it.expected_minor||0) - (it.applied_minor||0);
+      const b = el('button','smark','Mark '+markVerb(st));
+      b.type='button';
+      b.addEventListener('click', ()=>openMark(it, remaining, st));
+      srow.append(b);
+    }
     sched.append(srow);
   }
   box.append(sched);
+}
+
+// ── backfill helpers ──
+function markVerb(st){ return st.direction === 'taken' ? 'paid' : 'received'; }
+
+async function openMark(it, remaining, st){
+  const verb = markVerb(st);
+  const amt = prompt('Interest '+verb+' for Month '+it.month_index+' ('+sym(st.currency)+'):',
+                     (remaining/100).toFixed(2));
+  if (amt === null) return;
+  if (!amt || Number(amt) <= 0) return;
+  const prin = prompt('Optional principal '+verb+' this month ('+sym(st.currency)+', blank for none):','');
+  const when = it.period_start.slice(0,10) + 'T12:00:00';
+  const post = (kind, rupees) => fetch('/api/plans/'+pid+'/loan/entries', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ kind, amount: rupees, occurred_at: when,
+                             note: 'Backfill — Month '+it.month_index }) });
+  try {
+    let r = await post('interest_payment', amt);
+    if (!r.ok) throw new Error('interest');
+    if (prin && Number(prin) > 0) {
+      r = await post('principal_repayment', prin);
+      if (!r.ok) throw new Error('principal');
+    }
+    await boot();
+  } catch(e){ alert('Could not record payment.'); }
+}
+
+async function openBulk(rows, st){
+  const verb = markVerb(st);
+  const maxM = rows[rows.length-1].month_index;
+  const ans = prompt('Mark '+verb+' through which month? (0–'+maxM+')', String(maxM));
+  if (ans === null) return;
+  const m = parseInt(ans, 10);
+  if (isNaN(m) || m < 0) return;
+  let n=0, total=0;
+  for (const it of rows){ if(it.month_index>m) break;
+    if(it.status!=='paid'){ n++; total += (it.expected_minor||0)-(it.applied_minor||0); } }
+  if (!n){ alert('Nothing to mark in that range.'); return; }
+  if (!confirm('Mark '+n+' month(s) '+verb+' · '+sym(st.currency)+fmtNum(total, st.currency)+'?')) return;
+  try {
+    const r = await fetch('/api/plans/'+pid+'/loan/backfill', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ through_month: m }) });
+    if (!r.ok) throw new Error();
+    await boot();
+  } catch(e){ alert('Bulk mark failed.'); }
 }
 
 // ── payoff projection (amortization + extra-payment what-ifs) ──

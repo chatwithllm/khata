@@ -756,6 +756,33 @@ def loan_entry(plan_id):
                    state=loans.loan_state(g.db, plan.loan, as_of=date.today())), 201
 
 
+@bp.post("/<int:plan_id>/loan/backfill")
+def loan_backfill(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner-only
+    if err:
+        return err
+    if plan.type != "loan":
+        return jsonify(error="not_a_loan"), 400
+    data = request.get_json(silent=True) or {}
+    tm = data.get("through_month")
+    td = data.get("through_date")
+    try:
+        through_month = int(tm) if tm not in (None, "") else None
+        through_date = date.fromisoformat(td) if td else None
+        result = loans.backfill_loan_interest(
+            g.db, plan=plan, user_id=user.id, acting_user_id=user.id,
+            through_month=through_month, through_date=through_date)
+        g.db.commit()
+    except (LoanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(result=result,
+                   state=loans.loan_state(g.db, plan.loan, as_of=date.today())), 201
+
+
 @bp.post("/<int:plan_id>/chit/entries")
 def chit_entry(plan_id):
     user = current_user()
