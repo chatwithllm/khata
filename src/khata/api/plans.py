@@ -4,7 +4,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from ..models import Plan, User, LedgerEntry
 from ..money import format_minor, pct_to_bps, to_micro, to_minor
-from ..services import assets, chits, contacts, feed, fx, holdings, loans, retirement, sharing, sharing_links
+from ..services import assets, chits, contacts, feed, fx, holdings, loan_groups, loans, retirement, sharing, sharing_links
 from ..services.assets import PlanError
 from ..services.loans import LoanError
 from ..services.holdings import HoldingError
@@ -254,6 +254,15 @@ def index():
         return jsonify(error="unauthenticated"), 401
     owned, member = sharing.user_plans(g.db, user.id)
     return jsonify(plans=[_summary(p) for p in owned + member]), 200
+
+
+@bp.get("/loans/grouped")
+def loans_grouped():
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    base = getattr(user, "base_currency", None) or "INR"
+    return jsonify(loan_groups.grouped_loans(g.db, owner_id=user.id, base_currency=base)), 200
 
 
 @bp.get("/<int:plan_id>")
