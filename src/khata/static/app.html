@@ -114,7 +114,7 @@ a.gname:hover{color:var(--primary-deep);text-decoration:underline}
 .grow-amt{font-family:"JetBrains Mono";font-weight:700;font-size:13px;color:var(--ink-soft)}
 .partial-note{padding:10px 22px;font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";border-top:1px solid var(--line-2)}
 /* ── Sankey diagram ── */
-.sankey-wrap{position:relative;width:100%;overflow:visible;margin:12px 0 4px}
+.sankey-wrap{position:relative;width:100%;overflow:hidden;margin:12px 0 4px}
 .sankey-tip{position:absolute;background:var(--ink);color:var(--paper);font-size:11px;font-family:"JetBrains Mono";padding:5px 9px;border-radius:7px;pointer-events:none;white-space:nowrap;z-index:10;opacity:0;transition:opacity .1s;line-height:1.5}
 .sk-bar-wrap{padding:8px 22px 12px}
 .sk-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;font-family:"JetBrains Mono"}
@@ -668,34 +668,30 @@ function figEl(label, val){
 // ── Sankey diagram of the loan book ──
 function renderSankey(container, sankey, baseCcy, groups){
   if(!sankey||!sankey.nodes||!sankey.nodes.length){ container.style.display='none'; return; }
-  // fallback for small screens or reduced motion
-  if(window.matchMedia('(max-width:560px)').matches||window.matchMedia('(prefers-reduced-motion:reduce)').matches){
+  // compute node counts per column for overflow guard (Fix 2b)
+  const _dirCount=sankey.nodes.filter(n=>n.kind==='direction').length;
+  const _ctCount=sankey.nodes.filter(n=>n.kind==='contact').length;
+  const _lnCount=sankey.nodes.filter(n=>n.kind==='loan').length;
+  const _maxNodesInCol=Math.max(_dirCount,_ctCount,_lnCount);
+
+  // fallback for small screens, reduced motion, or too many nodes (>12) for SVG
+  if(window.matchMedia('(max-width:560px)').matches||window.matchMedia('(prefers-reduced-motion:reduce)').matches||_maxNodesInCol>12){
     // compact stacked-bar list: one row per contact
     const wrap=el('div','sk-bar-wrap');
     const ctNodes=sankey.nodes.filter(n=>n.kind==='contact');
-    // max throughput for scaling bars
+    // max throughput for scaling bars — use lent+borrowed per contact
     let maxVal=0;
     for(const cn of ctNodes){
-      const tot=sankey.links.filter(lk=>lk.source===cn.id||lk.target===cn.id).reduce((s,lk)=>s+(lk.source===cn.id?lk.value_minor:0),0)||
-                sankey.links.filter(lk=>lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
-      if(tot>maxVal) maxVal=tot;
+      const lv=sankey.links.filter(lk=>lk.source==='dir:lent'&&lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
+      const bv=sankey.links.filter(lk=>lk.source==='dir:borrowed'&&lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
+      if((lv+bv)>maxVal) maxVal=lv+bv;
     }
     if(!maxVal) maxVal=1;
     for(let ci=0;ci<ctNodes.length;ci++){
       const cn=ctNodes[ci];
-      // lent vs borrowed for this contact
-      let lentVal=0,borVal=0;
-      sankey.links.forEach(lk=>{
-        if(lk.source===cn.id){
-          // contact→loan: check direction of that loan node
-          const lnNode=sankey.nodes.find(n=>n.id===lk.target);
-          // direction determined by what points to this contact
-          const dirLink=sankey.links.find(dl=>dl.target===cn.id);
-          const dirId=dirLink?dirLink.source:'';
-          if(dirId==='dir:lent') lentVal+=lk.value_minor;
-          else borVal+=lk.value_minor;
-        }
-      });
+      // lent vs borrowed: look at Direction→Contact links specifically
+      const lentVal=sankey.links.filter(lk=>lk.source==='dir:lent'&&lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
+      const borVal=sankey.links.filter(lk=>lk.source==='dir:borrowed'&&lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
       const tot=lentVal+borVal||1;
       const row=el('div','sk-bar-row');
       const lbl=el('div','sk-bar-label');
@@ -728,10 +724,8 @@ function renderSankey(container, sankey, baseCcy, groups){
   function truncLabel(s,max){ return s.length>max?s.slice(0,max-1)+'…':s; }
 
   const W=Math.max(container.clientWidth||0,320)||760;
-  const NCOLS=3;
   const PAD_L=90,PAD_R=90,PAD_V=24;
   const NODE_W=14;
-  const COL_GAP=8;
 
   // assign columns
   const colMap={direction:0,contact:1,loan:2};
@@ -771,8 +765,6 @@ function renderSankey(container, sankey, baseCcy, groups){
     W-PAD_R
   ];
 
-  // scale: px-per-minor — based on max column total
-  const maxCol=Math.max(...colTotals,1);
   const NODE_GAP=10;
 
   // layout nodes in each column — stack top to bottom, vertically centred
@@ -933,7 +925,11 @@ function renderSankey(container, sankey, baseCcy, groups){
 }
 async function renderLoansByContact(card){
   let data;
-  try{ data=await fetch('/api/plans/loans/grouped').then(r=>r.json()); }
+  try{
+    const r=await fetch('/api/plans/loans/grouped');
+    if(!r.ok){ card.append(el('div','emptypanel','Couldn\'t load grouped loans.')); return; }
+    data=await r.json();
+  }
   catch(e){ card.append(el('div','emptypanel','Could not load grouped loans.')); return; }
   const sankey=el('div'); sankey.id='loan-sankey'; card.append(sankey);
   const list=el('div','grouped');
