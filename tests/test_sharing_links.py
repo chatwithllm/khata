@@ -72,6 +72,10 @@ def test_public_state_redacts_and_scopes(ctx):
     assert "members" not in full and "members" not in full.get("state", {})
     assert "schedule" in full["state"]
     assert "schedule" not in summ["state"] and "ledger" not in summ["state"]
+    import json as _json
+    fblob = _json.dumps(full)
+    assert "logged_by_user_id" not in fblob
+    assert "funding_plan_id" not in fblob
 
 
 def test_list_and_revoke(ctx):

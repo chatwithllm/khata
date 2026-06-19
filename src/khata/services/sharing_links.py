@@ -44,7 +44,8 @@ _SUMMARY_DROP = {"schedule", "ledger", "deployed", "deployed_total_minor",
                  "members"}  # members also in _SCRUB_KEYS (stripped from ALL scopes via _scrub)
 
 # Keys / nested keys to scrub for PII regardless of scope
-_SCRUB_KEYS = {"email", "proof_ref", "attachments", "attachment_id", "members"}
+_SCRUB_KEYS = {"email", "proof_ref", "attachments", "attachment_id", "members",
+               "logged_by_user_id", "plan_id", "funding_plan_id"}
 
 
 # ---------------------------------------------------------------------------

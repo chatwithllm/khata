@@ -65,6 +65,9 @@ def test_public_view_valid_scoped(client):
     assert body["plan_type"] == "loan" and body["scope"] == "full"
     assert "schedule" in body["state"]
     assert "@" not in json.dumps(body) and "proof_ref" not in json.dumps(body)
+    blob = json.dumps(body)
+    assert "logged_by_user_id" not in blob
+    assert "funding_plan_id" not in blob
 
 
 def test_public_summary_drops_lines(client):
