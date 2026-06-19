@@ -108,3 +108,32 @@ def test_empty(ctx):
     s, u, o = ctx
     out = grouped_loans(s, owner_id=u.id, base_currency="INR")
     assert out["groups"] == [] and out["sankey"]["nodes"] == [] and out["sankey"]["links"] == []
+
+
+def test_two_different_contacts_same_name_no_contact_id(ctx):
+    s, u, o = ctx
+    a = c.create_contact(s, owner_id=u.id, name="Ram"); s.flush()
+    b = c.create_contact(s, owner_id=u.id, name="ram"); s.flush()  # same normalized name, different id
+    _loan(s, u, "L1", "INR", "given", 100000, contact_id=a.id)
+    _loan(s, u, "L2", "INR", "given", 50000, contact_id=b.id)
+    out = grouped_loans(s, owner_id=u.id, base_currency="INR")
+    ram = [g for g in out["groups"] if g["name"].lower() == "ram"][0]
+    assert ram["given"]["count"] == 2          # merged by name
+    assert ram["contact_id"] is None           # two different contacts -> no single contact_id
+
+
+def test_sankey_invariant_mixed_direction(ctx):
+    s, u, o = ctx
+    ct = c.create_contact(s, owner_id=u.id, name="Mix"); s.flush()
+    _loan(s, u, "G", "INR", "given", 100000, contact_id=ct.id)
+    _loan(s, u, "T", "INR", "taken", 40000, contact_id=ct.id)
+    out = grouped_loans(s, owner_id=u.id, base_currency="INR")
+    sk = out["sankey"]
+    cnode = [n for n in sk["nodes"] if n["kind"] == "contact"][0]["id"]
+    incoming = sum(l["value_minor"] for l in sk["links"] if l["target"] == cnode)
+    outgoing = sum(l["value_minor"] for l in sk["links"] if l["source"] == cnode)
+    assert incoming == outgoing == 140000      # 100k lent + 40k borrowed, both flow through the contact
+    # aggregate: all Direction->Contact links == base_total lent + borrowed
+    dir_links = sum(l["value_minor"] for l in sk["links"] if l["source"].startswith("dir:"))
+    bt = out["base_total"]
+    assert dir_links == bt["lent"]["principal_minor"] + bt["borrowed"]["principal_minor"] == 140000

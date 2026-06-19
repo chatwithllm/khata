@@ -20,11 +20,13 @@ def grouped_loans(session: Session, *, owner_id, base_currency: str, as_of=None)
     groups = {}
     partial = False
 
+    _rates = {}
+
     def conv(v, ccy):
         nonlocal partial
         if ccy == base_currency:
             return v
-        rate = _fx.get_rate(session, base=ccy, quote=base_currency)
+        rate = _rates.setdefault(ccy, _fx.get_rate(session, base=ccy, quote=base_currency))
         if not rate:
             partial = True
             return 0
@@ -48,7 +50,7 @@ def grouped_loans(session: Session, *, owner_id, base_currency: str, as_of=None)
         else:
             name = (loan.counterparty or "").strip() or "Unlabeled"
             cid = None
-        norm = name.lower() or "unlabeled"
+        norm = name.lower()
 
         g = groups.get(norm)
         if g is None:
