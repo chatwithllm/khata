@@ -113,16 +113,66 @@ a.gname:hover{color:var(--primary-deep);text-decoration:underline}
 .grow-n:hover{color:var(--primary-deep)}
 .grow-amt{font-family:"JetBrains Mono";font-weight:700;font-size:13px;color:var(--ink-soft)}
 .partial-note{padding:10px 22px;font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";border-top:1px solid var(--line-2)}
-/* ── Sankey diagram ── */
-.sankey-wrap{position:relative;width:100%;overflow:hidden;margin:12px 0 4px}
-.sankey-tip{position:absolute;background:var(--ink);color:var(--paper);font-size:11px;font-family:"JetBrains Mono";padding:5px 9px;border-radius:7px;pointer-events:none;white-space:nowrap;z-index:10;opacity:0;transition:opacity .1s;line-height:1.5}
-.sk-bar-wrap{padding:8px 22px 12px}
-.sk-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;font-family:"JetBrains Mono"}
-.sk-bar-label{width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:600;font-size:11.5px}
-.sk-bar{flex:1;height:14px;border-radius:4px;background:var(--paper-2);overflow:hidden;display:flex}
-.sk-bar-l{background:color-mix(in srgb,var(--pos) 70%,transparent);height:100%}
-.sk-bar-b{background:color-mix(in srgb,var(--neg) 60%,transparent);height:100%}
-.sk-bar-amt{font-size:10.5px;color:var(--ink-faint);min-width:70px;text-align:right}
+/* ── loans by-contact: position band ── */
+.pos-band{padding:20px 22px 16px;border-bottom:1px solid var(--line-2)}
+.pos-meter{height:6px;border-radius:3px;background:var(--line-2);overflow:hidden;display:flex;margin-bottom:18px}
+.seg-l{background:var(--pos);transition:flex .8s cubic-bezier(.4,0,.2,1)}
+.seg-b{background:var(--neg);transition:flex .8s cubic-bezier(.4,0,.2,1)}
+.seg-muted{background:var(--line);flex:1}
+.pos-figs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid var(--line-2);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.pos-fig{padding:12px 14px;background:var(--card)}
+.pos-fig:not(:last-child){border-right:1px solid var(--line-2)}
+.pos-fl{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;font-family:"JetBrains Mono";margin-bottom:5px}
+.pos-fv{font-family:"Fraunces",serif;font-weight:600;font-size:20px;letter-spacing:-.02em;line-height:1;color:var(--ink)}
+.pos-fv.pos{color:var(--pos)}
+.pos-fv.neg{color:var(--neg)}
+.pos-fv.net{color:var(--accent-dk);font-size:24px}
+.pos-int-line{display:flex;gap:16px;font-size:11.5px;font-family:"JetBrains Mono"}
+.pos-int-item{display:flex;align-items:center;gap:5px;color:var(--ink-faint)}
+.pos-int-item .int-lbl{font-size:10.5px;letter-spacing:.04em}
+.pos-int-item .int-val{font-weight:700}
+.pos-int-item.int-pos .int-val{color:var(--pos)}
+.pos-int-item.int-neg .int-val{color:var(--neg)}
+.partial-note{padding:8px 22px 0;font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"}
+
+/* ── loans by-contact: ledger rows ── */
+.lrow{border-top:1px solid var(--line-2)}
+.lrow:first-child{border-top:none}
+.lrow-main{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;padding:14px 22px 12px;cursor:pointer;transition:background .15s;-webkit-tap-highlight-color:transparent}
+.lrow-main:hover{background:var(--paper-2)}
+.mono-monogram{width:34px;height:34px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-family:"Fraunces",serif;font-weight:600;font-size:14px;letter-spacing:0;flex:none;transition:background .2s}
+.lrow-main:hover .mono-monogram{background:color-mix(in srgb,var(--ink) 80%,var(--primary))}
+.lrow-name-wrap{min-width:0}
+.lname{font-family:"Hanken Grotesk",sans-serif;font-weight:600;font-size:14px;color:var(--ink);text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+a.lname:hover{color:var(--primary-deep);text-decoration:underline;text-underline-offset:3px}
+.lchip{display:inline-flex;margin-top:4px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink-faint)}
+.lrow-right{display:flex;align-items:center;gap:20px}
+.lfig{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:80px}
+.lfl{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;font-family:"JetBrains Mono"}
+.lfv{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums}
+.lfv.pos{color:var(--pos)}
+.lfv.neg{color:var(--neg)}
+.lchev{color:var(--ink-faint);font-size:11px;flex:none;transition:transform .2s;user-select:none}
+.lrow.open .lchev{transform:rotate(90deg)}
+.lprop-wrap{padding:0 22px 4px;display:flex;align-items:center;gap:8px}
+.lprop{flex:1;height:3px;border-radius:2px;background:var(--line-2);overflow:hidden;display:flex}
+.lprop-l{background:color-mix(in srgb,var(--pos) 70%,transparent);transition:width .6s cubic-bezier(.4,0,.2,1)}
+.lprop-b{background:color-mix(in srgb,var(--neg) 60%,transparent);transition:width .6s cubic-bezier(.4,0,.2,1)}
+.lrow-detail{overflow:hidden;max-height:0;transition:max-height .25s cubic-bezier(.4,0,.2,1)}
+@media(prefers-reduced-motion:reduce){.lrow-detail{transition:none}.lprop-l,.lprop-b,.seg-l,.seg-b{transition:none}}
+.lrow.open .lrow-detail{max-height:600px}
+.lsub-header{display:flex;padding:6px 22px 4px;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);font-family:"JetBrains Mono"}
+.lsub{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:8px 22px;border-top:1px solid var(--line-2)}
+.ltag{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:20px;flex:none}
+.ltag.lent{background:color-mix(in srgb,var(--pos) 14%,transparent);color:var(--pos)}
+.ltag.borrowed{background:color-mix(in srgb,var(--neg) 12%,transparent);color:var(--neg)}
+.lsub-name{min-width:0}
+.lsub-name a{font-size:13px;font-weight:600;color:var(--ink);text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lsub-name a:hover{color:var(--primary-deep);text-decoration:underline;text-underline-offset:2px}
+.lsub-name .lsub-int{font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:1px}
+.lsub-amt{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:13px;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* responsive: collapse lfig columns on narrow screens */
+@media(max-width:560px){.lfig:not(:first-child){display:none}.lrow-right{gap:10px}.lrow-main{gap:10px;padding:12px 16px 10px}.lprop-wrap{padding:0 16px 4px}.pos-figs{grid-template-columns:1fr}.pos-fig:not(:last-child){border-right:none;border-bottom:1px solid var(--line-2)}.pos-band{padding:16px 16px 14px}}
 </style>
 </head>
 <body>
@@ -647,17 +697,19 @@ async function renderConfirms(){
 // ── loans by-contact helpers ──
 // MONEY: format a BASE-currency minor amount with symbol (no sign prefix; sign from value)
 function MONEY(minor, ccy){ return fmt(minor, ccy||BASE); }
-// MONEYSIGN: prefix '+' (green) or '−' (red) based on sign; returns a span element
-function MONEYSIGN(minor, ccy){
+// SIGNED: prefix '+' (green) or '−' (red) based on sign; returns a span element with class pos/neg
+function SIGNED(minor, ccy){
   const s=document.createElement('span');
   if(minor===null||minor===undefined){ s.textContent='—'; return s; }
   const absVal=Math.abs(minor);
   const sign=minor>0?'+':minor<0?'−':'';
-  const cls=minor>0?'gfv pos':minor<0?'gfv neg':'gfv';
+  const cls=minor>0?'lfv pos':minor<0?'lfv neg':'lfv';
   s.className=cls;
   s.textContent=sign+fmt(absVal, ccy||BASE);
   return s;
 }
+// (legacy alias used by older gfig calls; redirect to no-op so existing code won't break)
+function MONEYSIGN(minor, ccy){ return SIGNED(minor, ccy); }
 function figEl(label, val){
   const d=el('div','gfig');
   const lbl=el('span','gfl',label);
@@ -665,264 +717,7 @@ function figEl(label, val){
   else { d.append(lbl, val); }
   return d;
 }
-// ── Sankey diagram of the loan book ──
-function renderSankey(container, sankey, baseCcy, groups){
-  if(!sankey||!sankey.nodes||!sankey.nodes.length){ container.style.display='none'; return; }
-  // compute node counts per column for overflow guard (Fix 2b)
-  const _dirCount=sankey.nodes.filter(n=>n.kind==='direction').length;
-  const _ctCount=sankey.nodes.filter(n=>n.kind==='contact').length;
-  const _lnCount=sankey.nodes.filter(n=>n.kind==='loan').length;
-  const _maxNodesInCol=Math.max(_dirCount,_ctCount,_lnCount);
-
-  // fallback for small screens, reduced motion, or too many nodes (>12) for SVG
-  if(window.matchMedia('(max-width:560px)').matches||window.matchMedia('(prefers-reduced-motion:reduce)').matches||_maxNodesInCol>12){
-    // compact stacked-bar list: one row per contact
-    const wrap=el('div','sk-bar-wrap');
-    const ctNodes=sankey.nodes.filter(n=>n.kind==='contact');
-    // max throughput for scaling bars — use lent+borrowed per contact
-    let maxVal=0;
-    for(const cn of ctNodes){
-      const lv=sankey.links.filter(lk=>lk.source==='dir:lent'&&lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
-      const bv=sankey.links.filter(lk=>lk.source==='dir:borrowed'&&lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
-      if((lv+bv)>maxVal) maxVal=lv+bv;
-    }
-    if(!maxVal) maxVal=1;
-    for(let ci=0;ci<ctNodes.length;ci++){
-      const cn=ctNodes[ci];
-      // lent vs borrowed: look at Direction→Contact links specifically
-      const lentVal=sankey.links.filter(lk=>lk.source==='dir:lent'&&lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
-      const borVal=sankey.links.filter(lk=>lk.source==='dir:borrowed'&&lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
-      const tot=lentVal+borVal||1;
-      const row=el('div','sk-bar-row');
-      const lbl=el('div','sk-bar-label');
-      lbl.textContent=cn.label.length>16?cn.label.slice(0,15)+'…':cn.label;
-      const bar=el('div','sk-bar');
-      const barL=el('div','sk-bar-l'); barL.style.width=(lentVal/maxVal*100)+'%';
-      const barB=el('div','sk-bar-b'); barB.style.width=(borVal/maxVal*100)+'%';
-      bar.append(barL,barB);
-      const amt=el('div','sk-bar-amt'); amt.textContent=fmt(tot,baseCcy);
-      row.append(lbl,bar,amt);
-      // click scrolls to group
-      const gKey=groups&&groups[ci]?groups[ci].key:null;
-      if(gKey){
-        row.style.cursor='pointer';
-        row.addEventListener('click',()=>{ const h=document.getElementById('grp-'+gKey.replace(/\s+/g,'-')); if(h) h.scrollIntoView({behavior:'smooth',block:'start'}); });
-      }
-      wrap.append(row);
-    }
-    container.append(wrap);
-    return;
-  }
-
-  const NS='http://www.w3.org/2000/svg';
-  function svgEl(tag,attrs){
-    const e=document.createElementNS(NS,tag);
-    if(attrs) Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));
-    return e;
-  }
-  function escTxt(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function truncLabel(s,max){ return s.length>max?s.slice(0,max-1)+'…':s; }
-
-  const W=Math.max(container.clientWidth||0,320)||760;
-  const PAD_L=90,PAD_R=90,PAD_V=24;
-  const NODE_W=14;
-
-  // assign columns
-  const colMap={direction:0,contact:1,loan:2};
-  // compute per-column total throughput for scaling
-  const colTotals=[0,0,0];
-  const nodeMap={};
-  sankey.nodes.forEach(n=>{ nodeMap[n.id]=n; });
-  // for direction nodes: sum outgoing; contacts: sum incoming; loans: sum incoming
-  sankey.nodes.forEach(n=>{
-    const col=colMap[n.kind]??0;
-    if(n.kind==='direction'){
-      const tot=sankey.links.filter(lk=>lk.source===n.id).reduce((s,lk)=>s+lk.value_minor,0);
-      n._val=tot;
-    } else if(n.kind==='contact'){
-      const tot=sankey.links.filter(lk=>lk.target===n.id).reduce((s,lk)=>s+lk.value_minor,0);
-      n._val=tot;
-    } else {
-      const tot=sankey.links.filter(lk=>lk.target===n.id).reduce((s,lk)=>s+lk.value_minor,0);
-      n._val=tot;
-    }
-    colTotals[col]+=n._val||0;
-  });
-
-  // height driven by node count
-  const maxNodesInCol=Math.max(
-    sankey.nodes.filter(n=>n.kind==='direction').length,
-    sankey.nodes.filter(n=>n.kind==='contact').length,
-    sankey.nodes.filter(n=>n.kind==='loan').length
-  );
-  const H=Math.max(220,Math.min(420, maxNodesInCol*80+PAD_V*2));
-  const usableH=H-PAD_V*2;
-
-  // x positions for each column center
-  const colX=[
-    PAD_L,
-    PAD_L+(W-PAD_L-PAD_R)/2,
-    W-PAD_R
-  ];
-
-  const NODE_GAP=10;
-
-  // layout nodes in each column — stack top to bottom, vertically centred
-  function layoutCol(nodes){
-    const totalVal=nodes.reduce((s,n)=>s+(n._val||0),0)||1;
-    const maxColTot=Math.max(...colTotals,1);
-    const scale=usableH/maxColTot;
-    const totalPx=nodes.reduce((s,n)=>s+(n._val||0)*scale,0)+NODE_GAP*(nodes.length-1);
-    let y=PAD_V+(usableH-Math.min(totalPx,usableH))/2;
-    nodes.forEach(n=>{
-      const h=Math.max(4,(n._val||0)*scale);
-      n._y=y; n._h=h;
-      y+=h+NODE_GAP;
-    });
-  }
-  const dirNodes=sankey.nodes.filter(n=>n.kind==='direction');
-  const ctNodes=sankey.nodes.filter(n=>n.kind==='contact');
-  const lnNodes=sankey.nodes.filter(n=>n.kind==='loan');
-  layoutCol(dirNodes);
-  layoutCol(ctNodes);
-  layoutCol(lnNodes);
-
-  // determine direction for each contact node (from which dir links point to it)
-  const ctDirMap={};
-  sankey.links.forEach(lk=>{
-    if(lk.source.startsWith('dir:')&&lk.target.startsWith('ct:')){
-      ctDirMap[lk.target]=lk.source;
-    }
-  });
-  // determine direction for each loan node (via contact)
-  const lnDirMap={};
-  sankey.links.forEach(lk=>{
-    if(lk.source.startsWith('ct:')&&lk.target.startsWith('ln:')){
-      lnDirMap[lk.target]=ctDirMap[lk.source]||'dir:lent';
-    }
-  });
-
-  const scale=usableH/Math.max(...colTotals,1);
-
-  // color helpers
-  function linkColor(srcId,tgtId){
-    let dir;
-    if(srcId.startsWith('dir:')) dir=srcId;
-    else if(srcId.startsWith('ct:')) dir=ctDirMap[srcId]||'dir:lent';
-    else dir=lnDirMap[srcId]||'dir:lent';
-    return dir==='dir:lent'?'var(--pos)':'var(--neg)';
-  }
-  function nodeColor(n){
-    if(n.kind==='direction') return n.id==='dir:lent'?'var(--pos)':'var(--neg)';
-    if(n.kind==='contact') return 'var(--ink)';
-    const dir=lnDirMap[n.id]||'dir:lent';
-    return dir==='dir:lent'
-      ?'color-mix(in srgb,var(--pos) 50%,transparent)'
-      :'color-mix(in srgb,var(--neg) 50%,transparent)';
-  }
-
-  const wrap=el('div','sankey-wrap');
-  wrap.style.height=H+'px';
-  const svg=svgEl('svg',{width:W,height:H,viewBox:'0 0 '+W+' '+H,'aria-hidden':'true'});
-  wrap.append(svg);
-
-  // tooltip
-  const tip=el('div','sankey-tip');
-  wrap.append(tip);
-  function showTip(evt,html){
-    tip.innerHTML=html;
-    tip.style.opacity='1';
-    positionTip(evt);
-  }
-  function positionTip(evt){
-    const br=wrap.getBoundingClientRect();
-    const x=evt.clientX-br.left+12;
-    const y=evt.clientY-br.top-28;
-    tip.style.left=Math.min(x,W-tip.offsetWidth-8)+'px';
-    tip.style.top=Math.max(0,y)+'px';
-  }
-  function hideTip(){ tip.style.opacity='0'; }
-
-  // draw links first (behind nodes)
-  // track running offsets per node (how far down the band we've consumed)
-  const outOffset={},inOffset={};
-  sankey.nodes.forEach(n=>{ outOffset[n.id]=0; inOffset[n.id]=0; });
-
-  // sort links so they flow in order
-  sankey.links.forEach(lk=>{
-    const src=nodeMap[lk.source],tgt=nodeMap[lk.target];
-    if(!src||!tgt) return;
-    const srcX=colX[colMap[src.kind]??0]+NODE_W;
-    const tgtX=colX[colMap[tgt.kind]??0];
-    const linkH=Math.max(1.5,lk.value_minor*scale);
-    const srcY=src._y+outOffset[src.id]+(linkH/2);
-    const tgtY=tgt._y+inOffset[tgt.id]+(linkH/2);
-    outOffset[src.id]+=linkH;
-    inOffset[tgt.id]+=linkH;
-    const cx=(srcX+tgtX)/2;
-    const col=linkColor(lk.source,lk.target);
-    const path=svgEl('path',{
-      d:'M'+srcX+','+srcY+' C'+cx+','+srcY+' '+cx+','+tgtY+' '+tgtX+','+tgtY,
-      fill:'none',
-      stroke:col,
-      'stroke-width':Math.max(1.5,linkH),
-      'stroke-opacity':'0.38',
-      'stroke-linecap':'round'
-    });
-    path.style.cursor='pointer';
-    path.addEventListener('mouseenter',(e)=>{
-      path.setAttribute('stroke-opacity','0.7');
-      const val=lk.value_minor;
-      showTip(e, escTxt(src.label)+' → '+escTxt(tgt.label)+'<br>'+escTxt(sym(baseCcy)+fmt(val,baseCcy)));
-    });
-    path.addEventListener('mousemove',positionTip);
-    path.addEventListener('mouseleave',()=>{ path.setAttribute('stroke-opacity','0.38'); hideTip(); });
-    svg.append(path);
-  });
-
-  // draw nodes and labels
-  sankey.nodes.forEach((n,ni)=>{
-    const col=colMap[n.kind]??0;
-    const x=colX[col];
-    const y=n._y, h=n._h||4;
-    const fill=nodeColor(n);
-    const rect=svgEl('rect',{x:x,y:y,width:NODE_W,height:h,rx:'3',fill:fill,'fill-opacity':'0.85'});
-    rect.style.cursor=n.kind==='contact'?'pointer':'default';
-    rect.addEventListener('mouseenter',(e)=>{
-      showTip(e, '<b>'+escTxt(n.label)+'</b><br>'+escTxt(sym(baseCcy))+escTxt(fmt(n._val,baseCcy)));
-    });
-    rect.addEventListener('mousemove',positionTip);
-    rect.addEventListener('mouseleave',hideTip);
-    if(n.kind==='contact'){
-      // parse index from ct:<i>
-      const idx=parseInt(n.id.replace('ct:',''),10);
-      const gKey=groups&&groups[idx]?groups[idx].key:null;
-      if(gKey){
-        rect.addEventListener('click',()=>{ const h2=document.getElementById('grp-'+gKey.replace(/\s+/g,'-')); if(h2) h2.scrollIntoView({behavior:'smooth',block:'start'}); });
-      }
-    }
-    svg.append(rect);
-
-    // label
-    const labelText=truncLabel(n.label,18);
-    let lx,ly,anchor,dy;
-    if(n.kind==='direction'){
-      // label to the left of col 0
-      lx=x-6; ly=y+(h/2); anchor='end'; dy='0.35em';
-    } else if(n.kind==='contact'){
-      // label above
-      lx=x+NODE_W/2; ly=y-4; anchor='middle'; dy='0';
-    } else {
-      // loan: label to the right
-      lx=x+NODE_W+5; ly=y+(h/2); anchor='start'; dy='0.35em';
-    }
-    const txt=svgEl('text',{x:lx,y:ly,'text-anchor':anchor,dy:dy,'font-size':'10.5','font-family':'JetBrains Mono, monospace',fill:'var(--ink-soft)','pointer-events':'none'});
-    txt.textContent=labelText;
-    svg.append(txt);
-  });
-
-  container.append(wrap);
-}
+// (renderSankey removed — replaced by position band + ledger rows)
 async function renderLoansByContact(card){
   let data;
   try{
@@ -931,38 +726,199 @@ async function renderLoansByContact(card){
     data=await r.json();
   }
   catch(e){ card.append(el('div','emptypanel','Could not load grouped loans.')); return; }
-  const sankey=el('div'); sankey.id='loan-sankey'; card.append(sankey);
-  const list=el('div','grouped');
-  if(!data.groups||!data.groups.length){ list.append(el('div','emptypanel','No loans yet.')); }
-  for(const g of (data.groups||[])){
-    const head=el('div','gcontact'); const gid='grp-'+g.key.replace(/\s+/g,'-'); head.id=gid;
-    const title=g.contact_id
-      ? Object.assign(el('a','gname',g.name),{href:'/contacts/'+g.contact_id})
-      : el('span','gname',g.name);
-    head.append(title);
+
+  const baseCcy=data.base_currency||BASE;
+
+  // ── empty state ──
+  if(!data.groups||!data.groups.length){
+    card.append(el('div','emptypanel','No loans yet.'));
+    return;
+  }
+
+  // ── (a) position band ──
+  const lent=(data.base_total&&data.base_total.lent&&data.base_total.lent.principal_minor)||0;
+  const bor=(data.base_total&&data.base_total.borrowed&&data.base_total.borrowed.principal_minor)||0;
+  const net=lent-bor;
+  const lentInt=(data.base_total&&data.base_total.lent&&data.base_total.lent.interest_monthly_minor)||0;
+  const borInt=(data.base_total&&data.base_total.borrowed&&data.base_total.borrowed.interest_monthly_minor)||0;
+
+  const band=el('div','pos-band');
+
+  // proportion meter — 6px ruled line split green/red
+  const meter=el('div','pos-meter');
+  if(lent===0&&bor===0){
+    meter.append(el('span','seg-muted'));
+  } else {
+    const total=lent+bor||1;
+    const segL=el('span','seg-l'); segL.style.flex=String(lent/total);
+    const segB=el('span','seg-b'); segB.style.flex=String(bor/total);
+    meter.append(segL,segB);
+  }
+  band.append(meter);
+
+  // three figures: Owed to you / You owe / Net
+  const figs=el('div','pos-figs');
+
+  const figOwed=el('div','pos-fig');
+  figOwed.append(el('div','pos-fl','Owed to you'));
+  const fvOwed=el('div','pos-fv pos'); fvOwed.textContent=MONEY(lent,baseCcy); figOwed.append(fvOwed);
+  figs.append(figOwed);
+
+  const figYou=el('div','pos-fig');
+  figYou.append(el('div','pos-fl','You owe'));
+  const fvYou=el('div','pos-fv neg'); fvYou.textContent=MONEY(bor,baseCcy); figYou.append(fvYou);
+  figs.append(figYou);
+
+  const figNet=el('div','pos-fig');
+  figNet.append(el('div','pos-fl','Net'));
+  const fvNet=el('div','pos-fv net');
+  fvNet.textContent=(net>=0?'+':'−')+MONEY(Math.abs(net),baseCcy);
+  figNet.append(fvNet);
+  figs.append(figNet);
+
+  band.append(figs);
+
+  // sub-line: monthly interest in / out
+  const intLine=el('div','pos-int-line');
+  const intIn=el('div','pos-int-item int-pos');
+  intIn.append(el('span','int-lbl','interest in'));
+  const intInVal=el('span','int-val'); intInVal.textContent='+'+MONEY(lentInt,baseCcy)+'/mo'; intIn.append(intInVal);
+  const intOut=el('div','pos-int-item int-neg');
+  intOut.append(el('span','int-lbl','interest out'));
+  const intOutVal=el('span','int-val'); intOutVal.textContent='−'+MONEY(borInt,baseCcy)+'/mo'; intOut.append(intOutVal);
+  intLine.append(intIn,intOut);
+  band.append(intLine);
+
+  if(data.partial){
+    band.append(el('div','partial-note','≈ excludes a currency (no FX rate)'));
+  }
+
+  card.append(band);
+
+  // ── (b) treemap placeholder (filled by a later task) ──
+  const treemap=document.createElement('div');
+  treemap.id='loan-treemap';
+  card.append(treemap);
+
+  // ── (c) ledger rows ──
+  const maxTotal=Math.max(...data.groups.map(function(g){ return g.total_base_minor||0; }),1);
+
+  for(const g of data.groups){
+    const slug=g.key.replace(/\s+/g,'-');
+    const lrow=el('div','lrow');
+    lrow.id='grp-'+slug;
+
+    // proportion bar values
+    const lp=g.given&&g.given.principal_minor||0;
+    const bp=g.taken&&g.taken.principal_minor||0;
+    const rowTotal=g.total_base_minor||0;
+    const propTotal=lp+bp||1;
+
+    // main clickable row
+    const main=el('div','lrow-main');
+    main.setAttribute('role','button');
+    main.setAttribute('tabindex','0');
+
+    // monogram coin — wax-seal aesthetic
+    const initial=(g.name&&g.name.trim()[0]||'?').toUpperCase();
+    const mono=el('div','mono-monogram'); mono.textContent=initial;
+    main.append(mono);
+
+    // name + chip
+    const nameWrap=el('div','lrow-name-wrap');
+    const lname=g.contact_id
+      ? Object.assign(el('a','lname'), {href:'/contacts/'+g.contact_id})
+      : el('span','lname');
+    lname.textContent=g.name;
+    nameWrap.append(lname);
+    const loanCount=(g.given.count||0)+(g.taken.count||0);
+    const chip=el('div','lchip'); chip.textContent=loanCount+(loanCount===1?' loan':' loans'); nameWrap.append(chip);
+    main.append(nameWrap);
+
+    // figures + chevron
+    const right=el('div','lrow-right');
     const principal=(g.given.principal_minor||0)+(g.taken.principal_minor||0);
     const intm=(g.given.interest_monthly_minor||0)-(g.taken.interest_monthly_minor||0);
     const nd=(g.given.next_due_minor||0)-(g.taken.next_due_minor||0);
-    const figs=el('div','gfigs');
-    figs.append(figEl('principal', MONEY(principal, data.base_currency)));
-    figs.append(figEl('interest/mo', MONEYSIGN(intm, data.base_currency)));
-    figs.append(figEl('next due', MONEYSIGN(nd, data.base_currency)));
-    head.append(figs);
-    list.append(head);
-    for(const side of ['given','taken']){
-      if(!g[side].count) continue;
-      list.append(el('div','gside',side==='given'?'Lent out':'Borrowed'));
-      for(const ln of g.loans.filter(l=>l.direction===side)){
-        const row=el('div','grow');
-        row.append(Object.assign(el('a','grow-n',ln.name),{href:'/loan/'+ln.plan_id}));
-        row.append(el('span','grow-amt',MONEY(ln.outstanding_minor,ln.currency)));
-        list.append(row);
+
+    const fPrin=el('div','lfig');
+    fPrin.append(el('div','lfl','principal'));
+    const fPrinV=el('div','lfv'); fPrinV.textContent=MONEY(principal,baseCcy); fPrin.append(fPrinV);
+    right.append(fPrin);
+
+    const fInt=el('div','lfig');
+    fInt.append(el('div','lfl','int/mo'));
+    fInt.append(SIGNED(intm,baseCcy));
+    right.append(fInt);
+
+    const fDue=el('div','lfig');
+    fDue.append(el('div','lfl','next due'));
+    fDue.append(SIGNED(nd,baseCcy));
+    right.append(fDue);
+
+    const chev=el('span','lchev','›');
+    right.append(chev);
+    main.append(right);
+    lrow.append(main);
+
+    // thin proportion bar below the main row
+    const propWrap=el('div','lprop-wrap');
+    const propBar=el('div','lprop');
+    const propL=el('div','lprop-l'); propL.style.width=(lp/propTotal*(rowTotal/maxTotal)*100)+'%';
+    const propB=el('div','lprop-b'); propB.style.width=(bp/propTotal*(rowTotal/maxTotal)*100)+'%';
+    propBar.append(propL,propB);
+    propWrap.append(propBar);
+    lrow.append(propWrap);
+
+    // expand/collapse detail block (built lazily on first open)
+    const detail=el('div','lrow-detail');
+    let detailBuilt=false;
+
+    function buildDetail(){
+      if(detailBuilt) return;
+      detailBuilt=true;
+      for(const side of ['given','taken']){
+        const sideLoans=g.loans.filter(function(ln){ return ln.direction===side; });
+        if(!sideLoans.length) continue;
+        const sh=el('div','lsub-header'); sh.textContent=side==='given'?'Lent out':'Borrowed';
+        detail.append(sh);
+        for(const ln of sideLoans){
+          const lsub=el('div','lsub');
+          const ltag=el('span','ltag '+(side==='given'?'lent':'borrowed'));
+          ltag.textContent=side==='given'?'Lent':'Borrowed';
+          lsub.append(ltag);
+          const nameCol=el('div','lsub-name');
+          const lnLink=el('a'); lnLink.href='/loan/'+ln.plan_id; lnLink.textContent=ln.name;
+          nameCol.append(lnLink);
+          const intStr=MONEY(ln.interest_monthly_minor,ln.currency)+'/mo';
+          const lsubInt=el('div','lsub-int'); lsubInt.textContent=intStr; nameCol.append(lsubInt);
+          lsub.append(nameCol);
+          const amtCell=el('div','lsub-amt'); amtCell.textContent=MONEY(ln.outstanding_minor,ln.currency);
+          lsub.append(amtCell);
+          detail.append(lsub);
+        }
       }
     }
+
+    function toggleRow(){
+      const opening=!lrow.classList.contains('open');
+      if(opening) buildDetail();
+      lrow.classList.toggle('open',opening);
+      // when no CSS transition (reduced motion), just let max-height toggle via class
+    }
+
+    main.addEventListener('click',function(e){
+      // let clicks on the contact link navigate, not expand
+      if(e.target.closest('a.lname')) return;
+      toggleRow();
+    });
+    main.addEventListener('keydown',function(e){
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleRow(); }
+    });
+
+    lrow.append(detail);
+    card.append(lrow);
   }
-  renderSankey(sankey, data.sankey, data.base_currency, data.groups);
-  card.append(list);
-  if(data.partial){ card.append(el('div','partial-note','≈ some totals exclude a currency (missing FX rate)')); }
 }
 // inject the By-direction / By-contact toggle into the loans panel header area
 function injectLoanToggle(plist, onSwitch){
