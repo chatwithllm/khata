@@ -28,6 +28,19 @@ def test_requires_exactly_one_parent(ctx):
     with pytest.raises(att.AttachmentError):
         att.add_attachment(s, uploaded_by=u.id, filename="x.png", raw=PNG)  # no parent
 
+def test_rejects_both_parents(ctx):
+    s, u = ctx
+    from khata.services.loans import create_loan_plan, add_disbursement
+    from datetime import date, datetime, timezone
+    ct = c.create_contact(s, owner_id=u.id, name="K"); s.flush()
+    p = create_loan_plan(s, owner_id=u.id, name="L", currency="INR", direction="given",
+                         interest_type="none", rate_bps=0, start_date=date(2024, 1, 1))
+    e = add_disbursement(s, plan=p, user_id=u.id, amount_minor=1000,
+                         occurred_at=datetime(2024, 1, 1, tzinfo=timezone.utc)); s.flush()
+    with pytest.raises(att.AttachmentError):
+        att.add_attachment(s, entry=e, contact=ct, uploaded_by=u.id, filename="x.png", raw=PNG)
+
+
 def test_delete_contact_cascades_attachments(ctx):
     s, u = ctx
     ct = c.create_contact(s, owner_id=u.id, name="K"); s.flush()
