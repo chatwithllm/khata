@@ -23,14 +23,13 @@ SRC=/tmp/khata-deploy-main       # clean main worktree, auto-managed below
 SSH="ssh -o BatchMode=yes $HOST"
 
 echo "── 1/5 refresh clean main checkout ──"
+# Always (re)create a clean main checkout at $SRC. Nuke + prune the (possibly stale,
+# /tmp→/private/tmp symlink-mismatched) registration, then force-add — robust to a
+# pruned/missing-but-registered worktree.
 git -C "$ROOT" fetch -q origin main
-if [ -d "$SRC/.git" ] || git -C "$ROOT" worktree list --porcelain | grep -q "worktree $SRC"; then
-  git -C "$SRC" fetch -q origin main
-  git -C "$SRC" checkout -q --detach origin/main
-else
-  rm -rf "$SRC"
-  git -C "$ROOT" worktree add -q --detach "$SRC" origin/main
-fi
+rm -rf "$SRC"
+git -C "$ROOT" worktree prune
+git -C "$ROOT" worktree add -f --detach "$SRC" origin/main
 test -f "$SRC/Dockerfile" || { echo "FATAL: $SRC has no Dockerfile — Docker files not on main?"; exit 1; }
 echo "main @ $(git -C "$SRC" rev-parse --short HEAD)"
 
