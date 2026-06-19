@@ -35,7 +35,7 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   on user/API data. Pages: `ledger.css` (landing/marketing, `.landing`-scoped animations) + `app.css`
   (app shell + detail panels); `sharing.js` (`mountSharing`). HTML served `Cache-Control: no-store`.
 
-## 4. Data model (13 tables)
+## 4. Data model (14 tables)
 - **users**: id, email, display_name, password_hash?, google_sub?, base_currency, **avatar?** (cropped
   square profile photo as a `data:image/...` URL, set via the crop tool; stored server-side so every member
   sees each contributor's photo and it travels with backups), **is_admin**, **disabled**, created_at.
@@ -76,8 +76,9 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   **token** (unguessable `secrets.token_urlsafe(32)`, unique), **scope** (`summary`|`full`), **expires_at**,
   **revoked_at?**, created_by_user_id, created_at. A link is valid iff not revoked and not past expiry.
   Migration `sh1share01`.
-- **attachments** (supporting proof on a ledger entry): id, **ledger_entry_id** (FK→ledger_entries,
-  ON DELETE CASCADE), uploaded_by_user_id, filename, **mime** (decided by MAGIC BYTES, never the
+- **attachments** (supporting proof on a ledger entry or contact): id, **ledger_entry_id?** (FK→ledger_entries,
+  ON DELETE CASCADE, nullable), **contact_id?** (FK→contacts, ON DELETE CASCADE, nullable — exactly one parent),
+  uploaded_by_user_id, filename, **mime** (decided by MAGIC BYTES, never the
   extension), size, **sha256**, **data** (`LargeBinary` blob — bytes live in the DB so the one-file
   JSON backup keeps round-tripping; the backup serializer base64-encodes the blob on export/import),
   created_at. Allowlist: images (jpeg/png/gif/webp/heic), PDF, Office (docx/xlsx/pptx + legacy OLE);
@@ -85,7 +86,11 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   the `▣ proof` tag (`has_proof = proof_ref OR attachments`) and `attachment_count` on the entry.
   Access: owner OR the entry's contributor may upload/delete; any shared member may view. Served from
   `/api/attachments/<id>` with the stored mime (images/PDF inline, else download), membership-gated,
-  `X-Content-Type-Options: nosniff`. Migration `dd7attach01`.
+  `X-Content-Type-Options: nosniff`. Migration `ct1contact01` (added contact_id).
+- **contacts** (people you lend to / borrow from — owner-private): id, owner_user_id, name,
+  phone?, email?, address?, notes?, photo? (data:URL), created_at, updated_at. Loans link via
+  `loans.contact_id` (nullable FK, **ON DELETE SET NULL** — deleting a contact unlinks its loans,
+  never deletes them). Migration `ct1contact01`.
 - **fx_rates**: id, base_currency, quote_currency, rate_micro, as_of?.
 - **backup_config** (singleton, id=1): enabled, frequency (`daily`|`weekly`), hour (0–23 server-local),
   retention (keep last N), last_run_at, last_status. Drives the in-app automatic-backup scheduler
@@ -180,6 +185,12 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-19 — Contacts + per-contact loan grouping.** A contact record (name/phone/email/address/notes/photo
+  + document attachments via the attachments table) that loans link to (`loans.contact_id`, manual assign, SET NULL
+  on delete). Per-contact rollup of principal + interest — per-currency subtotals plus a base-currency grand total
+  (FX-converted, flagged partial when a rate is missing). New `contacts` table (migration `ct1contact01`), contacts
+  service + API (`/api/contacts` CRUD, `/api/plans/<id>/loan/contact` assign, `/api/contacts/<id>/attachments` docs),
+  Contacts sidebar section + list + detail pages. Owner-only; contact PII excluded from shared/public views.
 - **2026-06-19 — Public read-only share links.** Any plan (asset/loan/holding/chit/retirement) can be
   shared via a tokenized public URL (`/s/<token>`, no login) with expiry (7/30/90 days) + revoke and a
   per-share `summary`|`full` (PII-redacted) scope; plus token-less Print and navigator.share "send".
@@ -407,6 +418,12 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-19 — Contacts + per-contact loan grouping. New Contacts section: a contact record
+  (name/phone/email/address/notes/photo + document attachments via the attachments table) that
+  loans link to (`loans.contact_id`, manual assign, SET NULL on delete). Per-contact rollup of
+  principal + interest — per-currency subtotals plus a base-currency grand total. New `contacts`
+  table (migration `ct1contact01`), contacts service + API, Contacts pages + loan contact picker.
+  Owner-only; contact PII kept out of shared/public views.
 - 2026-06-19 — Public read-only share links. Any plan (asset/loan/holding/chit/retirement) can be
   shared via a tokenized public URL (`/s/<token>`, no login) with expiry (7/30/90d) + revoke and a
   per-share summary|full (PII-redacted) scope; plus token-less Print and navigator.share "send".
