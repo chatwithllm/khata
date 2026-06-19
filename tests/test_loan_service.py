@@ -318,3 +318,110 @@ def test_schedule_principal_minor_tracks_repayment(ctx):
     # total_owed identity holds on every row regardless of the principal change
     for r in sch:
         assert r["total_owed_minor"] == r["principal_minor"] + r["cum_due_minor"]
+
+
+from khata.services.loans import backfill_loan_interest
+
+
+def _lent_loan(s, u, start):
+    plan = create_loan_plan(s, owner_id=u.id, name="Lent Sunil", currency="INR",
+                            direction="given", interest_type="monthly", rate_bps=300,
+                            start_date=start)
+    add_disbursement(s, plan=plan, user_id=u.id, amount_minor=220000000,
+                     occurred_at=_dt(start.year, start.month, start.day))
+    s.flush()
+    return plan
+
+
+def test_backfill_through_month_clears_all(ctx):
+    s, u = ctx
+    plan = _lent_loan(s, u, date(2023, 12, 12))
+    as_of = date(2024, 5, 12)  # 5 complete months -> months 0..4
+    before = loan_state(s, plan.loan, as_of=as_of)
+    assert len(before["schedule"]) == 5 and before["months_behind"] == 5
+
+    res = backfill_loan_interest(s, plan=plan, user_id=u.id, through_month=4, as_of=as_of)
+    s.flush()
+    assert res["count"] == 5
+    after = loan_state(s, plan.loan, as_of=as_of)
+    assert after["months_behind"] == 0
+    assert after["interest_paid_minor"] == after["interest_accrued_minor"]
+    pays = [e for e in plan.ledger_entries if e.kind == "interest_payment"]
+    assert len(pays) == 5
+    assert {e.occurred_at.date() for e in pays} == {
+        date(2023, 12, 12), date(2024, 1, 12), date(2024, 2, 12),
+        date(2024, 3, 12), date(2024, 4, 12)}
+    assert all(e.direction == "in" for e in pays)  # given -> repaid to me
+
+
+def test_backfill_is_idempotent(ctx):
+    s, u = ctx
+    plan = _lent_loan(s, u, date(2023, 12, 12))
+    as_of = date(2024, 5, 12)
+    backfill_loan_interest(s, plan=plan, user_id=u.id, through_month=4, as_of=as_of)
+    s.flush()
+    res2 = backfill_loan_interest(s, plan=plan, user_id=u.id, through_month=4, as_of=as_of)
+    assert res2 == {"count": 0, "total_minor": 0}
+
+
+def test_backfill_tops_up_partial(ctx):
+    s, u = ctx
+    plan = _lent_loan(s, u, date(2023, 12, 12))
+    as_of = date(2024, 5, 12)
+    log_loan_entry(s, plan=plan, user_id=u.id, kind="interest_payment",
+                   amount_minor=3300000, occurred_at=_dt(2023, 12, 12))
+    s.flush()
+    res = backfill_loan_interest(s, plan=plan, user_id=u.id, through_month=0, as_of=as_of)
+    s.flush()
+    assert res["count"] == 1 and res["total_minor"] == 3300000   # only the remainder
+    after = loan_state(s, plan.loan, as_of=as_of)
+    assert after["schedule"][0]["status"] == "paid"
+
+
+def test_backfill_cutoff_respected(ctx):
+    s, u = ctx
+    plan = _lent_loan(s, u, date(2023, 12, 12))
+    as_of = date(2024, 5, 12)
+    res = backfill_loan_interest(s, plan=plan, user_id=u.id, through_month=2, as_of=as_of)
+    s.flush()
+    assert res["count"] == 3
+    after = loan_state(s, plan.loan, as_of=as_of)
+    statuses = [r["status"] for r in after["schedule"]]
+    assert statuses == ["paid", "paid", "paid", "due", "due"]
+
+
+def test_backfill_through_date(ctx):
+    s, u = ctx
+    plan = _lent_loan(s, u, date(2023, 12, 12))
+    as_of = date(2024, 5, 12)
+    res = backfill_loan_interest(s, plan=plan, user_id=u.id,
+                                 through_date=date(2024, 2, 15), as_of=as_of)
+    s.flush()
+    assert res["count"] == 3  # months 0 (Dec), 1 (Jan), 2 (Feb)
+
+
+def test_backfill_validates_cutoff(ctx):
+    s, u = ctx
+    plan = _lent_loan(s, u, date(2023, 12, 12))
+    as_of = date(2024, 5, 12)
+    with pytest.raises(ValidationError):   # neither cutoff
+        backfill_loan_interest(s, plan=plan, user_id=u.id, as_of=as_of)
+    with pytest.raises(ValidationError):   # both cutoffs
+        backfill_loan_interest(s, plan=plan, user_id=u.id, through_month=1,
+                               through_date=date(2024, 1, 1), as_of=as_of)
+    with pytest.raises(ValidationError):   # future date
+        backfill_loan_interest(s, plan=plan, user_id=u.id,
+                               through_date=date(2024, 6, 1), as_of=as_of)
+
+
+def test_backfill_interest_free_noop(ctx):
+    s, u = ctx
+    plan = create_loan_plan(s, owner_id=u.id, name="Free", currency="INR",
+                            direction="given", interest_type="none", rate_bps=0,
+                            start_date=date(2024, 1, 1))
+    add_disbursement(s, plan=plan, user_id=u.id, amount_minor=100000000,
+                     occurred_at=_dt(2024, 1, 1))
+    s.flush()
+    res = backfill_loan_interest(s, plan=plan, user_id=u.id, through_month=5,
+                                 as_of=date(2024, 6, 1))
+    assert res == {"count": 0, "total_minor": 0}

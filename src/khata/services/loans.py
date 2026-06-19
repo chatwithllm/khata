@@ -1,5 +1,5 @@
 import calendar
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING
 
 from sqlalchemy import select
@@ -167,6 +167,65 @@ def log_loan_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor,
     session.flush()
     fx.snapshot_entry_rate(session, entry, explicit_rate_micro=fx_rate_micro)
     return entry
+
+
+def backfill_loan_interest(session: Session, *, plan: Plan, user_id,
+                           through_month: int | None = None,
+                           through_date: date | None = None,
+                           as_of: date | None = None,
+                           acting_user_id=None) -> dict:
+    """Record backdated interest payments to clear historical dues on a loan, oldest
+    month first, up to a cutoff. Each unmarked schedule month (status due/partial) at or
+    before the cutoff gets one `interest_payment` of its REMAINING expected interest,
+    dated at that month's period_start (12:00 UTC). Idempotent: already-paid months add
+    nothing. Returns {count, total_minor}.
+
+    Provide exactly one cutoff: `through_month` (a month_index) or `through_date`.
+    """
+    loan = plan.loan
+    if loan is None:
+        raise ValidationError("not a loan plan")
+    if (through_month is None) == (through_date is None):
+        raise ValidationError("provide exactly one of through_month / through_date")
+    as_of = as_of or date.today()
+    if through_date is not None and through_date > as_of:
+        raise ValidationError("cutoff date cannot be in the future")
+
+    session.expire(plan, ["ledger_entries"])
+    st = loan_state(session, loan, as_of=as_of)
+    schedule = st["schedule"]
+    if not schedule:
+        return {"count": 0, "total_minor": 0}
+
+    if through_month is not None:
+        cutoff_index = int(through_month)
+    else:
+        cutoff_index = -1
+        for row in schedule:
+            if date.fromisoformat(row["period_start"]) <= through_date:
+                cutoff_index = row["month_index"]
+
+    count = 0
+    total = 0
+    for row in schedule:
+        if row["month_index"] > cutoff_index:
+            break
+        if row["status"] == "paid":
+            continue
+        remaining = row["expected_minor"] - row["applied_minor"]
+        if remaining <= 0:
+            continue
+        pm = _month_add(loan.start_date, row["month_index"])
+        occurred = datetime(pm.year, pm.month, pm.day, 12, 0, tzinfo=timezone.utc)
+        log_loan_entry(session, plan=plan, user_id=user_id, kind="interest_payment",
+                       amount_minor=remaining, occurred_at=occurred,
+                       note=f"Backfill — Month {row['month_index']} interest",
+                       acting_user_id=acting_user_id)
+        count += 1
+        total += remaining
+    if count:
+        session.expire(plan, ["ledger_entries"])
+    return {"count": count, "total_minor": total}
 
 
 def _month_add(d: date, n: int) -> date:
