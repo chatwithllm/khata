@@ -152,6 +152,7 @@
     <div class="navsec">Records</div>
     <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
     <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
+    <a class="nav-i" href="/contacts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Contacts <span class="ct" id="ct-contacts"></span></a>
     <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
     <a class="nav-i" href="#" style="color:var(--neg)" onclick="event.preventDefault();fetch('/api/auth/logout',{method:'POST'}).finally(function(){location.href='/'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log out</a>
   </aside>
@@ -196,6 +197,8 @@
           <div class="panel fade d3" id="terms-panel"></div>
           <!-- deployed into (where the borrowed money went) -->
           <div class="panel fade d3" id="deployed-panel" style="display:none"></div>
+          <!-- contact -->
+          <div class="panel fade d3" id="contact-panel"></div>
           <!-- members (sharing) -->
           <div class="panel fade d4 fill" id="members-panel"></div>
           <!-- shared links -->
@@ -1410,6 +1413,91 @@ async function deleteLoan(){
   alert(e.detail || e.error || 'Could not delete this loan.');
 }
 
+// ── contact picker ──
+let CONTACTS = [];
+async function loadContactPicker(box){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Contact'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','lender or borrower'));
+  box.append(ph);
+  const body=el('div'); body.style.cssText='padding:16px 22px;display:flex;flex-direction:column;gap:12px';
+
+  // fetch contacts list
+  let contacts=[];
+  try{ contacts=(await fetch('/api/contacts').then(r=>r.json())).contacts||[]; }catch(e){}
+  CONTACTS=contacts;
+
+  // fetch current contact for this loan
+  let current=null;
+  try{ const d=await fetch('/api/plans/'+pid).then(r=>r.json()); current=d.plan&&d.plan.contact_id; }catch(e){}
+
+  const curContact = contacts.find(c=>c.id===current)||null;
+
+  const msg=el('div','err'); msg.id='contact-msg'; msg.style.color='var(--ink-faint)';
+
+  // current assignment display
+  const curDiv=el('div'); curDiv.id='cur-contact';
+  curDiv.style.cssText='font-size:13.5px;padding:8px 0';
+  if(curContact){
+    curDiv.append(document.createTextNode('Assigned: '));
+    const lnk=el('a'); lnk.href='/contacts/'+curContact.id; lnk.textContent=curContact.name;
+    lnk.style.cssText='color:var(--primary-deep);font-weight:600;text-decoration:none';
+    curDiv.append(lnk);
+  } else {
+    curDiv.textContent='No contact assigned';
+    curDiv.style.color='var(--ink-faint)';
+  }
+  body.append(curDiv);
+
+  // select
+  const sel=el('select'); sel.style.cssText='font-family:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);width:100%';
+  const blank=el('option',null,'— Choose contact —'); blank.value=''; sel.append(blank);
+  contacts.forEach(c=>{ const o=el('option',null,c.name+(c.phone?' · '+c.phone:'')); o.value=c.id; if(c.id===current) o.selected=true; sel.append(o); });
+  body.append(sel);
+
+  const btnRow=el('div'); btnRow.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
+  const assignBtn=el('button',null,'Assign'); assignBtn.style.cssText='font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:9px;background:var(--primary);color:var(--paper);border:none;cursor:pointer';
+  const unassignBtn=el('button',null,'Unassign'); unassignBtn.style.cssText='font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer';
+  if(!current) unassignBtn.style.display='none';
+  btnRow.append(assignBtn, unassignBtn);
+  body.append(btnRow, msg);
+
+  // inline new contact
+  const newToggle=el('button',null,'+ New contact'); newToggle.style.cssText='font:inherit;font-size:12px;color:var(--primary-deep);font-weight:600;cursor:pointer;border:none;background:none;padding:4px 0';
+  const newForm=el('div'); newForm.style.display='none';
+  const newName=el('input'); newName.placeholder='Name (required)'; newName.style.cssText='font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);width:100%;box-sizing:border-box';
+  const newPhone=el('input'); newPhone.placeholder='Phone (optional)'; newPhone.style.cssText=newName.style.cssText+'margin-top:8px';
+  const newSave=el('button',null,'Create & assign'); newSave.style.cssText=assignBtn.style.cssText+'margin-top:8px';
+  newForm.append(newName, newPhone, newSave);
+  newToggle.addEventListener('click', ()=>{ newForm.style.display=newForm.style.display==='none'?'flex':'none'; newForm.style.flexDirection='column'; if(newForm.style.display!=='none') newName.focus(); });
+  body.append(newToggle, newForm);
+  box.append(body);
+
+  assignBtn.addEventListener('click', async ()=>{
+    const cid=parseInt(sel.value,10); if(!cid){ msg.textContent='Select a contact first.'; return; }
+    msg.textContent='';
+    const r=await fetch('/api/plans/'+pid+'/loan/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contact_id:cid})});
+    if(r.ok){ loadContactPicker(box); } else { msg.textContent='Could not assign.'; }
+  });
+  unassignBtn.addEventListener('click', async ()=>{
+    msg.textContent='';
+    const r=await fetch('/api/plans/'+pid+'/loan/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contact_id:null})});
+    if(r.ok){ loadContactPicker(box); } else { msg.textContent='Could not unassign.'; }
+  });
+  newSave.addEventListener('click', async ()=>{
+    const nm=(newName.value||'').trim(); if(!nm){ newName.focus(); return; }
+    msg.textContent='';
+    const cr=await fetch('/api/contacts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:nm,phone:newPhone.value||null})});
+    if(!cr.ok){ msg.textContent='Could not create contact.'; return; }
+    const nc=await cr.json();
+    const newId=nc.contact&&nc.contact.id;
+    if(!newId){ msg.textContent='Created but no ID returned.'; return; }
+    const ar=await fetch('/api/plans/'+pid+'/loan/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contact_id:newId})});
+    if(ar.ok){ loadContactPicker(box); } else { msg.textContent='Created contact but could not assign.'; }
+  });
+}
+
 // ── boot ──
 async function boot(){
   const me = await fetch('/api/auth/me');
@@ -1472,6 +1560,7 @@ async function boot(){
   renderDeployed($('deployed-panel'), st);
   renderMembers($('members-panel'));
   renderSharePanel($('share-panel'));
+  loadContactPicker($('contact-panel'));
   loadShareList();
 
   // sidebar counts from /api/plans

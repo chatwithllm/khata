@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — Contact</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/assets/app.css">
+<script src="/static/assets/profile-menu.js"></script>
+<style>
+/* ── contact-detail.html-only rules ── */
+.c-avatar-lg{width:64px;height:64px;border-radius:50%;background:var(--primary);color:var(--paper);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:26px;flex:none;background-size:cover;background-position:center;cursor:pointer;position:relative;overflow:hidden}
+.c-avatar-lg .ava-ov{position:absolute;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+.c-avatar-lg:hover .ava-ov{opacity:1}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+.fld input,.fld select,.fld textarea{font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);transition:border-color .2s}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--primary)}
+.fld textarea{resize:vertical;min-height:72px}
+.acts{display:flex;gap:12px;align-items:center;margin-top:4px}
+.acts .save{font-weight:600;font-size:14px;padding:9px 18px;border-radius:10px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;font-family:inherit}
+.acts .save:hover{transform:translateY(-1px)}
+.acts .danger{font-weight:600;font-size:14px;color:var(--neg);cursor:pointer;border:none;background:none;font-family:inherit}
+.err{color:var(--neg);font-size:12.5px;min-height:16px}
+.ok{color:var(--pos);font-size:12.5px;min-height:16px}
+.att-row{display:flex;align-items:center;gap:10px;padding:10px 22px;border-top:1px solid var(--line-2);font-size:13.5px}
+.att-row:first-child{border-top:none}
+.att-name{flex:1;font-family:"JetBrains Mono";font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att-dl{font-size:12px;font-weight:600;color:var(--primary-deep);text-decoration:none}
+.att-del{font-size:12px;font-weight:600;color:var(--neg);cursor:pointer;border:none;background:none;font-family:inherit;padding:0}
+.loan-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 22px;border-top:1px solid var(--line-2);text-decoration:none;color:inherit}
+.loan-row:hover{background:var(--paper-2)}
+.loan-row:first-child{border-top:none}
+.loan-nm{font-weight:600;font-size:14px}
+.loan-meta{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:2px}
+.loan-amt{font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right;white-space:nowrap}
+.ru-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 22px;border-top:1px solid var(--line-2);font-size:13.5px}
+.ru-row:first-child{border-top:none}
+.ru-lbl{color:var(--ink-faint)}
+.ru-val{font-family:"JetBrains Mono";font-weight:700}
+.ru-section{padding:14px 22px;border-top:2px solid var(--line);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint)}
+.emptypanel{padding:30px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px}
+.info-body{padding:16px 22px;display:flex;flex-direction:column;gap:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- sidebar -->
+  <aside class="side">
+    <a class="brand" href="/app"><span class="glyph"></span> Khata</a>
+    <a class="newplan" href="/create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
+    <div class="navsec">Overview</div>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
+    <a class="nav-i" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
+    <div class="navsec">Money plans</div>
+    <a class="nav-i" href="/app?type=asset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i" href="/app?type=chit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app?type=loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app?type=retirement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <div class="navsec">Records</div>
+    <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
+    <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
+    <a class="nav-i" href="/contacts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Contacts <span class="ct" id="ct-contacts"></span></a>
+    <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+    <a class="nav-i" href="#" style="color:var(--neg)" onclick="event.preventDefault();fetch('/api/auth/logout',{method:'POST'}).finally(function(){location.href='/'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log out</a>
+  </aside>
+
+  <!-- main -->
+  <main class="main">
+    <div class="top">
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="c-avatar-lg" id="c-avatar-lg">
+          <span id="c-ava-init"></span>
+          <span class="ava-ov"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+          <input type="file" accept="image/*" id="photo-input" style="display:none">
+        </div>
+        <div>
+          <h1 id="c-name">Contact</h1>
+          <div class="sub" id="c-sub">—</div>
+        </div>
+      </div>
+      <div class="top-right">
+        <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init" id="ava-init"></span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="grid2">
+        <!-- LEFT: info + documents -->
+        <div class="stack">
+          <div class="panel fade" id="info-panel"></div>
+          <div class="panel fade d1" id="docs-panel"></div>
+        </div>
+        <!-- RIGHT: rollup + loans -->
+        <div class="stack">
+          <div class="panel fade d2" id="rollup-panel"></div>
+          <div class="panel fade d3" id="loans-panel"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const cid = parseInt(location.pathname.split('/').pop(), 10);
+
+function el(tag, cls, text){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined && text!==null) e.textContent=text;
+  return e;
+}
+
+function sym(ccy){ return ccy==='INR'?'₹':(ccy==='USD'?'$':''); }
+function fmtNum(minor, ccy){
+  if(minor===null||minor===undefined) return '—';
+  const v=minor/100;
+  if(ccy==='INR'){
+    let n=Math.round(v); let s=Math.abs(n).toString();
+    if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}
+    return (n<0?'-':'')+s;
+  }
+  return Math.round(v).toLocaleString('en-US');
+}
+
+function updateHeader(contact){
+  document.title='Khata — '+(contact.name||'Contact');
+  $('c-name').textContent=contact.name||'—';
+  const sub=[];
+  if(contact.phone) sub.push(contact.phone);
+  if(contact.email) sub.push(contact.email);
+  $('c-sub').textContent=sub.join(' · ')||'—';
+  const av=$('c-avatar-lg');
+  const init=$('c-ava-init');
+  if(contact.photo){
+    av.style.backgroundImage='url('+JSON.stringify(contact.photo)+')';
+    av.style.backgroundColor='transparent';
+    init.textContent='';
+  } else {
+    av.style.backgroundImage='';
+    av.style.backgroundColor='';
+    init.textContent=((contact.name||'?')[0]||'?').toUpperCase();
+  }
+}
+
+function renderInfo(box, contact){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Contact info'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','edit details'));
+  box.append(ph);
+
+  const body=el('div','info-body');
+
+  const nmFld=el('div','fld');
+  nmFld.append(el('label',null,'Name'));
+  const nmInp=el('input'); nmInp.id='i-name'; nmInp.value=contact.name||'';
+  nmFld.append(nmInp);
+
+  const row2=el('div'); row2.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:10px';
+  const phFld=el('div','fld');
+  phFld.append(el('label',null,'Phone'));
+  const phInp=el('input'); phInp.id='i-phone'; phInp.value=contact.phone||''; phInp.type='tel';
+  phFld.append(phInp);
+  const emFld=el('div','fld');
+  emFld.append(el('label',null,'Email'));
+  const emInp=el('input'); emInp.id='i-email'; emInp.value=contact.email||''; emInp.type='email';
+  emFld.append(emInp);
+  row2.append(phFld, emFld);
+
+  const adFld=el('div','fld');
+  adFld.append(el('label',null,'Address'));
+  const adInp=el('input'); adInp.id='i-address'; adInp.value=contact.address||'';
+  adFld.append(adInp);
+
+  const noFld=el('div','fld');
+  noFld.append(el('label',null,'Notes'));
+  const noInp=el('textarea'); noInp.id='i-notes'; noInp.value=contact.notes||'';
+  noFld.append(noInp);
+
+  const msgEl=el('div','err'); msgEl.id='i-msg';
+  const acts=el('div','acts');
+  const saveBtn=el('button','save','Save'); saveBtn.type='button';
+  const delBtn=el('button','danger','Delete contact'); delBtn.type='button';
+  acts.append(saveBtn, delBtn);
+
+  saveBtn.addEventListener('click', async ()=>{
+    msgEl.className='err'; msgEl.textContent='';
+    const payload={
+      name: nmInp.value.trim()||contact.name,
+      phone: phInp.value.trim()||null,
+      email: emInp.value.trim()||null,
+      address: adInp.value.trim()||null,
+      notes: noInp.value.trim()||null
+    };
+    const r=await fetch('/api/contacts/'+cid,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(r.status===401){ window.location.href='/'; return; }
+    if(!r.ok){ const e=await r.json().catch(()=>({})); msgEl.textContent=e.detail||e.error||'Could not save.'; return; }
+    const d=await r.json();
+    msgEl.className='ok'; msgEl.textContent='Saved.';
+    if(d.contact) updateHeader(d.contact);
+  });
+
+  delBtn.addEventListener('click', async ()=>{
+    if(!confirm('Delete this contact? This cannot be undone.')) return;
+    const r=await fetch('/api/contacts/'+cid,{method:'DELETE'});
+    if(r.ok){ window.location.href='/contacts'; return; }
+    const e=await r.json().catch(()=>({}));
+    msgEl.className='err'; msgEl.textContent=e.detail||e.error||'Could not delete.';
+  });
+
+  body.append(nmFld, row2, adFld, noFld, msgEl, acts);
+  box.append(body);
+}
+
+function renderDocs(box, atts){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Documents'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta', atts.length+' '+(atts.length===1?'file':'files')));
+  box.append(ph);
+
+  if(atts.length){
+    const list=el('div');
+    for(const a of atts){
+      const row=el('div','att-row');
+      const nm=el('div','att-name', a.filename||('Attachment '+a.id));
+      const dl=document.createElement('a');
+      dl.className='att-dl'; dl.href='/api/attachments/'+a.id; dl.textContent='Download'; dl.target='_blank';
+      const delBtn=el('button','att-del','Delete');
+      delBtn.addEventListener('click', async ()=>{
+        if(!confirm('Delete this attachment?')) return;
+        const r=await fetch('/api/attachments/'+a.id,{method:'DELETE'});
+        if(r.ok){ boot(); return; }
+        alert('Could not delete.');
+      });
+      row.append(nm, dl, delBtn);
+      list.append(row);
+    }
+    box.append(list);
+  } else {
+    box.append(el('div','emptypanel','No documents yet.'));
+  }
+
+  const uploadArea=el('div'); uploadArea.style.cssText='padding:12px 22px;border-top:1px solid var(--line-2)';
+  const upLabel=el('label');
+  upLabel.style.cssText='display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--primary-deep);cursor:pointer';
+  const upInp=el('input'); upInp.type='file'; upInp.multiple=true; upInp.style.display='none';
+  upLabel.append(upInp, document.createTextNode('＋ Upload file'));
+  const upMsg=el('div','err'); upMsg.style.marginTop='6px';
+  upInp.addEventListener('change', async ()=>{
+    if(!upInp.files||!upInp.files.length) return;
+    upMsg.textContent='Uploading…'; upMsg.className='ok';
+    const fd=new FormData();
+    for(const f of upInp.files) fd.append('file', f);
+    const r=await fetch('/api/contacts/'+cid+'/attachments',{method:'POST',body:fd});
+    if(!r.ok){ const e=await r.json().catch(()=>({})); upMsg.className='err'; upMsg.textContent=e.detail||e.error||'Upload failed.'; return; }
+    boot();
+  });
+  uploadArea.append(upLabel, upMsg);
+  box.append(uploadArea);
+}
+
+function renderRollup(box, rollup){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Loan rollup'); t.style.fontSize='16px';
+  const totalLoans=rollup.loan_count||0;
+  ph.append(t, el('div','meta','total across '+totalLoans+' loan'+(totalLoans===1?'':'s')));
+  box.append(ph);
+
+  if(!totalLoans){
+    box.append(el('div','emptypanel','No loans linked to this contact.'));
+    return;
+  }
+
+  // by currency
+  const byCcy=rollup.by_currency||[];
+  for(const bc of byCcy){
+    const sec=el('div','ru-section'); sec.textContent=bc.currency+(bc.loan_count>1?' · '+bc.loan_count+' loans':'');
+    box.append(sec);
+
+    function ruRow(lbl, val){
+      const r=el('div','ru-row');
+      r.append(el('span','ru-lbl',lbl));
+      r.append(el('span','ru-val', sym(bc.currency)+fmtNum(val, bc.currency)));
+      return r;
+    }
+    if(bc.principal_outstanding_minor!=null) box.append(ruRow('Principal outstanding', bc.principal_outstanding_minor));
+    if(bc.interest_due_minor!=null) box.append(ruRow('Interest due', bc.interest_due_minor));
+    if(bc.interest_paid_minor!=null) box.append(ruRow('Interest paid', bc.interest_paid_minor));
+  }
+
+  // grand total
+  if(rollup.base_total!=null){
+    const sec=el('div','ru-section'); sec.textContent='Grand total';
+    box.append(sec);
+    const r=el('div','ru-row');
+    r.append(el('span','ru-lbl', rollup.base_total_partial?'≈ Approximate':'Total'));
+    const v=el('span','ru-val'); v.textContent=(rollup.base_total_partial?'≈':'')+sym(rollup.base_currency||'INR')+fmtNum(rollup.base_total, rollup.base_currency||'INR');
+    if(rollup.base_total_partial){ const p=el('span',null,' (partial)'); p.style.cssText='color:var(--ink-faint);font-size:11px;font-weight:400'; v.append(p); }
+    r.append(v);
+    box.append(r);
+  }
+
+  // given / taken counts
+  const cr=el('div','ru-row');
+  cr.append(el('span','ru-lbl','Loans given'));
+  cr.append(el('span','ru-val', String(rollup.loans_given||0)));
+  box.append(cr);
+  const ct=el('div','ru-row');
+  ct.append(el('span','ru-lbl','Loans taken'));
+  ct.append(el('span','ru-val', String(rollup.loans_taken||0)));
+  box.append(ct);
+}
+
+function renderLoans(box, loans){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Linked loans'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta', loans.length+' '+(loans.length===1?'loan':'loans')));
+  box.append(ph);
+
+  if(!loans.length){
+    box.append(el('div','emptypanel','No loans linked.'));
+    return;
+  }
+
+  for(const ln of loans){
+    const row=document.createElement('a');
+    row.className='loan-row';
+    row.href='/loan/'+ln.plan_id;
+
+    const left=el('div');
+    left.append(el('div','loan-nm', ln.name||'Loan'));
+    const meta=[];
+    if(ln.direction) meta.push(ln.direction==='given'?'lent':'borrowed');
+    if(ln.currency) meta.push(ln.currency);
+    if(meta.length) left.append(el('div','loan-meta', meta.join(' · ')));
+    row.append(left);
+
+    const right=el('div');
+    right.style.textAlign='right';
+    if(ln.principal_outstanding_minor!=null){
+      const amt=el('div','loan-amt');
+      amt.textContent=sym(ln.currency)+fmtNum(ln.principal_outstanding_minor, ln.currency);
+      right.append(amt);
+    }
+    if(ln.interest_due_minor!=null && ln.interest_due_minor>0){
+      const id=el('div',null,sym(ln.currency)+fmtNum(ln.interest_due_minor, ln.currency)+' due');
+      id.style.cssText='font-size:11.5px;color:var(--neg);font-family:"JetBrains Mono"';
+      right.append(id);
+    }
+    row.append(right);
+    box.append(row);
+  }
+}
+
+// ── photo upload ──
+$('c-avatar-lg').addEventListener('click', ()=>$('photo-input').click());
+$('photo-input').addEventListener('change', async ()=>{
+  const file=$('photo-input').files[0]; if(!file) return;
+  const img=new Image();
+  const reader=new FileReader();
+  reader.onload=(ev)=>{
+    img.onload=async ()=>{
+      const MAX=200;
+      const scale=Math.min(1, MAX/Math.max(img.width, img.height));
+      const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      const dataURL=cv.toDataURL('image/jpeg', 0.85);
+      const r=await fetch('/api/contacts/'+cid,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({photo:dataURL})});
+      if(r.ok){ const d=await r.json(); if(d.contact) updateHeader(d.contact); }
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+async function boot(){
+  const me=await fetch('/api/auth/me');
+  if(me.status===401){ window.location.href='/'; return; }
+  const user=(await me.json()).user;
+  $('ava-init').textContent=((user.display_name||'?')[0]||'?').toUpperCase();
+
+  const [cr, ar] = await Promise.all([
+    fetch('/api/contacts/'+cid),
+    fetch('/api/contacts/'+cid+'/attachments').catch(()=>null)
+  ]);
+
+  if(cr.status===401){ window.location.href='/'; return; }
+  if(!cr.ok){ window.location.href='/contacts'; return; }
+
+  const d=await cr.json();
+  const contact=d.contact;
+  const rollup=d.rollup||{};
+
+  updateHeader(contact);
+
+  renderInfo($('info-panel'), contact);
+
+  let atts=[];
+  if(ar && ar.ok){ const ad=await ar.json(); atts=ad.attachments||[]; }
+  renderDocs($('docs-panel'), atts);
+
+  renderRollup($('rollup-panel'), rollup);
+  renderLoans($('loans-panel'), rollup.loans||[]);
+
+  // sidebar counts
+  try{
+    const plansResp=await fetch('/api/plans').then(x=>x.json());
+    const plans=plansResp.plans||[];
+    const by=(t)=>plans.filter(p=>p.type===t).length||'';
+    $('ct-asset').textContent=by('asset');
+    $('ct-chit').textContent=by('chit');
+    $('ct-loan').textContent=by('loan');
+    $('ct-retirement').textContent=by('retirement');
+  }catch(e){}
+
+  try{
+    const cr2=await fetch('/api/contacts').then(x=>x.json());
+    if($('ct-contacts')) $('ct-contacts').textContent=(cr2.contacts||[]).length||'';
+  }catch(e){}
+}
+
+mountProfileMenu();
+boot();
+</script>
+<script src="/static/assets/nav.js" defer></script>
+</body>
+</html>
