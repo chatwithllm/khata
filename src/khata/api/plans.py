@@ -4,7 +4,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from ..models import Plan, User, LedgerEntry
 from ..money import format_minor, pct_to_bps, to_micro, to_minor
-from ..services import assets, chits, feed, fx, holdings, loans, retirement, sharing
+from ..services import assets, chits, feed, fx, holdings, loans, retirement, sharing, sharing_links
 from ..services.assets import PlanError
 from ..services.loans import LoanError
 from ..services.holdings import HoldingError
@@ -830,6 +830,56 @@ def chit_dividend(plan_id):
     return jsonify(chits.auction_dividend(
         chit_value_minor=plan.chit.chit_value_minor, commission_bps=plan.chit.commission_bps,
         n_members=plan.chit.n_members, winning_bid_minor=bid)), 200
+
+
+@bp.post("/<int:plan_id>/shares")
+def create_share(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner-only
+    if err:
+        return err
+    data = request.get_json(silent=True) or {}
+    try:
+        sh = sharing_links.create_share(
+            g.db, plan=plan, user_id=user.id,
+            scope=data.get("scope", "summary"), ttl_days=int(data.get("ttl_days", 30)))
+        g.db.commit()
+    except (sharing_links.ShareError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    url = request.host_url.rstrip("/") + "/s/" + sh.token
+    return jsonify(share={"id": sh.id, "scope": sh.scope, "token": sh.token,
+                          "expires_at": sh.expires_at.isoformat()}, url=url), 201
+
+
+@bp.get("/<int:plan_id>/shares")
+def list_shares(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)
+    if err:
+        return err
+    return jsonify(shares=sharing_links.list_shares(g.db, plan)), 200
+
+
+@bp.delete("/<int:plan_id>/shares/<int:share_id>")
+def revoke_share(plan_id, share_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)
+    if err:
+        return err
+    try:
+        sharing_links.revoke_share(g.db, plan=plan, share_id=share_id)
+        g.db.commit()
+    except sharing_links.ShareNotFound:
+        g.db.rollback()
+        return jsonify(error="not_found"), 404
+    return "", 204
 
 
 @bp.post("/<int:plan_id>/retirement/update")

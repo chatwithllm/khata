@@ -1,0 +1,593 @@
+<!doctype html>
+<!--
+  Khata — public shared plan view.
+  Self-contained: no app.css / ledger.css / nav.js dependency.
+  Route: GET /s/<token>  →  fetches GET /api/public/<token>
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khata — shared plan</title>
+<meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; connect-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2314100a'/%3E%3Cpath d='M8 7v18M8 16l9-9M11 13l10 12' stroke='%23d4a843' stroke-width='2.6' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+<style>
+/* ── design tokens (ink/ivory ledger feel) ──────────────────── */
+:root {
+  --ink:       #14100a;
+  --ink-2:     #1d1810;
+  --ivory:     #f4edde;
+  --ivory-dim: #cfc5ae;
+  --mute:      #8d8268;
+  --gold:      #d4a843;
+  --sindoor:   #c4452e;
+  --green:     #5a9e4b;
+  --rule:      #d5cabb;
+  --serif:     Georgia, "Times New Roman", serif;
+  --mono:      ui-monospace, "Courier New", monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; }
+
+body {
+  background: var(--ivory);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  padding: 0 0 60px;
+}
+
+/* ── page wrapper ────────────────────────────────────────────── */
+.page {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ── state messages (404 / 410 / error) ─────────────────────── */
+.state-msg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  gap: 12px;
+}
+.state-msg h1 {
+  font-size: 1.5rem;
+  font-weight: normal;
+  color: var(--ink);
+}
+.state-msg p {
+  color: var(--mute);
+  font-size: 14px;
+  font-family: var(--mono);
+  letter-spacing: .04em;
+}
+
+/* ── plan header ─────────────────────────────────────────────── */
+.plan-header {
+  border-bottom: 2px solid var(--ink);
+  padding: 48px 0 24px;
+  margin-bottom: 32px;
+}
+
+.plan-name {
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  font-weight: normal;
+  letter-spacing: -.01em;
+  line-height: 1.15;
+  margin-bottom: 16px;
+}
+
+.plan-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .06em;
+  color: var(--mute);
+  text-transform: uppercase;
+}
+
+.plan-meta .badge {
+  background: var(--ink);
+  color: var(--ivory);
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.plan-meta .badge.status-active   { background: var(--green); }
+.plan-meta .badge.status-closed   { background: var(--mute); }
+.plan-meta .badge.status-overdue  { background: var(--sindoor); }
+
+/* ── section headings ────────────────────────────────────────── */
+.section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--sindoor);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+}
+
+/* ── headline figures grid ───────────────────────────────────── */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 36px;
+}
+
+.figure-cell {
+  background: var(--ivory);
+  padding: 18px 20px;
+}
+
+.figure-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--mute);
+  margin-bottom: 6px;
+}
+
+.figure-value {
+  font-size: 1.45rem;
+  font-weight: normal;
+  letter-spacing: -.01em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.figure-value.negative { color: var(--sindoor); }
+.figure-value.positive { color: var(--green); }
+
+/* ── tables ──────────────────────────────────────────────────── */
+.table-section {
+  margin-bottom: 36px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.data-table th {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--mute);
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ink);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: #f0e8d8; }
+
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── print button ────────────────────────────────────────────── */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin: 28px 0 0;
+}
+
+.btn-print {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  padding: 10px 22px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background .2s, color .2s;
+}
+.btn-print:hover { background: var(--ink); color: var(--ivory); }
+
+/* ── footer ──────────────────────────────────────────────────── */
+.page-footer {
+  margin-top: 48px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--mute);
+  text-align: center;
+}
+
+/* ── loading skeleton ────────────────────────────────────────── */
+.loading {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+/* ── print styles ────────────────────────────────────────────── */
+@media print {
+  body { padding: 0; font-size: 12pt; }
+  .page { max-width: 100%; padding: 0; }
+  .actions { display: none !important; }
+  .plan-header { padding-top: 0; }
+  .figures { break-inside: avoid; }
+  .table-section { break-inside: avoid; }
+  .data-table tr:hover td { background: none; }
+  .page-footer { margin-top: 24pt; }
+  a { text-decoration: none; }
+}
+
+@media (max-width: 520px) {
+  .figures { grid-template-columns: 1fr 1fr; }
+  .data-table { font-size: 12px; }
+  .data-table th, .data-table td { padding: 7px 6px; }
+}
+</style>
+</head>
+<body>
+<div class="page" id="root">
+  <div class="loading" id="loading">Loading&hellip;</div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── currency symbol lookup ───────────────────────────────── */
+  function sym(currency) {
+    if (!currency) return '';
+    var c = String(currency).toUpperCase();
+    if (c === 'INR') return '₹';
+    if (c === 'USD') return '$';
+    if (c === 'EUR') return '€';
+    if (c === 'GBP') return '£';
+    return c + ' ';
+  }
+
+  /* ── format minor-unit integer as money ───────────────────── */
+  function fmtMoney(minorInt, currency) {
+    if (minorInt == null) return '—';
+    var n = Number(minorInt);
+    if (isNaN(n)) return '—';
+    var major = n / 100;
+    // Use en-IN for INR, en-US otherwise
+    var locale = (String(currency).toUpperCase() === 'INR') ? 'en-IN' : 'en-US';
+    try {
+      return sym(currency) + Math.abs(major).toLocaleString(locale, {
+        minimumFractionDigits: 2, maximumFractionDigits: 2
+      });
+    } catch (e) {
+      return sym(currency) + Math.abs(major).toFixed(2);
+    }
+  }
+
+  /* ── humanize a snake_case key → Title Case label ─────────── */
+  function humanize(key) {
+    return key
+      .replace(/_minor$/, '')
+      .replace(/_micro$/, '')
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+  }
+
+  /* ── escape HTML ──────────────────────────────────────────── */
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ── build the "as of" display string ────────────────────── */
+  function fmtDate(iso) {
+    if (!iso) return '';
+    try {
+      var d = new Date(iso);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (e) {
+      return iso;
+    }
+  }
+
+  /* ── extract headline figures for each plan type ──────────── */
+  function extractFigures(planType, state, currency) {
+    var figures = [];
+    var type = String(planType || '').toLowerCase();
+    var keys, label, val;
+
+    if (type === 'loan') {
+      var loanKeys = [
+        ['principal_outstanding_minor', 'Outstanding Principal'],
+        ['interest_due_minor',          'Interest Due'],
+        ['interest_paid_minor',         'Interest Paid'],
+        ['months_behind',               'Months Behind']
+      ];
+      for (var li = 0; li < loanKeys.length; li++) {
+        var lk = loanKeys[li][0];
+        var ll = loanKeys[li][1];
+        if (state[lk] != null) {
+          var isMonth = (lk === 'months_behind');
+          figures.push({
+            label: ll,
+            raw: state[lk],
+            display: isMonth ? String(state[lk]) : fmtMoney(state[lk], currency),
+            sign: isMonth ? null : (Number(state[lk]) < 0 ? 'negative' : null)
+          });
+        }
+      }
+    } else if (type === 'holding') {
+      var holdKeys = [
+        ['current_value_minor',   'Current Value'],
+        ['unrealized_gain_minor', 'Unrealized Gain'],
+        ['qty_held_micro',        'Quantity Held (micro)']
+      ];
+      for (var hi = 0; hi < holdKeys.length; hi++) {
+        var hk = holdKeys[hi][0];
+        var hl = holdKeys[hi][1];
+        if (state[hk] != null) {
+          var hval = (hk === 'qty_held_micro')
+            ? String(Number(state[hk]) / 1000000)
+            : fmtMoney(state[hk], currency);
+          var hSign = null;
+          if (hk === 'unrealized_gain_minor') {
+            hSign = Number(state[hk]) < 0 ? 'negative' : 'positive';
+          }
+          figures.push({ label: hl, raw: state[hk], display: hval, sign: hSign });
+        }
+      }
+    } else {
+      // Generic fallback: covers asset / chit / retirement and any unknown type.
+      // Render every top-level *_minor or *_micro key as a money figure.
+      var stateKeys = Object.keys(state);
+      for (var gi = 0; gi < stateKeys.length; gi++) {
+        var gk = stateKeys[gi];
+        if (typeof state[gk] === 'number' || (state[gk] != null && !Array.isArray(state[gk]) && typeof state[gk] !== 'object')) {
+          if (/_minor$/.test(gk)) {
+            figures.push({
+              label: humanize(gk),
+              raw: state[gk],
+              display: fmtMoney(state[gk], currency),
+              sign: Number(state[gk]) < 0 ? 'negative' : null
+            });
+          } else if (/_micro$/.test(gk)) {
+            figures.push({
+              label: humanize(gk),
+              raw: state[gk],
+              display: String(Number(state[gk]) / 1000000),
+              sign: null
+            });
+          }
+        }
+      }
+      // If no *_minor/*_micro keys found, show any plain numeric scalars
+      if (figures.length === 0) {
+        var sk2 = Object.keys(state);
+        for (var si = 0; si < sk2.length; si++) {
+          var sk = sk2[si];
+          if (typeof state[sk] === 'number') {
+            figures.push({ label: humanize(sk), raw: state[sk], display: String(state[sk]), sign: null });
+          }
+        }
+      }
+    }
+    return figures;
+  }
+
+  /* ── render schedule table ────────────────────────────────── */
+  function renderSchedule(schedule, currency) {
+    if (!Array.isArray(schedule) || schedule.length === 0) return '';
+    var rows = schedule.map(function (row) {
+      var cells = [];
+      if (row.month_index != null) cells.push('<td>' + esc(row.month_index) + '</td>');
+      if (row.period_start) cells.push('<td>' + esc(fmtDate(row.period_start)) + '</td>');
+      var rkeys = Object.keys(row);
+      for (var ri = 0; ri < rkeys.length; ri++) {
+        var rk = rkeys[ri];
+        if (rk === 'month_index' || rk === 'period_start') continue;
+        if (/_minor$/.test(rk)) {
+          cells.push('<td class="num">' + esc(fmtMoney(row[rk], currency)) + '</td>');
+        }
+      }
+      return '<tr>' + cells.join('') + '</tr>';
+    }).join('');
+
+    // Build headers from first row
+    var first = schedule[0];
+    var headers = [];
+    if (first.month_index != null) headers.push('<th>#</th>');
+    if (first.period_start) headers.push('<th>Period</th>');
+    var fkeys = Object.keys(first);
+    for (var fi = 0; fi < fkeys.length; fi++) {
+      var fk = fkeys[fi];
+      if (fk === 'month_index' || fk === 'period_start') continue;
+      if (/_minor$/.test(fk)) headers.push('<th>' + esc(humanize(fk)) + '</th>');
+    }
+
+    return '<div class="table-section">'
+      + '<p class="section-label">Schedule</p>'
+      + '<table class="data-table"><thead><tr>' + headers.join('') + '</tr></thead>'
+      + '<tbody>' + rows + '</tbody></table></div>';
+  }
+
+  /* ── render ledger table ──────────────────────────────────── */
+  function renderLedger(ledger, currency) {
+    if (!Array.isArray(ledger) || ledger.length === 0) return '';
+    var rows = ledger.map(function (entry) {
+      var cells = [];
+      if (entry.occurred_at) cells.push('<td>' + esc(fmtDate(entry.occurred_at)) + '</td>');
+      if (entry.kind) cells.push('<td>' + esc(entry.kind) + '</td>');
+      var ekeys = Object.keys(entry);
+      for (var ei = 0; ei < ekeys.length; ei++) {
+        var ek = ekeys[ei];
+        if (ek === 'occurred_at' || ek === 'kind') continue;
+        if (/_minor$/.test(ek)) {
+          cells.push('<td class="num">' + esc(fmtMoney(entry[ek], currency)) + '</td>');
+        }
+      }
+      return '<tr>' + cells.join('') + '</tr>';
+    }).join('');
+
+    var first = ledger[0];
+    var headers = [];
+    if (first.occurred_at) headers.push('<th>Date</th>');
+    if (first.kind) headers.push('<th>Kind</th>');
+    var fkeys2 = Object.keys(first);
+    for (var fj = 0; fj < fkeys2.length; fj++) {
+      var fk2 = fkeys2[fj];
+      if (fk2 === 'occurred_at' || fk2 === 'kind') continue;
+      if (/_minor$/.test(fk2)) headers.push('<th>' + esc(humanize(fk2)) + '</th>');
+    }
+
+    return '<div class="table-section">'
+      + '<p class="section-label">Ledger</p>'
+      + '<table class="data-table"><thead><tr>' + headers.join('') + '</tr></thead>'
+      + '<tbody>' + rows + '</tbody></table></div>';
+  }
+
+  /* ── render full plan ─────────────────────────────────────── */
+  function renderPlan(data) {
+    var currency = data.currency || '';
+    var state    = data.state || {};
+    var figures  = extractFigures(data.plan_type, state, currency);
+    var statusCls = 'badge status-' + esc(String(data.status || '').toLowerCase());
+
+    // Header
+    var html = '';
+    html += '<div class="plan-header">';
+    html += '<h1 class="plan-name">' + esc(data.name || 'Shared Plan') + '</h1>';
+    html += '<div class="plan-meta">';
+    html += '<span class="badge">' + esc(data.plan_type || '') + '</span> ';
+    if (data.status) html += '<span class="' + statusCls + '">' + esc(data.status) + '</span> ';
+    if (data.owner_name) html += '<span>Owner: ' + esc(data.owner_name) + '</span>';
+    if (currency) html += '<span>' + esc(currency) + '</span>';
+    if (data.as_of) html += '<span>As of ' + esc(fmtDate(data.as_of)) + '</span>';
+    if (data.scope) html += '<span>' + esc(data.scope) + ' view</span>';
+    html += '</div>';
+    html += '</div>';
+
+    // Actions
+    html += '<div class="actions no-print">';
+    html += '<button class="btn-print" onclick="window.print()">Print</button>';
+    html += '</div>';
+
+    // Headline figures
+    if (figures.length > 0) {
+      html += '<p class="section-label">Headline Figures</p>';
+      html += '<div class="figures">';
+      for (var i = 0; i < figures.length; i++) {
+        var f = figures[i];
+        var cls = 'figure-value' + (f.sign ? ' ' + f.sign : '');
+        html += '<div class="figure-cell">';
+        html += '<div class="figure-label">' + esc(f.label) + '</div>';
+        html += '<div class="' + cls + '">' + esc(f.display) + '</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+
+    // Line items: schedule + ledger (full scope only; missing → skipped)
+    html += renderSchedule(state.schedule, currency);
+    html += renderLedger(state.ledger, currency);
+
+    // Footer
+    html += '<div class="page-footer">Read-only shared view &middot; Khata</div>';
+
+    return html;
+  }
+
+  /* ── error screen helper ──────────────────────────────────── */
+  function showMsg(heading, sub) {
+    return '<div class="state-msg"><h1>' + heading + '</h1>'
+      + (sub ? '<p>' + esc(sub) + '</p>' : '')
+      + '<div class="page-footer">Read-only shared view &middot; Khata</div></div>';
+  }
+
+  /* ── main ─────────────────────────────────────────────────── */
+  var root = document.getElementById('root');
+  var token = location.pathname.split('/').pop();
+
+  fetch('/api/public/' + token)
+    .then(function (res) {
+      if (res.status === 404) {
+        root.innerHTML = showMsg('Link not found', 'This shared link does not exist.');
+        return null;
+      }
+      if (res.status === 410) {
+        root.innerHTML = showMsg('Link expired or revoked', 'This shared link is no longer active.');
+        return null;
+      }
+      if (!res.ok) {
+        root.innerHTML = showMsg('Something went wrong', 'HTTP ' + res.status);
+        return null;
+      }
+      return res.json();
+    })
+    .then(function (data) {
+      if (!data) return;
+      try {
+        root.innerHTML = renderPlan(data);
+        // Update page title with plan name
+        if (data.name) {
+          document.title = 'Khata — ' + data.name;
+        }
+      } catch (err) {
+        root.innerHTML = showMsg('Render error', 'Could not display this plan.');
+        console.error('public-plan render error:', err);
+      }
+    })
+    .catch(function (err) {
+      root.innerHTML = showMsg('Network error', 'Could not reach the server.');
+      console.error('public-plan fetch error:', err);
+    });
+
+}());
+</script>
+</body>
+</html>

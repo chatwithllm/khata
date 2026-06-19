@@ -88,6 +88,11 @@ def analysis():
     return send_from_directory(_static_dir(), "analysis.html")
 
 
+@bp.get("/s/<token>")
+def public_plan(token):
+    return send_from_directory(_static_dir(), "public-plan.html")
+
+
 @bp.get("/manifest.webmanifest")
 def manifest():
     return send_from_directory(_static_dir(), "manifest.webmanifest",

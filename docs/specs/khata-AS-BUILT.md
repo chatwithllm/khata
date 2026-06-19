@@ -35,7 +35,7 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   on user/API data. Pages: `ledger.css` (landing/marketing, `.landing`-scoped animations) + `app.css`
   (app shell + detail panels); `sharing.js` (`mountSharing`). HTML served `Cache-Control: no-store`.
 
-## 4. Data model (12 tables)
+## 4. Data model (13 tables)
 - **users**: id, email, display_name, password_hash?, google_sub?, base_currency, **avatar?** (cropped
   square profile photo as a `data:image/...` URL, set via the crop tool; stored server-side so every member
   sees each contributor's photo and it travels with backups), **is_admin**, **disabled**, created_at.
@@ -72,6 +72,10 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   from the invitee until they accept (→ `active`). Decline → `declined` (hidden, re-invitable —
   re-inviting a declined user resets them to `invited`). Migration `b7a1m3status1`
   (server_default `active` so pre-existing rows keep working).
+- **plan_shares** (public read-only share links): id, **plan_id** (FK→plans, ON DELETE CASCADE),
+  **token** (unguessable `secrets.token_urlsafe(32)`, unique), **scope** (`summary`|`full`), **expires_at**,
+  **revoked_at?**, created_by_user_id, created_at. A link is valid iff not revoked and not past expiry.
+  Migration `sh1share01`.
 - **attachments** (supporting proof on a ledger entry): id, **ledger_entry_id** (FK→ledger_entries,
   ON DELETE CASCADE), uploaded_by_user_id, filename, **mime** (decided by MAGIC BYTES, never the
   extension), size, **sha256**, **data** (`LargeBinary` blob — bytes live in the DB so the one-file
@@ -176,6 +180,12 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-19 — Public read-only share links.** Any plan (asset/loan/holding/chit/retirement) can be
+  shared via a tokenized public URL (`/s/<token>`, no login) with expiry (7/30/90 days) + revoke and a
+  per-share `summary`|`full` (PII-redacted) scope; plus token-less Print and navigator.share "send".
+  New `plan_shares` table (migration `sh1share01`), `sharing_links` service (recursive PII scrub),
+  public blueprint `GET /api/public/<token>` (404/410), owner-only `POST/GET/DELETE /api/plans/<id>/shares`,
+  standalone print-friendly `/s/<token>` page (CSP, robots:noindex).
 - **2026-06-19 — Backfill historical loan payments.** Loan detail gains a per-row + bulk "mark through Month N" UI to record backdated interest payments/receipts against past schedule months. Backend: new `services.loans.backfill_loan_interest` service + owner-only `POST /api/plans/<id>/loan/backfill` endpoint. Both reuse the existing greedy interest pool (no schema change, no migration), creating timestamped `interest_payment` entries in the past. Idempotent — paid months are skipped. Wording follows loan direction (paid/received). Solves the real-world retroactive payment problem: "I paid interest for three months but didn't log it until now."
 - **2026-06-11 — Per-entry FX rate snapshots (live currency conversion).** Every ledger entry now
   freezes the exchange rate at log time so its counter-currency value is exact forever (spec
@@ -397,6 +407,12 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-19 — Public read-only share links. Any plan (asset/loan/holding/chit/retirement) can be
+  shared via a tokenized public URL (`/s/<token>`, no login) with expiry (7/30/90d) + revoke and a
+  per-share summary|full (PII-redacted) scope; plus token-less Print and navigator.share "send".
+  New `plan_shares` table (migration `sh1share01`), `sharing_links` service (recursive PII scrub),
+  public blueprint `GET /api/public/<token>` (404/410), owner-only `POST/GET/DELETE /api/plans/<id>/shares`,
+  standalone print-friendly `/s/<token>` page (CSP, robots:noindex).
 - 2026-06-19 — Backfill historical loan payments. Loan detail can now mark past interest dues as paid/received (wording follows loan direction): a per-month button on each unpaid schedule row (interest = remaining expected, editable, + optional principal, dated in that month) and a bulk "mark through Month N" control. Backend: new `loans.backfill_loan_interest` + owner-only `POST /loan/backfill`; both record backdated `interest_payment` entries against the existing greedy interest pool — no schema change. Idempotent (paid months skipped).
 - 2026-06-19 — Production VM containerized. Replaced systemd+gunicorn on the Debian box
   (192.168.50.14) with Docker: repo-root `Dockerfile` / `docker-entrypoint.sh` /
