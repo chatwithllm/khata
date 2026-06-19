@@ -93,7 +93,6 @@
 
 /* ── loans by-contact grouped view ── */
 .loan-tog{display:flex;align-items:center;gap:0;padding:12px 22px 0;position:relative}
-.loan-tog .slide{position:absolute;left:22px;top:12px;height:30px;border-radius:8px;background:var(--ink);transition:transform .18s,width .18s;z-index:0;pointer-events:none}
 .loan-tog button{position:relative;z-index:1;font:inherit;font-size:12px;font-weight:600;padding:6px 14px;border:1px solid var(--line);background:transparent;color:var(--ink-faint);cursor:pointer;transition:.15s;border-radius:8px;white-space:nowrap}
 .loan-tog button:first-of-type{border-radius:8px 0 0 8px;border-right:none}
 .loan-tog button:last-of-type{border-radius:0 8px 8px 0}
@@ -114,6 +113,16 @@ a.gname:hover{color:var(--primary-deep);text-decoration:underline}
 .grow-n:hover{color:var(--primary-deep)}
 .grow-amt{font-family:"JetBrains Mono";font-weight:700;font-size:13px;color:var(--ink-soft)}
 .partial-note{padding:10px 22px;font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";border-top:1px solid var(--line-2)}
+/* ── Sankey diagram ── */
+.sankey-wrap{position:relative;width:100%;overflow:visible;margin:12px 0 4px}
+.sankey-tip{position:absolute;background:var(--ink);color:var(--paper);font-size:11px;font-family:"JetBrains Mono";padding:5px 9px;border-radius:7px;pointer-events:none;white-space:nowrap;z-index:10;opacity:0;transition:opacity .1s;line-height:1.5}
+.sk-bar-wrap{padding:8px 22px 12px}
+.sk-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;font-family:"JetBrains Mono"}
+.sk-bar-label{width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:600;font-size:11.5px}
+.sk-bar{flex:1;height:14px;border-radius:4px;background:var(--paper-2);overflow:hidden;display:flex}
+.sk-bar-l{background:color-mix(in srgb,var(--pos) 70%,transparent);height:100%}
+.sk-bar-b{background:color-mix(in srgb,var(--neg) 60%,transparent);height:100%}
+.sk-bar-amt{font-size:10.5px;color:var(--ink-faint);min-width:70px;text-align:right}
 </style>
 </head>
 <body>
@@ -656,6 +665,272 @@ function figEl(label, val){
   else { d.append(lbl, val); }
   return d;
 }
+// ── Sankey diagram of the loan book ──
+function renderSankey(container, sankey, baseCcy, groups){
+  if(!sankey||!sankey.nodes||!sankey.nodes.length){ container.style.display='none'; return; }
+  // fallback for small screens or reduced motion
+  if(window.matchMedia('(max-width:560px)').matches||window.matchMedia('(prefers-reduced-motion:reduce)').matches){
+    // compact stacked-bar list: one row per contact
+    const wrap=el('div','sk-bar-wrap');
+    const ctNodes=sankey.nodes.filter(n=>n.kind==='contact');
+    // max throughput for scaling bars
+    let maxVal=0;
+    for(const cn of ctNodes){
+      const tot=sankey.links.filter(lk=>lk.source===cn.id||lk.target===cn.id).reduce((s,lk)=>s+(lk.source===cn.id?lk.value_minor:0),0)||
+                sankey.links.filter(lk=>lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
+      if(tot>maxVal) maxVal=tot;
+    }
+    if(!maxVal) maxVal=1;
+    for(let ci=0;ci<ctNodes.length;ci++){
+      const cn=ctNodes[ci];
+      // lent vs borrowed for this contact
+      let lentVal=0,borVal=0;
+      sankey.links.forEach(lk=>{
+        if(lk.source===cn.id){
+          // contact→loan: check direction of that loan node
+          const lnNode=sankey.nodes.find(n=>n.id===lk.target);
+          // direction determined by what points to this contact
+          const dirLink=sankey.links.find(dl=>dl.target===cn.id);
+          const dirId=dirLink?dirLink.source:'';
+          if(dirId==='dir:lent') lentVal+=lk.value_minor;
+          else borVal+=lk.value_minor;
+        }
+      });
+      const tot=lentVal+borVal||1;
+      const row=el('div','sk-bar-row');
+      const lbl=el('div','sk-bar-label');
+      lbl.textContent=cn.label.length>16?cn.label.slice(0,15)+'…':cn.label;
+      const bar=el('div','sk-bar');
+      const barL=el('div','sk-bar-l'); barL.style.width=(lentVal/maxVal*100)+'%';
+      const barB=el('div','sk-bar-b'); barB.style.width=(borVal/maxVal*100)+'%';
+      bar.append(barL,barB);
+      const amt=el('div','sk-bar-amt'); amt.textContent=fmt(tot,baseCcy);
+      row.append(lbl,bar,amt);
+      // click scrolls to group
+      const gKey=groups&&groups[ci]?groups[ci].key:null;
+      if(gKey){
+        row.style.cursor='pointer';
+        row.addEventListener('click',()=>{ const h=document.getElementById('grp-'+gKey); if(h) h.scrollIntoView({behavior:'smooth',block:'start'}); });
+      }
+      wrap.append(row);
+    }
+    container.append(wrap);
+    return;
+  }
+
+  const NS='http://www.w3.org/2000/svg';
+  function svgEl(tag,attrs){
+    const e=document.createElementNS(NS,tag);
+    if(attrs) Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));
+    return e;
+  }
+  function escTxt(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function truncLabel(s,max){ return s.length>max?s.slice(0,max-1)+'…':s; }
+
+  const W=Math.max(container.clientWidth||0,320)||760;
+  const NCOLS=3;
+  const PAD_L=90,PAD_R=90,PAD_V=24;
+  const NODE_W=14;
+  const COL_GAP=8;
+
+  // assign columns
+  const colMap={direction:0,contact:1,loan:2};
+  // compute per-column total throughput for scaling
+  const colTotals=[0,0,0];
+  const nodeMap={};
+  sankey.nodes.forEach(n=>{ nodeMap[n.id]=n; });
+  // for direction nodes: sum outgoing; contacts: sum incoming; loans: sum incoming
+  sankey.nodes.forEach(n=>{
+    const col=colMap[n.kind]??0;
+    if(n.kind==='direction'){
+      const tot=sankey.links.filter(lk=>lk.source===n.id).reduce((s,lk)=>s+lk.value_minor,0);
+      n._val=tot;
+    } else if(n.kind==='contact'){
+      const tot=sankey.links.filter(lk=>lk.target===n.id).reduce((s,lk)=>s+lk.value_minor,0);
+      n._val=tot;
+    } else {
+      const tot=sankey.links.filter(lk=>lk.target===n.id).reduce((s,lk)=>s+lk.value_minor,0);
+      n._val=tot;
+    }
+    colTotals[col]+=n._val||0;
+  });
+
+  // height driven by node count
+  const maxNodesInCol=Math.max(
+    sankey.nodes.filter(n=>n.kind==='direction').length,
+    sankey.nodes.filter(n=>n.kind==='contact').length,
+    sankey.nodes.filter(n=>n.kind==='loan').length
+  );
+  const H=Math.max(220,Math.min(420, maxNodesInCol*80+PAD_V*2));
+  const usableH=H-PAD_V*2;
+
+  // x positions for each column center
+  const colX=[
+    PAD_L,
+    PAD_L+(W-PAD_L-PAD_R)/2,
+    W-PAD_R
+  ];
+
+  // scale: px-per-minor — based on max column total
+  const maxCol=Math.max(...colTotals,1);
+  const NODE_GAP=10;
+
+  // layout nodes in each column — stack top to bottom, vertically centred
+  function layoutCol(nodes){
+    const totalVal=nodes.reduce((s,n)=>s+(n._val||0),0)||1;
+    const maxColTot=Math.max(...colTotals,1);
+    const scale=usableH/maxColTot;
+    const totalPx=nodes.reduce((s,n)=>s+(n._val||0)*scale,0)+NODE_GAP*(nodes.length-1);
+    let y=PAD_V+(usableH-Math.min(totalPx,usableH))/2;
+    nodes.forEach(n=>{
+      const h=Math.max(4,(n._val||0)*scale);
+      n._y=y; n._h=h;
+      y+=h+NODE_GAP;
+    });
+  }
+  const dirNodes=sankey.nodes.filter(n=>n.kind==='direction');
+  const ctNodes=sankey.nodes.filter(n=>n.kind==='contact');
+  const lnNodes=sankey.nodes.filter(n=>n.kind==='loan');
+  layoutCol(dirNodes);
+  layoutCol(ctNodes);
+  layoutCol(lnNodes);
+
+  // determine direction for each contact node (from which dir links point to it)
+  const ctDirMap={};
+  sankey.links.forEach(lk=>{
+    if(lk.source.startsWith('dir:')&&lk.target.startsWith('ct:')){
+      ctDirMap[lk.target]=lk.source;
+    }
+  });
+  // determine direction for each loan node (via contact)
+  const lnDirMap={};
+  sankey.links.forEach(lk=>{
+    if(lk.source.startsWith('ct:')&&lk.target.startsWith('ln:')){
+      lnDirMap[lk.target]=ctDirMap[lk.source]||'dir:lent';
+    }
+  });
+
+  const scale=usableH/Math.max(...colTotals,1);
+
+  // color helpers
+  function linkColor(srcId,tgtId){
+    let dir;
+    if(srcId.startsWith('dir:')) dir=srcId;
+    else if(srcId.startsWith('ct:')) dir=ctDirMap[srcId]||'dir:lent';
+    else dir=lnDirMap[srcId]||'dir:lent';
+    return dir==='dir:lent'?'var(--pos)':'var(--neg)';
+  }
+  function nodeColor(n){
+    if(n.kind==='direction') return n.id==='dir:lent'?'var(--pos)':'var(--neg)';
+    if(n.kind==='contact') return 'var(--ink)';
+    const dir=lnDirMap[n.id]||'dir:lent';
+    return dir==='dir:lent'
+      ?'color-mix(in srgb,var(--pos) 50%,transparent)'
+      :'color-mix(in srgb,var(--neg) 50%,transparent)';
+  }
+
+  const wrap=el('div','sankey-wrap');
+  wrap.style.height=H+'px';
+  const svg=svgEl('svg',{width:W,height:H,viewBox:'0 0 '+W+' '+H,'aria-hidden':'true'});
+  wrap.append(svg);
+
+  // tooltip
+  const tip=el('div','sankey-tip');
+  wrap.append(tip);
+  function showTip(evt,html){
+    tip.innerHTML=html;
+    tip.style.opacity='1';
+    positionTip(evt);
+  }
+  function positionTip(evt){
+    const br=wrap.getBoundingClientRect();
+    const x=evt.clientX-br.left+12;
+    const y=evt.clientY-br.top-28;
+    tip.style.left=Math.min(x,W-tip.offsetWidth-8)+'px';
+    tip.style.top=Math.max(0,y)+'px';
+  }
+  function hideTip(){ tip.style.opacity='0'; }
+
+  // draw links first (behind nodes)
+  // track running offsets per node (how far down the band we've consumed)
+  const outOffset={},inOffset={};
+  sankey.nodes.forEach(n=>{ outOffset[n.id]=0; inOffset[n.id]=0; });
+
+  // sort links so they flow in order
+  sankey.links.forEach(lk=>{
+    const src=nodeMap[lk.source],tgt=nodeMap[lk.target];
+    if(!src||!tgt) return;
+    const srcX=colX[colMap[src.kind]??0]+NODE_W;
+    const tgtX=colX[colMap[tgt.kind]??0];
+    const linkH=Math.max(1.5,lk.value_minor*scale);
+    const srcY=src._y+outOffset[src.id]+(linkH/2);
+    const tgtY=tgt._y+inOffset[tgt.id]+(linkH/2);
+    outOffset[src.id]+=linkH;
+    inOffset[tgt.id]+=linkH;
+    const cx=(srcX+tgtX)/2;
+    const col=linkColor(lk.source,lk.target);
+    const path=svgEl('path',{
+      d:'M'+srcX+','+srcY+' C'+cx+','+srcY+' '+cx+','+tgtY+' '+tgtX+','+tgtY,
+      fill:'none',
+      stroke:col,
+      'stroke-width':Math.max(1.5,linkH),
+      'stroke-opacity':'0.38',
+      'stroke-linecap':'round'
+    });
+    path.style.cursor='pointer';
+    path.addEventListener('mouseenter',(e)=>{
+      path.setAttribute('stroke-opacity','0.7');
+      const val=lk.value_minor;
+      showTip(e, escTxt(src.label)+' → '+escTxt(tgt.label)+'<br>'+escTxt(sym(baseCcy)+fmt(val,baseCcy)));
+    });
+    path.addEventListener('mousemove',positionTip);
+    path.addEventListener('mouseleave',()=>{ path.setAttribute('stroke-opacity','0.38'); hideTip(); });
+    svg.append(path);
+  });
+
+  // draw nodes and labels
+  sankey.nodes.forEach((n,ni)=>{
+    const col=colMap[n.kind]??0;
+    const x=colX[col];
+    const y=n._y, h=n._h||4;
+    const fill=nodeColor(n);
+    const rect=svgEl('rect',{x:x,y:y,width:NODE_W,height:h,rx:'3',fill:fill,'fill-opacity':'0.85'});
+    rect.style.cursor=n.kind==='contact'?'pointer':'default';
+    rect.addEventListener('mouseenter',(e)=>{
+      showTip(e, '<b>'+escTxt(n.label)+'</b><br>'+escTxt(sym(baseCcy))+escTxt(fmt(n._val,baseCcy)));
+    });
+    rect.addEventListener('mousemove',positionTip);
+    rect.addEventListener('mouseleave',hideTip);
+    if(n.kind==='contact'){
+      // parse index from ct:<i>
+      const idx=parseInt(n.id.replace('ct:',''),10);
+      const gKey=groups&&groups[idx]?groups[idx].key:null;
+      if(gKey){
+        rect.addEventListener('click',()=>{ const h2=document.getElementById('grp-'+gKey); if(h2) h2.scrollIntoView({behavior:'smooth',block:'start'}); });
+      }
+    }
+    svg.append(rect);
+
+    // label
+    const labelText=truncLabel(n.label,18);
+    let lx,ly,anchor,dy;
+    if(n.kind==='direction'){
+      // label to the left of col 0
+      lx=x-6; ly=y+(h/2); anchor='end'; dy='0.35em';
+    } else if(n.kind==='contact'){
+      // label above
+      lx=x+NODE_W/2; ly=y-4; anchor='middle'; dy='0';
+    } else {
+      // loan: label to the right
+      lx=x+NODE_W+5; ly=y+(h/2); anchor='start'; dy='0.35em';
+    }
+    const txt=svgEl('text',{x:lx,y:ly,'text-anchor':anchor,dy:dy,'font-size':'10.5','font-family':'JetBrains Mono, monospace',fill:'var(--ink-soft)','pointer-events':'none'});
+    txt.textContent=labelText;
+    svg.append(txt);
+  });
+
+  container.append(wrap);
+}
 async function renderLoansByContact(card){
   let data;
   try{ data=await fetch('/api/plans/loans/grouped').then(r=>r.json()); }
@@ -689,6 +964,7 @@ async function renderLoansByContact(card){
       }
     }
   }
+  renderSankey(sankey, data.sankey, data.base_currency, data.groups);
   card.append(list);
   if(data.partial){ card.append(el('div','partial-note','≈ some totals exclude a currency (missing FX rate)')); }
 }
@@ -878,7 +1154,6 @@ async function boot(){
       injectLoanToggle(plist, (newMode)=>{
         // on switch: clear the plist contents (but NOT the toggle itself) and re-render
         const panel=plist.closest('.panel');
-        const tog=panel&&panel.querySelector('.loan-tog');
         plist.textContent='';
         if(newMode==='contact'){
           renderLoansByContact(plist);
