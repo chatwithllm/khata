@@ -1,7 +1,8 @@
-"""Ledger-entry attachments — supporting proof (receipt photos, scanned PDFs, chat
-screenshots, signed agreements). Bytes are stored in the DB; the mime is decided by the
-file's MAGIC BYTES, never the declared extension (a tight allowlist: common images, PDF,
-and Office docs). Anything we can't positively identify is rejected.
+"""Attachments — supporting proof (receipt photos, scanned PDFs, chat screenshots,
+signed agreements) attached to either a ledger entry or a contact. Bytes are stored in
+the DB; the mime is decided by the file's MAGIC BYTES, never the declared extension (a
+tight allowlist: common images, PDF, and Office docs). Anything we can't positively
+identify is rejected.
 """
 import hashlib
 
@@ -55,8 +56,12 @@ def _sniff(raw: bytes) -> str | None:
     return None
 
 
-def add_attachment(session: Session, *, entry: LedgerEntry, uploaded_by: int,
-                   filename: str, raw: bytes) -> Attachment:
+def add_attachment(session: Session, *, uploaded_by: int, filename: str, raw: bytes,
+                   entry: LedgerEntry | None = None,
+                   contact=None) -> Attachment:
+    """Attach a file to exactly one parent: a ledger entry OR a contact (not both, not neither)."""
+    if (entry is None) == (contact is None):
+        raise AttachmentError("attachment needs exactly one parent (entry or contact)")
     if not raw:
         raise AttachmentError("empty file")
     if len(raw) > MAX_SIZE:
@@ -66,7 +71,9 @@ def add_attachment(session: Session, *, entry: LedgerEntry, uploaded_by: int,
         raise AttachmentError("unsupported file type — images, PDF, or Office documents only")
     name = (filename or "file").strip()[:255] or "file"
     att = Attachment(
-        ledger_entry_id=entry.id, uploaded_by_user_id=uploaded_by,
+        ledger_entry_id=entry.id if entry is not None else None,
+        contact_id=contact.id if contact is not None else None,
+        uploaded_by_user_id=uploaded_by,
         filename=name, mime=mime, size=len(raw),
         sha256=hashlib.sha256(raw).hexdigest(), data=raw)
     session.add(att)
@@ -77,6 +84,12 @@ def add_attachment(session: Session, *, entry: LedgerEntry, uploaded_by: int,
 def list_for_entry(session: Session, entry_id: int) -> list[Attachment]:
     return list(session.scalars(
         select(Attachment).where(Attachment.ledger_entry_id == entry_id)
+        .order_by(Attachment.created_at, Attachment.id)))
+
+
+def list_for_contact(session: Session, contact_id: int) -> list[Attachment]:
+    return list(session.scalars(
+        select(Attachment).where(Attachment.contact_id == contact_id)
         .order_by(Attachment.created_at, Attachment.id)))
 
 

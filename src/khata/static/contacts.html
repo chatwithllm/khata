@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Khata — Contacts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/assets/app.css">
+<script src="/static/assets/profile-menu.js"></script>
+<style>
+/* ── contacts.html-only rules ── */
+.contact-card{display:flex;align-items:center;gap:13px;padding:14px 22px;border-top:1px solid var(--line-2);cursor:pointer;text-decoration:none;color:inherit;transition:background .15s}
+.contact-card:hover{background:var(--paper-2)}
+.contact-card:first-child{border-top:none}
+.c-avatar{width:38px;height:38px;border-radius:50%;background:var(--primary);color:var(--paper);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex:none;background-size:cover;background-position:center}
+.c-name{font-weight:600;font-size:14.5px}
+.c-meta{font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono";margin-top:2px}
+.emptypanel{padding:30px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px}
+.new-form{padding:16px 22px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700}
+.fld input,.fld textarea{font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);transition:border-color .2s}
+.fld input:focus,.fld textarea:focus{outline:none;border-color:var(--primary)}
+.fld textarea{resize:vertical;min-height:60px}
+.fld-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.acts{display:flex;gap:12px;align-items:center;margin-top:2px}
+.acts .save{font-weight:600;font-size:14px;padding:9px 18px;border-radius:10px;background:var(--primary);color:var(--paper);border:none;cursor:pointer;font-family:inherit}
+.acts .save:hover{transform:translateY(-1px)}
+.acts .cancel-btn{font-weight:600;font-size:14px;color:var(--ink-faint);cursor:pointer;border:none;background:none;font-family:inherit}
+.err{color:var(--neg);font-size:12.5px;min-height:16px}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- sidebar -->
+  <aside class="side">
+    <a class="brand" href="/app"><span class="glyph"></span> Khata</a>
+    <a class="newplan" href="/create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg> New plan</a>
+    <div class="navsec">Overview</div>
+    <a class="nav-i" href="/app"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg> Dashboard</a>
+    <a class="nav-i" href="/holdings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg> Holdings</a>
+    <div class="navsec">Money plans</div>
+    <a class="nav-i" href="/app?type=asset"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V10l7-5 7 5v11"/></svg> Assets <span class="ct" id="ct-asset"></span></a>
+    <a class="nav-i" href="/app?type=chit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Chit funds <span class="ct" id="ct-chit"></span></a>
+    <a class="nav-i" href="/app?type=loan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v12H3zM3 11h18"/></svg> Loans <span class="ct" id="ct-loan"></span></a>
+    <a class="nav-i" href="/app?type=retirement"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h9a3 3 0 010 6H5"/></svg> 401(k) <span class="ct" id="ct-retirement"></span></a>
+    <div class="navsec">Records</div>
+    <a class="nav-i" href="/features"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h16M4 19h10"/></svg> Features</a>
+    <a class="nav-i" href="/analysis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg> Analysis</a>
+    <a class="nav-i on" href="/contacts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> Contacts <span class="ct" id="ct-contacts"></span></a>
+    <a class="nav-i" href="/settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg> Settings</a>
+    <a class="nav-i" href="#" style="color:var(--neg)" onclick="event.preventDefault();fetch('/api/auth/logout',{method:'POST'}).finally(function(){location.href='/'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log out</a>
+  </aside>
+
+  <!-- main -->
+  <main class="main">
+    <div class="top">
+      <div>
+        <h1>Contacts</h1>
+        <div class="sub">people &amp; lenders</div>
+      </div>
+      <div class="top-right">
+        <label class="avatar" id="avatar" title="Upload profile photo"><input type="file" accept="image/*" /><span class="ava-init" id="ava-init"></span><span class="ava-ov"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span></label>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="panel fade" id="contacts-panel"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function el(tag, cls, text){
+  const e=document.createElement(tag);
+  if(cls) e.className=cls;
+  if(text!==undefined && text!==null) e.textContent=text;
+  return e;
+}
+
+function sym(ccy){ return ccy==='INR'?'₹':(ccy==='USD'?'$':''); }
+function fmtNum(minor, ccy){
+  if(minor===null||minor===undefined) return '—';
+  const v=minor/100;
+  if(ccy==='INR'){
+    let n=Math.round(v); let s=Math.abs(n).toString();
+    if(s.length>3){let l=s.slice(-3),r=s.slice(0,-3).replace(/\B(?=(\d{2})+(?!\d))/g,',');s=r+','+l;}
+    return (n<0?'-':'')+s;
+  }
+  return Math.round(v).toLocaleString('en-US');
+}
+
+let showForm = false;
+
+function renderContacts(box, contacts){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Contacts'); t.style.fontSize='16px';
+  const meta=el('div','meta', contacts.length+' '+(contacts.length===1?'person':'people'));
+  const newBtn=el('button',null,'＋ New');
+  newBtn.style.cssText='font:inherit;font-size:13px;font-weight:600;padding:6px 13px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer;flex:none';
+  newBtn.addEventListener('click', ()=>{ showForm=!showForm; renderContacts(box, contacts); });
+  ph.append(t, meta, newBtn);
+  box.append(ph);
+
+  if(showForm){
+    const form=el('div','new-form');
+    const nmFld=el('div','fld');
+    nmFld.append(el('label',null,'Name *'));
+    const nmInp=el('input'); nmInp.id='nc-name'; nmInp.placeholder='Full name'; nmInp.required=true;
+    nmFld.append(nmInp);
+
+    const row2=el('div','fld-row');
+    const phFld=el('div','fld');
+    phFld.append(el('label',null,'Phone'));
+    const phInp=el('input'); phInp.id='nc-phone'; phInp.placeholder='+91 98765 43210'; phInp.type='tel';
+    phFld.append(phInp);
+    const emFld=el('div','fld');
+    emFld.append(el('label',null,'Email'));
+    const emInp=el('input'); emInp.id='nc-email'; emInp.placeholder='person@example.com'; emInp.type='email';
+    emFld.append(emInp);
+    row2.append(phFld, emFld);
+
+    const adFld=el('div','fld');
+    adFld.append(el('label',null,'Address'));
+    const adInp=el('input'); adInp.id='nc-address'; adInp.placeholder='Optional address';
+    adFld.append(adInp);
+
+    const noFld=el('div','fld');
+    noFld.append(el('label',null,'Notes'));
+    const noInp=el('textarea'); noInp.id='nc-notes'; noInp.placeholder='Optional notes';
+    noFld.append(noInp);
+
+    const errEl=el('div','err'); errEl.id='nc-err';
+
+    const acts=el('div','acts');
+    const saveBtn=el('button','save','Create contact'); saveBtn.type='button';
+    const cancelBtn=el('button','cancel-btn','Cancel'); cancelBtn.type='button';
+    cancelBtn.addEventListener('click', ()=>{ showForm=false; renderContacts(box, contacts); });
+    acts.append(saveBtn, cancelBtn);
+
+    saveBtn.addEventListener('click', async ()=>{
+      const name=(nmInp.value||'').trim();
+      if(!name){ nmInp.focus(); errEl.textContent='Name is required.'; return; }
+      errEl.textContent='';
+      const payload={name};
+      if(phInp.value.trim()) payload.phone=phInp.value.trim();
+      if(emInp.value.trim()) payload.email=emInp.value.trim();
+      if(adInp.value.trim()) payload.address=adInp.value.trim();
+      if(noInp.value.trim()) payload.notes=noInp.value.trim();
+      const r=await fetch('/api/contacts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      if(r.status===401){ window.location.href='/'; return; }
+      if(!r.ok){ const e=await r.json().catch(()=>({})); errEl.textContent=e.detail||e.error||'Could not create contact.'; return; }
+      const nc=await r.json();
+      const newId=nc.contact&&nc.contact.id;
+      if(newId){ window.location.href='/contacts/'+newId; return; }
+      showForm=false;
+      load();
+    });
+
+    form.append(nmFld, row2, adFld, noFld, errEl, acts);
+    box.append(form);
+  }
+
+  if(!contacts.length){
+    const e=el('div','emptypanel','No contacts yet — add one with ＋ New.');
+    box.append(e);
+    return;
+  }
+
+  const list=el('div');
+  for(const c of contacts){
+    const card=document.createElement('a');
+    card.className='contact-card';
+    card.href='/contacts/'+c.id;
+
+    const av=el('div','c-avatar');
+    if(c.photo){
+      av.style.backgroundImage='url('+JSON.stringify(c.photo)+')';
+      av.style.backgroundColor='transparent';
+    } else {
+      av.textContent=((c.name||'?')[0]||'?').toUpperCase();
+    }
+    card.append(av);
+
+    const info=el('div');
+    info.append(el('div','c-name', c.name||'—'));
+    const meta2=[];
+    if(c.phone) meta2.push(c.phone);
+    if(c.email) meta2.push(c.email);
+    if(meta2.length) info.append(el('div','c-meta', meta2.join(' · ')));
+    card.append(info);
+
+    list.append(card);
+  }
+  box.append(list);
+}
+
+async function load(){
+  const me=await fetch('/api/auth/me');
+  if(me.status===401){ window.location.href='/'; return; }
+  const user=(await me.json()).user;
+  $('ava-init').textContent=((user.display_name||'?')[0]||'?').toUpperCase();
+
+  const r=await fetch('/api/contacts');
+  if(r.status===401){ window.location.href='/'; return; }
+  const d=await r.json();
+  const contacts=d.contacts||[];
+
+  $('ct-contacts').textContent=contacts.length||'';
+
+  renderContacts($('contacts-panel'), contacts);
+
+  // sidebar plan counts
+  try{
+    const plansResp=await fetch('/api/plans').then(x=>x.json());
+    const plans=plansResp.plans||[];
+    const by=(t)=>plans.filter(p=>p.type===t).length||'';
+    $('ct-asset').textContent=by('asset');
+    $('ct-chit').textContent=by('chit');
+    $('ct-loan').textContent=by('loan');
+    $('ct-retirement').textContent=by('retirement');
+  }catch(e){}
+}
+
+mountProfileMenu();
+load();
+</script>
+<script src="/static/assets/nav.js" defer></script>
+</body>
+</html>

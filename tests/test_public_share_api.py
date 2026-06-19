@@ -98,3 +98,15 @@ def test_public_no_auth_needed(client):
     tok = _create_share(client, pid, scope="summary", ttl_days=7)
     client.delete_cookie("session")            # drop auth — public must still work
     assert client.get(f"/api/public/{tok}").status_code == 200
+
+
+def test_public_share_no_contact_pii(client):
+    _register(client)
+    pid = _make_loan_with_dues(client)
+    cid = client.post("/api/contacts", json={"name": "PRIVATE_PERSON", "phone": "PRIVATE_PHONE"}).get_json()["contact"]["id"]
+    client.post(f"/api/plans/{pid}/loan/contact", json={"contact_id": cid})
+    tok = _create_share(client, pid, scope="full", ttl_days=30)
+    import json
+    blob = json.dumps(client.get(f"/api/public/{tok}").get_json())
+    assert "PRIVATE_PERSON" not in blob and "PRIVATE_PHONE" not in blob
+    assert "contact_id" not in blob and "\"contact\"" not in blob

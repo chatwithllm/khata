@@ -78,6 +78,16 @@ def retirement_detail(plan_id):
     return send_from_directory(_static_dir(), "retirement-detail.html")
 
 
+@bp.get("/contacts")
+def contacts_page():
+    return send_from_directory(_static_dir(), "contacts.html")
+
+
+@bp.get("/contacts/<int:contact_id>")
+def contact_detail_page(contact_id):
+    return send_from_directory(_static_dir(), "contact-detail.html")
+
+
 @bp.get("/settings")
 def settings():
     return send_from_directory(_static_dir(), "settings.html")

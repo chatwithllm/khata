@@ -50,7 +50,9 @@ _SCRUB_KEYS = {"email", "proof_ref", "attachments", "attachment_id", "members",
                "display_name", "avatar", "user_id", "paid_by_name", "paid_by_avatar",
                "plan_name", "plan_type", "funding_plan_name", "funding_plan_type",
                "funding_plan_accessible", "name", "amount_status", "counter_amount_minor",
-               "contributors"}
+               "contributors",
+               # Contact PII — defence-in-depth: strip even if loan_state ever adds contact info
+               "contact", "contact_id", "contact_name", "phone", "address"}
 
 
 # ---------------------------------------------------------------------------

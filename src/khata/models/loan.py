@@ -18,6 +18,7 @@ class Loan(Base):
     kind: Mapped[str] = mapped_column(String(16), nullable=False,
                                       default="personal", server_default="personal")
     counterparty: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contact_id: Mapped[int | None] = mapped_column(ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True, index=True)
     interest_type: Mapped[str] = mapped_column(String(10), nullable=False)    # none | monthly | yearly
     rate_bps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     basis: Mapped[str] = mapped_column(String(12), nullable=False, default="reducing")

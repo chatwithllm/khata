@@ -19,14 +19,15 @@ from sqlalchemy import DateTime, Date, LargeBinary
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..models import (User, Plan, AssetPurchase, Loan, Holding, Chit, Retirement,
+from ..models import (User, Plan, AssetPurchase, Contact, Loan, Holding, Chit, Retirement,
                       Installment, LedgerEntry, PlanMembership, FxRate, Attachment)
 
 BACKUP_VERSION = 1
 
-# Export order = FK dependency order (parents before children). Attachment follows
-# LedgerEntry (its parent) so a restore can remap entry ids before inserting blobs.
-EXPORT_MODELS = [User, Plan, AssetPurchase, Loan, Holding, Chit, Retirement,
+# Export order = FK dependency order (parents before children). Contact before Loan
+# (loans FK contacts). Attachment follows LedgerEntry (its parent) so a restore can
+# remap entry ids before inserting blobs.
+EXPORT_MODELS = [User, Plan, AssetPurchase, Contact, Loan, Holding, Chit, Retirement,
                  Installment, LedgerEntry, Attachment, PlanMembership, FxRate]
 
 
