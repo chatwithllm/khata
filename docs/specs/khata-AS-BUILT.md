@@ -372,6 +372,15 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   data in `khata_app.db`, secret persisted in `.env.app`, restart via `run-app.sh`. HTML is `no-store`
   (always fresh); static edits live on reload; Python edits need a restart. **Not yet** a reboot-surviving
   service (launchd) — add when wanted. Back up `khata_app.db` (only source of truth).
+- **Production (Debian VM 192.168.50.14)** — now **Docker**, replacing the old systemd+gunicorn unit
+  (systemd `khata` left `disabled`). Build source = **`main`** (owns the live DB's alembic head
+  `fxsnapshot01`; do NOT deploy a feature branch — migration mismatch crash-loops). Repo-root
+  `Dockerfile` (python:3.12-slim + gunicorn `-w 2 :5057`), `docker-entrypoint.sh` (`alembic upgrade
+  head` → gunicorn), `docker-compose.yml` (`restart: always`, healthcheck, watchtower-disabled label).
+  DB on a **bind mount** `~/khata/app/data/khata_app.db` (`KHATA_DATABASE_URL=sqlite:////data/...`) so
+  rebuilds never touch data; env from `~/khata/app/.env.prod`. Deploy = rsync a clean `main` worktree
+  (with the Docker files) → `~/khata/app`, then `docker compose up -d --build`. Ops: `docker ps`,
+  `docker compose {up -d,restart,logs -f,down}`. Pre-Docker DB fallback kept at `~/khata/khata_app.db`.
 - **App distribution (personal, free):** Khata installs three ways without the App Store —
   (1) a **PWA** of the web app (`/manifest.webmanifest` + `/sw.js`, injected by `nav.js`):
   Mac "Add to Dock", iOS "Add to Home Screen"; (2) the **Expo native iOS app** (`mobile/`)
@@ -387,6 +396,13 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-19 — Production VM containerized. Replaced systemd+gunicorn on the Debian box
+  (192.168.50.14) with Docker: repo-root `Dockerfile` / `docker-entrypoint.sh` /
+  `docker-compose.yml` / `.dockerignore`. gunicorn `-w 2 :5057`, `restart: always`, healthcheck,
+  SQLite on a bind-mounted `data/` volume, env from `.env.prod`, watchtower opted out. systemd
+  `khata` stopped + `disabled`. **Deploy source must be `main`** — the live DB's alembic head is
+  `fxsnapshot01` (FX-snapshot, PR #52), which only `main` carries; deploying a feature branch
+  crash-loops on `alembic upgrade head`. Ops now: `docker ps` / `docker compose up -d`. See §11.
 - 2026-06-12 — Installable apps (free, no App Store). Added a PWA layer to the web app
   (`manifest.webmanifest` + `sw.js` served by Flask, tags + SW registered via `nav.js`) →
   installable on Mac and iOS home screen. The service worker is network-first everywhere
