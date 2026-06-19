@@ -6,7 +6,7 @@ of time-limited, token-scoped share links.
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import select
@@ -40,7 +40,8 @@ _VALID_TTL_DAYS = {7, 30, 90}
 
 # Keys dropped from the plan's state dict when scope == "summary"
 _SUMMARY_DROP = {"schedule", "ledger", "deployed", "deployed_total_minor",
-                 "deployed_totals", "installments", "members"}
+                 "deployed_totals", "installments",
+                 "members"}  # members also in _SCRUB_KEYS (stripped from ALL scopes via _scrub)
 
 # Keys / nested keys to scrub for PII regardless of scope
 _SCRUB_KEYS = {"email", "proof_ref", "attachments", "attachment_id", "members"}
@@ -65,7 +66,11 @@ def _status(sh: PlanShare) -> str:
 
 
 def _scrub(obj: Any) -> Any:
-    """Recursively remove PII keys from dicts/lists."""
+    """Recursively remove PII keys from dicts/lists.
+
+    State values are assumed JSON-serialisable (no tuples/sets); plain
+    scalars pass through unchanged.
+    """
     if isinstance(obj, dict):
         return {k: _scrub(v) for k, v in obj.items() if k not in _SCRUB_KEYS}
     if isinstance(obj, list):
@@ -75,9 +80,7 @@ def _scrub(obj: Any) -> Any:
 
 def _plan_state(session: Session, plan: Plan) -> dict:
     """Dispatch to the correct state serialiser based on plan.type."""
-    from datetime import date as _date
-
-    today = _date.today()
+    today = date.today()
 
     if plan.type == "loan":
         from .loans import loan_state
@@ -164,13 +167,21 @@ def list_shares(session: Session, plan: Plan) -> list[dict]:
 
 
 def revoke_share(session: Session, *, plan: Plan, share_id: int) -> PlanShare:
-    """Mark a share as revoked. Raises ShareNotFound if it doesn't belong to plan."""
+    """Mark a share as revoked.
+
+    Raises:
+        ShareNotFound – share_id doesn't exist or belongs to a different plan.
+
+    Idempotent: calling on an already-revoked share is a no-op (the original
+    ``revoked_at`` timestamp is preserved).
+    """
     share = session.scalar(
         select(PlanShare).where(PlanShare.id == share_id, PlanShare.plan_id == plan.id)
     )
     if share is None:
         raise ShareNotFound(share_id)
-    share.revoked_at = datetime.now(timezone.utc)
+    if share.revoked_at is None:
+        share.revoked_at = datetime.now(timezone.utc)
     return share
 
 

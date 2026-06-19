@@ -86,6 +86,19 @@ def test_list_and_revoke(ctx):
     assert rows2[a.id]["status"] == "revoked" and rows2[b.id]["status"] == "active"
 
 
+def test_revoke_wrong_plan_raises(ctx):
+    s, u, plan = ctx
+    from khata.services.loans import create_loan_plan
+    from datetime import date as _date
+    other = create_loan_plan(s, owner_id=u.id, name="Other", currency="INR",
+                             direction="given", interest_type="monthly", rate_bps=100,
+                             start_date=_date(2024,1,1))
+    s.flush()
+    sh = sl.create_share(s, plan=plan, user_id=u.id, scope="full", ttl_days=7); s.flush()
+    with pytest.raises(sl.ShareNotFound):
+        sl.revoke_share(s, plan=other, share_id=sh.id)
+
+
 def test_expiry_survives_session_reload(tmp_path):
     from datetime import date, datetime, timezone, timedelta
     from khata.db import Base, make_engine, make_session_factory
