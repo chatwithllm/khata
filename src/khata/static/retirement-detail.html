@@ -81,9 +81,25 @@
 .planacts .plandel{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer;user-select:none;transition:border-color .2s,color .2s,background .2s}
 .planacts svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .planacts .plandel:hover{border-color:var(--neg);color:var(--neg);background:color-mix(in srgb,var(--neg) 6%,transparent)}
-@media(pointer:coarse){ .planacts .plandel{min-height:44px;padding:10px 14px} }
+.planacts .planshare{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer;user-select:none;transition:border-color .2s,color .2s,background .2s}
+.planacts .planshare:hover{border-color:var(--primary);color:var(--primary-deep)}
+.planacts .planprint{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer;user-select:none;transition:border-color .2s,color .2s,background .2s}
+.planacts .planprint:hover{border-color:var(--ink);color:var(--ink)}
+@media(pointer:coarse){ .planacts .plandel,.planacts .planshare,.planacts .planprint{min-height:44px;padding:10px 14px} }
 .ph-right{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
-</style>
+/* share-list panel */
+.share-list-panel{padding:18px 22px}
+.share-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line-2);font-size:13px;font-family:"JetBrains Mono"}
+.share-row:last-child{border-bottom:none}
+.share-empty{font-size:13.5px;color:var(--ink-faint);padding:10px 0}
+.share-revoke{font:inherit;font-size:12px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--neg);cursor:pointer}
+.share-revoke:hover{background:color-mix(in srgb,var(--neg) 8%,transparent)}
+@media print{
+  .side,.top-right,.planacts,.share-list-panel,#editbtn{display:none!important}
+  .app{display:block}
+  .main{margin:0;padding:0}
+  .grid2{display:block}
+}
 </head>
 <body>
 <div class="app">
@@ -138,6 +154,8 @@
           <div class="panel fade d3" id="terms-panel"></div>
           <!-- members (sharing) -->
           <div class="panel fade d4 fill" id="members-panel"></div>
+          <!-- shared links -->
+          <div class="panel fade d4" id="share-panel"></div>
         </div>
       </div>
     </div>
@@ -219,6 +237,8 @@ function renderHeader(box, plan, st){
   const actBtn=(cls, label, dPath, fn)=>{ const b=el('span',cls); b.tabIndex=0; b.setAttribute('role','button'); b.append(icon(dPath), document.createTextNode(label));
     b.addEventListener('click', fn); b.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); fn(); } }); return b; };
   const acts=el('div','planacts');
+  acts.append(actBtn('planshare','Share','M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13', openShareMenu));
+  acts.append(actBtn('planprint','Print','M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z', printPlan));
   acts.append(actBtn('plandel','Delete','M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6', deletePlan));
   const right=el('div','ph-right');
   right.append(el('div','meta', meta), acts);
@@ -467,6 +487,64 @@ function renderNotFound(noun){
   content.append(wrap);
 }
 
+// ── share menu + manage links ──
+async function openShareMenu(){
+  const scope = confirm('OK = full detail, Cancel = summary only') ? 'full' : 'summary';
+  const ttlAns = prompt('Link valid for how many days? (7, 30, or 90)', '30');
+  const ttl = parseInt(ttlAns, 10);
+  if (![7,30,90].includes(ttl)) { alert('Pick 7, 30, or 90.'); return; }
+  let r;
+  try {
+    r = await fetch('/api/plans/'+pid+'/shares', { method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ scope, ttl_days: ttl }) });
+    if (!r.ok) throw new Error();
+  } catch(e){ alert('Could not create link.'); return; }
+  const { url } = await r.json();
+  if (navigator.share) { try { await navigator.share({ title: document.title, url }); } catch(e){} }
+  else { try { await navigator.clipboard.writeText(url); alert('Link copied:\n'+url); }
+         catch(e){ prompt('Copy this link:', url); } }
+  if (typeof loadShareList === 'function') loadShareList();
+}
+
+async function loadShareList(){
+  const box = document.getElementById('share-list'); if (!box) return;
+  let shares = [];
+  try { shares = (await fetch('/api/plans/'+pid+'/shares').then(r=>r.json())).shares || []; }
+  catch(e){ return; }
+  box.textContent = '';
+  if (!shares.length){ box.append(el('div','share-empty','No shared links yet.')); return; }
+  for (const sh of shares){
+    const row = el('div','share-row',
+      sh.scope+' · '+sh.status+' · expires '+(sh.expires_at||'').slice(0,10)+' ');
+    if (sh.status === 'active'){
+      const rev = el('button','share-revoke','Revoke');
+      rev.type='button';
+      rev.addEventListener('click', async ()=>{
+        if(!confirm('Revoke this link?')) return;
+        await fetch('/api/plans/'+pid+'/shares/'+sh.id, { method:'DELETE' });
+        loadShareList();
+      });
+      row.append(rev);
+    }
+    box.append(row);
+  }
+}
+function printPlan(){ window.print(); }
+
+// ── shared links panel ──
+function renderSharePanel(box){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Shared links'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','manage access'));
+  box.append(ph);
+  const body=el('div','share-list-panel');
+  const list=el('div'); list.id='share-list';
+  body.append(list);
+  box.append(body);
+}
+
 // ── delete the whole retirement plan ──
 async function deletePlan(){
   if(!confirm('Delete this retirement plan and all its entries? This cannot be undone.')) return;
@@ -505,6 +583,8 @@ async function boot(){
   renderContribution($('contrib-panel'), st);
   renderTerms($('terms-panel'), st);
   renderMembers($('members-panel'));
+  renderSharePanel($('share-panel'));
+  loadShareList();
 
   // sidebar counts from /api/plans
   try{
