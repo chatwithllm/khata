@@ -4,7 +4,7 @@ import pytest
 
 from khata.db import Base, make_engine, make_session_factory
 from khata.models import User
-from khata.services.loans import create_loan_plan, add_disbursement
+from khata.services.loans import create_loan_plan, add_disbursement, log_loan_entry
 from khata.services import sharing_links as sl
 
 
@@ -61,6 +61,12 @@ def test_resolve_public_valid_expired_revoked_unknown(ctx):
 
 def test_public_state_redacts_and_scopes(ctx):
     s, u, plan = ctx
+    # Add a payment with a sensitive note to verify it gets scrubbed
+    log_loan_entry(s, plan=plan, user_id=u.id, kind="principal_repayment",
+                   amount_minor=10000,
+                   occurred_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+                   note="SECRET_MEMO_XYZ")
+    s.flush()
     full = sl.public_state(s, plan, "full")
     summ = sl.public_state(s, plan, "summary")
     import json
@@ -76,6 +82,8 @@ def test_public_state_redacts_and_scopes(ctx):
     fblob = _json.dumps(full)
     assert "logged_by_user_id" not in fblob
     assert "funding_plan_id" not in fblob
+    # note field must be scrubbed from the public payload
+    assert "SECRET_MEMO_XYZ" not in _json.dumps(full)
 
 
 def test_list_and_revoke(ctx):

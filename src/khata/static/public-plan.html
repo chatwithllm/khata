@@ -10,6 +10,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Khata — shared plan</title>
 <meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; connect-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2314100a'/%3E%3Cpath d='M8 7v18M8 16l9-9M11 13l10 12' stroke='%23d4a843' stroke-width='2.6' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
 <style>
 /* ── design tokens (ink/ivory ledger feel) ──────────────────── */
@@ -304,14 +305,6 @@ body {
     } catch (e) {
       return sym(currency) + Math.abs(major).toFixed(2);
     }
-  }
-
-  /* negative money with sign indicator */
-  function fmtSigned(minorInt, currency) {
-    if (minorInt == null) return '—';
-    var n = Number(minorInt);
-    if (isNaN(n)) return (n < 0 ? '−' : '') + fmtMoney(minorInt, currency);
-    return (n < 0 ? '−' : '') + fmtMoney(minorInt, currency);
   }
 
   /* ── humanize a snake_case key → Title Case label ─────────── */
