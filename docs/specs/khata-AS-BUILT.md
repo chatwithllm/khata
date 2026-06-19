@@ -176,6 +176,7 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-19 — Backfill historical loan payments.** Loan detail gains a per-row + bulk "mark through Month N" UI to record backdated interest payments/receipts against past schedule months. Backend: new `services.loans.backfill_loan_interest` service + owner-only `POST /api/plans/<id>/loan/backfill` endpoint. Both reuse the existing greedy interest pool (no schema change, no migration), creating timestamped `interest_payment` entries in the past. Idempotent — paid months are skipped. Wording follows loan direction (paid/received). Solves the real-world retroactive payment problem: "I paid interest for three months but didn't log it until now."
 - **2026-06-11 — Per-entry FX rate snapshots (live currency conversion).** Every ledger entry now
   freezes the exchange rate at log time so its counter-currency value is exact forever (spec
   `docs/specs/2026-06-11-fx-snapshot-design.md`). `ledger_entries.fx_rate_micro` (counter-per-entry
@@ -396,6 +397,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-19 — Backfill historical loan payments. Loan detail can now mark past interest dues as paid/received (wording follows loan direction): a per-month button on each unpaid schedule row (interest = remaining expected, editable, + optional principal, dated in that month) and a bulk "mark through Month N" control. Backend: new `loans.backfill_loan_interest` + owner-only `POST /loan/backfill`; both record backdated `interest_payment` entries against the existing greedy interest pool — no schema change. Idempotent (paid months skipped).
 - 2026-06-19 — Production VM containerized. Replaced systemd+gunicorn on the Debian box
   (192.168.50.14) with Docker: repo-root `Dockerfile` / `docker-entrypoint.sh` /
   `docker-compose.yml` / `.dockerignore`. gunicorn `-w 2 :5057`, `restart: always`, healthcheck,
