@@ -110,6 +110,9 @@ def create_app(config: Config | None = None) -> Flask:
     from .api.admin import bp as admin_bp
     app.register_blueprint(admin_bp)
 
+    from .api.public import bp as public_bp
+    app.register_blueprint(public_bp)
+
     # Automatic-backup scheduler — opt-in via env so tests never spawn threads. Enabled
     # by run-app.sh (dev) and the prod .env.prod.
     if os.environ.get("KHATA_ENABLE_SCHEDULER") == "1":
