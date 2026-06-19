@@ -26,8 +26,8 @@ def upgrade() -> None:
         sa.Column("address", sa.Text(), nullable=True),
         sa.Column("notes", sa.Text(), nullable=True),
         sa.Column("photo", sa.Text(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
     op.create_index("ix_contacts_owner_user_id", "contacts", ["owner_user_id"])
     with op.batch_alter_table("loans") as b:
