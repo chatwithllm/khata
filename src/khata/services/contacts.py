@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -93,8 +93,7 @@ def assign_loan(session: Session, *, owner_id, plan: Plan, contact_id) -> None:
 
 def contact_state(session: Session, contact: Contact, *, base_currency: str,
                   as_of=None) -> dict:
-    from datetime import date as _date
-    as_of = as_of or _date.today()
+    as_of = as_of or date.today()
     plans = list(session.scalars(
         select(Plan).join(Loan, Loan.plan_id == Plan.id)
         .where(Loan.contact_id == contact.id)))

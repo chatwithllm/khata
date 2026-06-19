@@ -109,3 +109,22 @@ def test_contact_state_empty(ctx):
     st = c.contact_state(s, ct, base_currency="INR")
     assert st["loan_count"] == 0 and st["by_currency"] == [] and st["loans"] == []
     assert st["base_total"]["principal_outstanding_minor"] == 0
+
+
+def test_contact_state_partial_flag_when_rate_missing(ctx):
+    # USD loan with no USD→INR rate seeded → bucket is skipped, partial=True.
+    # Only INR and USD are SUPPORTED_CURRENCIES, so we use USD as the
+    # foreign currency and deliberately omit fx.set_rate to exercise the
+    # missing-rate branch in contact_state.
+    from khata.services.loans import add_disbursement
+    s, u, o = ctx
+    ct = c.create_contact(s, owner_id=u.id, name="K"); s.flush()
+    p = create_loan_plan(s, owner_id=u.id, name="E", currency="USD", direction="given",
+                         interest_type="none", rate_bps=0, start_date=date(2024, 1, 1))
+    add_disbursement(s, plan=p, user_id=u.id, amount_minor=5000,
+                     occurred_at=datetime(2024, 1, 1, tzinfo=timezone.utc))
+    c.assign_loan(s, owner_id=u.id, plan=p, contact_id=ct.id)
+    s.flush()
+    st = c.contact_state(s, ct, base_currency="INR")
+    assert st["base_total_partial"] is True
+    assert st["base_total"]["principal_outstanding_minor"] == 0
