@@ -26,7 +26,7 @@ def upgrade() -> None:
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_by_user_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     )
     op.create_index("ix_plan_shares_plan_id", "plan_shares", ["plan_id"])
     op.create_index("ix_plan_shares_token", "plan_shares", ["token"], unique=True)
