@@ -425,6 +425,13 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-19 — Loans By-contact view redesigned. Retired the hand-rolled Sankey (unreadable
+  for a small loan book) for an editorial layout: a position band (100%-stacked exposure meter
+  + Owed-to-you / You-owe / Net), ruled per-contact ledger rows (principal · interest/mo ·
+  next-due, expandable to each person's loans), and a compact treemap breakdown (area =
+  outstanding, click → scroll to the contact). Frontend-only (app.html); same
+  /api/plans/loans/grouped data. No migration. (The endpoint still returns a now-unused `sankey`
+  payload — harmless; client ignores it.)
 - 2026-06-19 — Loans grouped by contact + Sankey. By-direction ↔ By-contact toggle on the Loans
   page: By-contact groups loans per person (contact name, else counterparty; same names merge),
   given/taken within, each with principal · expected interest/mo · next-month due (base currency).
