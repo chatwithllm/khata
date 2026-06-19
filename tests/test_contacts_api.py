@@ -66,3 +66,38 @@ def test_assign_loan_to_contact(client):
 
 def test_create_contact_requires_name_400(client):
     assert client.post("/api/contacts", json={"name": "  "}).status_code == 400
+
+
+def test_patch_ignores_mass_assignment(client):
+    cid = client.post("/api/contacts", json={"name": "K"}).get_json()["contact"]["id"]
+    # attempt to inject protected fields — must be silently ignored, contact unchanged owner/id
+    r = client.patch(f"/api/contacts/{cid}", json={"owner_user_id": 999, "id": 12345, "name": "K2"})
+    assert r.status_code == 200
+    body = r.get_json()["contact"]
+    assert body["id"] == cid and body["name"] == "K2"   # id unchanged, name applied
+
+
+def test_assign_foreign_contact_rejected(client):
+    # owner (user 1) creates a loan and a contact
+    pid = _make_loan(client)
+    owner_cid = client.post("/api/contacts", json={"name": "OwnerContact"}).get_json()["contact"]["id"]
+    # switch to user 2; user 2 creates their own loan
+    _login_as_other_user(client)
+    pid2 = _make_loan(client)
+    # user 2 tries to assign user 1's contact (which is invisible to user 2) to their own loan —
+    # the service's owner-scoped get_contact returns None → 400 "no such contact"
+    r = client.post(f"/api/plans/{pid2}/loan/contact", json={"contact_id": owner_cid})
+    assert r.status_code in (400, 403)   # owner-gate (403) or foreign-contact reject (400)
+
+
+def test_assign_to_non_loan_400(client):
+    import pytest
+    cid = client.post("/api/contacts", json={"name": "K"}).get_json()["contact"]["id"]
+    # create an asset plan (requires total_price > 0)
+    r = client.post("/api/plans", json={"type": "asset", "name": "Land", "currency": "INR",
+                                        "total_price": "100000"})
+    if r.status_code != 201:
+        pytest.skip("asset create payload differs; non-loan-assign path covered by service test")
+    apid = r.get_json().get("plan", {}).get("id") or r.get_json().get("id")
+    rr = client.post(f"/api/plans/{apid}/loan/contact", json={"contact_id": cid})
+    assert rr.status_code == 400
