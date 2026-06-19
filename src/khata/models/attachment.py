@@ -32,3 +32,4 @@ class Attachment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     entry: Mapped["LedgerEntry"] = relationship(back_populates="attachments")
+    contact: Mapped["Contact"] = relationship(back_populates="attachments")

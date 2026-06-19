@@ -4,11 +4,12 @@ import pytest
 from sqlalchemy import select
 
 from khata.db import Base, make_engine, make_session_factory
-from khata.models import User, Plan, FxRate, FxRefreshState, BackupConfig, LedgerEntry
+from khata.models import User, Plan, FxRate, FxRefreshState, BackupConfig, LedgerEntry, Attachment
 from khata.services.assets import create_asset_plan, log_payment
 from khata.services.loans import create_loan_plan, add_disbursement
 from khata.services.sharing import add_member
 from khata.services.backup import export_all, import_replace, BackupError
+from khata.services import contacts as contacts_svc, attachments as att_svc
 
 
 def _fresh():
@@ -194,3 +195,65 @@ def test_operational_state_untouched_by_restore():
         import_replace(s, data); s.commit()
         assert s.query(BackupConfig).count() == 1
         assert s.query(FxRefreshState).count() == 1
+
+
+_PNG = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+    "0000000a49444154789c6360000002000154a24f9f0000000049454e44ae426082"
+)
+
+
+def test_contact_and_attachment_backup_roundtrip():
+    """Contact row, loan.contact_id FK, and contact attachment all survive export/import."""
+    S1 = _fresh()
+    with S1() as s1:
+        owner = User(email="owner@x.com", display_name="Owner", password_hash="h")
+        s1.add(owner); s1.flush()
+
+        ct = contacts_svc.create_contact(s1, owner_id=owner.id, name="Ravi Kumar")
+        s1.flush()
+
+        ln = create_loan_plan(s1, owner_id=owner.id, name="Personal loan", currency="INR",
+                              direction="given", interest_type="none", rate_bps=0,
+                              start_date=date(2026, 1, 1))
+        contacts_svc.assign_loan(s1, owner_id=owner.id, plan=ln, contact_id=ct.id)
+        s1.flush()
+
+        a = att_svc.add_attachment(s1, contact=ct, uploaded_by=owner.id,
+                                   filename="id.png", raw=_PNG)
+        s1.commit()
+
+        orig_contact_id = ct.id
+        orig_att_id = a.id
+        orig_loan_plan_id = ln.id
+        data = _json_roundtrip(export_all(s1))
+
+    # Verify the backup dict carries the right data.
+    assert any(r["id"] == orig_contact_id and r["name"] == "Ravi Kumar"
+               for r in data["tables"]["contacts"])
+    att_rows = [r for r in data["tables"]["attachments"] if r["id"] == orig_att_id]
+    assert len(att_rows) == 1
+    assert att_rows[0]["contact_id"] == orig_contact_id
+    assert att_rows[0]["ledger_entry_id"] is None
+
+    # Restore into a fresh instance and verify round-trip integrity.
+    S2 = _fresh()
+    with S2() as s2:
+        stats = import_replace(s2, data); s2.commit()
+
+        assert stats["contacts"] == 1
+        assert stats["attachments"] == 1
+
+        from khata.models import Contact as ContactModel, Loan as LoanModel
+        restored_ct = s2.get(ContactModel, orig_contact_id)
+        assert restored_ct is not None and restored_ct.name == "Ravi Kumar"
+
+        restored_loan = s2.query(LoanModel).filter_by(plan_id=orig_loan_plan_id).one()
+        assert restored_loan.contact_id == orig_contact_id
+
+        restored_att = s2.get(Attachment, orig_att_id)
+        assert restored_att is not None
+        assert restored_att.contact_id == orig_contact_id
+        assert restored_att.ledger_entry_id is None
+        assert restored_att.mime == "image/png"
+        assert restored_att.data == _PNG

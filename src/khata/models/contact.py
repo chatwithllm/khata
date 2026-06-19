@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Base
 
@@ -23,3 +23,7 @@ class Contact(Base):
     photo: Mapped[str | None] = mapped_column(Text, nullable=True)   # data:image/... URL
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    attachments: Mapped[list["Attachment"]] = relationship(
+        back_populates="contact", cascade="all, delete-orphan",
+        order_by="Attachment.created_at")

@@ -11,7 +11,7 @@ from urllib.parse import quote
 
 from flask import Blueprint, Response, g, jsonify, request
 
-from ..models import LedgerEntry, Plan
+from ..models import Contact, LedgerEntry, Plan
 from ..services import attachments, sharing
 from ..services.attachments import AttachmentError
 from .auth import current_user
@@ -84,9 +84,19 @@ def download_attachment(att_id):
     att = attachments.get(g.db, att_id)
     if att is None:
         return jsonify(error="not_found"), 404
-    entry = g.db.get(LedgerEntry, att.ledger_entry_id)
-    plan = g.db.get(Plan, entry.plan_id) if entry else None
-    if plan is None or not sharing.accessible(g.db, plan=plan, user_id=user.id):
+    if att.ledger_entry_id is not None:
+        # Entry attachment: any plan member may view (proof is shared evidence).
+        entry = g.db.get(LedgerEntry, att.ledger_entry_id)
+        plan = g.db.get(Plan, entry.plan_id) if entry else None
+        if plan is None or not sharing.accessible(g.db, plan=plan, user_id=user.id):
+            return jsonify(error="forbidden"), 403
+    elif att.contact_id is not None:
+        # Contact attachment: owner-only access (private documents).
+        contact = g.db.get(Contact, att.contact_id)
+        if contact is None or contact.owner_user_id != user.id:
+            return jsonify(error="forbidden"), 403
+    else:
+        # Orphaned attachment (should not occur in practice).
         return jsonify(error="forbidden"), 403
     disp = "inline" if att.mime in attachments.INLINE_MIMES else "attachment"
     # RFC 5987 filename* — handles non-ASCII names without breaking the header.
@@ -107,13 +117,22 @@ def delete_attachment(att_id):
     att = attachments.get(g.db, att_id)
     if att is None:
         return jsonify(error="not_found"), 404
-    entry = g.db.get(LedgerEntry, att.ledger_entry_id)
-    plan = g.db.get(Plan, entry.plan_id) if entry else None
-    if plan is None:
+    if att.ledger_entry_id is not None:
+        # Entry attachment: owner or uploader may delete.
+        entry = g.db.get(LedgerEntry, att.ledger_entry_id)
+        plan = g.db.get(Plan, entry.plan_id) if entry else None
+        if plan is None:
+            return jsonify(error="not_found"), 404
+        if not (user.id == plan.owner_user_id or user.id == att.uploaded_by_user_id):
+            return jsonify(error="forbidden",
+                           detail="only the owner or the uploader can remove this attachment"), 403
+    elif att.contact_id is not None:
+        # Contact attachment: owner-only (same check as download).
+        contact = g.db.get(Contact, att.contact_id)
+        if contact is None or contact.owner_user_id != user.id:
+            return jsonify(error="forbidden"), 403
+    else:
         return jsonify(error="not_found"), 404
-    if not (user.id == plan.owner_user_id or user.id == att.uploaded_by_user_id):
-        return jsonify(error="forbidden",
-                       detail="only the owner or the uploader can remove this attachment"), 403
     attachments.delete(g.db, att)
     g.db.commit()
     return jsonify(ok=True), 200

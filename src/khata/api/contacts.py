@@ -1,6 +1,6 @@
 from flask import Blueprint, g, jsonify, request
 
-from ..services import contacts
+from ..services import contacts, attachments
 from .auth import current_user
 
 bp = Blueprint("contacts", __name__, url_prefix="/api/contacts")
@@ -82,3 +82,35 @@ def remove(contact_id):
         g.db.rollback()
         return jsonify(error="not_found"), 404
     return "", 204
+
+
+@bp.get("/<int:contact_id>/attachments")
+def list_docs(contact_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    ct = contacts.get_contact(g.db, owner_id=user.id, contact_id=contact_id)
+    if ct is None:
+        return jsonify(error="not_found"), 404
+    return jsonify(attachments=[attachments.meta(a) for a in attachments.list_for_contact(g.db, ct.id)]), 200
+
+
+@bp.post("/<int:contact_id>/attachments")
+def upload_doc(contact_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    ct = contacts.get_contact(g.db, owner_id=user.id, contact_id=contact_id)
+    if ct is None:
+        return jsonify(error="not_found"), 404
+    f = request.files.get("file")
+    if f is None:
+        return jsonify(error="invalid", detail="no file"), 400
+    try:
+        a = attachments.add_attachment(g.db, contact=ct, uploaded_by=user.id,
+                                       filename=f.filename, raw=f.read())
+        g.db.commit()
+    except attachments.AttachmentError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(attachment=attachments.meta(a)), 201
