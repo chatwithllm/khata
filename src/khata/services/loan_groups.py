@@ -26,7 +26,9 @@ def grouped_loans(session: Session, *, owner_id, base_currency: str, as_of=None)
         nonlocal partial
         if ccy == base_currency:
             return v
-        rate = _rates.setdefault(ccy, _fx.get_rate(session, base=ccy, quote=base_currency))
+        if ccy not in _rates:
+            _rates[ccy] = _fx.get_rate(session, base=ccy, quote=base_currency)
+        rate = _rates[ccy]
         if not rate:
             partial = True
             return 0
@@ -111,10 +113,11 @@ def _build_sankey(groups: list) -> dict:
             if val > 0:
                 links.append({"source": dnode, "target": cnode, "value_minor": val})
         for ln in g["loans"]:
+            if ln["outstanding_base_minor"] <= 0:
+                continue
             lnode = f"ln:{ln['plan_id']}"
             nodes.append({"id": lnode, "label": ln["name"], "kind": "loan",
                           "plan_id": ln["plan_id"]})
-            if ln["outstanding_base_minor"] > 0:
-                links.append({"source": cnode, "target": lnode,
-                              "value_minor": ln["outstanding_base_minor"]})
+            links.append({"source": cnode, "target": lnode,
+                          "value_minor": ln["outstanding_base_minor"]})
     return {"nodes": nodes, "links": links}

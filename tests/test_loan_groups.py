@@ -4,7 +4,7 @@ import pytest
 
 from khata.db import Base, make_engine, make_session_factory
 from khata.models import User
-from khata.services.loans import create_loan_plan, add_disbursement
+from khata.services.loans import create_loan_plan, add_disbursement, log_loan_entry
 from khata.services import contacts as c, fx
 from khata.services.loan_groups import grouped_loans
 
@@ -137,3 +137,20 @@ def test_sankey_invariant_mixed_direction(ctx):
     dir_links = sum(l["value_minor"] for l in sk["links"] if l["source"].startswith("dir:"))
     bt = out["base_total"]
     assert dir_links == bt["lent"]["principal_minor"] + bt["borrowed"]["principal_minor"] == 140000
+
+
+def test_zero_outstanding_loan_no_sankey_node(ctx):
+    s, u, o = ctx
+    ct = c.create_contact(s, owner_id=u.id, name="Z"); s.flush()
+    # a fully-repaid loan: disburse then repay all principal
+    p = create_loan_plan(s, owner_id=u.id, name="paid", currency="INR", direction="given",
+                         interest_type="none", rate_bps=0, start_date=date(2024, 1, 1),
+                         counterparty="Z")
+    add_disbursement(s, plan=p, user_id=u.id, amount_minor=50000,
+                     occurred_at=datetime(2024, 1, 1, tzinfo=timezone.utc))
+    log_loan_entry(s, plan=p, user_id=u.id, kind="principal_repayment", amount_minor=50000,
+                   occurred_at=datetime(2024, 2, 1, tzinfo=timezone.utc))
+    c.assign_loan(s, owner_id=u.id, plan=p, contact_id=ct.id); s.flush()
+    out = grouped_loans(s, owner_id=u.id, base_currency="INR")
+    loan_nodes = [n for n in out["sankey"]["nodes"] if n["kind"] == "loan"]
+    assert loan_nodes == []   # 0 outstanding -> no loan node

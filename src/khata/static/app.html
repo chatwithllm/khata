@@ -706,7 +706,7 @@ function renderSankey(container, sankey, baseCcy, groups){
       const gKey=groups&&groups[ci]?groups[ci].key:null;
       if(gKey){
         row.style.cursor='pointer';
-        row.addEventListener('click',()=>{ const h=document.getElementById('grp-'+gKey); if(h) h.scrollIntoView({behavior:'smooth',block:'start'}); });
+        row.addEventListener('click',()=>{ const h=document.getElementById('grp-'+gKey.replace(/\s+/g,'-')); if(h) h.scrollIntoView({behavior:'smooth',block:'start'}); });
       }
       wrap.append(row);
     }
@@ -898,7 +898,7 @@ function renderSankey(container, sankey, baseCcy, groups){
       const idx=parseInt(n.id.replace('ct:',''),10);
       const gKey=groups&&groups[idx]?groups[idx].key:null;
       if(gKey){
-        rect.addEventListener('click',()=>{ const h2=document.getElementById('grp-'+gKey); if(h2) h2.scrollIntoView({behavior:'smooth',block:'start'}); });
+        rect.addEventListener('click',()=>{ const h2=document.getElementById('grp-'+gKey.replace(/\s+/g,'-')); if(h2) h2.scrollIntoView({behavior:'smooth',block:'start'}); });
       }
     }
     svg.append(rect);
@@ -935,7 +935,7 @@ async function renderLoansByContact(card){
   const list=el('div','grouped');
   if(!data.groups||!data.groups.length){ list.append(el('div','emptypanel','No loans yet.')); }
   for(const g of (data.groups||[])){
-    const head=el('div','gcontact'); head.id='grp-'+g.key;
+    const head=el('div','gcontact'); const gid='grp-'+g.key.replace(/\s+/g,'-'); head.id=gid;
     const title=g.contact_id
       ? Object.assign(el('a','gname',g.name),{href:'/contacts/'+g.contact_id})
       : el('span','gname',g.name);
@@ -1149,7 +1149,6 @@ async function boot(){
       const loanMode=localStorage.getItem('loanGroupMode')||'direction';
       injectLoanToggle(plist, (newMode)=>{
         // on switch: clear the plist contents (but NOT the toggle itself) and re-render
-        const panel=plist.closest('.panel');
         plist.textContent='';
         if(newMode==='contact'){
           renderLoansByContact(plist);
