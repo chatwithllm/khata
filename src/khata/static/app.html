@@ -90,6 +90,39 @@
 .emptypanel a{color:var(--primary-deep);font-weight:600}
 /* phone micro-type floor (responsive pass) */
 @media(max-width:560px){ .stat.d2 .d,.stat.d3 .d{font-size:11px} }
+
+/* ── loans by-contact grouped view ── */
+.loan-tog{display:flex;align-items:center;gap:0;padding:12px 22px 0;position:relative}
+.loan-tog button{position:relative;z-index:1;font:inherit;font-size:12px;font-weight:600;padding:6px 14px;border:1px solid var(--line);background:transparent;color:var(--ink-faint);cursor:pointer;transition:.15s;border-radius:8px;white-space:nowrap}
+.loan-tog button:first-of-type{border-radius:8px 0 0 8px;border-right:none}
+.loan-tog button:last-of-type{border-radius:0 8px 8px 0}
+.loan-tog button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.grouped{padding:0 0 8px}
+.gcontact{padding:14px 22px 10px;border-top:1px solid var(--line-2)}
+.gcontact:first-child{border-top:none}
+.gname{font-weight:700;font-size:14px;color:var(--ink);text-decoration:none;display:block;margin-bottom:8px}
+a.gname:hover{color:var(--primary-deep);text-decoration:underline}
+.gfigs{display:flex;gap:16px;flex-wrap:wrap}
+.gfig{display:flex;flex-direction:column;gap:2px;min-width:90px}
+.gfl{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600;font-family:"JetBrains Mono"}
+.gfv{font-family:"JetBrains Mono";font-weight:700;font-size:13px;color:var(--ink)}
+.gfv.pos{color:var(--pos)}.gfv.neg{color:var(--neg)}
+.gside{padding:6px 22px 2px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
+.grow{display:flex;align-items:center;justify-content:space-between;padding:7px 22px;border-top:1px solid var(--line-2)}
+.grow-n{font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none}
+.grow-n:hover{color:var(--primary-deep)}
+.grow-amt{font-family:"JetBrains Mono";font-weight:700;font-size:13px;color:var(--ink-soft)}
+.partial-note{padding:10px 22px;font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";border-top:1px solid var(--line-2)}
+/* ── Sankey diagram ── */
+.sankey-wrap{position:relative;width:100%;overflow:hidden;margin:12px 0 4px}
+.sankey-tip{position:absolute;background:var(--ink);color:var(--paper);font-size:11px;font-family:"JetBrains Mono";padding:5px 9px;border-radius:7px;pointer-events:none;white-space:nowrap;z-index:10;opacity:0;transition:opacity .1s;line-height:1.5}
+.sk-bar-wrap{padding:8px 22px 12px}
+.sk-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px;font-family:"JetBrains Mono"}
+.sk-bar-label{width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);font-weight:600;font-size:11.5px}
+.sk-bar{flex:1;height:14px;border-radius:4px;background:var(--paper-2);overflow:hidden;display:flex}
+.sk-bar-l{background:color-mix(in srgb,var(--pos) 70%,transparent);height:100%}
+.sk-bar-b{background:color-mix(in srgb,var(--neg) 60%,transparent);height:100%}
+.sk-bar-amt{font-size:10.5px;color:var(--ink-faint);min-width:70px;text-align:right}
 </style>
 </head>
 <body>
@@ -611,6 +644,356 @@ async function renderConfirms(){
   });
 }
 
+// ── loans by-contact helpers ──
+// MONEY: format a BASE-currency minor amount with symbol (no sign prefix; sign from value)
+function MONEY(minor, ccy){ return fmt(minor, ccy||BASE); }
+// MONEYSIGN: prefix '+' (green) or '−' (red) based on sign; returns a span element
+function MONEYSIGN(minor, ccy){
+  const s=document.createElement('span');
+  if(minor===null||minor===undefined){ s.textContent='—'; return s; }
+  const absVal=Math.abs(minor);
+  const sign=minor>0?'+':minor<0?'−':'';
+  const cls=minor>0?'gfv pos':minor<0?'gfv neg':'gfv';
+  s.className=cls;
+  s.textContent=sign+fmt(absVal, ccy||BASE);
+  return s;
+}
+function figEl(label, val){
+  const d=el('div','gfig');
+  const lbl=el('span','gfl',label);
+  if(typeof val==='string'){ d.append(lbl, el('span','gfv',val)); }
+  else { d.append(lbl, val); }
+  return d;
+}
+// ── Sankey diagram of the loan book ──
+function renderSankey(container, sankey, baseCcy, groups){
+  if(!sankey||!sankey.nodes||!sankey.nodes.length){ container.style.display='none'; return; }
+  // compute node counts per column for overflow guard (Fix 2b)
+  const _dirCount=sankey.nodes.filter(n=>n.kind==='direction').length;
+  const _ctCount=sankey.nodes.filter(n=>n.kind==='contact').length;
+  const _lnCount=sankey.nodes.filter(n=>n.kind==='loan').length;
+  const _maxNodesInCol=Math.max(_dirCount,_ctCount,_lnCount);
+
+  // fallback for small screens, reduced motion, or too many nodes (>12) for SVG
+  if(window.matchMedia('(max-width:560px)').matches||window.matchMedia('(prefers-reduced-motion:reduce)').matches||_maxNodesInCol>12){
+    // compact stacked-bar list: one row per contact
+    const wrap=el('div','sk-bar-wrap');
+    const ctNodes=sankey.nodes.filter(n=>n.kind==='contact');
+    // max throughput for scaling bars — use lent+borrowed per contact
+    let maxVal=0;
+    for(const cn of ctNodes){
+      const lv=sankey.links.filter(lk=>lk.source==='dir:lent'&&lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
+      const bv=sankey.links.filter(lk=>lk.source==='dir:borrowed'&&lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
+      if((lv+bv)>maxVal) maxVal=lv+bv;
+    }
+    if(!maxVal) maxVal=1;
+    for(let ci=0;ci<ctNodes.length;ci++){
+      const cn=ctNodes[ci];
+      // lent vs borrowed: look at Direction→Contact links specifically
+      const lentVal=sankey.links.filter(lk=>lk.source==='dir:lent'&&lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
+      const borVal=sankey.links.filter(lk=>lk.source==='dir:borrowed'&&lk.target===cn.id).reduce((s,lk)=>s+lk.value_minor,0);
+      const tot=lentVal+borVal||1;
+      const row=el('div','sk-bar-row');
+      const lbl=el('div','sk-bar-label');
+      lbl.textContent=cn.label.length>16?cn.label.slice(0,15)+'…':cn.label;
+      const bar=el('div','sk-bar');
+      const barL=el('div','sk-bar-l'); barL.style.width=(lentVal/maxVal*100)+'%';
+      const barB=el('div','sk-bar-b'); barB.style.width=(borVal/maxVal*100)+'%';
+      bar.append(barL,barB);
+      const amt=el('div','sk-bar-amt'); amt.textContent=fmt(tot,baseCcy);
+      row.append(lbl,bar,amt);
+      // click scrolls to group
+      const gKey=groups&&groups[ci]?groups[ci].key:null;
+      if(gKey){
+        row.style.cursor='pointer';
+        row.addEventListener('click',()=>{ const h=document.getElementById('grp-'+gKey.replace(/\s+/g,'-')); if(h) h.scrollIntoView({behavior:'smooth',block:'start'}); });
+      }
+      wrap.append(row);
+    }
+    container.append(wrap);
+    return;
+  }
+
+  const NS='http://www.w3.org/2000/svg';
+  function svgEl(tag,attrs){
+    const e=document.createElementNS(NS,tag);
+    if(attrs) Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));
+    return e;
+  }
+  function escTxt(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function truncLabel(s,max){ return s.length>max?s.slice(0,max-1)+'…':s; }
+
+  const W=Math.max(container.clientWidth||0,320)||760;
+  const PAD_L=90,PAD_R=90,PAD_V=24;
+  const NODE_W=14;
+
+  // assign columns
+  const colMap={direction:0,contact:1,loan:2};
+  // compute per-column total throughput for scaling
+  const colTotals=[0,0,0];
+  const nodeMap={};
+  sankey.nodes.forEach(n=>{ nodeMap[n.id]=n; });
+  // for direction nodes: sum outgoing; contacts: sum incoming; loans: sum incoming
+  sankey.nodes.forEach(n=>{
+    const col=colMap[n.kind]??0;
+    if(n.kind==='direction'){
+      const tot=sankey.links.filter(lk=>lk.source===n.id).reduce((s,lk)=>s+lk.value_minor,0);
+      n._val=tot;
+    } else if(n.kind==='contact'){
+      const tot=sankey.links.filter(lk=>lk.target===n.id).reduce((s,lk)=>s+lk.value_minor,0);
+      n._val=tot;
+    } else {
+      const tot=sankey.links.filter(lk=>lk.target===n.id).reduce((s,lk)=>s+lk.value_minor,0);
+      n._val=tot;
+    }
+    colTotals[col]+=n._val||0;
+  });
+
+  // height driven by node count
+  const maxNodesInCol=Math.max(
+    sankey.nodes.filter(n=>n.kind==='direction').length,
+    sankey.nodes.filter(n=>n.kind==='contact').length,
+    sankey.nodes.filter(n=>n.kind==='loan').length
+  );
+  const H=Math.max(220,Math.min(420, maxNodesInCol*80+PAD_V*2));
+  const usableH=H-PAD_V*2;
+
+  // x positions for each column center
+  const colX=[
+    PAD_L,
+    PAD_L+(W-PAD_L-PAD_R)/2,
+    W-PAD_R
+  ];
+
+  const NODE_GAP=10;
+
+  // layout nodes in each column — stack top to bottom, vertically centred
+  function layoutCol(nodes){
+    const totalVal=nodes.reduce((s,n)=>s+(n._val||0),0)||1;
+    const maxColTot=Math.max(...colTotals,1);
+    const scale=usableH/maxColTot;
+    const totalPx=nodes.reduce((s,n)=>s+(n._val||0)*scale,0)+NODE_GAP*(nodes.length-1);
+    let y=PAD_V+(usableH-Math.min(totalPx,usableH))/2;
+    nodes.forEach(n=>{
+      const h=Math.max(4,(n._val||0)*scale);
+      n._y=y; n._h=h;
+      y+=h+NODE_GAP;
+    });
+  }
+  const dirNodes=sankey.nodes.filter(n=>n.kind==='direction');
+  const ctNodes=sankey.nodes.filter(n=>n.kind==='contact');
+  const lnNodes=sankey.nodes.filter(n=>n.kind==='loan');
+  layoutCol(dirNodes);
+  layoutCol(ctNodes);
+  layoutCol(lnNodes);
+
+  // determine direction for each contact node (from which dir links point to it)
+  const ctDirMap={};
+  sankey.links.forEach(lk=>{
+    if(lk.source.startsWith('dir:')&&lk.target.startsWith('ct:')){
+      ctDirMap[lk.target]=lk.source;
+    }
+  });
+  // determine direction for each loan node (via contact)
+  const lnDirMap={};
+  sankey.links.forEach(lk=>{
+    if(lk.source.startsWith('ct:')&&lk.target.startsWith('ln:')){
+      lnDirMap[lk.target]=ctDirMap[lk.source]||'dir:lent';
+    }
+  });
+
+  const scale=usableH/Math.max(...colTotals,1);
+
+  // color helpers
+  function linkColor(srcId,tgtId){
+    let dir;
+    if(srcId.startsWith('dir:')) dir=srcId;
+    else if(srcId.startsWith('ct:')) dir=ctDirMap[srcId]||'dir:lent';
+    else dir=lnDirMap[srcId]||'dir:lent';
+    return dir==='dir:lent'?'var(--pos)':'var(--neg)';
+  }
+  function nodeColor(n){
+    if(n.kind==='direction') return n.id==='dir:lent'?'var(--pos)':'var(--neg)';
+    if(n.kind==='contact') return 'var(--ink)';
+    const dir=lnDirMap[n.id]||'dir:lent';
+    return dir==='dir:lent'
+      ?'color-mix(in srgb,var(--pos) 50%,transparent)'
+      :'color-mix(in srgb,var(--neg) 50%,transparent)';
+  }
+
+  const wrap=el('div','sankey-wrap');
+  wrap.style.height=H+'px';
+  const svg=svgEl('svg',{width:W,height:H,viewBox:'0 0 '+W+' '+H,'aria-hidden':'true'});
+  wrap.append(svg);
+
+  // tooltip
+  const tip=el('div','sankey-tip');
+  wrap.append(tip);
+  function showTip(evt,html){
+    tip.innerHTML=html;
+    tip.style.opacity='1';
+    positionTip(evt);
+  }
+  function positionTip(evt){
+    const br=wrap.getBoundingClientRect();
+    const x=evt.clientX-br.left+12;
+    const y=evt.clientY-br.top-28;
+    tip.style.left=Math.min(x,W-tip.offsetWidth-8)+'px';
+    tip.style.top=Math.max(0,y)+'px';
+  }
+  function hideTip(){ tip.style.opacity='0'; }
+
+  // draw links first (behind nodes)
+  // track running offsets per node (how far down the band we've consumed)
+  const outOffset={},inOffset={};
+  sankey.nodes.forEach(n=>{ outOffset[n.id]=0; inOffset[n.id]=0; });
+
+  // sort links so they flow in order
+  sankey.links.forEach(lk=>{
+    const src=nodeMap[lk.source],tgt=nodeMap[lk.target];
+    if(!src||!tgt) return;
+    const srcX=colX[colMap[src.kind]??0]+NODE_W;
+    const tgtX=colX[colMap[tgt.kind]??0];
+    const linkH=Math.max(1.5,lk.value_minor*scale);
+    const srcY=src._y+outOffset[src.id]+(linkH/2);
+    const tgtY=tgt._y+inOffset[tgt.id]+(linkH/2);
+    outOffset[src.id]+=linkH;
+    inOffset[tgt.id]+=linkH;
+    const cx=(srcX+tgtX)/2;
+    const col=linkColor(lk.source,lk.target);
+    const path=svgEl('path',{
+      d:'M'+srcX+','+srcY+' C'+cx+','+srcY+' '+cx+','+tgtY+' '+tgtX+','+tgtY,
+      fill:'none',
+      stroke:col,
+      'stroke-width':Math.max(1.5,linkH),
+      'stroke-opacity':'0.38',
+      'stroke-linecap':'round'
+    });
+    path.style.cursor='pointer';
+    path.addEventListener('mouseenter',(e)=>{
+      path.setAttribute('stroke-opacity','0.7');
+      const val=lk.value_minor;
+      showTip(e, escTxt(src.label)+' → '+escTxt(tgt.label)+'<br>'+escTxt(sym(baseCcy)+fmt(val,baseCcy)));
+    });
+    path.addEventListener('mousemove',positionTip);
+    path.addEventListener('mouseleave',()=>{ path.setAttribute('stroke-opacity','0.38'); hideTip(); });
+    svg.append(path);
+  });
+
+  // draw nodes and labels
+  sankey.nodes.forEach((n,ni)=>{
+    const col=colMap[n.kind]??0;
+    const x=colX[col];
+    const y=n._y, h=n._h||4;
+    const fill=nodeColor(n);
+    const rect=svgEl('rect',{x:x,y:y,width:NODE_W,height:h,rx:'3',fill:fill,'fill-opacity':'0.85'});
+    rect.style.cursor=n.kind==='contact'?'pointer':'default';
+    rect.addEventListener('mouseenter',(e)=>{
+      showTip(e, '<b>'+escTxt(n.label)+'</b><br>'+escTxt(sym(baseCcy))+escTxt(fmt(n._val,baseCcy)));
+    });
+    rect.addEventListener('mousemove',positionTip);
+    rect.addEventListener('mouseleave',hideTip);
+    if(n.kind==='contact'){
+      // parse index from ct:<i>
+      const idx=parseInt(n.id.replace('ct:',''),10);
+      const gKey=groups&&groups[idx]?groups[idx].key:null;
+      if(gKey){
+        rect.addEventListener('click',()=>{ const h2=document.getElementById('grp-'+gKey.replace(/\s+/g,'-')); if(h2) h2.scrollIntoView({behavior:'smooth',block:'start'}); });
+      }
+    }
+    svg.append(rect);
+
+    // label
+    const labelText=truncLabel(n.label,18);
+    let lx,ly,anchor,dy;
+    if(n.kind==='direction'){
+      // label to the left of col 0
+      lx=x-6; ly=y+(h/2); anchor='end'; dy='0.35em';
+    } else if(n.kind==='contact'){
+      // label above
+      lx=x+NODE_W/2; ly=y-4; anchor='middle'; dy='0';
+    } else {
+      // loan: label to the right
+      lx=x+NODE_W+5; ly=y+(h/2); anchor='start'; dy='0.35em';
+    }
+    const txt=svgEl('text',{x:lx,y:ly,'text-anchor':anchor,dy:dy,'font-size':'10.5','font-family':'JetBrains Mono, monospace',fill:'var(--ink-soft)','pointer-events':'none'});
+    txt.textContent=labelText;
+    svg.append(txt);
+  });
+
+  container.append(wrap);
+}
+async function renderLoansByContact(card){
+  let data;
+  try{
+    const r=await fetch('/api/plans/loans/grouped');
+    if(!r.ok){ card.append(el('div','emptypanel','Couldn\'t load grouped loans.')); return; }
+    data=await r.json();
+  }
+  catch(e){ card.append(el('div','emptypanel','Could not load grouped loans.')); return; }
+  const sankey=el('div'); sankey.id='loan-sankey'; card.append(sankey);
+  const list=el('div','grouped');
+  if(!data.groups||!data.groups.length){ list.append(el('div','emptypanel','No loans yet.')); }
+  for(const g of (data.groups||[])){
+    const head=el('div','gcontact'); const gid='grp-'+g.key.replace(/\s+/g,'-'); head.id=gid;
+    const title=g.contact_id
+      ? Object.assign(el('a','gname',g.name),{href:'/contacts/'+g.contact_id})
+      : el('span','gname',g.name);
+    head.append(title);
+    const principal=(g.given.principal_minor||0)+(g.taken.principal_minor||0);
+    const intm=(g.given.interest_monthly_minor||0)-(g.taken.interest_monthly_minor||0);
+    const nd=(g.given.next_due_minor||0)-(g.taken.next_due_minor||0);
+    const figs=el('div','gfigs');
+    figs.append(figEl('principal', MONEY(principal, data.base_currency)));
+    figs.append(figEl('interest/mo', MONEYSIGN(intm, data.base_currency)));
+    figs.append(figEl('next due', MONEYSIGN(nd, data.base_currency)));
+    head.append(figs);
+    list.append(head);
+    for(const side of ['given','taken']){
+      if(!g[side].count) continue;
+      list.append(el('div','gside',side==='given'?'Lent out':'Borrowed'));
+      for(const ln of g.loans.filter(l=>l.direction===side)){
+        const row=el('div','grow');
+        row.append(Object.assign(el('a','grow-n',ln.name),{href:'/loan/'+ln.plan_id}));
+        row.append(el('span','grow-amt',MONEY(ln.outstanding_minor,ln.currency)));
+        list.append(row);
+      }
+    }
+  }
+  renderSankey(sankey, data.sankey, data.base_currency, data.groups);
+  card.append(list);
+  if(data.partial){ card.append(el('div','partial-note','≈ some totals exclude a currency (missing FX rate)')); }
+}
+// inject the By-direction / By-contact toggle into the loans panel header area
+function injectLoanToggle(plist, onSwitch){
+  const panel=plist.closest('.panel');
+  if(!panel) return;
+  // find the panel header (ph) and insert toggle after it
+  const ph=panel.querySelector('.ph');
+  const tog=el('div','loan-tog');
+  const bDir=el('button',null,'By direction');
+  const bCon=el('button',null,'By contact');
+  const mode=localStorage.getItem('loanGroupMode')||'direction';
+  bDir.classList.toggle('on', mode==='direction');
+  bCon.classList.toggle('on', mode==='contact');
+  bDir.addEventListener('click',()=>{
+    if(localStorage.getItem('loanGroupMode')==='direction') return;
+    localStorage.setItem('loanGroupMode','direction');
+    bDir.classList.add('on'); bCon.classList.remove('on');
+    onSwitch('direction');
+  });
+  bCon.addEventListener('click',()=>{
+    if(localStorage.getItem('loanGroupMode')==='contact') return;
+    localStorage.setItem('loanGroupMode','contact');
+    bCon.classList.add('on'); bDir.classList.remove('on');
+    onSwitch('contact');
+  });
+  tog.append(bDir, bCon);
+  if(ph && ph.nextSibling){ panel.insertBefore(tog, ph.nextSibling); }
+  else if(ph){ panel.appendChild(tog); }
+  else { panel.insertBefore(tog, plist); }
+}
+
 // ── boot ──
 async function boot(){
   const me = await fetch('/api/auth/me');
@@ -762,17 +1145,120 @@ async function boot(){
       const taken=shown.filter(p=>p.direction==='taken');
       const given=shown.filter(p=>p.direction==='given');
       if(pmeta) pmeta.textContent = taken.length+' borrowed · '+given.length+' lent';
-      const groups=[
-        {arr:taken, label:'Borrowed', sub:'you owe', accent:'var(--neg)', taken:true},
-        {arr:given, label:'Lent out', sub:'owed to you', accent:'var(--pos)', taken:false},
-      ];
-      let first=true;
-      for(const g of groups){
-        if(!g.arr.length) continue;
-        const els=groupHeader(g.label, g.sub, g.accent, first); first=false;
-        const agg={sum:0, interest:0, pend:0, owed:0, outEl:els.outEl, intEl:els.intEl, subEl:els.subEl, ccy:'INR', taken:g.taken};
-        aggs.push(agg);
-        g.arr.forEach(p=> makeRow(p, agg));
+      // inject the By-direction / By-contact toggle (once, before list content)
+      const loanMode=localStorage.getItem('loanGroupMode')||'direction';
+      injectLoanToggle(plist, (newMode)=>{
+        // on switch: clear the plist contents (but NOT the toggle itself) and re-render
+        plist.textContent='';
+        if(newMode==='contact'){
+          renderLoansByContact(plist);
+        } else {
+          // re-run direction rendering inline
+          const t2=shown.filter(p=>p.direction==='taken');
+          const g2=shown.filter(p=>p.direction==='given');
+          const grps2=[
+            {arr:t2, label:'Borrowed', sub:'you owe', accent:'var(--neg)', taken:true},
+            {arr:g2, label:'Lent out', sub:'owed to you', accent:'var(--pos)', taken:false},
+          ];
+          const fl2=[];
+          const aggs2=[];
+          const mk2=(p2,agg2)=>{
+            const row=document.createElement('a'); row.className='prow'; row.href='/'+p2.type+'/'+p2.id;
+            const left=el('div');
+            const l1=el('div','l1'); l1.append(el('span','tag '+p2.type,p2.type),document.createTextNode(' '));
+            const pn=el('span'); pn.textContent=p2.name; l1.append(pn);
+            if(p2.type==='loan'&&p2.kind&&p2.kind!=='personal'){
+              const chip=el('span',null,(LOAN_KIND_SHORT[p2.kind]||p2.kind));
+              chip.style.cssText='font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:2px 7px;border-radius:20px;background:color-mix(in srgb,var(--primary) 14%,transparent);color:var(--accent-dk)';
+              l1.append(chip);
+            }
+            left.append(l1);
+            const l2e=el('div','l2',planMeta(p2)); left.append(l2e);
+            const right=el('div'); right.style.cssText='display:flex;align-items:center;gap:26px;justify-content:flex-end';
+            const intCol2=el('div','pr-icol'); intCol2.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:104px';
+            const intAmt2=el('div'); intAmt2.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:13px';
+            if(p2.type==='loan'){ const il=el('div',null,'interest/mo'); il.style.cssText='font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"'; intCol2.append(intAmt2,il); }
+            const outCol2=el('div'); outCol2.style.cssText='display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:112px';
+            const amt2=el('div'); amt2.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px';
+            const ar2=el('div','arrow','→');
+            outCol2.append(amt2,ar2);
+            if(p2.type==='loan') right.append(intCol2,outCol2); else right.append(outCol2);
+            row.append(left,right); plist.append(row);
+            if(p2.type==='loan'||p2.type==='asset') fl2.push({p:p2,amt:amt2,intAmt:intAmt2,outCol:outCol2,ar:ar2,l2el:l2e,groupAgg:agg2});
+          };
+          const gh2=(label,sub,accent,first2)=>{
+            const h=el('div'); h.style.cssText='display:flex;align-items:baseline;justify-content:space-between;padding:'+(first2?'4px':'16px')+' 22px 8px';
+            if(!first2) h.style.borderTop='1px solid var(--line-2)';
+            const lft=el('div'); lft.style.cssText='display:flex;align-items:baseline;gap:8px';
+            const lab=el('span',null,label); lab.style.cssText='font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:'+accent;
+            const s=el('span',null,sub); s.style.cssText='font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"';
+            lft.append(lab,s);
+            const tw=el('div'); tw.style.cssText='display:flex;align-items:baseline;gap:26px';
+            const intTot=el('div','pr-icol'); intTot.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:12px;min-width:104px;text-align:right;color:'+accent;
+            const outTot=el('div'); outTot.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:13px;min-width:112px;text-align:right;color:'+accent;
+            tw.append(intTot,outTot); h.append(lft,tw); plist.append(h);
+            const subrow=el('div'); subrow.style.cssText='display:flex;justify-content:flex-end;padding:0 22px 8px;font-family:"JetBrains Mono";font-size:11px;color:var(--ink-faint)';
+            plist.append(subrow);
+            return {outEl:outTot,intEl:intTot,subEl:subrow};
+          };
+          let f2=true;
+          for(const g2x of grps2){
+            if(!g2x.arr.length) continue;
+            const els2=gh2(g2x.label,g2x.sub,g2x.accent,f2); f2=false;
+            const agg2x={sum:0,interest:0,pend:0,owed:0,outEl:els2.outEl,intEl:els2.intEl,subEl:els2.subEl,ccy:'INR',taken:g2x.taken};
+            aggs2.push(agg2x);
+            g2x.arr.forEach(p2=>mk2(p2,agg2x));
+          }
+          Promise.all(fl2.map(async ({p:p2,amt:a2,intAmt:ia2,outCol:oc2,ar:ar2,l2el:l2e2,groupAgg:ga2})=>{
+            try{
+              const d2=await fetch('/api/plans/'+p2.id).then(r=>r.json());
+              const st2=d2.state||{}; const ccy2=st2.currency||p2.currency;
+              const cap2=el('div'); cap2.style.cssText='font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"';
+              const out2=st2.principal_outstanding_minor||0;
+              a2.textContent=fmtB(out2,ccy2);
+              const ltv2=st2.gold_collateral&&st2.gold_collateral.ltv_pct;
+              if(ltv2!=null){ cap2.textContent=(ltv2>100?'⚠ ':'')+'LTV '+ltv2+'%'; cap2.style.color=ltv2>100?'var(--neg)':ltv2>75?'#a96a00':ltv2<=60?'var(--pos)':'var(--ink-faint)'; if(ltv2>100) cap2.title='Loan exceeds the recorded gold value — check the weight / value / principal'; }
+              else { cap2.textContent='outstanding'; }
+              oc2.insertBefore(cap2,ar2);
+              const idue2=st2.interest_due_minor||0,owed2=st2.total_minor||0;
+              if(idue2>0){ const pc2=el('div'); pc2.style.cssText='font-size:11px;color:var(--ink-faint);font-family:"JetBrains Mono"'; pc2.textContent='pending int '+fmtB(idue2,ccy2)+' · owed '+fmtB(owed2,ccy2); oc2.insertBefore(pc2,ar2); }
+              const mi2=monthlyInterestMinor(out2,p2.rate_bps,p2.interest_type);
+              const taken2=(p2.direction!=='given');
+              if(!mi2){ ia2.textContent='—'; ia2.style.color='var(--ink-faint)'; }
+              else { ia2.textContent=(taken2?'−':'+')+fmtB(mi2,ccy2); ia2.style.color=taken2?'var(--neg)':'var(--pos)'; }
+              if(ga2){ ga2.sum+=toBase(out2,ccy2)[0]; ga2.interest+=toBase(mi2,ccy2)[0]; ga2.ccy=BASE; ga2.pend+=toBase(idue2,ccy2)[0]; ga2.owed+=toBase(owed2,ccy2)[0]; ga2.outEl.textContent=fmt(ga2.sum,BASE); ga2.intEl.textContent=(ga2.taken?'−':'+')+fmt(ga2.interest,BASE)+'/mo'; ga2.subEl.textContent='pending int '+fmt(ga2.pend,BASE)+' · owed '+fmt(ga2.owed,BASE); }
+            }catch(e2){}
+          })).then(()=>{
+            if(!aggs2.length) return;
+            let paid2=0,earned2=0,ccy2b='INR';
+            aggs2.forEach(a=>{ if(a.taken) paid2+=a.interest; else earned2+=a.interest; ccy2b=a.ccy||ccy2b; });
+            const net2=earned2-paid2;
+            const nr2=el('div'); nr2.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:2px solid var(--line);background:var(--paper-2)';
+            const lab2=el('span',null,'Net interest / month'); lab2.style.cssText='font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint)';
+            const v2=el('div'); v2.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:15px;display:flex;align-items:baseline;gap:8px';
+            const num2=el('span'); const note2=el('span'); note2.style.cssText='font-size:11px;font-weight:600;text-transform:none;letter-spacing:0';
+            if(net2>0){ num2.textContent='+'+fmt(net2,ccy2b)+'/mo'; num2.style.color='var(--pos)'; note2.textContent='you come out ahead'; note2.style.color='var(--pos)'; }
+            else if(net2<0){ num2.textContent='−'+fmt(-net2,ccy2b)+'/mo'; num2.style.color='var(--neg)'; note2.textContent='net cost — you pay out'; note2.style.color='var(--neg)'; }
+            else { num2.textContent=fmt(0,ccy2b)+'/mo'; num2.style.color='var(--ink-faint)'; note2.textContent='flat'; }
+            v2.append(num2,note2); nr2.append(lab2,v2); plist.append(nr2);
+          });
+        }
+      });
+      if(loanMode==='contact'){
+        renderLoansByContact(plist);
+      } else {
+        const groups=[
+          {arr:taken, label:'Borrowed', sub:'you owe', accent:'var(--neg)', taken:true},
+          {arr:given, label:'Lent out', sub:'owed to you', accent:'var(--pos)', taken:false},
+        ];
+        let first=true;
+        for(const g of groups){
+          if(!g.arr.length) continue;
+          const els=groupHeader(g.label, g.sub, g.accent, first); first=false;
+          const agg={sum:0, interest:0, pend:0, owed:0, outEl:els.outEl, intEl:els.intEl, subEl:els.subEl, ccy:'INR', taken:g.taken};
+          aggs.push(agg);
+          g.arr.forEach(p=> makeRow(p, agg));
+        }
       }
     } else {
       for(const p of shown) makeRow(p, null);

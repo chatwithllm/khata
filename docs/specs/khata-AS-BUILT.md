@@ -145,7 +145,8 @@ re-opens confirmation) · **POST `/<id>/entries/<entry_id>/amount`** (`{action: 
 (repayment projection: EMI + baseline + optional what-if scenario — months/interest saved) · **POST
 `/<id>/loan/compare`** (`{amount?, offers:[{label, rate, interest_type?, tenure_months?, fee_pct?, fee_amount?}]}`
 → shop-around comparison vs the current loan: EMI, total interest, fee, total cost, effective APR per offer,
-cheapest flagged) · POST `/<id>/holding/buys|sells|quote|refresh-quote` · POST
+cheapest flagged) · **GET `/loans/grouped`** → grouped-by-contact rollup (per-currency→base) + sankey nodes/links
+· POST `/<id>/holding/buys|sells|quote|refresh-quote` · POST
 `/<id>/chit/entries` · GET `/<id>/chit/dividend?bid=` · POST `/<id>/retirement/update` · GET/POST
 `/<id>/members` (POST returns `{member:{…, status}}` — invited members start `invited`) ·
 DELETE `/<id>/members/<user_id>`.
@@ -185,6 +186,12 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-19 — Loans grouped by contact + Sankey.** By-direction ↔ By-contact toggle on the Loans page: By-contact
+  groups loans per person (contact name, else counterparty; same names merge), given/taken within each, with a
+  one-glance summary (principal · expected interest/mo · next-month due) in base currency. Hand-rolled SVG Sankey
+  (Direction → Contact → Loan, weighted by outstanding) sits above the list, with a stacked-bar fallback on small
+  screens / reduced-motion / large books. Powered by a new read-only `GET /api/plans/loans/grouped` (owner-only)
+  that computes the aggregation + sankey nodes/links server-side (reuses loan_state + fx). No migration.
 - **2026-06-19 — Contacts + per-contact loan grouping.** A contact record (name/phone/email/address/notes/photo
   + document attachments via the attachments table) that loans link to (`loans.contact_id`, manual assign, SET NULL
   on delete). Per-contact rollup of principal + interest — per-currency subtotals plus a base-currency grand total
@@ -418,6 +425,12 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-19 — Loans grouped by contact + Sankey. By-direction ↔ By-contact toggle on the Loans
+  page: By-contact groups loans per person (contact name, else counterparty; same names merge),
+  given/taken within, each with principal · expected interest/mo · next-month due (base currency).
+  Hand-rolled SVG Sankey (Direction → Contact → Loan, weighted by outstanding) with a stacked-bar
+  fallback on small screens. New read-only `GET /api/plans/loans/grouped` (owner-only) computes the
+  aggregation + sankey server-side (reuses loan_state + fx). No migration.
 - 2026-06-19 — Contacts + per-contact loan grouping. New Contacts section: a contact record
   (name/phone/email/address/notes/photo + document attachments via the attachments table) that
   loans link to (`loans.contact_id`, manual assign, SET NULL on delete). Per-contact rollup of
