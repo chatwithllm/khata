@@ -795,6 +795,9 @@ function renderTreemap(container, groups, baseCcy){
   tip.className='tmap-tip';
   container.appendChild(tip);
   let tipHideTimer=null;
+  // register tip-level hover handlers once (keep tooltip open when cursor moves onto it)
+  tip.addEventListener('mouseenter',function(){ clearTimeout(tipHideTimer); });
+  tip.addEventListener('mouseleave',function(){ tipHideTimer=setTimeout(function(){ tip.classList.remove('vis'); },80); });
 
   // build tiles
   rowLayouts.forEach(function(rl){
@@ -824,6 +827,7 @@ function renderTreemap(container, groups, baseCcy){
       tile.style.background=tint;
       tile.setAttribute('role','button');
       tile.setAttribute('tabindex','0');
+      tile.setAttribute('aria-label',g.name+': '+sym(baseCcy)+fmt(val,baseCcy));
       tile.title=''; // suppress native tooltip; use custom
 
       // label: only when tile is large enough
@@ -872,8 +876,6 @@ function renderTreemap(container, groups, baseCcy){
 
       tile.addEventListener('mouseenter',showTip);
       tile.addEventListener('mouseleave',hideTip);
-      tip.addEventListener('mouseenter',function(){ clearTimeout(tipHideTimer); });
-      tip.addEventListener('mouseleave',hideTip);
 
       // click: scroll to the contact's ledger row
       function scrollToRow(){
@@ -994,6 +996,7 @@ async function renderLoansByContact(card){
     const main=el('div','lrow-main');
     main.setAttribute('role','button');
     main.setAttribute('tabindex','0');
+    main.setAttribute('aria-expanded','false');
 
     // monogram coin — wax-seal aesthetic
     const initial=(g.name&&g.name.trim()[0]||'?').toUpperCase();
@@ -1080,6 +1083,7 @@ async function renderLoansByContact(card){
       const opening=!lrow.classList.contains('open');
       if(opening) buildDetail();
       lrow.classList.toggle('open',opening);
+      main.setAttribute('aria-expanded',opening?'true':'false');
       // when no CSS transition (reduced motion), just let max-height toggle via class
     }
 
@@ -1466,7 +1470,7 @@ async function boot(){
       const note=el('span'); note.style.cssText='font-size:11px;font-weight:600;text-transform:none;letter-spacing:0';
       if(net>0){ num.textContent='+'+fmt(net,ccy)+'/mo'; num.style.color='var(--pos)'; note.textContent='you come out ahead'; note.style.color='var(--pos)'; }
       else if(net<0){ num.textContent='−'+fmt(-net,ccy)+'/mo'; num.style.color='var(--neg)'; note.textContent='net cost — you pay out'; note.style.color='var(--neg)'; }
-      else { num.textContent=fmt(0,ccy)+'/mo'; num.style.color='var(--ink-faint)'; note.textContent='flat'; }
+      else { num.textContent=(net>0?'+':net<0?'−':'')+fmt(0,ccy)+'/mo'; num.style.color='var(--ink-faint)'; note.textContent='flat'; }
       v.append(num, note);
       nr.append(lab, v); plist.append(nr);
     });
