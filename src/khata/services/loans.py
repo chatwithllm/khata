@@ -181,6 +181,8 @@ def backfill_loan_interest(session: Session, *, plan: Plan, user_id,
     nothing. Returns {count, total_minor}.
 
     Provide exactly one cutoff: `through_month` (a month_index) or `through_date`.
+    If the cutoff falls before any completed period (e.g. a `through_date` earlier than
+    the first month's period_start), the function returns an empty result {count:0, total_minor:0}.
     """
     loan = plan.loan
     if loan is None:
@@ -199,6 +201,8 @@ def backfill_loan_interest(session: Session, *, plan: Plan, user_id,
 
     if through_month is not None:
         cutoff_index = int(through_month)
+        if cutoff_index < 0:
+            raise ValidationError("through_month must be >= 0")
     else:
         cutoff_index = -1
         for row in schedule:

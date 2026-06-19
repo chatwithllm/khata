@@ -11,6 +11,7 @@ from khata.services.loans import (
     loan_state,
     set_collateral,
     ValidationError,
+    backfill_loan_interest,
 )
 from khata.services.holdings import create_holding_plan, add_buy, set_quote
 
@@ -320,9 +321,6 @@ def test_schedule_principal_minor_tracks_repayment(ctx):
         assert r["total_owed_minor"] == r["principal_minor"] + r["cum_due_minor"]
 
 
-from khata.services.loans import backfill_loan_interest
-
-
 def _lent_loan(s, u, start):
     plan = create_loan_plan(s, owner_id=u.id, name="Lent Sunil", currency="INR",
                             direction="given", interest_type="monthly", rate_bps=300,
@@ -425,3 +423,11 @@ def test_backfill_interest_free_noop(ctx):
     res = backfill_loan_interest(s, plan=plan, user_id=u.id, through_month=5,
                                  as_of=date(2024, 6, 1))
     assert res == {"count": 0, "total_minor": 0}
+
+
+def test_backfill_rejects_negative_month(ctx):
+    s, u = ctx
+    plan = _lent_loan(s, u, date(2023, 12, 12))
+    with pytest.raises(ValidationError):
+        backfill_loan_interest(s, plan=plan, user_id=u.id, through_month=-1,
+                               as_of=date(2024, 5, 12))
