@@ -19,6 +19,7 @@ from khata.db import Base
 def client():
     cfg = Config()
     cfg.database_url = "sqlite:///:memory:"
+    cfg.testing = True
     app = create_app(cfg)
     app.config["TESTING"] = True
     Base.metadata.create_all(app.config["ENGINE"])
@@ -113,3 +114,10 @@ def test_backfill_forbidden_for_non_owner(client):
     _register(client, "other@test.com")
     r = client.post(f"/api/plans/{pid}/loan/backfill", json={"through_month": 1})
     assert r.status_code == 403
+
+
+def test_backfill_malformed_through_date_is_400(client):
+    pid = _setup_loan(client)
+    r = client.post(f"/api/plans/{pid}/loan/backfill", json={"through_date": "not-a-date"})
+    assert r.status_code == 400
+    assert r.get_json()["error"] == "invalid"
