@@ -173,6 +173,20 @@ a.lname:hover{color:var(--primary-deep);text-decoration:underline;text-underline
 .lsub-amt{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:13px;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 /* responsive: collapse lfig columns on narrow screens */
 @media(max-width:560px){.lfig:not(:first-child){display:none}.lrow-right{gap:10px}.lrow-main{gap:10px;padding:12px 16px 10px}.lprop-wrap{padding:0 16px 4px}.pos-figs{grid-template-columns:1fr}.pos-fig:not(:last-child){border-right:none;border-bottom:1px solid var(--line-2)}.pos-band{padding:16px 16px 14px}}
+
+/* ── loans treemap ── */
+#loan-treemap{position:relative;height:180px;margin:0;border-bottom:1px solid var(--line-2);overflow:hidden;background:var(--paper-2)}
+#loan-treemap:empty{display:none}
+.tmap-tile{position:absolute;box-sizing:border-box;border:1px solid var(--line-2);border-radius:6px;overflow:hidden;cursor:pointer;transition:filter .15s,border-color .15s;will-change:filter}
+.tmap-tile:hover{filter:brightness(.92);border-color:var(--line);z-index:2}
+.tmap-tile:focus-visible{outline:2px solid var(--primary);outline-offset:1px;z-index:3}
+.tmap-label{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:5px 7px;pointer-events:none}
+.tmap-name{font-family:"Hanken Grotesk",sans-serif;font-size:10.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;opacity:.85}
+.tmap-amt{font-family:"Fraunces",serif;font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;letter-spacing:-.01em}
+.tmap-tip{position:absolute;z-index:10;background:var(--ink);color:var(--paper);border-radius:7px;padding:6px 10px;font-size:11.5px;font-family:"Hanken Grotesk",sans-serif;font-weight:600;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .1s;max-width:220px}
+.tmap-tip.vis{opacity:1}
+.tmap-tip .tip-amt{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;color:var(--accent-dk);display:block;margin-top:1px}
+@media(prefers-reduced-motion:reduce){.tmap-tile{transition:none}.tmap-tip{transition:none}}
 </style>
 </head>
 <body>
@@ -717,6 +731,168 @@ function figEl(label, val){
   else { d.append(lbl, val); }
   return d;
 }
+// ── compact treemap: area ∝ outstanding, tint by direction, click → scroll to row ──
+function renderTreemap(container, groups, baseCcy){
+  // responsive guard: hide on narrow screens (rows convey the same info)
+  if(window.matchMedia('(max-width:560px)').matches){ container.style.display='none'; return; }
+  container.style.display='';
+  container.textContent='';
+
+  // empty guard
+  if(!groups||!groups.length){ return; }
+
+  // filter to contacts with outstanding balance
+  const active=groups.filter(function(g){ return (g.total_base_minor||0)>0; });
+  if(!active.length){ container.style.display='none'; return; }
+
+  const W=container.clientWidth||720;
+  const H=180;
+
+  // sort largest first (groups API already sorted, but be explicit)
+  const sorted=active.slice().sort(function(a,b){ return (b.total_base_minor||0)-(a.total_base_minor||0); });
+  const total=sorted.reduce(function(s,g){ return s+(g.total_base_minor||0); },0)||1;
+  const maxVal=sorted[0].total_base_minor||1;
+
+  // ── slice-and-dice layout ──
+  // We pack tiles into N rows where N = ceil(sqrt(count)).
+  // Each row's height is proportional to its row-total / total.
+  // Within a row, tile widths are proportional to individual values.
+  const n=sorted.length;
+  const nRows=Math.max(1,Math.ceil(Math.sqrt(n)));
+  // Distribute groups into rows greedily: each row gets floor(n/nRows) tiles,
+  // with remainder distributed to first rows.
+  const rowGroups=[];
+  let idx=0;
+  const base=Math.floor(n/nRows);
+  const rem=n%nRows;
+  for(let r=0;r<nRows;r++){
+    const count=base+(r<rem?1:0);
+    rowGroups.push(sorted.slice(idx,idx+count));
+    idx+=count;
+  }
+
+  // remove empty rows (can happen if n < nRows)
+  const filledRows=rowGroups.filter(function(r){ return r.length>0; });
+
+  // compute row totals and cumulative Y positions
+  let y=0;
+  const rowLayouts=filledRows.map(function(row){
+    const rowTotal=row.reduce(function(s,g){ return s+(g.total_base_minor||0); },0)||1;
+    const rowH=Math.round((rowTotal/total)*H);
+    const layout={ row: row, rowTotal: rowTotal, y: y, h: rowH };
+    y+=rowH;
+    return layout;
+  });
+
+  // snap last row to exactly H
+  if(rowLayouts.length>0){
+    const last=rowLayouts[rowLayouts.length-1];
+    last.h=H-last.y;
+  }
+
+  // create tooltip element (shared, repositioned on hover)
+  const tip=document.createElement('div');
+  tip.className='tmap-tip';
+  container.appendChild(tip);
+  let tipHideTimer=null;
+
+  // build tiles
+  rowLayouts.forEach(function(rl){
+    let x=0;
+    rl.row.forEach(function(g, i){
+      const val=g.total_base_minor||0;
+      const rawW=(val/rl.rowTotal)*W;
+      // snap last tile in row to exactly fill to W
+      const tileW=(i===rl.row.length-1)?W-x:Math.round(rawW);
+      const tileH=rl.h;
+
+      // direction tint: green if net lender, red if net borrower
+      const gp=(g.given&&g.given.principal_minor)||0;
+      const bp=(g.taken&&g.taken.principal_minor)||0;
+      const isLender=gp>=bp;
+      const alpha=0.10+0.32*(val/maxVal); // 0.10→0.42 scaled by share of max
+      const tint=isLender
+        ? 'color-mix(in srgb,var(--pos) '+Math.round(alpha*100)+'%,var(--paper-2))'
+        : 'color-mix(in srgb,var(--neg) '+Math.round(alpha*100)+'%,var(--paper-2))';
+
+      const tile=document.createElement('div');
+      tile.className='tmap-tile';
+      tile.style.left=x+'px';
+      tile.style.top=rl.y+'px';
+      tile.style.width=tileW+'px';
+      tile.style.height=tileH+'px';
+      tile.style.background=tint;
+      tile.setAttribute('role','button');
+      tile.setAttribute('tabindex','0');
+      tile.title=''; // suppress native tooltip; use custom
+
+      // label: only when tile is large enough
+      if(tileW>=64&&tileH>=30){
+        const lbl=document.createElement('div');
+        lbl.className='tmap-label';
+        const nameEl=document.createElement('div');
+        nameEl.className='tmap-name';
+        nameEl.textContent=g.name||'';
+        lbl.appendChild(nameEl);
+        if(tileH>=44){
+          const amtEl=document.createElement('div');
+          amtEl.className='tmap-amt';
+          amtEl.textContent=sym(baseCcy)+fmt(val,baseCcy);
+          lbl.appendChild(amtEl);
+        }
+        tile.appendChild(lbl);
+      }
+
+      // slug for scroll-to-row
+      const slug=g.key.replace(/\s+/g,'-');
+
+      // hover: raise tint + show tooltip
+      function showTip(e){
+        clearTimeout(tipHideTimer);
+        tip.textContent='';
+        const nameNode=document.createElement('span');
+        nameNode.textContent=g.name||'';
+        const amtNode=document.createElement('span');
+        amtNode.className='tip-amt';
+        amtNode.textContent=sym(baseCcy)+fmt(val,baseCcy);
+        tip.appendChild(nameNode);
+        tip.appendChild(amtNode);
+        // position within container, avoiding right/bottom overflow
+        const cx=tile.offsetLeft+Math.min(12,tileW/2);
+        const cy=rl.y+rl.h+4;
+        // if bottom overflows container, flip above
+        const tipTop=(cy+52>H)?Math.max(0,rl.y-52):cy;
+        tip.style.left=Math.min(cx, W-230)+'px';
+        tip.style.top=tipTop+'px';
+        tip.classList.add('vis');
+      }
+      function hideTip(){
+        tipHideTimer=setTimeout(function(){ tip.classList.remove('vis'); },80);
+      }
+
+      tile.addEventListener('mouseenter',showTip);
+      tile.addEventListener('mouseleave',hideTip);
+      tip.addEventListener('mouseenter',function(){ clearTimeout(tipHideTimer); });
+      tip.addEventListener('mouseleave',hideTip);
+
+      // click: scroll to the contact's ledger row
+      function scrollToRow(){
+        const target=document.getElementById('grp-'+slug);
+        if(!target) return;
+        const rm=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        target.scrollIntoView({behavior:rm?'auto':'smooth', block:'start'});
+      }
+      tile.addEventListener('click',scrollToRow);
+      tile.addEventListener('keydown',function(e){
+        if(e.key==='Enter'||e.key===' '){ e.preventDefault(); scrollToRow(); }
+      });
+
+      container.appendChild(tile);
+      x+=tileW;
+    });
+  });
+}
+
 // (renderSankey removed — replaced by position band + ledger rows)
 async function renderLoansByContact(card){
   let data;
@@ -919,6 +1095,9 @@ async function renderLoansByContact(card){
     lrow.append(detail);
     card.append(lrow);
   }
+
+  // ── render the treemap into its placeholder (now that rows exist for click-scroll) ──
+  renderTreemap(treemap, data.groups, data.base_currency);
 }
 // inject the By-direction / By-contact toggle into the loans panel header area
 function injectLoanToggle(plist, onSwitch){
