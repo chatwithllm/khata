@@ -115,6 +115,7 @@
 .sbulk{ font:inherit; font-size:12px; margin-left:auto; padding:4px 10px;
   border-radius:8px; border:1px solid var(--line); background:transparent;
   color:var(--ink); cursor:pointer; }
+.sbulk:hover{ background:color-mix(in srgb, var(--gold) 14%, transparent); }
 </style>
 </head>
 <body>
@@ -626,6 +627,7 @@ function renderSchedule(box, st){
   // Tenure can run long (16+ months here) — cap height & scroll past ~7 rows.
   const sched=el('div','sched fillrows'+(rows.length>7?' capscroll':''));
   if(!rows.length){ sched.append(el('div','emptypanel','No interest schedule (interest-free or not yet accruing).')); box.append(sched); return; }
+  const todayIso = new Date().toISOString().slice(0,10);
   for(const it of rows){
     const status=it.status||'due';
     const dotCls = status==='paid'?'paid':(status==='partial'?'part':'due');
@@ -647,7 +649,6 @@ function renderSchedule(box, st){
     }
     srow.append(dot,si,sv);
     // Per-row backfill button for past unpaid months.
-    const todayIso = new Date().toISOString().slice(0,10);
     if (it.status !== 'paid' && it.period_start.slice(0,10) <= todayIso) {
       const remaining = (it.expected_minor||0) - (it.applied_minor||0);
       const b = el('button','smark','Mark '+markVerb(st));
@@ -665,10 +666,11 @@ function markVerb(st){ return st.direction === 'taken' ? 'paid' : 'received'; }
 
 async function openMark(it, remaining, st){
   const verb = markVerb(st);
-  const amt = prompt('Interest '+verb+' for Month '+it.month_index+' (₹):',
+  const amt = prompt('Interest '+verb+' for Month '+it.month_index+' ('+sym(st.currency)+'):',
                      (remaining/100).toFixed(2));
   if (amt === null) return;
-  const prin = prompt('Optional principal '+verb+' this month (₹, blank for none):','');
+  if (!amt || Number(amt) <= 0) return;
+  const prin = prompt('Optional principal '+verb+' this month ('+sym(st.currency)+', blank for none):','');
   const when = it.period_start.slice(0,10) + 'T12:00:00';
   const post = (kind, rupees) => fetch('/api/plans/'+pid+'/loan/entries', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -696,7 +698,7 @@ async function openBulk(rows, st){
   for (const it of rows){ if(it.month_index>m) break;
     if(it.status!=='paid'){ n++; total += (it.expected_minor||0)-(it.applied_minor||0); } }
   if (!n){ alert('Nothing to mark in that range.'); return; }
-  if (!confirm('Mark '+n+' month(s) '+verb+' · '+sym(st.currency)+(total/100).toLocaleString()+'?')) return;
+  if (!confirm('Mark '+n+' month(s) '+verb+' · '+sym(st.currency)+fmtNum(total, st.currency)+'?')) return;
   try {
     const r = await fetch('/api/plans/'+pid+'/loan/backfill', {
       method:'POST', headers:{'Content-Type':'application/json'},
