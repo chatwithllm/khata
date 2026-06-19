@@ -300,8 +300,10 @@ function renderRollup(box, rollup){
     box.append(sec);
     const r=el('div','ru-row');
     r.append(el('span','ru-lbl', rollup.base_total_partial?'≈ Approximate':'Total'));
-    const v=el('span','ru-val'); v.textContent=(rollup.base_total_partial?'≈':'')+sym(rollup.base_currency||'INR')+fmtNum(rollup.base_total, rollup.base_currency||'INR');
-    if(rollup.base_total_partial){ const p=el('span',null,' (partial)'); p.style.cssText='color:var(--ink-faint);font-size:11px;font-weight:400'; v.append(p); }
+    const baseCcy=rollup.base_currency||'INR';
+    const bt=rollup.base_total;
+    const v=el('span','ru-val'); v.textContent=(rollup.base_total_partial?'≈':'')+sym(baseCcy)+fmtNum(bt.principal_outstanding_minor, baseCcy);
+    if(rollup.base_total_partial){ const p=el('span',null,' (partial — missing FX rate)'); p.style.cssText='color:var(--ink-faint);font-size:11px;font-weight:400'; v.append(p); }
     r.append(v);
     box.append(r);
   }
