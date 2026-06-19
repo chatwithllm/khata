@@ -46,16 +46,20 @@
         { "t": "create-plan modal (per-type fields)", "s": "done" }
       ]
     },
-    { "title": "Phase 6 — Native features", "status": "todo", "note": "deferred to v1.1 (read+create app is usable without)",
+    { "title": "Phase 6 — Native features", "status": "done", "note": "avatar + backup wired into Settings",
       "tasks": [
-        { "t": "avatar upload (image-picker)", "s": "todo" },
-        { "t": "backup export/restore", "s": "todo" }
+        { "t": "avatar upload (image-picker + manipulator, 256px JPEG <200KB)", "s": "done" },
+        { "t": "avatar display + remove in Settings", "s": "done" },
+        { "t": "backup export (file-system + share sheet)", "s": "done" },
+        { "t": "restore from file (document-picker)", "s": "done" },
+        { "t": "operator-only gating via /me is_operator", "s": "done" }
       ]
     },
-    { "title": "Verify", "status": "done", "note": "tsc clean + iOS bundle export clean",
+    { "title": "Verify", "status": "done", "note": "tsc clean + iOS bundle export clean (Phase 6)",
       "tasks": [
         { "t": "tsc --noEmit clean", "s": "done" },
         { "t": "expo export ios bundles clean (no missing modules)", "s": "done" },
+        { "t": "metro dev server live on :8081", "s": "done" },
         { "t": "on-device smoke (needs updated backend running)", "s": "todo" }
       ]
     }

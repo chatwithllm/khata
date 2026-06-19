@@ -143,9 +143,10 @@ mobile/
 
 ## Implementation Checklist
 
-> **Build status (2026-06-09):** Phases 0–5 **complete**; verify gate **passed**
-> (`tsc --noEmit` clean + `expo export ios` bundles with no missing modules). Phase 6
-> (avatar/backup native) **deferred to v1.1** — the read + create app is usable without it.
+> **Build status (2026-06-09):** Phases 0–6 **complete**; verify gate **passed**
+> (`tsc --noEmit` clean + `expo export ios` bundles with no missing modules; Metro dev
+> server live on :8081). Phase 6 (avatar pick/crop/upload + operator-only backup
+> export/restore) is now wired into Settings.
 > Remaining: on-device smoke test against the updated backend. Live tracker:
 > `docs/web-to-mobile/mobile-build-status.json` (served at `:5099/dashboard.html`).
 > App lives in `mobile/`. Phases 1–5 checklist items below are all done.
