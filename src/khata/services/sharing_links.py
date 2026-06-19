@@ -39,7 +39,8 @@ _VALID_SCOPES = {"summary", "full"}
 _VALID_TTL_DAYS = {7, 30, 90}
 
 # Keys dropped from the plan's state dict when scope == "summary"
-_SUMMARY_DROP = {"schedule", "ledger", "deployed", "deployed_total_minor", "deployed_totals"}
+_SUMMARY_DROP = {"schedule", "ledger", "deployed", "deployed_total_minor",
+                 "deployed_totals", "installments", "members"}
 
 # Keys / nested keys to scrub for PII regardless of scope
 _SCRUB_KEYS = {"email", "proof_ref", "attachments", "attachment_id", "members"}
@@ -48,6 +49,20 @@ _SCRUB_KEYS = {"email", "proof_ref", "attachments", "attachment_id", "members"}
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+def _status(sh: PlanShare) -> str:
+    """Return 'revoked', 'expired', or 'active' for a PlanShare.
+
+    Normalises naive datetimes (SQLite returns them without tzinfo on session
+    reload) before comparing to the aware UTC now.
+    """
+    if sh.revoked_at is not None:
+        return "revoked"
+    exp = sh.expires_at
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    return "expired" if exp <= datetime.now(timezone.utc) else "active"
+
 
 def _scrub(obj: Any) -> Any:
     """Recursively remove PII keys from dicts/lists."""
@@ -84,8 +99,8 @@ def _plan_state(session: Session, plan: Plan) -> dict:
         from .assets import asset_state
         return asset_state(session, plan)
 
-    # Unknown plan type — return minimal info
-    return {}
+    # Unknown plan type — raise rather than silently returning empty state
+    raise ShareError(f"unshareable plan type: {plan.type}")
 
 
 # ---------------------------------------------------------------------------
@@ -125,7 +140,6 @@ def create_share(
 
 def list_shares(session: Session, plan: Plan) -> list[dict]:
     """Return all shares for *plan*, active and revoked, newest first."""
-    now = datetime.now(timezone.utc)
     rows = list(
         session.scalars(
             select(PlanShare)
@@ -135,16 +149,11 @@ def list_shares(session: Session, plan: Plan) -> list[dict]:
     )
     result = []
     for sh in rows:
-        if sh.revoked_at is not None:
-            status = "revoked"
-        elif sh.expires_at <= now:
-            status = "expired"
-        else:
-            status = "active"
+        status = _status(sh)
         result.append(
             {
                 "id": sh.id,
-                "token": sh.token,
+                "token": sh.token if status == "active" else None,
                 "scope": sh.scope,
                 "status": status,
                 "expires_at": sh.expires_at.isoformat(),
@@ -176,8 +185,7 @@ def resolve_public(session: Session, token: str) -> tuple[Plan, str]:
     if share is None:
         raise ShareNotFound(token)
 
-    now = datetime.now(timezone.utc)
-    if share.revoked_at is not None or share.expires_at <= now:
+    if _status(share) != "active":
         raise ShareGone(token)
 
     plan = session.get(Plan, share.plan_id)
@@ -188,12 +196,14 @@ def public_state(session: Session, plan: Plan, scope: str) -> dict:
     """Return a sanitised, scope-limited state envelope for public rendering.
 
     The envelope always contains:
-        plan_type, name, currency, scope
+        plan_type, name, currency, status, scope, owner_name, as_of
 
     Plus a ``state`` dict with keys determined by *scope*:
         - "full"    → all keys, PII scrubbed
         - "summary" → drop detailed keys (schedule, ledger, deployed, …)
     """
+    from ..models import User
+
     raw_state = _plan_state(session, plan)
 
     if scope == "summary":
@@ -201,10 +211,16 @@ def public_state(session: Session, plan: Plan, scope: str) -> dict:
 
     scrubbed_state = _scrub(raw_state)
 
+    owner = session.get(User, plan.owner_user_id)
+    owner_name = owner.display_name if owner is not None else None
+
     return {
         "plan_type": plan.type,
         "name": plan.name,
         "currency": plan.currency,
+        "status": plan.status,
         "scope": scope,
+        "owner_name": owner_name,
+        "as_of": datetime.now(timezone.utc).date().isoformat(),
         "state": scrubbed_state,
     }

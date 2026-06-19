@@ -84,3 +84,35 @@ def test_list_and_revoke(ctx):
     sl.revoke_share(s, plan=plan, share_id=a.id); s.flush()
     rows2 = {r["id"]: r for r in sl.list_shares(s, plan)}
     assert rows2[a.id]["status"] == "revoked" and rows2[b.id]["status"] == "active"
+
+
+def test_expiry_survives_session_reload(tmp_path):
+    from datetime import date, datetime, timezone, timedelta
+    from khata.db import Base, make_engine, make_session_factory
+    from khata.models import User
+    from khata.services.loans import create_loan_plan, add_disbursement
+    from khata.services import sharing_links as sl
+    db = tmp_path / "s.db"
+    engine = make_engine(f"sqlite:///{db}")
+    Base.metadata.create_all(engine)
+    Session = make_session_factory(engine)
+    with Session() as s:
+        u = User(email="a@b.com", display_name="A", password_hash="x"); s.add(u); s.flush()
+        plan = create_loan_plan(s, owner_id=u.id, name="L", currency="INR",
+                                direction="given", interest_type="monthly", rate_bps=300,
+                                start_date=date(2023,12,12))
+        add_disbursement(s, plan=plan, user_id=u.id, amount_minor=220000000,
+                         occurred_at=datetime(2023,12,12,tzinfo=timezone.utc))
+        sh = sl.create_share(s, plan=plan, user_id=u.id, scope="full", ttl_days=7)
+        sh.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)  # already expired
+        tok = sh.token
+        s.commit()
+    # fresh session -> expires_at reloads as NAIVE; must still cleanly raise ShareGone, not crash
+    with Session() as s2:
+        with __import__("pytest").raises(sl.ShareGone):
+            sl.resolve_public(s2, tok)
+        # list_shares must not crash on naive reload either
+        from khata.models import Plan
+        p2 = s2.get(Plan, 1)
+        rows = sl.list_shares(s2, p2)
+        assert rows and rows[0]["status"] == "expired" and rows[0]["token"] is None
