@@ -75,7 +75,8 @@ def _summary(plan: Plan) -> dict:
                      "collateral_unit": plan.loan.collateral_unit,
                      "collateral_rate_minor": plan.loan.collateral_rate_minor,
                      "collateral_rate_basis": plan.loan.collateral_rate_basis,
-                     "collateral_value_minor": plan.loan.collateral_value_minor})
+                     "collateral_value_minor": plan.loan.collateral_value_minor,
+                     "contact_id": plan.loan.contact_id})
     elif plan.type == "holding" and plan.holding is not None:
         base.update({"asset_class": plan.holding.asset_class, "unit": plan.holding.unit,
                      "symbol": plan.holding.symbol,

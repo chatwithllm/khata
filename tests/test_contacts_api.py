@@ -61,7 +61,14 @@ def test_assign_loan_to_contact(client):
     r = client.post(f"/api/plans/{pid}/loan/contact", json={"contact_id": cid})
     assert r.status_code == 200
     assert client.get(f"/api/contacts/{cid}").get_json()["rollup"]["loan_count"] == 1
+    # contact_id must appear in the plan summary so the loan-detail page can
+    # pre-select the assigned contact in the contact picker
+    plan_summary = client.get(f"/api/plans/{pid}").get_json()["plan"]
+    assert plan_summary["contact_id"] == cid
+    # after unassign, contact_id should be None (not missing)
     assert client.post(f"/api/plans/{pid}/loan/contact", json={"contact_id": None}).status_code == 200
+    plan_summary_after = client.get(f"/api/plans/{pid}").get_json()["plan"]
+    assert plan_summary_after.get("contact_id") is None
 
 
 def test_create_contact_requires_name_400(client):
