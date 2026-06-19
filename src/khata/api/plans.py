@@ -4,7 +4,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from ..models import Plan, User, LedgerEntry
 from ..money import format_minor, pct_to_bps, to_micro, to_minor
-from ..services import assets, chits, feed, fx, holdings, loans, retirement, sharing, sharing_links
+from ..services import assets, chits, contacts, feed, fx, holdings, loans, retirement, sharing, sharing_links
 from ..services.assets import PlanError
 from ..services.loans import LoanError
 from ..services.holdings import HoldingError
@@ -563,6 +563,27 @@ def loan_collateral(plan_id):
         loans.set_collateral(g.db, plan=plan, collateral_plan_id=data.get("collateral_plan_id"))
         g.db.commit()
     except (LoanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(state=loans.loan_state(g.db, plan.loan, as_of=date.today())), 200
+
+
+@bp.post("/<int:plan_id>/loan/contact")
+def assign_loan_contact(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "loan":
+        return jsonify(error="not_a_loan"), 400
+    data = request.get_json(silent=True) or {}
+    try:
+        contacts.assign_loan(g.db, owner_id=user.id, plan=plan,
+                             contact_id=data.get("contact_id"))
+        g.db.commit()
+    except contacts.ContactError as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
     return jsonify(state=loans.loan_state(g.db, plan.loan, as_of=date.today())), 200
