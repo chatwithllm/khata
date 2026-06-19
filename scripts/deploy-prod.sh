@@ -1,108 +1,86 @@
 #!/bin/bash
-# Khata — deploy to production box (Debian 12) over SSH, no sudo needed except
-# the final systemd install block which is printed for the operator to paste.
+# Khata — deploy to the production box (Debian 12) over SSH as a Docker container.
+# No sudo needed (operator is in the docker group).
 #
 #   bash scripts/deploy-prod.sh
 #
 # What it does:
-#   1. rsync code (main checkout) -> prod ~/khata/app
-#   2. venv + pip install (incl. gunicorn) on prod
-#   3. consistent SQLite snapshot of the real DB -> prod (FIRST RUN ONLY —
-#      never overwrites an existing prod DB)
-#   4. .env.prod on prod (secret key + Google client id carried from .env.app)
-#   5. alembic upgrade + smoke-boot gunicorn + curl check
-#   6. prints the one sudo block to install the systemd service
+#   1. refresh a clean `main` checkout (Docker files live on main) -> rsync to prod ~/khata/app
+#   2. first run only: seed a consistent SQLite snapshot into the bind-mounted data/ volume
+#   3. first run only: write ~/khata/app/.env.prod (secret + Google id carried from local .env.app)
+#   4. docker compose up -d --build  (gunicorn -w 2 :5057, restart:always)
+#   5. curl smoke test on :5057
+#
+# Deploy source is ALWAYS main — the live DB's alembic head (fxsnapshot01) lives there.
+# Deploying a feature branch crash-loops on `alembic upgrade head`.
 set -euo pipefail
 
 HOST=npalakurla@192.168.50.14
 RHOME=/home/npalakurla
-ROOT=/Users/assistant/dev/active/khata
-SRC=/tmp/khata-landing          # clean main checkout
+APP=$RHOME/khata/app
+ROOT=$(cd "$(dirname "$0")/.." && git rev-parse --show-toplevel)
+SRC=/tmp/khata-deploy-main       # clean main worktree, auto-managed below
 SSH="ssh -o BatchMode=yes $HOST"
 
-echo "── 1/6 code sync ──"
-test -d "$SRC/src/khata" || { echo "FATAL: $SRC missing main checkout"; exit 1; }
-$SSH "mkdir -p $RHOME/khata/app"
+echo "── 1/5 refresh clean main checkout ──"
+git -C "$ROOT" fetch -q origin main
+if [ -d "$SRC/.git" ] || git -C "$ROOT" worktree list --porcelain | grep -q "worktree $SRC"; then
+  git -C "$SRC" fetch -q origin main
+  git -C "$SRC" checkout -q --detach origin/main
+else
+  rm -rf "$SRC"
+  git -C "$ROOT" worktree add -q --detach "$SRC" origin/main
+fi
+test -f "$SRC/Dockerfile" || { echo "FATAL: $SRC has no Dockerfile — Docker files not on main?"; exit 1; }
+echo "main @ $(git -C "$SRC" rev-parse --short HEAD)"
+
+echo "── code sync -> $APP ──"
+$SSH "mkdir -p $APP/data"
 rsync -az --delete \
-  --exclude .git --exclude '__pycache__' --exclude '*.pyc' \
+  --exclude .git --exclude '.venv' --exclude '__pycache__' --exclude '*.pyc' \
   --exclude '*.db' --exclude '*.db-shm' --exclude '*.db-wal' \
   --exclude '.env*' --exclude mobile --exclude OD_khata_mockup \
-  --exclude _build-dashboard --exclude notes --exclude backups \
-  "$SRC/" "$HOST:$RHOME/khata/app/"
+  --exclude _build-dashboard --exclude site --exclude notes --exclude backups \
+  --exclude data --exclude '*.log' --exclude '*.pid' \
+  "$SRC/" "$HOST:$APP/"
 echo "code synced"
 
-echo "── 2/6 venv + deps ──"
-# Debian box ships no python3-venv/pip; bootstrap pip via get-pip into a
-# --without-pip venv (no apt/sudo needed).
-$SSH "if ! test -x $RHOME/khata/venv/bin/pip; then
-        rm -rf $RHOME/khata/venv
-        python3 -m venv --without-pip $RHOME/khata/venv
-        curl -fsSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
-        $RHOME/khata/venv/bin/python /tmp/get-pip.py -q
-      fi
-      $RHOME/khata/venv/bin/pip install -q --upgrade pip
-      $RHOME/khata/venv/bin/pip install -q -r $RHOME/khata/app/requirements.txt gunicorn
-      $RHOME/khata/venv/bin/gunicorn --version"
-
-echo "── 3/6 data snapshot ──"
-if $SSH "test -f $RHOME/khata/khata_app.db"; then
-  echo "prod DB already exists — NOT overwriting (delete it on the box first if you really want a re-seed)"
+echo "── 2/5 data seed (first run only) ──"
+if $SSH "test -f $APP/data/khata_app.db"; then
+  echo "prod DB exists at $APP/data/khata_app.db — NOT overwriting"
 else
-  sqlite3 "$ROOT/khata_app.db" ".backup /tmp/khata-prod-seed.db"   # consistent even while app runs
-  scp -q /tmp/khata-prod-seed.db "$HOST:$RHOME/khata/khata_app.db"
+  # consistent snapshot of the local DB (safe while it runs); local Mac has sqlite3
+  sqlite3 "$ROOT/khata_app.db" ".backup /tmp/khata-prod-seed.db"
+  scp -q /tmp/khata-prod-seed.db "$HOST:$APP/data/khata_app.db"
   rm /tmp/khata-prod-seed.db
-  echo "real data copied -> prod ($($SSH "du -h $RHOME/khata/khata_app.db | cut -f1"))"
+  echo "real data seeded -> $APP/data/khata_app.db ($($SSH "du -h $APP/data/khata_app.db | cut -f1"))"
 fi
 
-echo "── 4/6 .env.prod ──"
-SECRET=$(grep '^KHATA_SECRET_KEY=' "$ROOT/.env.app" | cut -d= -f2-)
-GCID=$(grep '^KHATA_GOOGLE_CLIENT_ID=' "$ROOT/.env.app" | cut -d= -f2-)
-$SSH "cat > $RHOME/khata/.env.prod <<EOF
+echo "── 3/5 .env.prod (first run only) ──"
+if $SSH "test -f $APP/.env.prod"; then
+  echo ".env.prod exists — NOT overwriting (edit on the box to change secrets)"
+else
+  SECRET=$(grep '^KHATA_SECRET_KEY=' "$ROOT/.env.app" | cut -d= -f2-)
+  GCID=$(grep '^KHATA_GOOGLE_CLIENT_ID=' "$ROOT/.env.app" | cut -d= -f2-)
+  # KHATA_DATABASE_URL / KHATA_ENV are set by docker-compose.yml, not here.
+  $SSH "umask 077; cat > $APP/.env.prod <<EOF
 KHATA_SECRET_KEY=$SECRET
 KHATA_GOOGLE_CLIENT_ID=$GCID
-KHATA_DATABASE_URL=sqlite:///$RHOME/khata/khata_app.db
-KHATA_ENV=production
-EOF
-chmod 600 $RHOME/khata/.env.prod"
-echo ".env.prod written (KHATA_SECURE_COOKIES intentionally NOT set until proxy is live)"
-
-echo "── 5/6 migrate + smoke test ──"
-$SSH "cd $RHOME/khata/app && set -a && . $RHOME/khata/.env.prod && set +a
-      PYTHONPATH=src $RHOME/khata/venv/bin/alembic upgrade head
-      PYTHONPATH=src nohup $RHOME/khata/venv/bin/gunicorn -w 2 -b 127.0.0.1:5057 'khata:create_app()' >/tmp/khata-smoke.log 2>&1 &
-      GPID=\$!   # kill by PID, not pattern (pattern matches our own ssh cmdline)
-      sleep 4
-      code=\$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5057/)
-      users=\$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5057/welcome)
-      kill \$GPID 2>/dev/null || true
-      echo \"smoke: / -> \$code, /welcome -> \$users\"
-      [ \"\$code\" = 200 ] || { tail -20 /tmp/khata-smoke.log; exit 1; }"
-
-echo "── 6/6 systemd unit (needs your sudo) ──"
-$SSH "cat > $RHOME/khata/khata.service <<'EOF'
-[Unit]
-Description=Khata ledger
-After=network.target
-
-[Service]
-User=npalakurla
-WorkingDirectory=/home/npalakurla/khata/app
-EnvironmentFile=/home/npalakurla/khata/.env.prod
-Environment=PYTHONPATH=/home/npalakurla/khata/app/src
-ExecStart=/home/npalakurla/khata/venv/bin/gunicorn -w 2 -b 0.0.0.0:5057 'khata:create_app()'
-Restart=always
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
 EOF"
+  echo ".env.prod written (KHATA_SECURE_COOKIES intentionally NOT set until a TLS proxy is live)"
+fi
+
+echo "── 4/5 build + up ──"
+$SSH "cd $APP && docker compose up -d --build"
+
+echo "── 5/5 smoke test ──"
+$SSH "sleep 6
+      code=\$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5057/)
+      welcome=\$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5057/welcome)
+      echo \"smoke: / -> \$code, /welcome -> \$welcome\"
+      docker ps --filter name=khata --format '{{.Names}} {{.Status}}'
+      [ \"\$code\" = 200 ] || { docker compose -f $APP/docker-compose.yml logs --tail=30; exit 1; }"
 
 echo
-echo "ALL NON-SUDO STEPS DONE. Now paste this ON THE PROD BOX (ssh in first):"
-echo "──────────────────────────────────────────────────────"
-echo "sudo cp ~/khata/khata.service /etc/systemd/system/khata.service"
-echo "sudo systemctl daemon-reload"
-echo "sudo systemctl enable --now khata"
-echo "systemctl status khata --no-pager | head -5"
-echo "──────────────────────────────────────────────────────"
-echo "Then from any LAN device: http://192.168.50.14:5057/"
+echo "DEPLOYED. http://192.168.50.14:5057/"
+echo "Ops on the box:  docker ps | docker compose {restart,logs -f,down}  (in $APP)"
