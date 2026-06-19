@@ -76,3 +76,36 @@ def test_delete_unlinks_loans(ctx):
     c.delete_contact(s, owner_id=u.id, contact_id=ct.id); s.commit()
     s.expire_all()
     assert plan.loan.contact_id is None
+
+
+def test_contact_state_per_currency_and_base(ctx):
+    from khata.services.loans import add_disbursement
+    from khata.services import fx
+    s, u, o = ctx
+    # seed an INR<->USD rate so the base total is meaningful (1 USD = 83 INR)
+    fx.set_rate(s, base="USD", quote="INR", rate_micro=83_000_000, as_of=None)
+    ct = c.create_contact(s, owner_id=u.id, name="K"); s.flush()
+    for nm, ccy, amt in [("A", "INR", 100000), ("B", "INR", 50000), ("C", "USD", 2000)]:
+        p = create_loan_plan(s, owner_id=u.id, name=nm, currency=ccy, direction="given",
+                             interest_type="none", rate_bps=0, start_date=date(2024,1,1))
+        add_disbursement(s, plan=p, user_id=u.id, amount_minor=amt,
+                         occurred_at=datetime(2024,1,1,tzinfo=timezone.utc))
+        c.assign_loan(s, owner_id=u.id, plan=p, contact_id=ct.id)
+    s.flush()
+    st = c.contact_state(s, ct, base_currency="INR")
+    by = {r["currency"]: r for r in st["by_currency"]}
+    assert by["INR"]["loan_count"] == 2 and by["INR"]["principal_outstanding_minor"] == 150000
+    assert by["USD"]["loan_count"] == 1 and by["USD"]["principal_outstanding_minor"] == 2000
+    assert st["loan_count"] == 3 and st["given_count"] == 3 and st["taken_count"] == 0
+    assert st["base_currency"] == "INR"
+    # base total = 150000 INR + 2000 USD*83 = 150000 + 166000 = 316000
+    assert st["base_total"]["principal_outstanding_minor"] == 316000
+    assert len(st["loans"]) == 3
+
+
+def test_contact_state_empty(ctx):
+    s, u, o = ctx
+    ct = c.create_contact(s, owner_id=u.id, name="K"); s.flush()
+    st = c.contact_state(s, ct, base_currency="INR")
+    assert st["loan_count"] == 0 and st["by_currency"] == [] and st["loans"] == []
+    assert st["base_total"]["principal_outstanding_minor"] == 0

@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import Contact, Plan, Loan
+from . import loans as _loans, fx as _fx
 
 PHOTO_MAX = 220_000   # ~200KB data-URL cap (mirrors user avatar)
 
@@ -88,3 +89,55 @@ def assign_loan(session: Session, *, owner_id, plan: Plan, contact_id) -> None:
             raise ContactError("no such contact")
         plan.loan.contact_id = ct.id
     session.flush()
+
+
+def contact_state(session: Session, contact: Contact, *, base_currency: str,
+                  as_of=None) -> dict:
+    from datetime import date as _date
+    as_of = as_of or _date.today()
+    plans = list(session.scalars(
+        select(Plan).join(Loan, Loan.plan_id == Plan.id)
+        .where(Loan.contact_id == contact.id)))
+    loans_out = []
+    buckets = {}
+    given = taken = 0
+    for p in plans:
+        ls = _loans.loan_state(session, p.loan, as_of=as_of)
+        ccy = ls["currency"]
+        b = buckets.setdefault(ccy, {"currency": ccy, "loan_count": 0,
+            "principal_outstanding_minor": 0, "interest_accrued_minor": 0,
+            "interest_paid_minor": 0, "interest_due_minor": 0})
+        b["loan_count"] += 1
+        for k in ("principal_outstanding_minor", "interest_accrued_minor",
+                  "interest_paid_minor", "interest_due_minor"):
+            b[k] += ls.get(k, 0)
+        if ls["direction"] == "given":
+            given += 1
+        else:
+            taken += 1
+        loans_out.append({"plan_id": p.id, "name": p.name, "direction": ls["direction"],
+                          "currency": ccy,
+                          "principal_outstanding_minor": ls["principal_outstanding_minor"],
+                          "interest_due_minor": ls["interest_due_minor"]})
+    by_currency = sorted(buckets.values(), key=lambda r: -r["loan_count"])
+    base = {"principal_outstanding_minor": 0, "interest_accrued_minor": 0,
+            "interest_paid_minor": 0, "interest_due_minor": 0}
+    base_partial = False
+    for b in by_currency:
+        if b["currency"] == base_currency:
+            for k in base:
+                base[k] += b[k]
+        else:
+            rate = _fx.get_rate(session, base=b["currency"], quote=base_currency)
+            if rate:
+                for k in base:
+                    base[k] += _fx.convert(b[k], rate_micro=rate)
+            else:
+                base_partial = True
+    return {
+        "contact_id": contact.id, "name": contact.name,
+        "base_currency": base_currency, "as_of": as_of.isoformat(),
+        "loan_count": len(plans), "given_count": given, "taken_count": taken,
+        "by_currency": by_currency, "base_total": base,
+        "base_total_partial": base_partial, "loans": loans_out,
+    }
