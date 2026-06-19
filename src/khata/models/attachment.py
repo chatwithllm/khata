@@ -19,8 +19,10 @@ class Attachment(Base):
     __tablename__ = "attachments"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    ledger_entry_id: Mapped[int] = mapped_column(
-        ForeignKey("ledger_entries.id", ondelete="CASCADE"), nullable=False, index=True)
+    ledger_entry_id: Mapped[int | None] = mapped_column(
+        ForeignKey("ledger_entries.id", ondelete="CASCADE"), nullable=True, index=True)
+    contact_id: Mapped[int | None] = mapped_column(
+        ForeignKey("contacts.id", ondelete="CASCADE"), nullable=True, index=True)
     uploaded_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     mime: Mapped[str] = mapped_column(String(100), nullable=False)
