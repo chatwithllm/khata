@@ -49,6 +49,14 @@ class AssetPurchase(Base):
     plan_id: Mapped[int] = mapped_column(
         ForeignKey("plans.id", ondelete="CASCADE"), primary_key=True)
     total_price_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    seller_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    seller_contact_id: Mapped[int | None] = mapped_column(
+        ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
+    buyer_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    buyer_contact_id: Mapped[int | None] = mapped_column(
+        ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
+    extra_fields: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON [{label,value}]
+    links: Mapped[str | None] = mapped_column(Text, nullable=True)         # JSON [{label,url,video?}]
 
     plan: Mapped["Plan"] = relationship(back_populates="asset")
 
