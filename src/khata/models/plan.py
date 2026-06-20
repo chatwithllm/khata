@@ -41,6 +41,10 @@ class Plan(Base):
         foreign_keys="LedgerEntry.plan_id")   # disambiguate from funding_plan_id FK
     memberships: Mapped[list["PlanMembership"]] = relationship(
         back_populates="plan", cascade="all, delete-orphan")
+    attachments: Mapped[list["Attachment"]] = relationship(
+        back_populates="asset_plan", cascade="all, delete-orphan",
+        foreign_keys="Attachment.asset_plan_id",
+        order_by="Attachment.created_at")
 
 
 class AssetPurchase(Base):

@@ -25,9 +25,10 @@ from ..models import (User, Plan, AssetPurchase, Contact, Loan, Holding, Chit, R
 BACKUP_VERSION = 1
 
 # Export order = FK dependency order (parents before children). Contact before Loan
-# (loans FK contacts). Attachment follows LedgerEntry (its parent) so a restore can
-# remap entry ids before inserting blobs.
-EXPORT_MODELS = [User, Plan, AssetPurchase, Contact, Loan, Holding, Chit, Retirement,
+# (loans FK contacts) and before AssetPurchase (asset_purchases FK contacts via
+# seller_contact_id / buyer_contact_id). Attachment follows LedgerEntry (its parent) so
+# a restore can remap entry ids before inserting blobs.
+EXPORT_MODELS = [User, Plan, Contact, AssetPurchase, Loan, Holding, Chit, Retirement,
                  Installment, LedgerEntry, Attachment, PlanMembership, FxRate]
 
 

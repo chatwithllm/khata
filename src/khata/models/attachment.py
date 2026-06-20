@@ -33,5 +33,9 @@ class Attachment(Base):
     data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    entry: Mapped["LedgerEntry"] = relationship(back_populates="attachments")
-    contact: Mapped["Contact | None"] = relationship(back_populates="attachments")
+    entry: Mapped["LedgerEntry"] = relationship(
+        back_populates="attachments", foreign_keys=[ledger_entry_id])
+    contact: Mapped["Contact | None"] = relationship(
+        back_populates="attachments", foreign_keys=[contact_id])
+    asset_plan: Mapped["Plan | None"] = relationship(
+        back_populates="attachments", foreign_keys=[asset_plan_id])
