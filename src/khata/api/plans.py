@@ -703,6 +703,67 @@ def holding_refresh_quote(plan_id):
     return jsonify(state=holdings.holding_state(g.db, plan.holding)), 200
 
 
+@bp.patch("/<int:plan_id>/asset/meta")
+def asset_meta(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner-only
+    if err:
+        return err
+    if plan.type != "asset":
+        return jsonify(error="not_an_asset"), 400
+    d = request.get_json(silent=True) or {}
+    try:
+        assets.update_asset_meta(g.db, plan=plan, owner_id=user.id,
+            seller_name=d.get("seller_name"), seller_contact_id=d.get("seller_contact_id"),
+            buyer_name=d.get("buyer_name"), buyer_contact_id=d.get("buyer_contact_id"),
+            extra_fields=d.get("extra_fields"), links=d.get("links"))
+        g.db.commit()
+    except (PlanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(state=assets.asset_state(g.db, plan, viewer_id=user.id)), 200
+
+
+@bp.get("/<int:plan_id>/asset/attachments")
+def list_asset_docs(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _accessible_plan(user, plan_id)   # members can view
+    if err:
+        return err
+    if plan.type != "asset":
+        return jsonify(error="not_an_asset"), 400
+    from ..services import attachments as _att
+    return jsonify(attachments=[_att.meta(a) for a in _att.list_for_asset(g.db, plan.id)]), 200
+
+
+@bp.post("/<int:plan_id>/asset/attachments")
+def upload_asset_doc(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner uploads
+    if err:
+        return err
+    if plan.type != "asset":
+        return jsonify(error="not_an_asset"), 400
+    f = request.files.get("file")
+    if f is None:
+        return jsonify(error="invalid", detail="no file"), 400
+    from ..services import attachments as _att
+    try:
+        a = _att.add_attachment(g.db, asset_plan=plan, uploaded_by=user.id,
+                                filename=f.filename, raw=f.read())
+        g.db.commit()
+    except _att.AttachmentError as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(attachment=_att.meta(a)), 201
+
+
 @bp.post("/<int:plan_id>/members")
 def add_member(plan_id):
     user = current_user()
