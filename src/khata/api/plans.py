@@ -4,7 +4,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from ..models import Plan, User, LedgerEntry
 from ..money import format_minor, pct_to_bps, to_micro, to_minor
-from ..services import assets, chits, contacts, feed, fx, holdings, loan_groups, loans, retirement, sharing, sharing_links
+from ..services import assets, attachments, chits, contacts, feed, fx, holdings, loan_groups, loans, retirement, sharing, sharing_links
 from ..services.assets import PlanError
 from ..services.loans import LoanError
 from ..services.holdings import HoldingError
@@ -736,8 +736,7 @@ def list_asset_docs(plan_id):
         return err
     if plan.type != "asset":
         return jsonify(error="not_an_asset"), 400
-    from ..services import attachments as _att
-    return jsonify(attachments=[_att.meta(a) for a in _att.list_for_asset(g.db, plan.id)]), 200
+    return jsonify(attachments=[attachments.meta(a) for a in attachments.list_for_asset(g.db, plan.id)]), 200
 
 
 @bp.post("/<int:plan_id>/asset/attachments")
@@ -753,15 +752,15 @@ def upload_asset_doc(plan_id):
     f = request.files.get("file")
     if f is None:
         return jsonify(error="invalid", detail="no file"), 400
-    from ..services import attachments as _att
     try:
-        a = _att.add_attachment(g.db, asset_plan=plan, uploaded_by=user.id,
-                                filename=f.filename, raw=f.read())
+        a = attachments.add_attachment(g.db, asset_plan=plan, uploaded_by=user.id,
+                                       filename=f.filename, raw=f.read())
         g.db.commit()
-    except _att.AttachmentError as e:
+    except attachments.AttachmentError as e:
         g.db.rollback()
-        return jsonify(error="invalid", detail=str(e)), 400
-    return jsonify(attachment=_att.meta(a)), 201
+        code = 413 if "too large" in str(e) else 400
+        return jsonify(error="invalid", detail=str(e)), code
+    return jsonify(attachment=attachments.meta(a)), 201
 
 
 @bp.post("/<int:plan_id>/members")

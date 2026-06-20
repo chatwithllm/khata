@@ -39,8 +39,8 @@ def _login_as_other_user(client):
         "email": "other@example.com", "display_name": "Other", "password": "pw12345"})
     assert r.status_code in (201, 409), r.get_json()
     if r.status_code == 409:
-        client.post("/api/auth/login", json={
-            "email": "other@example.com", "password": "pw12345"})
+        assert client.post("/api/auth/login", json={
+            "email": "other@example.com", "password": "pw12345"}).status_code == 200
 
 
 def test_patch_meta_owner_only(client):
@@ -81,3 +81,38 @@ def test_asset_doc_download_stranger_403(client):
     # a second user who is NOT a plan member cannot download the asset document
     _login_as_other_user(client)
     assert client.get(f"/api/attachments/{aid}").status_code == 403
+
+
+def test_asset_doc_delete_owner(client):
+    pid = _make_asset(client)
+    r = client.post(f"/api/plans/{pid}/asset/attachments",
+                    data={"file": (io.BytesIO(PNG), "deed.png")}, content_type="multipart/form-data")
+    assert r.status_code == 201
+    aid = r.get_json()["attachment"]["id"]
+    assert client.delete(f"/api/attachments/{aid}").status_code == 200
+    assert len(client.get(f"/api/plans/{pid}/asset/attachments").get_json()["attachments"]) == 0
+
+
+def test_asset_doc_delete_stranger_403(client):
+    pid = _make_asset(client)
+    r = client.post(f"/api/plans/{pid}/asset/attachments",
+                    data={"file": (io.BytesIO(PNG), "deed.png")}, content_type="multipart/form-data")
+    assert r.status_code == 201
+    aid = r.get_json()["attachment"]["id"]
+    # a non-member stranger cannot delete the asset document
+    _login_as_other_user(client)
+    assert client.delete(f"/api/attachments/{aid}").status_code == 403
+    # the doc still exists — owner re-login lists 1
+    client.post("/api/auth/logout")
+    assert client.post("/api/auth/login", json={
+        "email": "owner@example.com", "password": "pw12345"}).status_code == 200
+    assert len(client.get(f"/api/plans/{pid}/asset/attachments").get_json()["attachments"]) == 1
+
+
+def test_asset_doc_upload_stranger_403(client):
+    pid = _make_asset(client)
+    # a non-member stranger cannot upload an asset document
+    _login_as_other_user(client)
+    r = client.post(f"/api/plans/{pid}/asset/attachments",
+                    data={"file": (io.BytesIO(PNG), "deed.png")}, content_type="multipart/form-data")
+    assert r.status_code in (403, 404)
