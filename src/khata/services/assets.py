@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -40,6 +42,71 @@ def create_asset_plan(session: Session, *, owner_id, name, currency, total_price
     session.add(AssetPurchase(plan_id=plan.id, total_price_minor=total_price_minor))
     session.flush()
     return plan
+
+
+_FIELD_CAP = 40
+_LABEL_MAX = 80
+_VALUE_MAX = 500
+_URL_MAX = 1000
+
+
+def _clean_fields(rows):
+    out = []
+    for r in (rows or []):
+        if not isinstance(r, dict):
+            continue
+        label = str(r.get("label", "")).strip()[:_LABEL_MAX]
+        value = str(r.get("value", "")).strip()[:_VALUE_MAX]
+        if not label:
+            continue
+        out.append({"label": label, "value": value})
+        if len(out) >= _FIELD_CAP:
+            break
+    return out
+
+
+def _clean_links(rows):
+    out = []
+    for r in (rows or []):
+        if not isinstance(r, dict):
+            raise ValidationError("each link must be an object")
+        url = str(r.get("url", "")).strip()[:_URL_MAX]
+        low = url.lower()
+        if not (low.startswith("http://") or low.startswith("https://")):
+            raise ValidationError("links must be http(s) URLs")
+        label = str(r.get("label", "")).strip()[:_LABEL_MAX] or url
+        out.append({"label": label, "url": url, "video": bool(r.get("video"))})
+        if len(out) >= _FIELD_CAP:
+            break
+    return out
+
+
+def update_asset_meta(session: Session, *, plan: Plan, owner_id, seller_name=None,
+                      seller_contact_id=None, buyer_name=None, buyer_contact_id=None,
+                      extra_fields=None, links=None) -> AssetPurchase:
+    ap = plan.asset
+    if ap is None:
+        raise ValidationError("not an asset plan")
+    from . import contacts as _contacts
+
+    def _ck(cid):
+        if cid is None:
+            return None
+        ct = _contacts.get_contact(session, owner_id=owner_id, contact_id=cid)
+        if ct is None:
+            raise ValidationError("no such contact")
+        return ct.id
+
+    ap.seller_name = (seller_name.strip() or None) if seller_name else None
+    ap.seller_contact_id = _ck(seller_contact_id)
+    ap.buyer_name = (buyer_name.strip() or None) if buyer_name else None
+    ap.buyer_contact_id = _ck(buyer_contact_id)
+    if extra_fields is not None:
+        ap.extra_fields = json.dumps(_clean_fields(extra_fields))
+    if links is not None:
+        ap.links = json.dumps(_clean_links(links))
+    session.flush()
+    return ap
 
 
 def set_installments(session: Session, *, plan: Plan, items) -> None:
@@ -341,7 +408,7 @@ def asset_state(session: Session, plan: Plan, viewer_id: int | None = None) -> d
         for e in sorted(plan.ledger_entries, key=lambda x: x.occurred_at.replace(tzinfo=None), reverse=True)
     ]
 
-    return {
+    state = {
         "total_price_minor": total,
         "paid_to_date_minor": paid,
         "remaining_minor": max(0, total - paid),
@@ -352,3 +419,21 @@ def asset_state(session: Session, plan: Plan, viewer_id: int | None = None) -> d
         "contributors": contributors,
         "ledger": ledger,
     }
+
+    ap = plan.asset
+
+    def _party(name, cid):
+        cn = None
+        if cid is not None:
+            from ..models import Contact
+            ct = session.get(Contact, cid)
+            cn = ct.name if ct else None
+        return {"name": name, "contact_id": cid, "contact_name": cn}
+
+    state["seller"] = _party(ap.seller_name, ap.seller_contact_id) if ap else None
+    state["buyer"] = _party(ap.buyer_name, ap.buyer_contact_id) if ap else None
+    state["extra_fields"] = json.loads(ap.extra_fields) if (ap and ap.extra_fields) else []
+    state["links"] = json.loads(ap.links) if (ap and ap.links) else []
+    from .attachments import list_for_asset, meta as _ameta
+    state["attachments"] = [_ameta(a) for a in list_for_asset(session, plan.id)]
+    return state

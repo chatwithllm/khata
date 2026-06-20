@@ -47,7 +47,11 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 - **plans** (spine): id, owner_user_id, **type** (asset|loan|holding|chit|retirement), name, currency,
   status, created_at. 1:1 → asset/loan/holding/chit/retirement; 1:N → installments, ledger_entries,
   memberships.
-- **asset_purchases**: plan_id, total_price_minor.
+- **asset_purchases**: plan_id, total_price_minor, **seller_name?**, **seller_contact_id?** (FK→contacts,
+  ON DELETE SET NULL), **buyer_name?**, **buyer_contact_id?** (FK→contacts, ON DELETE SET NULL),
+  **extra_fields?** (Text/JSON `[{label, value}]` — custom info rows), **links?** (Text/JSON
+  `[{label, url, video}]` — external links; http(s)-only URLs, `video: true` renders as ▶).
+  Migration `as1assetmeta01`.
 - **installments**: id, plan_id, seq, planned_amount_minor, due_date?, note?.
 - **loans**: plan_id, direction (given|taken), **kind** (personal|gold|home|vehicle|education|business|other —
   the loan category; default personal; migration `ca4loankind01`), counterparty?, interest_type
@@ -76,8 +80,9 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   **token** (unguessable `secrets.token_urlsafe(32)`, unique), **scope** (`summary`|`full`), **expires_at**,
   **revoked_at?**, created_by_user_id, created_at. A link is valid iff not revoked and not past expiry.
   Migration `sh1share01`.
-- **attachments** (supporting proof on a ledger entry or contact): id, **ledger_entry_id?** (FK→ledger_entries,
-  ON DELETE CASCADE, nullable), **contact_id?** (FK→contacts, ON DELETE CASCADE, nullable — exactly one parent),
+- **attachments** (supporting proof on a ledger entry, contact, or asset plan): id, **ledger_entry_id?** (FK→ledger_entries,
+  ON DELETE CASCADE, nullable), **contact_id?** (FK→contacts, ON DELETE CASCADE, nullable),
+  **asset_plan_id?** (FK→plans, ON DELETE CASCADE, nullable — exactly one of three parents; indexed),
   uploaded_by_user_id, filename, **mime** (decided by MAGIC BYTES, never the
   extension), size, **sha256**, **data** (`LargeBinary` blob — bytes live in the DB so the one-file
   JSON backup keeps round-tripping; the backup serializer base64-encodes the blob on export/import),
@@ -109,6 +114,9 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
 - **asset_state**: total_price_minor, paid_to_date_minor, remaining_minor, overpaid_minor, next_due_seq,
   installments[{seq, planned_amount_minor, applied_minor, status(paid|partial|due), due_date}], funding_breakdown
   [{source, amount_minor, pct}], contributors[{user_id, display_name, **avatar**, paid_minor, pct, **unconfirmed**}],
+  **seller** `{name, contact_id, contact_name}|null`, **buyer** `{name, contact_id, contact_name}|null`,
+  **extra_fields** `[{label, value}]`, **links** `[{label, url, video}]`, **attachments** (list; scrubbed
+  from public share links),
   **ledger** [{id, kind, direction, amount_minor, created_at, occurred_at, method, funding_source, note, has_proof,
   logged_by_user_id, paid_by_name, **paid_by_avatar**, **amount_status**, **counter_amount_minor**}].
   (loan_state.ledger carries the same amount_status/counter fields.)
@@ -146,6 +154,10 @@ re-opens confirmation) · **POST `/<id>/entries/<entry_id>/amount`** (`{action: 
 `/<id>/loan/compare`** (`{amount?, offers:[{label, rate, interest_type?, tenure_months?, fee_pct?, fee_amount?}]}`
 → shop-around comparison vs the current loan: EMI, total interest, fee, total cost, effective APR per offer,
 cheapest flagged) · **GET `/loans/grouped`** → grouped-by-contact rollup (per-currency→base) + sankey nodes/links
+· **PATCH `/<id>/asset/meta`** (update asset seller/buyer/extra_fields/links — owner-only; 400 on bad
+input or non-http(s) URL; blank seller/buyer names stripped; extra_fields/links rows capped and cleaned)
+· **GET `/<id>/asset/attachments`** (list asset document attachments — plan-member accessible) · **POST
+`/<id>/asset/attachments`** (upload asset document — owner-only; 413 if over size cap)
 · POST `/<id>/holding/buys|sells|quote|refresh-quote` · POST
 `/<id>/chit/entries` · GET `/<id>/chit/dividend?bid=` · POST `/<id>/retirement/update` · GET/POST
 `/<id>/members` (POST returns `{member:{…, status}}` — invited members start `invited`) ·
@@ -170,6 +182,9 @@ if their account isn't in the backup, session is cleared and `logged_out: true` 
 snapshot is auto-saved first; restoring the same file twice is idempotent; returns
 `{ok, stats: {<table>: count, …}, pre_restore_saved, logged_out}`. Both authenticated.
 
+**Attachments:** `GET/DELETE /api/attachments/<id>` extended with an `asset_plan_id` branch: download is
+plan-member accessible (`sharing.accessible`); delete is owner-or-uploader. `GET /api/attachments/<id>`
+serves with stored mime (images/PDF inline, else download), `X-Content-Type-Options: nosniff`.
 **Authorization:** plan-level mutations are **owner-only** (`_owned_plan`); **ledger-entry** edit/delete are **owner OR the entry's own contributor** (`_editable_entry`); reads are owner-or-**active**-member
 (`_accessible_plan` → `sharing.accessible`, which now requires status `active`, so an invited member
 can't view the plan until they accept). `paid_by` tagging uses the looser `sharing.on_plan` (owner or
@@ -186,6 +201,19 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-06-19 — Asset details: parties, custom fields, links, and document attachments.**
+  Assets gain seller & buyer (free text + optional Contact link via `seller_contact_id`/`buyer_contact_id`,
+  FK contacts SET NULL), custom info rows (`extra_fields` JSON `[{label,value}]`) and external links
+  (`links` JSON `[{label,url,video}]` — http(s)-only; `video:true` renders as ▶ link, never an upload —
+  so the one-file backup property is preserved). Document attachments supported via a third attachment
+  parent: `asset_plan_id` on the `attachments` table (FK→plans CASCADE, indexed). Owner edits via
+  `PATCH /api/plans/<id>/asset/meta` (400 on bad input or non-http(s) URL); asset docs: upload
+  owner-only (`POST /asset/attachments`), listing + download plan-member accessible (`GET
+  /asset/attachments`, `GET /api/attachments/<id>`). seller/buyer/extra_fields/links/url scrubbed from
+  public share links (`_SCRUB_KEYS` in `sharing_links.py`; attachments already scrubbed). UI:
+  `asset-detail.html` — Parties display (contact links), Edit-details slide-over, Details card, Links
+  card, Documents card (upload/list/download/delete). Migration `as1assetmeta01`
+  (down_revision `ct1contact01`).
 - **2026-06-19 — Loans grouped by contact + Sankey.** By-direction ↔ By-contact toggle on the Loans page: By-contact
   groups loans per person (contact name, else counterparty; same names merge), given/taken within each, with a
   one-glance summary (principal · expected interest/mo · next-month due) in base currency. Hand-rolled SVG Sankey
@@ -425,6 +453,12 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-19 — Asset details. Assets gain seller & buyer (free text + optional Contact link),
+  custom info rows + external links (JSON columns on `asset_purchases`), and document attachments
+  (a third attachment parent `asset_plan_id`; video = a link, not an upload — keeps the one-file
+  backup). Owner edits via `PATCH /api/plans/<id>/asset/meta`; asset docs upload owner-only,
+  download plan-member. http(s)-only URLs; seller/buyer/fields/links scrubbed from public share
+  links. Migration `as1assetmeta01`.
 - 2026-06-19 — Loans By-contact view redesigned. Retired the hand-rolled Sankey (unreadable
   for a small loan book) for an editorial layout: a position band (100%-stacked exposure meter
   + Owed-to-you / You-owe / Net), ruled per-contact ledger rows (principal · interest/mo ·

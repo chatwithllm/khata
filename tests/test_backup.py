@@ -257,3 +257,63 @@ def test_contact_and_attachment_backup_roundtrip():
         assert restored_att.ledger_entry_id is None
         assert restored_att.mime == "image/png"
         assert restored_att.data == _PNG
+
+
+def test_asset_meta_and_attachment_backup_roundtrip():
+    """Asset seller/buyer/extra_fields/links + an asset-plan attachment survive
+    a backup -> restore cycle intact."""
+    from khata.services import assets as assets_svc
+    S1 = _fresh()
+    with S1() as s1:
+        owner = User(email="owner@x.com", display_name="Owner", password_hash="h")
+        s1.add(owner); s1.flush()
+
+        ct = contacts_svc.create_contact(s1, owner_id=owner.id, name="Ramesh")
+        s1.flush()
+
+        plan = create_asset_plan(s1, owner_id=owner.id, name="1 Acre", currency="INR",
+                                 total_price_minor=17500000)
+        s1.flush()
+        assets_svc.update_asset_meta(
+            s1, plan=plan, owner_id=owner.id, seller_name="Ramesh",
+            seller_contact_id=ct.id, buyer_name="Me",
+            extra_fields=[{"label": "Survey No", "value": "123"}],
+            links=[{"label": "Walkthrough", "url": "https://youtu.be/x", "video": True}])
+        s1.flush()
+
+        a = att_svc.add_attachment(s1, asset_plan=plan, uploaded_by=owner.id,
+                                   filename="deed.png", raw=_PNG)
+        s1.commit()
+
+        orig_plan_id = plan.id
+        orig_att_id = a.id
+        orig_contact_id = ct.id
+        data = _json_roundtrip(export_all(s1))
+
+    # The backup dict carries the new asset columns + the asset_plan_id attachment.
+    asset_rows = [r for r in data["tables"]["asset_purchases"] if r["plan_id"] == orig_plan_id]
+    assert len(asset_rows) == 1
+    assert asset_rows[0]["seller_name"] == "Ramesh"
+    assert asset_rows[0]["seller_contact_id"] == orig_contact_id
+    att_rows = [r for r in data["tables"]["attachments"] if r["id"] == orig_att_id]
+    assert len(att_rows) == 1
+    assert att_rows[0]["asset_plan_id"] == orig_plan_id
+    assert att_rows[0]["ledger_entry_id"] is None and att_rows[0]["contact_id"] is None
+
+    S2 = _fresh()
+    with S2() as s2:
+        import_replace(s2, data); s2.commit()
+
+        restored = s2.query(Plan).filter_by(name="1 Acre").one().asset
+        assert restored.seller_name == "Ramesh"
+        assert restored.seller_contact_id == orig_contact_id
+        assert restored.buyer_name == "Me"
+        import json as _json
+        assert _json.loads(restored.extra_fields) == [{"label": "Survey No", "value": "123"}]
+        assert _json.loads(restored.links)[0]["url"] == "https://youtu.be/x"
+
+        restored_att = s2.get(Attachment, orig_att_id)
+        assert restored_att is not None
+        assert restored_att.asset_plan_id == orig_plan_id
+        assert restored_att.ledger_entry_id is None and restored_att.contact_id is None
+        assert restored_att.data == _PNG

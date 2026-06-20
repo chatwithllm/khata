@@ -4,7 +4,7 @@ from flask import Blueprint, current_app, g, jsonify, request
 
 from ..models import Plan, User, LedgerEntry
 from ..money import format_minor, pct_to_bps, to_micro, to_minor
-from ..services import assets, chits, contacts, feed, fx, holdings, loan_groups, loans, retirement, sharing, sharing_links
+from ..services import assets, attachments, chits, contacts, feed, fx, holdings, loan_groups, loans, retirement, sharing, sharing_links
 from ..services.assets import PlanError
 from ..services.loans import LoanError
 from ..services.holdings import HoldingError
@@ -701,6 +701,66 @@ def holding_refresh_quote(plan_id):
         g.db.rollback()
         return jsonify(error="feed_error", detail=str(e)), 502
     return jsonify(state=holdings.holding_state(g.db, plan.holding)), 200
+
+
+@bp.patch("/<int:plan_id>/asset/meta")
+def asset_meta(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner-only
+    if err:
+        return err
+    if plan.type != "asset":
+        return jsonify(error="not_an_asset"), 400
+    d = request.get_json(silent=True) or {}
+    try:
+        assets.update_asset_meta(g.db, plan=plan, owner_id=user.id,
+            seller_name=d.get("seller_name"), seller_contact_id=d.get("seller_contact_id"),
+            buyer_name=d.get("buyer_name"), buyer_contact_id=d.get("buyer_contact_id"),
+            extra_fields=d.get("extra_fields"), links=d.get("links"))
+        g.db.commit()
+    except (PlanError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(state=assets.asset_state(g.db, plan, viewer_id=user.id)), 200
+
+
+@bp.get("/<int:plan_id>/asset/attachments")
+def list_asset_docs(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _accessible_plan(user, plan_id)   # members can view
+    if err:
+        return err
+    if plan.type != "asset":
+        return jsonify(error="not_an_asset"), 400
+    return jsonify(attachments=[attachments.meta(a) for a in attachments.list_for_asset(g.db, plan.id)]), 200
+
+
+@bp.post("/<int:plan_id>/asset/attachments")
+def upload_asset_doc(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)   # owner uploads
+    if err:
+        return err
+    if plan.type != "asset":
+        return jsonify(error="not_an_asset"), 400
+    f = request.files.get("file")
+    if f is None:
+        return jsonify(error="invalid", detail="no file"), 400
+    try:
+        a = attachments.add_attachment(g.db, asset_plan=plan, uploaded_by=user.id,
+                                       filename=f.filename, raw=f.read())
+        g.db.commit()
+    except attachments.AttachmentError as e:
+        g.db.rollback()
+        code = 413 if "too large" in str(e) else 400
+        return jsonify(error="invalid", detail=str(e)), code
+    return jsonify(attachment=attachments.meta(a)), 201
 
 
 @bp.post("/<int:plan_id>/members")
