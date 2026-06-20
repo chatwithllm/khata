@@ -52,7 +52,10 @@ _SCRUB_KEYS = {"email", "proof_ref", "attachments", "attachment_id", "members",
                "funding_plan_accessible", "name", "amount_status", "counter_amount_minor",
                "contributors",
                # Contact PII — defence-in-depth: strip even if loan_state ever adds contact info
-               "contact", "contact_id", "contact_name", "phone", "address"}
+               "contact", "contact_id", "contact_name", "phone", "address",
+               # Asset PII — seller/buyer parties, custom fields, and external links
+               "seller", "buyer", "seller_name", "buyer_name",
+               "extra_fields", "links", "url"}
 
 
 # ---------------------------------------------------------------------------
