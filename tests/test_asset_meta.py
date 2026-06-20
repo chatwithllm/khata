@@ -78,6 +78,35 @@ def test_asset_attachment_three_parents(ctx):
         att.add_attachment(s, asset_plan=plan, contact=ct, uploaded_by=u.id, filename="x.png", raw=PNG)
 
 
+def test_extra_fields_skips_non_dict_rows(ctx):
+    s, u, o = ctx
+    plan = _asset(s, u); s.flush()
+    assets.update_asset_meta(s, plan=plan, owner_id=u.id,
+        extra_fields=["junk", 42, None, {"label": "OK", "value": "v"}])
+    s.flush()
+    st = assets.asset_state(s, plan)
+    assert st["extra_fields"] == [{"label": "OK", "value": "v"}]
+
+
+def test_links_reject_non_dict_row(ctx):
+    s, u, o = ctx
+    plan = _asset(s, u); s.flush()
+    with pytest.raises(assets.PlanError):
+        assets.update_asset_meta(s, plan=plan, owner_id=u.id,
+                                 links=["notadict"])
+
+
+def test_whitespace_only_seller_buyer_stored_as_null(ctx):
+    s, u, o = ctx
+    plan = _asset(s, u); s.flush()
+    assets.update_asset_meta(s, plan=plan, owner_id=u.id,
+                             seller_name="   ", buyer_name="  ")
+    s.flush()
+    st = assets.asset_state(s, plan)
+    assert st["seller"]["name"] is None
+    assert st["buyer"]["name"] is None
+
+
 def test_delete_asset_cascades_attachments(ctx):
     s, u, o = ctx
     plan = _asset(s, u); s.flush()

@@ -53,6 +53,8 @@ _URL_MAX = 1000
 def _clean_fields(rows):
     out = []
     for r in (rows or []):
+        if not isinstance(r, dict):
+            continue
         label = str(r.get("label", "")).strip()[:_LABEL_MAX]
         value = str(r.get("value", "")).strip()[:_VALUE_MAX]
         if not label:
@@ -66,6 +68,8 @@ def _clean_fields(rows):
 def _clean_links(rows):
     out = []
     for r in (rows or []):
+        if not isinstance(r, dict):
+            raise ValidationError("each link must be an object")
         url = str(r.get("url", "")).strip()[:_URL_MAX]
         low = url.lower()
         if not (low.startswith("http://") or low.startswith("https://")):
@@ -93,9 +97,9 @@ def update_asset_meta(session: Session, *, plan: Plan, owner_id, seller_name=Non
             raise ValidationError("no such contact")
         return ct.id
 
-    ap.seller_name = (seller_name or None)
+    ap.seller_name = (seller_name.strip() or None) if seller_name else None
     ap.seller_contact_id = _ck(seller_contact_id)
-    ap.buyer_name = (buyer_name or None)
+    ap.buyer_name = (buyer_name.strip() or None) if buyer_name else None
     ap.buyer_contact_id = _ck(buyer_contact_id)
     if extra_fields is not None:
         ap.extra_fields = json.dumps(_clean_fields(extra_fields))
