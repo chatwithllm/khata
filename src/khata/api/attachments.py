@@ -95,6 +95,11 @@ def download_attachment(att_id):
         contact = g.db.get(Contact, att.contact_id)
         if contact is None or contact.owner_user_id != user.id:
             return jsonify(error="forbidden"), 403
+    elif att.asset_plan_id is not None:
+        # Asset document: any plan member may view (shared evidence).
+        plan = g.db.get(Plan, att.asset_plan_id)
+        if plan is None or not sharing.accessible(g.db, plan=plan, user_id=user.id):
+            return jsonify(error="forbidden"), 403
     else:
         # Orphaned attachment (should not occur in practice).
         return jsonify(error="forbidden"), 403
@@ -130,6 +135,13 @@ def delete_attachment(att_id):
         # Contact attachment: owner-only (same check as download).
         contact = g.db.get(Contact, att.contact_id)
         if contact is None or contact.owner_user_id != user.id:
+            return jsonify(error="forbidden"), 403
+    elif att.asset_plan_id is not None:
+        # Asset document: owner or uploader may delete.
+        plan = g.db.get(Plan, att.asset_plan_id)
+        if plan is None:
+            return jsonify(error="not_found"), 404
+        if not (user.id == plan.owner_user_id or user.id == att.uploaded_by_user_id):
             return jsonify(error="forbidden"), 403
     else:
         return jsonify(error="not_found"), 404

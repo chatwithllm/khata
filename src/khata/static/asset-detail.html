@@ -13,6 +13,36 @@
 /* ── asset-detail.html-only rules (shell + detail-panel groups live in app.css) ── */
 .emptypanel{padding:30px 22px;text-align:center;color:var(--ink-faint);font-size:13.5px}
 
+/* parties / custom details / links / documents cards (mirrors contact-detail) */
+.kv-row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:11px 22px;border-top:1px solid var(--line-2);font-size:13.5px}
+.kv-row:first-child{border-top:none}
+.kv-lbl{color:var(--ink-faint);flex:none}
+.kv-val{font-weight:600;text-align:right;word-break:break-word}
+.kv-val a{color:var(--primary-deep);text-decoration:none}
+.kv-val a:hover{text-decoration:underline}
+.link-row{display:flex;align-items:center;gap:9px;padding:11px 22px;border-top:1px solid var(--line-2);font-size:13.5px}
+.link-row:first-child{border-top:none}
+.link-row a{color:var(--primary-deep);text-decoration:none;font-weight:600;word-break:break-word}
+.link-row a:hover{text-decoration:underline}
+.link-vid{flex:none;color:var(--primary)}
+.att-row{display:flex;align-items:center;gap:10px;padding:10px 22px;border-top:1px solid var(--line-2);font-size:13.5px}
+.att-row:first-child{border-top:none}
+.att-name{flex:1;font-family:"JetBrains Mono";font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att-dl{font-size:12px;font-weight:600;color:var(--primary-deep);text-decoration:none}
+.att-del{font-size:12px;font-weight:600;color:var(--neg);cursor:pointer;border:none;background:none;font-family:inherit;padding:0}
+.ok{color:var(--pos);font-size:12.5px;min-height:16px}
+/* edit-details slide-over: repeatable rows */
+.meta-rows{display:flex;flex-direction:column;gap:10px}
+.meta-erow{display:grid;gap:8px;align-items:center}
+.meta-erow.field{grid-template-columns:1fr 1fr 26px}
+.meta-erow.link{grid-template-columns:1fr 1.4fr auto 26px}
+.meta-erow input{font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
+.meta-erow input:focus{outline:none;border-color:var(--primary)}
+.meta-erow .vidwrap{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-faint);white-space:nowrap}
+.meta-erow .rm{cursor:pointer;color:var(--ink-faint);font-size:18px;text-align:center}
+.meta-addrow{align-self:flex-start;background:none;border:1px dashed var(--line);border-radius:9px;padding:8px 12px;color:var(--primary);font-weight:600;font-size:13px;cursor:pointer;font-family:inherit}
+.meta-sec{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);font-weight:700;margin-top:4px}
+
 /* in-page not-found state (replaces a silent redirect to /app on 404/403) */
 .notfound{display:grid;place-items:center;min-height:60vh;padding:40px 22px}
 .notfound .nf-card{max-width:420px;text-align:center;padding:40px 34px;border:1px solid var(--line);border-radius:18px;background:var(--card);box-shadow:0 18px 50px -34px rgba(28,24,19,.4)}
@@ -73,7 +103,7 @@
 .share-revoke{font:inherit;font-size:12px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--neg);cursor:pointer}
 .share-revoke:hover{background:color-mix(in srgb,var(--neg) 8%,transparent)}
 @media print{
-  .side,.top-right,.planacts,.share-list-panel,#logbtn{display:none!important}
+  .side,.top-right,.planacts,.share-list-panel,#logbtn,.att-del,.doc-upload{display:none!important}
   .app{display:block}
   .main{margin:0;padding:0}
   .grid2{display:block}
@@ -137,6 +167,14 @@
 
         <!-- RIGHT RAIL -->
         <div class="stack fillcol">
+          <!-- parties (seller / buyer) -->
+          <div class="panel fade d2" id="parties-panel"></div>
+          <!-- custom details -->
+          <div class="panel fade d2" id="details-panel"></div>
+          <!-- links -->
+          <div class="panel fade d2" id="links-panel"></div>
+          <!-- documents -->
+          <div class="panel fade d3" id="docs-panel"></div>
           <!-- funding sources -->
           <div class="panel fade d2" id="fund-panel"></div>
           <!-- contributors -->
@@ -200,6 +238,33 @@
     <button type="button" id="sched-addrow" style="align-self:flex-start;background:none;border:1px dashed var(--line);border-radius:9px;padding:8px 12px;color:var(--primary);font-weight:600;font-size:13px;cursor:pointer">+ Add installment</button>
     <div class="err" id="sched-err"></div>
     <div class="acts"><button class="save" id="sched-save">Save schedule</button><span class="cancel" id="sched-cancel">Cancel</span></div>
+  </div>
+</aside>
+
+<!-- asset details editor slide-over -->
+<aside class="over" id="meta-over" aria-hidden="true">
+  <div class="oh">
+    <div class="eyebrow">Asset details</div>
+    <h3>Edit <em>details</em></h3>
+    <div class="osub">Seller, buyer, custom fields and links.</div>
+  </div>
+  <div class="obody">
+    <div class="fld"><label for="m-seller">Seller</label><input id="m-seller" placeholder="Name"></div>
+    <div class="fld"><label for="m-seller-c">Seller · linked contact</label>
+      <select id="m-seller-c"><option value="">— none —</option></select>
+    </div>
+    <div class="fld"><label for="m-buyer">Buyer</label><input id="m-buyer" placeholder="Name"></div>
+    <div class="fld"><label for="m-buyer-c">Buyer · linked contact</label>
+      <select id="m-buyer-c"><option value="">— none —</option></select>
+    </div>
+    <div class="meta-sec">Custom fields</div>
+    <div id="m-fields" class="meta-rows"></div>
+    <button type="button" id="m-addfield" class="meta-addrow">＋ Add field</button>
+    <div class="meta-sec">Links</div>
+    <div id="m-links" class="meta-rows"></div>
+    <button type="button" id="m-addlink" class="meta-addrow">＋ Add link</button>
+    <div class="err" id="m-err"></div>
+    <div class="acts"><button class="save" id="m-save">Save details</button><span class="cancel" id="m-cancel">Cancel</span></div>
   </div>
 </aside>
 
@@ -410,6 +475,7 @@ function renderHeader(box, plan, st){
   const actBtn=(cls, label, dPath, fn)=>{ const b=el('span',cls); b.tabIndex=0; b.setAttribute('role','button'); b.append(icon(dPath), document.createTextNode(label));
     b.addEventListener('click', fn); b.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); fn(); } }); return b; };
   const acts=el('div','planacts');
+  acts.append(actBtn('planshare','Edit details','M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z', ()=>openMeta(st)));
   acts.append(actBtn('planshare','Share','M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13', openShareMenu));
   acts.append(actBtn('planprint','Print','M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z', printPlan));
   acts.append(actBtn('plandel','Delete','M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6', deletePlan));
@@ -731,6 +797,188 @@ function renderSharePanel(box){
   box.append(body);
 }
 
+// ── parties (seller / buyer) ──
+// A party value: plain name, OR a link to /contacts/<id> when a contact is attached.
+// All text via textContent / safe DOM (K4 XSS).
+function partyValueEl(party){
+  if(!party || (!party.name && !party.contact_id)) return el('span','kv-val','—');
+  const label = party.contact_name || party.name || ('Contact '+party.contact_id);
+  const wrap=el('span','kv-val');
+  if(party.contact_id!=null){
+    const a=el('a', null, label);
+    a.href='/contacts/'+party.contact_id;
+    wrap.append(a);
+    // if a free-text name was also kept and differs from the contact name, show it quietly
+    if(party.name && party.contact_name && party.name!==party.contact_name){
+      wrap.append(document.createTextNode(' · '), el('span',null,party.name));
+    }
+  } else {
+    wrap.textContent = label;
+  }
+  return wrap;
+}
+function renderParties(box, st){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Parties'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta','seller · buyer'));
+  box.append(ph);
+  const seller=st.seller, buyer=st.buyer;
+  const hasSeller = seller && (seller.name || seller.contact_id);
+  const hasBuyer = buyer && (buyer.name || buyer.contact_id);
+  if(!hasSeller && !hasBuyer){
+    box.append(el('div','emptypanel','No seller or buyer set yet.'));
+    return;
+  }
+  const sr=el('div','kv-row'); sr.append(el('span','kv-lbl','Seller'), partyValueEl(seller));
+  const br=el('div','kv-row'); br.append(el('span','kv-lbl','Buyer'), partyValueEl(buyer));
+  box.append(sr, br);
+}
+
+// ── custom details (extra_fields) ──
+function renderDetails(box, st){
+  box.textContent='';
+  const fields = st.extra_fields || [];
+  const ph=el('div','ph');
+  const t=el('div','t','Details'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta', fields.length+(fields.length===1?' field':' fields')));
+  box.append(ph);
+  if(!fields.length){ box.append(el('div','emptypanel','No custom details yet.')); return; }
+  for(const f of fields){
+    const r=el('div','kv-row');
+    r.append(el('span','kv-lbl', f.label||''), el('span','kv-val', f.value||'—'));
+    box.append(r);
+  }
+}
+
+// ── links ──
+function renderLinks(box, st){
+  box.textContent='';
+  const links = st.links || [];
+  const ph=el('div','ph');
+  const t=el('div','t','Links'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta', links.length+(links.length===1?' link':' links')));
+  box.append(ph);
+  if(!links.length){ box.append(el('div','emptypanel','No links yet.')); return; }
+  for(const lk of links){
+    const row=el('div','link-row');
+    if(lk.video){ const v=el('span','link-vid','▶'); v.title='Video'; row.append(v); }
+    // server guarantees http(s); defend in depth anyway.
+    const url=String(lk.url||'');
+    const safe = /^https?:\/\//i.test(url);
+    if(safe){
+      const a=el('a', null, lk.label||url);   // label & url via textContent / href (K4)
+      a.href=url; a.target='_blank'; a.rel='noopener noreferrer';
+      row.append(a);
+    } else {
+      row.append(el('span', null, lk.label||url));
+    }
+    box.append(row);
+  }
+}
+
+// ── documents (mirrors contact-detail docs UI) ──
+function renderDocs(box, atts){
+  box.textContent='';
+  const ph=el('div','ph');
+  const t=el('div','t','Documents'); t.style.fontSize='16px';
+  ph.append(t, el('div','meta', atts.length+' '+(atts.length===1?'file':'files')));
+  box.append(ph);
+
+  if(atts.length){
+    const list=el('div');
+    for(const a of atts){
+      const row=el('div','att-row');
+      const nm=el('div','att-name', a.filename||('Attachment '+a.id));
+      const dl=el('a','att-dl','Download');
+      dl.href='/api/attachments/'+a.id; dl.target='_blank';
+      const delBtn=el('button','att-del','Delete'); delBtn.type='button';
+      delBtn.addEventListener('click', async ()=>{
+        if(!confirm('Delete this attachment?')) return;
+        const r=await fetch('/api/attachments/'+a.id,{method:'DELETE'});
+        if(r.ok){ loadDocs(); return; }
+        alert('Could not delete.');
+      });
+      row.append(nm, dl, delBtn);
+      list.append(row);
+    }
+    box.append(list);
+  } else {
+    box.append(el('div','emptypanel','No documents yet.'));
+  }
+
+  const uploadArea=el('div','doc-upload'); uploadArea.style.cssText='padding:12px 22px;border-top:1px solid var(--line-2)';
+  const upLabel=el('label');
+  upLabel.style.cssText='display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--primary-deep);cursor:pointer';
+  const upInp=el('input'); upInp.type='file'; upInp.style.display='none';
+  upLabel.append(upInp, document.createTextNode('＋ Upload file'));
+  const upMsg=el('div','err'); upMsg.style.marginTop='6px';
+  upInp.addEventListener('change', async ()=>{
+    if(!upInp.files||!upInp.files.length) return;
+    upMsg.className='ok'; upMsg.textContent='Uploading…';
+    const fd=new FormData(); fd.append('file', upInp.files[0]);
+    const r=await fetch('/api/plans/'+pid+'/asset/attachments',{method:'POST',body:fd});
+    if(!r.ok){ const e=await r.json().catch(()=>({})); upMsg.className='err'; upMsg.textContent=e.detail||e.error||'Upload failed.'; return; }
+    loadDocs();
+  });
+  uploadArea.append(upLabel, upMsg);
+  box.append(uploadArea);
+}
+// refresh just the documents card (after upload/delete) without a full reload
+async function loadDocs(){
+  let atts=[];
+  try{ atts=(await fetch('/api/plans/'+pid+'/asset/attachments').then(r=>r.json())).attachments||[]; }
+  catch(e){ atts=[]; }
+  renderDocs($('docs-panel'), atts);
+}
+
+// ── edit-details slide-over ──
+let CONTACTS=[];
+function fillContactSelect(sel, selectedId){
+  sel.textContent='';
+  const none=el('option', null, '— none —'); none.value=''; sel.append(none);
+  for(const c of CONTACTS){
+    const o=el('option', null, c.name||('Contact '+c.id)); o.value=String(c.id); sel.append(o);
+  }
+  sel.value = (selectedId!=null) ? String(selectedId) : '';
+}
+function metaFieldRow(label, value){
+  const row=el('div','meta-erow field');
+  const l=el('input'); l.className='m-flabel'; l.placeholder='Label'; if(label) l.value=label;
+  const v=el('input'); v.className='m-fvalue'; v.placeholder='Value'; if(value) v.value=value;
+  const rm=el('span','rm','×'); rm.title='remove'; rm.addEventListener('click', ()=>row.remove());
+  row.append(l, v, rm);
+  return row;
+}
+function metaLinkRow(label, url, video){
+  const row=el('div','meta-erow link');
+  const l=el('input'); l.className='m-llabel'; l.placeholder='Label'; if(label) l.value=label;
+  const u=el('input'); u.className='m-lurl'; u.placeholder='https://…'; u.type='url'; if(url) u.value=url;
+  const vw=el('label','vidwrap');
+  const cb=el('input'); cb.type='checkbox'; cb.className='m-lvideo'; cb.checked=!!video;
+  vw.append(cb, document.createTextNode('video'));
+  const rm=el('span','rm','×'); rm.title='remove'; rm.addEventListener('click', ()=>row.remove());
+  row.append(l, u, vw, rm);
+  return row;
+}
+function openMeta(st){
+  $('m-err').textContent='';
+  const seller=st.seller||{}, buyer=st.buyer||{};
+  $('m-seller').value=seller.name||'';
+  $('m-buyer').value=buyer.name||'';
+  fillContactSelect($('m-seller-c'), seller.contact_id);
+  fillContactSelect($('m-buyer-c'), buyer.contact_id);
+  const fbox=$('m-fields'); fbox.textContent='';
+  for(const f of (st.extra_fields||[])) fbox.append(metaFieldRow(f.label, f.value));
+  if(!(st.extra_fields||[]).length) fbox.append(metaFieldRow('', ''));
+  const lbox=$('m-links'); lbox.textContent='';
+  for(const lk of (st.links||[])) lbox.append(metaLinkRow(lk.label, lk.url, lk.video));
+  if(!(st.links||[]).length) lbox.append(metaLinkRow('', '', false));
+  $('scrim').classList.add('on'); $('meta-over').classList.add('on'); $('meta-over').setAttribute('aria-hidden','false');
+  $('m-seller').focus();
+}
+function closeMeta(){ $('scrim').classList.remove('on'); $('meta-over').classList.remove('on'); $('meta-over').setAttribute('aria-hidden','true'); }
+
 // ── members (sharing) ──
 function renderMembers(box){
   box.textContent='';
@@ -805,6 +1053,40 @@ function openSched(insts){
 function closeSched(){ $('scrim').classList.remove('on'); $('sched-over').classList.remove('on'); $('sched-over').setAttribute('aria-hidden','true'); }
 $('sched-addrow').addEventListener('click', ()=>{ $('sched-rows').append(schedRow('', '')); });
 $('sched-cancel').addEventListener('click', closeSched);
+
+// ── edit-details: add-row + save ──
+$('m-addfield').addEventListener('click', ()=>{ $('m-fields').append(metaFieldRow('', '')); });
+$('m-addlink').addEventListener('click', ()=>{ $('m-links').append(metaLinkRow('', '', false)); });
+$('m-cancel').addEventListener('click', closeMeta);
+$('m-save').addEventListener('click', async ()=>{
+  $('m-err').textContent='';
+  const extra_fields=[];
+  for(const row of $('m-fields').querySelectorAll('.meta-erow.field')){
+    const label=row.querySelector('.m-flabel').value.trim();
+    const value=row.querySelector('.m-fvalue').value.trim();
+    if(!label) continue;   // server drops label-less rows; skip here too
+    extra_fields.push({ label, value });
+  }
+  const links=[];
+  for(const row of $('m-links').querySelectorAll('.meta-erow.link')){
+    const url=row.querySelector('.m-lurl').value.trim();
+    if(!url) continue;     // an empty URL row is dropped
+    links.push({ label: row.querySelector('.m-llabel').value.trim(), url,
+                 video: row.querySelector('.m-lvideo').checked });
+  }
+  const payload={
+    seller_name: $('m-seller').value.trim() || null,
+    seller_contact_id: $('m-seller-c').value ? parseInt($('m-seller-c').value,10) : null,
+    buyer_name: $('m-buyer').value.trim() || null,
+    buyer_contact_id: $('m-buyer-c').value ? parseInt($('m-buyer-c').value,10) : null,
+    extra_fields, links
+  };
+  const r=await fetch('/api/plans/'+pid+'/asset/meta',{method:'PATCH',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+  if(r.ok){ closeMeta(); boot(); return; }
+  const e=await r.json().catch(()=>({}));
+  $('m-err').textContent = e.detail || e.error || 'Could not save details.';
+});
 $('sched-save').addEventListener('click', async ()=>{
   $('sched-err').textContent='';
   const items=[];
@@ -952,11 +1234,18 @@ async function boot(){
   renderHeader($('header-panel'), plan, st);
   renderSchedule($('sched-panel'), st);
   renderLedger($('ledger-panel'), st);
+  renderParties($('parties-panel'), st);
+  renderDetails($('details-panel'), st);
+  renderLinks($('links-panel'), st);
+  renderDocs($('docs-panel'), st.attachments || []);
   renderFunding($('fund-panel'), st);
   renderContributors($('contrib-panel'), st, myUserId);
   renderMembers($('members-panel'));
   renderSharePanel($('share-panel'));
   loadShareList();
+
+  // contacts for the seller/buyer typeahead (owner's contacts; safe if it fails)
+  try{ CONTACTS=(await fetch('/api/contacts').then(r=>r.json())).contacts||[]; }catch(e){ CONTACTS=[]; }
 
   // sidebar counts from /api/plans (+ stash loan plans for the "from which loan" picker)
   try{
@@ -997,8 +1286,8 @@ $('amount').addEventListener('blur', ()=>{
 $('pay-cur').addEventListener('change', updateFxPreview);
 $('fsource').addEventListener('change', ()=>fillFundPlan($('fundplan')?$('fundplan').value:null));
 $('cancel').addEventListener('click', closeOver);
-$('scrim').addEventListener('click', ()=>{ closeOver(); closeSched(); });
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeSched(); } });
+$('scrim').addEventListener('click', ()=>{ closeOver(); closeSched(); closeMeta(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeSched(); closeMeta(); } });
 $('save').addEventListener('click', async ()=>{
   $('err').textContent='';
   const occ = $('occurred').value ? $('occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift

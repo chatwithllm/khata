@@ -110,3 +110,45 @@ def test_public_share_no_contact_pii(client):
     blob = json.dumps(client.get(f"/api/public/{tok}").get_json())
     assert "PRIVATE_PERSON" not in blob and "PRIVATE_PHONE" not in blob
     assert "contact_id" not in blob and "\"contact\"" not in blob
+
+
+def _make_asset(client):
+    """Create a minimal asset plan and return its id."""
+    r = client.post("/api/plans", json={
+        "type": "asset", "name": "Test Asset", "currency": "INR",
+        "total_price": "5000000"})
+    assert r.status_code == 201, r.get_json()
+    return r.get_json()["plan"]["id"]
+
+
+def test_public_share_asset_no_pii(client):
+    """seller, buyer, extra_fields, and links must be absent from public asset share."""
+    _register(client)
+    pid = _make_asset(client)
+
+    # Attach seller name + a link + an extra field via the PATCH API
+    r = client.patch(f"/api/plans/{pid}/asset/meta", json={
+        "seller_name": "PRIVATE_SELLER",
+        "extra_fields": [{"label": "Reg No", "value": "SECRET_REGVAL"}],
+        "links": [{"label": "Listing", "url": "https://example.com/SECRET_URL"}],
+    })
+    assert r.status_code == 200, r.get_json()
+
+    tok = _create_share(client, pid, scope="full", ttl_days=30)
+    resp = client.get(f"/api/public/{tok}")
+    assert resp.status_code == 200
+
+    body = resp.get_json()
+    blob = json.dumps(body)
+
+    # Check that no PII strings appear anywhere in the raw JSON text
+    assert "PRIVATE_SELLER" not in blob, "seller name leaked into public share"
+    assert "SECRET_REGVAL" not in blob, "extra_field value leaked into public share"
+    assert "SECRET_URL" not in blob, "link URL leaked into public share"
+
+    # Check that the sensitive structural keys are absent from the parsed dict
+    state = body["state"]
+    assert "seller" not in state, "'seller' key present in public state"
+    assert "buyer" not in state, "'buyer' key present in public state"
+    assert "extra_fields" not in state, "'extra_fields' key present in public state"
+    assert "links" not in state, "'links' key present in public state"

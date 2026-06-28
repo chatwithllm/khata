@@ -23,6 +23,8 @@ class Attachment(Base):
         ForeignKey("ledger_entries.id", ondelete="CASCADE"), nullable=True, index=True)
     contact_id: Mapped[int | None] = mapped_column(
         ForeignKey("contacts.id", ondelete="CASCADE"), nullable=True, index=True)
+    asset_plan_id: Mapped[int | None] = mapped_column(
+        ForeignKey("plans.id", ondelete="CASCADE"), nullable=True, index=True)
     uploaded_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     mime: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -31,5 +33,9 @@ class Attachment(Base):
     data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    entry: Mapped["LedgerEntry"] = relationship(back_populates="attachments")
-    contact: Mapped["Contact | None"] = relationship(back_populates="attachments")
+    entry: Mapped["LedgerEntry"] = relationship(
+        back_populates="attachments", foreign_keys=[ledger_entry_id])
+    contact: Mapped["Contact | None"] = relationship(
+        back_populates="attachments", foreign_keys=[contact_id])
+    asset_plan: Mapped["Plan | None"] = relationship(
+        back_populates="attachments", foreign_keys=[asset_plan_id])
