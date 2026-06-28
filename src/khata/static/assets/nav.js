@@ -1,6 +1,4 @@
 // ── PWA: make Khata installable (manifest + apple meta + service worker) ──
-// Runs on every app page; independent of the off-canvas nav IIFE below. Injecting
-// these tags from JS is sufficient for Add-to-Home-Screen (iOS) and desktop install.
 (function () {
   function add(tag, attrs) {
     var e = document.createElement(tag);
@@ -20,20 +18,18 @@
   }
 })();
 
-// Responsive off-canvas sidebar. Injects a hamburger into the topbar + a scrim,
-// and toggles `.nav-open` on `.app`. The drawer transform lives in app.css (≤880px).
-// Loaded on every app page so the per-page markup stays untouched.
+// Responsive sidebar: hamburger toggles off-canvas on mobile, collapses in-place on desktop.
+// Desktop state persists in localStorage ('khata-nav' = 'open' | 'closed').
 (function () {
   var app = document.querySelector('.app');
   var top = document.querySelector('.top');
   var side = document.querySelector('.side');
   if (!app || !top || !side) return;
 
-  // hamburger (3 bars built via createElement — no innerHTML on dynamic data)
   var ham = document.createElement('button');
   ham.className = 'hamburger';
   ham.type = 'button';
-  ham.setAttribute('aria-label', 'Open menu');
+  ham.setAttribute('aria-label', 'Toggle menu');
   for (var i = 0; i < 3; i++) ham.appendChild(document.createElement('span'));
   top.insertBefore(ham, top.firstChild);
 
@@ -41,14 +37,30 @@
   scrim.className = 'nav-scrim';
   app.appendChild(scrim);
 
-  function open() { app.classList.add('nav-open'); ham.setAttribute('aria-expanded', 'true'); }
-  function close() { app.classList.remove('nav-open'); ham.setAttribute('aria-expanded', 'false'); }
+  function isDesktop() { return window.matchMedia('(min-width:881px)').matches; }
+
+  function openMobile()  { app.classList.add('nav-open');    ham.setAttribute('aria-expanded', 'true');  }
+  function closeMobile() { app.classList.remove('nav-open'); ham.setAttribute('aria-expanded', 'false'); }
+
+  function openDesktop()  { app.classList.remove('nav-closed'); try { localStorage.setItem('khata-nav', 'open');   } catch(e){} }
+  function closeDesktop() { app.classList.add('nav-closed');    try { localStorage.setItem('khata-nav', 'closed'); } catch(e){} }
+
+  // Restore desktop sidebar state across page loads
+  if (isDesktop()) {
+    try { if (localStorage.getItem('khata-nav') === 'closed') app.classList.add('nav-closed'); } catch(e) {}
+  }
+
   ham.addEventListener('click', function () {
-    if (app.classList.contains('nav-open')) close(); else open();
+    if (isDesktop()) {
+      if (app.classList.contains('nav-closed')) openDesktop(); else closeDesktop();
+    } else {
+      if (app.classList.contains('nav-open')) closeMobile(); else openMobile();
+    }
   });
-  scrim.addEventListener('click', close);
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-  // tapping a nav item closes the drawer (navigations close it anyway; this covers
-  // same-page filters like /app?type=…)
-  side.querySelectorAll('.nav-i').forEach(function (a) { a.addEventListener('click', close); });
+
+  scrim.addEventListener('click', closeMobile);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMobile(); });
+  side.querySelectorAll('.nav-i').forEach(function (a) {
+    a.addEventListener('click', function () { if (!isDesktop()) closeMobile(); });
+  });
 })();
