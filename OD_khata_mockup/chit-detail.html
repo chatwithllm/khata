@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Khata — Sangam chit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root, html[data-cur="inr"]{--bg:oklch(98.6% 0.003 255);--surface:oklch(100% 0 0);--surface-2:oklch(97% 0.004 255);--fg:oklch(24% 0.02 262);--fg-soft:oklch(40% 0.02 262);--muted:oklch(56% 0.015 262);--border:oklch(92.5% 0.005 262);--border-2:oklch(88% 0.007 262);--accent:oklch(52% 0.17 262);--accent-2:oklch(44% 0.17 264);--accent-soft:oklch(96% 0.03 262);--accent-ink:oklch(100% 0 0);--pos:oklch(54% 0.13 162);--neg:oklch(55% 0.19 25);--side:oklch(97.4% 0.004 262);--on-side:oklch(24% 0.02 262);--on-side-mut:oklch(54% 0.015 262);}
+html[data-cur="usd"]{--accent:oklch(53% 0.13 165);--accent-2:oklch(45% 0.12 165);--accent-soft:oklch(96% 0.03 165);--pos:oklch(53% 0.13 165);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--fg);font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;transition:background .5s,color .5s;}
+.num{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;letter-spacing:-.02em;}
+h1,h2,h3{font-family:'Space Grotesk',system-ui,sans-serif;font-weight:600;line-height:1.06;letter-spacing:-.025em;}
+.ital{font-style:italic;}a{color:inherit;text-decoration:none;}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);}
+::selection{background:color-mix(in oklab,var(--accent) 22%,transparent);}
+.app{display:grid;grid-template-columns:252px 1fr;min-height:100vh;}@media (max-width:900px){.app{grid-template-columns:1fr;}}
+.side{background:var(--side);color:var(--on-side);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:22px 16px;border-right:1px solid var(--border);}
+@media (max-width:900px){.side{position:static;height:auto;flex-direction:row;align-items:center;gap:8px;overflow-x:auto;padding:12px;}}
+.s-brand{display:flex;align-items:center;gap:11px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;letter-spacing:-.03em;color:var(--on-side);padding:4px 10px 22px;}
+.s-brand .mark{width:32px;height:32px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink);font-weight:700;font-size:17px;flex:none;}
+@media (max-width:900px){.s-brand{padding:0 8px 0 4px;}.s-brand span.t{display:none;}}
+.s-nav{display:flex;flex-direction:column;gap:3px;}@media (max-width:900px){.s-nav{flex-direction:row;}}
+.s-nav a{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;color:var(--on-side-mut);font-weight:600;font-size:14.5px;transition:background .2s,color .2s;white-space:nowrap;}
+.s-nav a svg{width:18px;height:18px;flex:none;opacity:.7;}.s-nav a:hover{background:var(--surface);color:var(--on-side);}
+.s-nav a.active{background:var(--accent-soft);color:var(--accent);box-shadow:inset 2px 0 0 var(--accent);}.s-nav a.active svg{opacity:1;color:var(--accent);}
+.s-foot{margin-top:auto;padding:14px 12px 4px;border-top:1px solid var(--border);}@media (max-width:900px){.s-foot{display:none;}}
+.s-foot .who{display:flex;align-items:center;gap:10px;}.s-foot .av{width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:14px;}
+.s-foot .nm{font-size:13.5px;font-weight:600;color:var(--on-side);}.s-foot .inst{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--on-side-mut);}
+.main{display:flex;flex-direction:column;min-width:0;}
+.top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:18px;padding:18px 34px;background:color-mix(in oklab,var(--bg) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+@media (max-width:640px){.top{padding:14px 18px;}}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);}.crumb a:hover{color:var(--accent);}
+.greet h1{font-size:21px;}.top-right{margin-left:auto;display:flex;align-items:center;gap:13px;}
+.cur-toggle{display:inline-flex;align-items:center;background:var(--surface-2);border:1px solid var(--border-2);border-radius:999px;padding:3px;position:relative;}
+.cur-toggle button{position:relative;z-index:2;border:0;background:transparent;cursor:pointer;font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12.5px;color:var(--muted);padding:6px 13px;border-radius:999px;transition:color .35s;}
+.cur-toggle .knob{position:absolute;z-index:1;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);background:var(--accent);border-radius:999px;transition:transform .42s cubic-bezier(.22,.68,0,1),background .42s;}
+html[data-cur="usd"] .cur-toggle .knob{transform:translateX(100%);}html[data-cur="inr"] .cur-toggle button[data-c="inr"],html[data-cur="usd"] .cur-toggle button[data-c="usd"]{color:var(--accent-ink);}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;padding:10px 17px;border-radius:12px;border:1px solid transparent;cursor:pointer;transition:all .22s cubic-bezier(.22,.68,0,1);}
+.btn-primary{background:var(--accent);color:var(--accent-ink);box-shadow:0 6px 16px -8px color-mix(in oklab,var(--accent) 60%,transparent);}.btn-primary:hover{background:var(--accent-2);transform:translateY(-2px);}
+.av-top{width:38px;height:38px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:15px;}
+.content{padding:28px 34px 60px;}@media (max-width:640px){.content{padding:20px 18px 48px;}}
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .7s cubic-bezier(.22,.68,0,1),transform .7s cubic-bezier(.22,.68,0,1);}.reveal.in{opacity:1;transform:none;}@media (prefers-reduced-motion:reduce){.reveal{opacity:1!important;transform:none!important;}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(20,28,60,.04);}
+.p-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);gap:12px;}
+.p-head h2{font-size:18px;}.p-head .sub{font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.head-card{background:linear-gradient(160deg,var(--accent-soft),var(--surface));border:1px solid var(--border);border-radius:18px;padding:24px 26px;box-shadow:0 1px 2px rgba(20,28,60,.04);}
+.head-card h1{font-size:32px;}
+.tags{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap;}
+.tag{font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:4px 9px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--fg-soft);}
+.tag.role{background:var(--accent);color:var(--accent-ink);border-color:transparent;}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:22px;}@media (max-width:680px){.kpis{grid-template-columns:1fr 1fr;}}
+.kpi .kl{font-size:11.5px;color:var(--muted);font-weight:600;}.kpi .kv{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:24px;margin-top:4px;letter-spacing:-.02em;}
+.cols{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-top:18px;}@media (max-width:1000px){.cols{grid-template-columns:1fr;}}
+.stack{display:grid;gap:18px;}
+.rt{width:100%;border-collapse:collapse;font-size:13px;}
+.rt thead th{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500;text-align:right;padding:10px 12px;border-bottom:1px solid var(--border-2);}
+.rt thead th:first-child,.rt thead th:nth-child(2){text-align:left;}
+.rt td{padding:11px 12px;border-bottom:1px solid var(--border);text-align:right;font-family:'JetBrains Mono',monospace;font-weight:500;}
+.rt td:first-child,.rt td:nth-child(2){text-align:left;font-family:'Hanken Grotesk';}
+.rt tr:last-child td{border-bottom:0;}
+.rt .rn{font-family:'JetBrains Mono',monospace;color:var(--muted);width:34px;}
+.rt tr.done{color:var(--fg-soft);}
+.rt tr.now td{background:var(--accent-soft);}.rt tr.now .rn{color:var(--accent);font-weight:700;}
+.rt tr.mine td{background:color-mix(in oklab,var(--neg) 7%,transparent);}.rt .you{color:var(--neg);font-weight:700;}
+.st{font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:5px;}
+.st.d{background:color-mix(in oklab,var(--pos) 14%,transparent);color:var(--pos);}.st.n{background:var(--accent);color:var(--accent-ink);}
+.st.p{background:color-mix(in oklab,var(--neg) 13%,transparent);color:var(--neg);}.st.f{background:var(--surface-2);color:var(--muted);border:1px solid var(--border-2);}
+.chart-wrap{padding:14px 20px 22px;}
+.zero-line{stroke:var(--border-2);stroke-width:1;stroke-dasharray:3 4;}
+.npline{stroke-dasharray:1200;stroke-dashoffset:1200;transition:stroke-dashoffset 1.8s cubic-bezier(.22,.68,0,1);}
+.in .npline{stroke-dashoffset:0;}@media (prefers-reduced-motion:reduce){.npline{stroke-dashoffset:0!important;}}
+.chart-note{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:8px;}
+.mp{padding:18px 20px;}
+.mpline{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--border);font-size:13.5px;}
+.mpline:last-of-type{border-bottom:0;}.mpline .l{color:var(--fg-soft);}.mpline .v{font-family:'JetBrains Mono',monospace;font-weight:600;}
+.mpline .v.pos{color:var(--pos);}.mpline .v.neg{color:var(--neg);}
+.mp-tot{margin-top:12px;padding-top:14px;border-top:2px solid var(--border-2);display:flex;justify-content:space-between;align-items:baseline;}
+.mp-tot .t{font-weight:700;}.mp-tot .v{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:24px;}
+.mem{display:flex;align-items:center;gap:11px;padding:11px 20px;border-bottom:1px solid var(--border);}
+.mem:last-child{border-bottom:0;}.mem.you{background:color-mix(in oklab,var(--neg) 6%,transparent);}
+.mem .av{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:var(--fg);font-weight:700;font-size:12px;flex:none;background:var(--surface-2);}
+.mem.you .av{background:var(--neg);color:var(--accent-ink);}
+.mem .nm{font-weight:600;font-size:13.5px;}.mem .mt{font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.mem .stt{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:6px;}
+.mem .stt.took{background:color-mix(in oklab,var(--pos) 14%,transparent);color:var(--pos);}
+.mem .stt.paid{background:var(--surface-2);color:var(--fg-soft);border:1px solid var(--border-2);}
+.mem .stt.pend{background:color-mix(in oklab,var(--neg) 12%,transparent);color:var(--neg);}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <a href="index.html" class="s-brand"><span class="mark">k</span><span class="t">Khata</span></a>
+    <nav class="s-nav">
+      <a href="app.html"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="12" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="16" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>Dashboard</a>
+      <a href="holdings.html"><svg viewBox="0 0 24 24" fill="none"><path d="M3 17l5-5 3 3 4-5 6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="8" r="2" stroke="currentColor" stroke-width="1.7"/></svg>Holdings</a>
+      <a href="asset-detail.html"><svg viewBox="0 0 24 24" fill="none"><path d="M4 10 12 4l8 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>Assets</a>
+      <a href="chit-detail.html" class="active"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.4" stroke="currentColor" stroke-width="1.7"/></svg>Chit funds</a>
+      <a href="loan-detail.html"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.7"/></svg>Loans</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2V4Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>Ledger</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v3m0 14v3m10-10h-3M5 12H2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Settings</a>
+    </nav>
+    <div class="s-foot"><div class="who"><span class="av">A</span><div><div class="nm">Arjun Nair</div><div class="inst">khata.local:8443</div></div></div></div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <div class="greet"><div class="crumb"><a href="app.html">Chit funds</a> / Sangam chit</div><h1>Sangam chit</h1></div>
+      <div class="top-right">
+        <div class="cur-toggle" role="group" aria-label="Primary currency"><span class="knob" aria-hidden="true"></span><button data-c="inr" aria-pressed="true">₹ INR</button><button data-c="usd" aria-pressed="false">$ USD</button></div>
+        <a href="log-payment.html" class="btn btn-primary"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Log payment</a>
+        <span class="av-top">A</span>
+      </div>
+    </header>
+    <div class="content">
+      <div class="head-card reveal">
+        <h1>Sangam chit</h1>
+        <div class="tags"><span class="tag role">auction</span><span class="tag role">organizer + member</span><span class="tag">round 7 / 20</span><span class="tag">20 members</span><span class="tag">started Nov 2025</span></div>
+        <div class="kpis">
+          <div class="kpi"><div class="kl">Pot value</div><div class="kv num fig countup" data-amount="1000000" data-style="abbr">₹0</div></div>
+          <div class="kpi"><div class="kl">Base / month</div><div class="kv num fig countup" data-amount="50000" data-style="full">₹0</div></div>
+          <div class="kpi"><div class="kl">Commission</div><div class="kv num">5%</div></div>
+          <div class="kpi"><div class="kl">My net so far</div><div class="kv num fig countup" data-amount="-23800" data-style="full" style="color:var(--neg)">₹0</div></div>
+        </div>
+      </div>
+      <div class="cols">
+        <div class="stack">
+          <div class="panel reveal">
+            <div class="p-head"><div><h2>Rounds</h2><div class="sub">taker · winning bid · dividend · your pay</div></div></div>
+            <div style="overflow-x:auto;">
+              <table class="rt">
+                <thead><tr><th>R</th><th>Taker</th><th>Bid %</th><th>Commission</th><th>Dividend</th><th>Your pay</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr class="done"><td class="rn">1</td><td>Meera</td><td>18%</td><td class="fig" data-amount="50000" data-style="full">₹0</td><td class="fig" data-amount="6500" data-style="full">₹0</td><td class="fig" data-amount="43500" data-style="full">₹0</td><td><span class="st d">done</span></td></tr>
+                  <tr class="done"><td class="rn">2</td><td>Vikram</td><td>16%</td><td class="fig" data-amount="50000" data-style="full">₹0</td><td class="fig" data-amount="5800" data-style="full">₹0</td><td class="fig" data-amount="44200" data-style="full">₹0</td><td><span class="st d">done</span></td></tr>
+                  <tr class="done"><td class="rn">3</td><td>Sundar</td><td>14%</td><td class="fig" data-amount="50000" data-style="full">₹0</td><td class="fig" data-amount="5100" data-style="full">₹0</td><td class="fig" data-amount="44900" data-style="full">₹0</td><td><span class="st d">done</span></td></tr>
+                  <tr class="done"><td class="rn">4</td><td>Lakshmi</td><td>13%</td><td class="fig" data-amount="50000" data-style="full">₹0</td><td class="fig" data-amount="4700" data-style="full">₹0</td><td class="fig" data-amount="45300" data-style="full">₹0</td><td><span class="st d">done</span></td></tr>
+                  <tr class="done"><td class="rn">5</td><td>Faisal</td><td>12%</td><td class="fig" data-amount="50000" data-style="full">₹0</td><td class="fig" data-amount="4300" data-style="full">₹0</td><td class="fig" data-amount="45700" data-style="full">₹0</td><td><span class="st d">done</span></td></tr>
+                  <tr class="done"><td class="rn">6</td><td>Reena</td><td>11%</td><td class="fig" data-amount="50000" data-style="full">₹0</td><td class="fig" data-amount="3900" data-style="full">₹0</td><td class="fig" data-amount="46100" data-style="full">₹0</td><td><span class="st d">done</span></td></tr>
+                  <tr class="now"><td class="rn">7</td><td>open bidding</td><td>—</td><td>—</td><td>—</td><td class="fig" data-amount="46000" data-style="full">₹0</td><td><span class="st n">now</span></td></tr>
+                  <tr class="mine"><td class="rn">8</td><td class="you">You (planned)</td><td>~10%</td><td class="fig" data-amount="50000" data-style="full">₹0</td><td>—</td><td class="you fig" data-amount="900000" data-style="abbr">₹0</td><td><span class="st p">take pot</span></td></tr>
+                  <tr><td class="rn">9</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="fig" data-amount="50000" data-style="full">₹0</td><td><span class="st f">upcoming</span></td></tr>
+                  <tr><td class="rn">10</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="fig" data-amount="50000" data-style="full">₹0</td><td><span class="st f">upcoming</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="panel reveal" id="npPanel">
+            <div class="p-head"><div><h2>Net position over rounds</h2><div class="sub">dips while paying in · jumps when you take the pot</div></div></div>
+            <div class="chart-wrap">
+              <svg width="100%" height="220" viewBox="0 0 560 220" fill="none" preserveAspectRatio="none" role="img" aria-label="Net position over 20 rounds">
+                <line class="zero-line" x1="0" y1="150" x2="560" y2="150"/>
+                <polyline class="npline" points="0,150 28,162 56,173 84,183 112,192 140,200 168,207 196,212 224,58 252,70 280,82 308,93 336,103 364,112 392,120 420,127 448,133 476,138 504,142 532,145 560,147" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="196" cy="212" r="4" fill="var(--neg)"/><circle cx="224" cy="58" r="5" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
+              </svg>
+              <div class="chart-note">▼ lowest at round 7 (₹−2.9L paid in) · <span style="color:var(--accent)">round 8 you take ₹9.0L pot</span> · ends net positive by round 20</div>
+            </div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="panel reveal">
+            <div class="p-head"><div><h2>My position</h2><div class="sub">if you take the pot at #8</div></div></div>
+            <div class="mp">
+              <div class="mpline"><span class="l">Contributions paid (R1–6)</span><span class="v neg">−<span class="fig" data-amount="269700" data-style="full">₹0</span></span></div>
+              <div class="mpline"><span class="l">Dividends received</span><span class="v pos">+<span class="fig" data-amount="30300" data-style="full">₹0</span></span></div>
+              <div class="mpline"><span class="l">Pot you'll take (R8, net of bid)</span><span class="v pos">+<span class="fig" data-amount="900000" data-style="abbr">₹0</span></span></div>
+              <div class="mpline"><span class="l">Future contributions (R8–20)</span><span class="v neg">−<span class="fig" data-amount="650000" data-style="abbr">₹0</span></span></div>
+              <div class="mp-tot"><span class="t">Projected net</span><span class="v" style="color:var(--pos)">+<span class="fig num" data-amount="10600" data-style="full">₹0</span></span></div>
+            </div>
+          </div>
+          <div class="panel reveal">
+            <div class="p-head"><div><h2>Member roster</h2><div class="sub">20 members · you organize</div></div></div>
+            <div>
+              <div class="mem"><span class="av">M</span><div><div class="nm">Meera</div><div class="mt">took R1</div></div><span class="stt took">took</span></div>
+              <div class="mem"><span class="av">V</span><div><div class="nm">Vikram</div><div class="mt">took R2</div></div><span class="stt took">took</span></div>
+              <div class="mem"><span class="av">S</span><div><div class="nm">Sundar</div><div class="mt">took R3</div></div><span class="stt took">took</span></div>
+              <div class="mem"><span class="av">L</span><div><div class="nm">Lakshmi</div><div class="mt">took R4</div></div><span class="stt took">took</span></div>
+              <div class="mem you"><span class="av">A</span><div><div class="nm">You</div><div class="mt">paid · planned take R8</div></div><span class="stt pend">R8</span></div>
+              <div class="mem"><span class="av">R</span><div><div class="nm">Reena</div><div class="mt">took R6 · paid R7</div></div><span class="stt paid">paid</span></div>
+              <div class="mem"><span class="av">K</span><div><div class="nm">Karthik</div><div class="mt">R7 pending</div></div><span class="stt pend">pending</span></div>
+              <div class="mem"><span class="av">+</span><div><div class="nm">13 more members</div><div class="mt">all paid up to R6</div></div><span class="stt paid">paid</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var FX=83, REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches, html=document.documentElement;
+  function groupIndian(s){var neg=s[0]==='-';if(neg)s=s.slice(1);var r;if(s.length<=3)r=s;else{var l3=s.slice(-3),rest=s.slice(0,-3);r=rest.replace(/\B(?=(\d{2})+(?!\d))/g,',')+','+l3;}return (neg?'-':'')+r;}
+  function trimDec(x){return (Math.round(x*100)/100).toString();}
+  function fmt(base,cur,style){var neg=base<0,a=Math.abs(base),sign=neg?'-':'';if(cur==='usd'){var v=a/FX;if(style==='abbr'){if(v>=1e6)return sign+'$'+trimDec(v/1e6)+'M';if(v>=1e3)return sign+'$'+trimDec(v/1e3)+'k';}return sign+'$'+Math.round(v).toLocaleString('en-US');}if(style==='abbr'){if(a>=1e7)return sign+'₹'+trimDec(a/1e7)+'Cr';if(a>=1e5)return sign+'₹'+trimDec(a/1e5)+'L';}return sign+'₹'+groupIndian(String(Math.round(a)));}
+  var figs=[].slice.call(document.querySelectorAll('.fig'));
+  function cur(){return html.getAttribute('data-cur');}
+  function renderFig(el){if(el.__counting)return;if(el.classList.contains('countup')&&!el.__done)return;el.textContent=fmt(parseFloat(el.getAttribute('data-amount')),cur(),el.getAttribute('data-style')||'full');}
+  function renderAll(){figs.forEach(renderFig);}
+  var btns=document.querySelectorAll('.cur-toggle button');
+  btns.forEach(function(b){b.addEventListener('click',function(){html.setAttribute('data-cur',b.getAttribute('data-c'));btns.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});renderAll();});});
+  function countUp(el){var base=parseFloat(el.getAttribute('data-amount')),style=el.getAttribute('data-style')||'full';if(REDUCED){el.textContent=fmt(base,cur(),style);return;}var dur=1300,t0=null;el.__counting=true;function e(p){return 1-Math.pow(1-p,3);}function s(ts){if(t0===null)t0=ts;var p=Math.min(1,(ts-t0)/dur);el.textContent=fmt(base*e(p),cur(),style);if(p<1)requestAnimationFrame(s);else{el.__counting=false;el.textContent=fmt(base,cur(),style);}}requestAnimationFrame(s);}
+  renderAll();
+  if('IntersectionObserver' in window && !REDUCED){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add('in');e.target.querySelectorAll('.countup').forEach(function(c){if(!c.__done){c.__done=true;countUp(c);}});io.unobserve(e.target);});},{threshold:.12});
+    document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+  }else{document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('in');});document.querySelectorAll('.countup').forEach(function(c){c.__done=true;renderFig(c);});}
+})();
+</script>
+</body>
+</html>

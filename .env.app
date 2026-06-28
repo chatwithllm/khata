@@ -1,0 +1,2 @@
+KHATA_SECRET_KEY=16b26808e4e483d41c9acf8bb7546531cd33a8b17d36412e6c0bcda08dfd4815
+KHATA_GOOGLE_CLIENT_ID=783668953580-gr78rbtehil9mtavk47hfgjvnf93hh7k.apps.googleusercontent.com

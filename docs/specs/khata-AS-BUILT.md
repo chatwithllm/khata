@@ -425,6 +425,7 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-27 — Log-payment calculator + multi-currency input. Two additions to the Log payment slide-over (asset-detail.html, no backend changes): (1) **Calculator** — type any math expression (`50000+25000`, `2*85000`) in the amount field; live `= ₹X` preview as you type, blur evaluates and fills the result (safe: only digits/operators/parens pass). (2) **Multi-currency** — currency picker next to the amount (defaults to plan currency). Switch to a foreign currency (e.g. USD on an INR plan) for a live `≈ ₹X` FX preview using stored rates; on save, converts to plan currency and auto-prefixes the note with the original (`$1,000 USD — land payment Q2`). No rate → error pointing to Settings → FX rates.
 - 2026-06-19 — Loans By-contact view redesigned. Retired the hand-rolled Sankey (unreadable
   for a small loan book) for an editorial layout: a position band (100%-stacked exposure meter
   + Owed-to-you / You-owe / Net), ruled per-contact ledger rows (principal · interest/mo ·

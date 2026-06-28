@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Khata — Toyota Innova Crysta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root, html[data-cur="inr"]{--bg:oklch(98.6% 0.003 255);--surface:oklch(100% 0 0);--surface-2:oklch(97% 0.004 255);--fg:oklch(24% 0.02 262);--fg-soft:oklch(40% 0.02 262);--muted:oklch(56% 0.015 262);--border:oklch(92.5% 0.005 262);--border-2:oklch(88% 0.007 262);--accent:oklch(52% 0.17 262);--accent-2:oklch(44% 0.17 264);--accent-soft:oklch(96% 0.03 262);--accent-ink:oklch(100% 0 0);--pos:oklch(54% 0.13 162);--neg:oklch(55% 0.19 25);--side:oklch(97.4% 0.004 262);--on-side:oklch(24% 0.02 262);--on-side-mut:oklch(54% 0.015 262);--c1:oklch(52% 0.17 262);--c2:oklch(58% 0.13 215);--c3:oklch(55% 0.19 25);--c4:oklch(54% 0.13 162);}
+html[data-cur="usd"]{--accent:oklch(53% 0.13 165);--accent-2:oklch(45% 0.12 165);--accent-soft:oklch(96% 0.03 165);--pos:oklch(53% 0.13 165);--c1:oklch(53% 0.13 165);--c2:oklch(56% 0.12 195);--c3:oklch(55% 0.19 25);--c4:oklch(58% 0.12 135);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--fg);font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;transition:background .5s,color .5s;}
+.num{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;letter-spacing:-.02em;}
+h1,h2,h3{font-family:'Space Grotesk',system-ui,sans-serif;font-weight:600;line-height:1.06;letter-spacing:-.025em;}
+.ital{font-style:italic;}a{color:inherit;text-decoration:none;}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);}
+::selection{background:color-mix(in oklab,var(--accent) 22%,transparent);}
+.app{display:grid;grid-template-columns:252px 1fr;min-height:100vh;}@media (max-width:900px){.app{grid-template-columns:1fr;}}
+.side{background:var(--side);color:var(--on-side);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:22px 16px;border-right:1px solid var(--border);}
+@media (max-width:900px){.side{position:static;height:auto;flex-direction:row;align-items:center;gap:8px;overflow-x:auto;padding:12px;}}
+.s-brand{display:flex;align-items:center;gap:11px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;letter-spacing:-.03em;color:var(--on-side);padding:4px 10px 22px;}
+.s-brand .mark{width:32px;height:32px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink);font-weight:700;font-size:17px;flex:none;}
+@media (max-width:900px){.s-brand{padding:0 8px 0 4px;}.s-brand span.t{display:none;}}
+.s-nav{display:flex;flex-direction:column;gap:3px;}@media (max-width:900px){.s-nav{flex-direction:row;}}
+.s-nav a{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;color:var(--on-side-mut);font-weight:600;font-size:14.5px;transition:background .2s,color .2s;white-space:nowrap;}
+.s-nav a svg{width:18px;height:18px;flex:none;opacity:.7;}.s-nav a:hover{background:var(--surface);color:var(--on-side);}
+.s-nav a.active{background:var(--accent-soft);color:var(--accent);box-shadow:inset 2px 0 0 var(--accent);}.s-nav a.active svg{opacity:1;color:var(--accent);}
+.s-foot{margin-top:auto;padding:14px 12px 4px;border-top:1px solid var(--border);}@media (max-width:900px){.s-foot{display:none;}}
+.s-foot .who{display:flex;align-items:center;gap:10px;}.s-foot .av{width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:14px;}
+.s-foot .nm{font-size:13.5px;font-weight:600;color:var(--on-side);}.s-foot .inst{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--on-side-mut);}
+.main{display:flex;flex-direction:column;min-width:0;}
+.top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:18px;padding:18px 34px;background:color-mix(in oklab,var(--bg) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+@media (max-width:640px){.top{padding:14px 18px;}}
+.crumb{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);}.crumb a:hover{color:var(--accent);}
+.greet h1{font-size:21px;}.top-right{margin-left:auto;display:flex;align-items:center;gap:13px;}
+.cur-toggle{display:inline-flex;align-items:center;background:var(--surface-2);border:1px solid var(--border-2);border-radius:999px;padding:3px;position:relative;}
+.cur-toggle button{position:relative;z-index:2;border:0;background:transparent;cursor:pointer;font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12.5px;color:var(--muted);padding:6px 13px;border-radius:999px;transition:color .35s;}
+.cur-toggle .knob{position:absolute;z-index:1;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);background:var(--accent);border-radius:999px;transition:transform .42s cubic-bezier(.22,.68,0,1),background .42s;}
+html[data-cur="usd"] .cur-toggle .knob{transform:translateX(100%);}html[data-cur="inr"] .cur-toggle button[data-c="inr"],html[data-cur="usd"] .cur-toggle button[data-c="usd"]{color:var(--accent-ink);}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;padding:10px 17px;border-radius:12px;border:1px solid transparent;cursor:pointer;transition:all .22s cubic-bezier(.22,.68,0,1);}
+.btn-primary{background:var(--accent);color:var(--accent-ink);box-shadow:0 6px 16px -8px color-mix(in oklab,var(--accent) 60%,transparent);}.btn-primary:hover{background:var(--accent-2);transform:translateY(-2px);}
+.av-top{width:38px;height:38px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:15px;}
+.content{padding:28px 34px 60px;}@media (max-width:640px){.content{padding:20px 18px 48px;}}
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .7s cubic-bezier(.22,.68,0,1),transform .7s cubic-bezier(.22,.68,0,1);}.reveal.in{opacity:1;transform:none;}@media (prefers-reduced-motion:reduce){.reveal{opacity:1!important;transform:none!important;}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(20,28,60,.04);}
+.p-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);gap:12px;}
+.p-head h2{font-size:18px;}.p-head .sub{font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.head-card{background:linear-gradient(160deg,var(--accent-soft),var(--surface));border:1px solid var(--border);border-radius:18px;padding:24px 26px;box-shadow:0 1px 2px rgba(20,28,60,.04);}
+.head-card h1{font-size:32px;}
+.tags{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap;}
+.tag{font-family:'JetBrains Mono',monospace;font-size:10.5px;padding:4px 9px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--fg-soft);}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:22px;}@media (max-width:560px){.kpis{grid-template-columns:1fr;gap:14px;}}
+.kpi .kl{font-size:12px;color:var(--muted);font-weight:600;}.kpi .kv{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:30px;margin-top:4px;letter-spacing:-.02em;}
+.kpi.rem .kv{color:var(--accent);}
+.bar{height:9px;border-radius:6px;background:var(--surface-2);overflow:hidden;margin-top:20px;}
+.bar>span{display:block;height:100%;width:0;border-radius:6px;background:var(--accent);transition:width 1.1s cubic-bezier(.22,.68,0,1);}
+.in .bar>span{width:var(--pct);}@media (prefers-reduced-motion:reduce){.bar>span{transition:none;width:var(--pct)!important;}}
+.pace{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--pos);margin-top:10px;}
+.cols{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;margin-top:18px;}@media (max-width:1000px){.cols{grid-template-columns:1fr;}}
+.stack{display:grid;gap:18px;}
+.sch{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;padding:11px 20px;border-bottom:1px solid var(--border);}
+.sch:last-child{border-bottom:0;}.sch .no{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);width:30px;}
+.sch .when{font-size:13px;color:var(--fg-soft);}.sch .pl{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+.sch .amt{font-family:'JetBrains Mono',monospace;font-size:13.5px;font-weight:600;text-align:right;}
+.badge{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:6px;white-space:nowrap;}
+.badge.paid{background:color-mix(in oklab,var(--pos) 13%,transparent);color:var(--pos);}
+.badge.roll-out{background:var(--accent-soft);color:var(--accent);}
+.badge.roll-in{background:color-mix(in oklab,var(--neg) 13%,transparent);color:var(--neg);}
+.badge.now{background:var(--accent);color:var(--accent-ink);}.badge.due{background:var(--surface-2);color:var(--muted);border:1px solid var(--border-2);}
+.lrow{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;padding:13px 20px;border-bottom:1px solid var(--border);}
+.lrow:last-child{border-bottom:0;}
+.lrow .d{font-weight:600;font-size:14px;}.lrow .d small{display:block;color:var(--muted);font-size:11px;font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.pill{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:999px;white-space:nowrap;}
+.pill.m{background:var(--accent-soft);color:var(--accent);}.pill.f{background:color-mix(in oklab,var(--neg) 13%,transparent);color:var(--neg);}
+.lrow .a{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:14px;text-align:right;}
+.proof{display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--accent);}
+.proof .th{width:24px;height:24px;border-radius:6px;border:1px solid var(--border-2);background:var(--surface-2);display:grid;place-items:center;}
+.donut-wrap{display:flex;align-items:center;gap:22px;padding:20px;flex-wrap:wrap;}
+.legend{display:grid;gap:9px;flex:1;min-width:140px;}
+.lg{display:flex;align-items:center;gap:9px;font-size:13px;}.lg .sw{width:11px;height:11px;border-radius:3px;flex:none;}.lg .ln{flex:1;color:var(--fg-soft);}.lg .lv{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12.5px;}
+.donut circle{transition:stroke-dashoffset 1.2s cubic-bezier(.22,.68,0,1);}
+.share-bar{height:34px;border-radius:9px;overflow:hidden;display:flex;margin:6px 0 14px;border:1px solid var(--border);}
+.share-bar i{display:flex;align-items:center;justify-content:center;color:var(--accent-ink);font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;}
+.contrib{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--border);}
+.contrib:last-child{border-bottom:0;}
+.contrib .av{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--accent-ink);font-weight:700;font-size:13px;flex:none;}
+.contrib .nm{font-weight:600;font-size:14px;}.contrib .pc{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+.contrib .amt{margin-left:auto;font-family:'JetBrains Mono',monospace;font-weight:600;font-size:14px;}
+.proj{padding:20px;}.proj .big{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:24px;}
+.spark{margin-top:12px;}.spark polyline{stroke-dasharray:600;stroke-dashoffset:600;transition:stroke-dashoffset 1.6s cubic-bezier(.22,.68,0,1);}
+.in .spark polyline{stroke-dashoffset:0;}@media (prefers-reduced-motion:reduce){.spark polyline{stroke-dashoffset:0!important;}}
+.link-liab{display:flex;align-items:center;gap:12px;padding:16px 20px;}
+.link-liab .ic{width:40px;height:40px;border-radius:11px;background:color-mix(in oklab,var(--neg) 13%,transparent);color:var(--neg);display:grid;place-items:center;flex:none;}
+.link-liab .nm{font-weight:600;font-size:14px;}.link-liab .mt{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;}.link-liab .v{margin-left:auto;font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent);}
+.gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:20px;}
+.gallery .ph{aspect-ratio:1;border-radius:10px;border:1px solid var(--border-2);background:var(--surface-2);display:grid;place-items:center;color:var(--muted);position:relative;overflow:hidden;cursor:pointer;transition:transform .25s,border-color .25s;}
+.gallery .ph:hover{transform:scale(1.04);border-color:var(--accent);color:var(--accent);}
+.gallery .ph span{position:absolute;bottom:4px;left:5px;font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--fg-soft);}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <a href="index.html" class="s-brand"><span class="mark">k</span><span class="t">Khata</span></a>
+    <nav class="s-nav">
+      <a href="app.html"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="12" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="16" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>Dashboard</a>
+      <a href="holdings.html"><svg viewBox="0 0 24 24" fill="none"><path d="M3 17l5-5 3 3 4-5 6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="8" r="2" stroke="currentColor" stroke-width="1.7"/></svg>Holdings</a>
+      <a href="asset-detail.html" class="active"><svg viewBox="0 0 24 24" fill="none"><path d="M4 10 12 4l8 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>Assets</a>
+      <a href="chit-detail.html"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.4" stroke="currentColor" stroke-width="1.7"/></svg>Chit funds</a>
+      <a href="loan-detail.html"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.7"/></svg>Loans</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2V4Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>Ledger</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v3m0 14v3m10-10h-3M5 12H2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Settings</a>
+    </nav>
+    <div class="s-foot"><div class="who"><span class="av">A</span><div><div class="nm">Arjun Nair</div><div class="inst">khata.local:8443</div></div></div></div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <div class="greet"><div class="crumb"><a href="app.html">Assets</a> / Innova Crysta</div><h1>Toyota Innova Crysta</h1></div>
+      <div class="top-right">
+        <div class="cur-toggle" role="group" aria-label="Primary currency"><span class="knob" aria-hidden="true"></span><button data-c="inr" aria-pressed="true">₹ INR</button><button data-c="usd" aria-pressed="false">$ USD</button></div>
+        <a href="log-payment.html" class="btn btn-primary"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Log payment</a>
+        <span class="av-top">A</span>
+      </div>
+    </header>
+    <div class="content">
+      <div class="head-card reveal">
+        <h1>Toyota Innova Crysta</h1>
+        <div class="tags"><span class="tag">asset · purchase</span><span class="tag">joint · 2 people</span><span class="tag">roll-forward on</span><span class="tag">started Jan 2026</span></div>
+        <div class="kpis">
+          <div class="kpi"><div class="kl">Paid to date</div><div class="kv num fig countup" data-amount="1290000" data-style="full">₹0</div></div>
+          <div class="kpi rem"><div class="kl">Remaining</div><div class="kv num fig countup" data-amount="910000" data-style="full">₹0</div></div>
+          <div class="kpi"><div class="kl">Total price</div><div class="kv num fig countup" data-amount="2200000" data-style="full">₹0</div></div>
+        </div>
+        <div class="bar"><span style="--pct:59%"></span></div>
+        <div class="pace">59% paid · recent pace ≈ ₹2.0L/mo · projected clear Mar 2027</div>
+      </div>
+      <div class="cols">
+        <div class="stack">
+          <div class="panel reveal">
+            <div class="p-head"><div><h2>Installment schedule</h2><div class="sub">planned vs paid · roll-forward</div></div></div>
+            <div>
+              <div class="sch"><span class="no">#1</span><span class="when">Jan 2026 <span class="pl">· planned ₹2,00,000</span></span><span class="amt num fig" data-amount="200000" data-style="full">₹0</span><span class="badge paid">paid</span></div>
+              <div class="sch"><span class="no">#2</span><span class="when">Feb 2026 <span class="pl">· planned ₹2,00,000</span></span><span class="amt num fig" data-amount="200000" data-style="full">₹0</span><span class="badge paid">paid</span></div>
+              <div class="sch"><span class="no">#3</span><span class="when">Mar 2026 <span class="pl">· planned ₹2,00,000</span></span><span class="amt num fig" data-amount="200000" data-style="full">₹0</span><span class="badge paid">paid</span></div>
+              <div class="sch"><span class="no">#4</span><span class="when">Apr 2026 <span class="pl">· planned ₹2,00,000</span></span><span class="amt num fig" data-amount="240000" data-style="full">₹0</span><span class="badge roll-in">+₹40k carried in</span></div>
+              <div class="sch"><span class="no">#5</span><span class="when">May 2026 <span class="pl">· planned ₹2,00,000</span></span><span class="amt num fig" data-amount="140000" data-style="full">₹0</span><span class="badge roll-out">−₹60k rolled fwd</span></div>
+              <div class="sch"><span class="no">#6</span><span class="when">Jun 2026 <span class="pl">· planned ₹2,00,000 +₹60k</span></span><span class="amt num fig" data-amount="260000" data-style="full">₹0</span><span class="badge now">due now</span></div>
+              <div class="sch"><span class="no">#7</span><span class="when">Jul 2026 <span class="pl">· planned ₹2,00,000</span></span><span class="amt num fig" data-amount="200000" data-style="full">₹0</span><span class="badge due">scheduled</span></div>
+            </div>
+          </div>
+          <div class="panel reveal">
+            <div class="p-head"><div><h2>Full ledger</h2><div class="sub">method · funding source · proof</div></div></div>
+            <div>
+              <div class="lrow"><div class="d">Installment #5 · you<small>14 May 2026</small></div><div><span class="pill m">UPI</span> <span class="pill f">savings</span></div><div class="a num fig" data-amount="80000" data-style="full">₹0</div><div><a class="proof" href="#"><span class="th"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/></svg></span>UPI_4471</a></div></div>
+              <div class="lrow"><div class="d">Priya's share · #5<small>14 May 2026</small></div><div><span class="pill m">transfer</span> <span class="pill f">savings</span></div><div class="a num fig" data-amount="60000" data-style="full">₹0</div><div><a class="proof" href="#"><span class="th"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/></svg></span>NEFT.pdf</a></div></div>
+              <div class="lrow"><div class="d">Installment #4 · you<small>12 Apr 2026 · over by ₹40k</small></div><div><span class="pill m">UPI</span> <span class="pill f">chit-payout</span></div><div class="a num fig" data-amount="160000" data-style="full">₹0</div><div><a class="proof" href="#"><span class="th"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/></svg></span>slip.jpg</a></div></div>
+              <div class="lrow"><div class="d">Installment #4 · Priya<small>12 Apr 2026</small></div><div><span class="pill m">cash</span> <span class="pill f">savings</span></div><div class="a num fig" data-amount="80000" data-style="full">₹0</div><div><a class="proof" href="#"><span class="th"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/></svg></span>recpt</a></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="panel reveal" id="donutPanel">
+            <div class="p-head"><div><h2>Funding sources</h2><div class="sub">where the money came from</div></div></div>
+            <div class="donut-wrap">
+              <svg class="donut" width="118" height="118" viewBox="0 0 118 118">
+                <circle cx="59" cy="59" r="46" fill="none" stroke="var(--surface-2)" stroke-width="16"/>
+                <circle cx="59" cy="59" r="46" fill="none" stroke="var(--c1)" stroke-width="16" stroke-dasharray="289" stroke-dashoffset="289" data-frac=".62" transform="rotate(-90 59 59)"/>
+                <circle cx="59" cy="59" r="46" fill="none" stroke="var(--c2)" stroke-width="16" stroke-dasharray="289" stroke-dashoffset="289" data-frac=".16" transform="rotate(133 59 59)"/>
+                <circle cx="59" cy="59" r="46" fill="none" stroke="var(--c3)" stroke-width="16" stroke-dasharray="289" stroke-dashoffset="289" data-frac=".14" transform="rotate(191 59 59)"/>
+                <circle cx="59" cy="59" r="46" fill="none" stroke="var(--c4)" stroke-width="16" stroke-dasharray="289" stroke-dashoffset="289" data-frac=".08" transform="rotate(241 59 59)"/>
+              </svg>
+              <div class="legend">
+                <div class="lg"><span class="sw" style="background:var(--c1)"></span><span class="ln">Savings</span><span class="lv">62%</span></div>
+                <div class="lg"><span class="sw" style="background:var(--c2)"></span><span class="ln">Chit payout</span><span class="lv">16%</span></div>
+                <div class="lg"><span class="sw" style="background:var(--c3)"></span><span class="ln">Borrowed</span><span class="lv">14%</span></div>
+                <div class="lg"><span class="sw" style="background:var(--c4)"></span><span class="ln">Sold asset</span><span class="lv">8%</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel reveal">
+            <div class="p-head"><div><h2>Contributors</h2><div class="sub">auto ownership-share</div></div></div>
+            <div style="padding:18px 20px;">
+              <div class="share-bar"><i style="background:var(--accent);flex-basis:58%">You 58%</i><i style="background:var(--neg);flex-basis:42%">Priya 42%</i></div>
+              <div class="contrib"><span class="av" style="background:var(--accent)">A</span><div><div class="nm">You</div><div class="pc">58% share · 6 payments</div></div><span class="amt num fig" data-amount="748200" data-style="full">₹0</span></div>
+              <div class="contrib"><span class="av" style="background:var(--neg)">P</span><div><div class="nm">Priya</div><div class="pc">42% share · 5 payments</div></div><span class="amt num fig" data-amount="541800" data-style="full">₹0</span></div>
+            </div>
+          </div>
+          <div class="panel reveal" id="projPanel">
+            <div class="p-head"><div><h2>Projection</h2><div class="sub">at recent pace</div></div></div>
+            <div class="proj">
+              <div class="big">Mar 2027 <span style="font-family:'Hanken Grotesk';font-size:13px;color:var(--muted);font-weight:600;">· 10 installments left</span></div>
+              <svg class="spark" width="100%" height="56" viewBox="0 0 280 56" preserveAspectRatio="none" fill="none"><polyline points="0,50 40,44 80,46 120,34 160,30 200,22 240,14 280,6" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+          <div class="panel reveal">
+            <div class="link-liab"><span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span><div><div class="nm">Linked: Gold loan · Muthoot</div><div class="mt">₹1.6L of #4 funded by this loan</div></div><a href="loan-detail.html" class="v">view →</a></div>
+          </div>
+          <div class="panel reveal">
+            <div class="p-head"><div><h2>Proof gallery</h2><div class="sub">7 attachments</div></div></div>
+            <div class="gallery">
+              <div class="ph"><svg width="20" height="20" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M3 11l3-3 2 2 3-4 2 2" stroke="currentColor" stroke-width="1.2"/></svg><span>#5 UPI</span></div>
+              <div class="ph"><svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M4 2h6l3 3v9H4V2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg><span>NEFT</span></div>
+              <div class="ph"><svg width="20" height="20" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M3 11l3-3 2 2 3-4 2 2" stroke="currentColor" stroke-width="1.2"/></svg><span>#4 slip</span></div>
+              <div class="ph"><svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M4 2h6l3 3v9H4V2Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg><span>recpt</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var FX=83, REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches, html=document.documentElement;
+  function groupIndian(s){var neg=s[0]==='-';if(neg)s=s.slice(1);var r;if(s.length<=3)r=s;else{var l3=s.slice(-3),rest=s.slice(0,-3);r=rest.replace(/\B(?=(\d{2})+(?!\d))/g,',')+','+l3;}return (neg?'-':'')+r;}
+  function trimDec(x){return (Math.round(x*100)/100).toString();}
+  function fmt(base,cur,style){var neg=base<0,a=Math.abs(base),sign=neg?'-':'';if(cur==='usd'){var v=a/FX;if(style==='abbr'){if(v>=1e6)return sign+'$'+trimDec(v/1e6)+'M';if(v>=1e3)return sign+'$'+trimDec(v/1e3)+'k';}return sign+'$'+Math.round(v).toLocaleString('en-US');}if(style==='abbr'){if(a>=1e7)return sign+'₹'+trimDec(a/1e7)+'Cr';if(a>=1e5)return sign+'₹'+trimDec(a/1e5)+'L';}return sign+'₹'+groupIndian(String(Math.round(a)));}
+  var figs=[].slice.call(document.querySelectorAll('.fig'));
+  function cur(){return html.getAttribute('data-cur');}
+  function renderFig(el){if(el.__counting)return;if(el.classList.contains('countup')&&!el.__done)return;el.textContent=fmt(parseFloat(el.getAttribute('data-amount')),cur(),el.getAttribute('data-style')||'full');}
+  function renderAll(){figs.forEach(renderFig);}
+  var btns=document.querySelectorAll('.cur-toggle button');
+  btns.forEach(function(b){b.addEventListener('click',function(){html.setAttribute('data-cur',b.getAttribute('data-c'));btns.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});renderAll();});});
+  function countUp(el){var base=parseFloat(el.getAttribute('data-amount')),style=el.getAttribute('data-style')||'full';if(REDUCED){el.textContent=fmt(base,cur(),style);return;}var dur=1300,t0=null;el.__counting=true;function e(p){return 1-Math.pow(1-p,3);}function s(ts){if(t0===null)t0=ts;var p=Math.min(1,(ts-t0)/dur);el.textContent=fmt(base*e(p),cur(),style);if(p<1)requestAnimationFrame(s);else{el.__counting=false;el.textContent=fmt(base,cur(),style);}}requestAnimationFrame(s);}
+  function fillDonut(panel){panel.querySelectorAll('circle[data-frac]').forEach(function(c){var frac=parseFloat(c.getAttribute('data-frac')),len=289;c.style.strokeDashoffset=(len-len*frac).toString();});}
+  renderAll();
+  if('IntersectionObserver' in window && !REDUCED){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add('in');e.target.querySelectorAll('.countup').forEach(function(c){if(!c.__done){c.__done=true;countUp(c);}});if(e.target.querySelector&&e.target.querySelector('circle[data-frac]'))fillDonut(e.target);io.unobserve(e.target);});},{threshold:.12});
+    document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+  }else{document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('in');});document.querySelectorAll('.countup').forEach(function(c){c.__done=true;renderFig(c);});var dp=document.getElementById('donutPanel');if(dp)fillDonut(dp);}
+})();
+</script>
+</body>
+</html>

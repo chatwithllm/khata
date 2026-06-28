@@ -78,6 +78,13 @@
   .main{margin:0;padding:0}
   .grid2{display:block}
 }
+.amt-row{display:flex;gap:6px}
+.amt-row input{flex:1;min-width:0}
+.amt-row select{width:76px;flex-shrink:0;font-size:13px;padding:10px 6px;text-align:center}
+.amt-hint{font-size:12px;font-family:"JetBrains Mono";padding:2px 2px}
+.amt-hint.calc{color:var(--primary-deep);font-weight:600}
+.amt-hint.fx{color:var(--ink-faint)}
+.amt-hint.fx-warn{color:color-mix(in srgb,var(--neg) 80%,transparent);font-size:11.5px}
 </style>
 </head>
 <body>
@@ -153,7 +160,15 @@
     <div class="osub" id="osub"></div>
   </div>
   <div class="obody">
-    <div class="fld"><label for="amount">Amount</label><input id="amount" placeholder="50,000" inputmode="decimal"></div>
+    <div class="fld">
+      <label for="amount">Amount <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-faint);font-size:10px;margin-left:4px">· type math to calculate</span></label>
+      <div class="amt-row">
+        <input id="amount" placeholder="50,000" inputmode="decimal">
+        <select id="pay-cur" title="Currency you paid in"></select>
+      </div>
+      <div class="amt-hint calc" id="calc-preview" style="display:none"></div>
+      <div class="amt-hint fx"   id="fx-preview"   style="display:none"></div>
+    </div>
     <div class="fld"><label for="occurred">Date (when it happened)</label><input id="occurred" type="date"></div>
     <div class="fld"><label for="method">Method</label>
       <select id="method"><option value="transfer">Transfer</option><option value="upi">UPI</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select>
@@ -200,6 +215,73 @@ let planName = "";
 let ME_ID = null;        // current user id (from /api/auth/me)
 let MEMBERS = [];        // plan members [{user_id, email, display_name, role}]
 let LOANS = [];          // the user's loan plans — for the "funded from which loan" picker
+let FX_RATES = [];       // [{base_currency, quote_currency, rate_micro}] from /api/fx-rates
+const CURRENCIES = ['INR','USD'];
+
+// ── calculator: evaluate safe math expressions typed in the amount field ──
+function calcEval(raw) {
+  const expr = raw.replace(/,/g, '').replace(/[^0-9+\-*/().\s]/g, '');
+  if (!expr.trim() || !/[+\-*\/]/.test(expr)) return null;
+  try {
+    // eslint-disable-next-line no-new-func
+    const result = Function('"use strict";return(' + expr + ')')();
+    if (typeof result === 'number' && isFinite(result) && result >= 0) return result;
+  } catch(e) {}
+  return null;
+}
+
+// ── FX helpers for multi-currency payment input ──
+function getFxRateMicro(from, to) {
+  if (from === to) return 1000000;
+  for (const r of FX_RATES) {
+    if (r.base_currency === from && r.quote_currency === to) return r.rate_micro;
+    if (r.base_currency === to && r.quote_currency === from && r.rate_micro > 0)
+      return Math.round(1e12 / r.rate_micro);
+  }
+  return null;
+}
+function fillPayCur(selectedCur) {
+  const sel = $('pay-cur');
+  sel.textContent = '';
+  for (const c of CURRENCIES) {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    if (c === (selectedCur || BASE)) o.selected = true;
+    sel.append(o);
+  }
+  updateFxPreview();
+}
+function updateCalcPreview() {
+  const raw = $('amount').value;
+  const result = calcEval(raw);
+  const pre = $('calc-preview');
+  if (result !== null) {
+    const rounded = Math.round(result * 100) / 100;
+    pre.textContent = '= ' + sym($('pay-cur').value) + fmtNum(Math.round(rounded * 100), $('pay-cur').value);
+    pre.style.display = '';
+  } else {
+    pre.style.display = 'none';
+  }
+}
+function updateFxPreview() {
+  const payCur = $('pay-cur') ? $('pay-cur').value : BASE;
+  const pre = $('fx-preview');
+  if (payCur === BASE) { pre.style.display = 'none'; return; }
+  const raw = $('amount').value.replace(/,/g, '');
+  const amt = parseFloat(raw);
+  if (!amt || isNaN(amt)) { pre.style.display = 'none'; return; }
+  const rateMicro = getFxRateMicro(payCur, BASE);
+  if (!rateMicro) {
+    pre.className = 'amt-hint fx-warn';
+    pre.textContent = 'No ' + payCur + '→' + BASE + ' rate — set one in Settings → FX rates.';
+    pre.style.display = '';
+    return;
+  }
+  const convertedMinor = Math.round(amt * 100 * rateMicro / 1e6);
+  pre.className = 'amt-hint fx';
+  pre.textContent = '≈ ' + sym(BASE) + fmtNum(convertedMinor, BASE) + ' in ' + BASE;
+  pre.style.display = '';
+}
 
 // ── "From which loan" field: shown when funding source is a loan/borrowed ──
 function fundSrcIsLoan(){ const v=$('fsource').value; return v==='loan'||v==='borrowed'; }
@@ -672,6 +754,8 @@ function openOver(){ // NEW payment
   $('del-entry').style.display='none';   // no delete when logging a new entry
   $('proof-fld').style.display='none';   // proof attaches to a saved entry, not a draft
   $('fxrate-fld').style.display='none';
+  $('calc-preview').style.display='none'; $('fx-preview').style.display='none';
+  fillPayCur(BASE);
   fillPaidBy(ME_ID);                      // default contributor = current user
   fillFundPlan(null);
   showOver(); $('amount').focus();
@@ -684,6 +768,8 @@ function openEdit(lr){ // EDIT existing entry
   if(lr.funding_source) $('fsource').value=lr.funding_source;
   $('occurred').value=(lr.occurred_at||'').slice(0,10)||todayISO();
   $('del-entry').style.display='inline';  // delete available when editing
+  $('calc-preview').style.display='none'; $('fx-preview').style.display='none';
+  fillPayCur(BASE); // edits show in plan currency
   fillPaidBy(lr.logged_by_user_id);       // preselect the entry's existing contributor
   fillFundPlan(lr.funding_plan_id);       // preselect the source loan (if any)
   // proof: attach photos / PDFs / docs to this saved entry (server enforces who may modify)
@@ -823,6 +909,7 @@ async function boot(){
   if(user.avatar){ const a=$('avatar'); a.style.backgroundImage='url("'+user.avatar+'")'; a.classList.add('has-img'); }
 
   // members list (owner + shared) — used by the "Paid by · contributor" field
+  FX_RATES = (await fetch('/api/fx-rates').then(r=>r.json()).catch(()=>({}))).rates || [];
   MEMBERS = (await fetch('/api/plans/'+pid+'/members').then(r=>r.json()).catch(()=>({}))).members || [];
 
   const r = await fetch('/api/plans/'+pid);
@@ -898,6 +985,16 @@ $('curtog').addEventListener('click', async (e)=>{
 
 // ── log-payment slide-over wiring ──
 $('logbtn').addEventListener('click', openOver);
+$('amount').addEventListener('input', ()=>{ updateCalcPreview(); updateFxPreview(); });
+$('amount').addEventListener('blur', ()=>{
+  const result = calcEval($('amount').value);
+  if (result !== null) {
+    $('amount').value = String(Math.round(result * 100) / 100);
+    $('calc-preview').style.display = 'none';
+    updateFxPreview();
+  }
+});
+$('pay-cur').addEventListener('change', updateFxPreview);
 $('fsource').addEventListener('change', ()=>fillFundPlan($('fundplan')?$('fundplan').value:null));
 $('cancel').addEventListener('click', closeOver);
 $('scrim').addEventListener('click', ()=>{ closeOver(); closeSched(); });
@@ -905,8 +1002,31 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); c
 $('save').addEventListener('click', async ()=>{
   $('err').textContent='';
   const occ = $('occurred').value ? $('occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift
-  const body = { amount: $('amount').value, method: $('method').value,
-                 funding_source: $('fsource').value, note: $('note').value || null,
+  const payCur = $('pay-cur').value;
+  let amountStr = $('amount').value.replace(/,/g,'');
+
+  // resolve calculator expression before anything else
+  const calcResult = calcEval(amountStr);
+  if (calcResult !== null) amountStr = String(Math.round(calcResult * 100) / 100);
+
+  // convert foreign-currency amount → plan currency
+  let userNote = $('note').value.trim();
+  if (payCur !== BASE) {
+    const rateMicro = getFxRateMicro(payCur, BASE);
+    if (!rateMicro) {
+      $('err').textContent = 'No ' + payCur + '→' + BASE + ' rate. Set one in Settings → FX rates.';
+      return;
+    }
+    const origAmt = parseFloat(amountStr);
+    if (!origAmt || isNaN(origAmt)) { $('err').textContent = 'Enter a valid amount.'; return; }
+    const convertedMinor = Math.round(origAmt * 100 * rateMicro / 1e6);
+    const origLabel = sym(payCur) + fmtNum(Math.round(origAmt * 100), payCur) + ' ' + payCur;
+    userNote = origLabel + (userNote ? ' — ' + userNote : '');
+    amountStr = String(convertedMinor / 100);
+  }
+
+  const body = { amount: amountStr, method: $('method').value,
+                 funding_source: $('fsource').value, note: userNote || null,
                  occurred_at: occ };
   // explicit FX rate: send only when edited and non-empty (clearing = leave unchanged)
   if(editId && $('fxrate-fld').style.display!=='none'){

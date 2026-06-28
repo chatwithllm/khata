@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "loan-detail.html",
+  "entry": "loan-detail.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-06-04T18:57:55.269Z",
+  "updatedAt": "2026-06-04T18:57:55.269Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

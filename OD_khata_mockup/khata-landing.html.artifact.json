@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "Khata — Landing (index.html)",
+  "entry": "khata-landing.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "primary": true,
+  "createdAt": "2026-06-04T17:50:22.968Z",
+  "updatedAt": "2026-06-04T17:50:22.973Z",
+  "metadata": {
+    "identifier": "khata-landing",
+    "artifactType": "text/html",
+    "inferred": false
+  }
+}

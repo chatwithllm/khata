@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en" data-cur="inr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Khata — Holdings &amp; net worth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root, html[data-cur="inr"]{--bg:oklch(98.6% 0.003 255);--surface:oklch(100% 0 0);--surface-2:oklch(97% 0.004 255);--fg:oklch(24% 0.02 262);--fg-soft:oklch(40% 0.02 262);--muted:oklch(56% 0.015 262);--border:oklch(92.5% 0.005 262);--border-2:oklch(88% 0.007 262);--accent:oklch(52% 0.17 262);--accent-2:oklch(44% 0.17 264);--accent-soft:oklch(96% 0.03 262);--accent-ink:oklch(100% 0 0);--pos:oklch(54% 0.13 162);--neg:oklch(55% 0.19 25);--side:oklch(97.4% 0.004 262);--on-side:oklch(24% 0.02 262);--on-side-mut:oklch(54% 0.015 262);}
+html[data-cur="usd"]{--accent:oklch(53% 0.13 165);--accent-2:oklch(45% 0.12 165);--accent-soft:oklch(96% 0.03 165);--pos:oklch(53% 0.13 165);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--fg);font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;transition:background .5s,color .5s;}
+.num{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;letter-spacing:-.02em;}
+h1,h2,h3{font-family:'Space Grotesk',system-ui,sans-serif;font-weight:600;line-height:1.06;letter-spacing:-.025em;}
+.ital{font-style:italic;}a{color:inherit;text-decoration:none;}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);}
+::selection{background:color-mix(in oklab,var(--accent) 22%,transparent);}
+.app{display:grid;grid-template-columns:252px 1fr;min-height:100vh;}@media (max-width:900px){.app{grid-template-columns:1fr;}}
+.side{background:var(--side);color:var(--on-side);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:22px 16px;border-right:1px solid var(--border);}
+@media (max-width:900px){.side{position:static;height:auto;flex-direction:row;align-items:center;gap:8px;overflow-x:auto;padding:12px;}}
+.s-brand{display:flex;align-items:center;gap:11px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px;letter-spacing:-.03em;color:var(--on-side);padding:4px 10px 22px;}
+.s-brand .mark{width:32px;height:32px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink);font-weight:700;font-size:17px;flex:none;}
+@media (max-width:900px){.s-brand{padding:0 8px 0 4px;}.s-brand span.t{display:none;}}
+.s-nav{display:flex;flex-direction:column;gap:3px;}@media (max-width:900px){.s-nav{flex-direction:row;}}
+.s-nav a{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;color:var(--on-side-mut);font-weight:600;font-size:14.5px;transition:background .2s,color .2s;white-space:nowrap;}
+.s-nav a svg{width:18px;height:18px;flex:none;opacity:.7;}.s-nav a:hover{background:var(--surface);color:var(--on-side);}
+.s-nav a.active{background:var(--accent-soft);color:var(--accent);box-shadow:inset 2px 0 0 var(--accent);}.s-nav a.active svg{opacity:1;color:var(--accent);}
+.s-foot{margin-top:auto;padding:14px 12px 4px;border-top:1px solid var(--border);}@media (max-width:900px){.s-foot{display:none;}}
+.s-foot .who{display:flex;align-items:center;gap:10px;}.s-foot .av{width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:14px;}
+.s-foot .nm{font-size:13.5px;font-weight:600;color:var(--on-side);}.s-foot .inst{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--on-side-mut);}
+.main{display:flex;flex-direction:column;min-width:0;}
+.top{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:18px;padding:18px 34px;background:color-mix(in oklab,var(--bg) 82%,transparent);backdrop-filter:blur(14px) saturate(1.1);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+@media (max-width:640px){.top{padding:14px 18px;}}
+.greet h1{font-size:22px;}.greet .dt{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:1px;}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:13px;}
+.cur-toggle{display:inline-flex;align-items:center;background:var(--surface-2);border:1px solid var(--border-2);border-radius:999px;padding:3px;position:relative;}
+.cur-toggle button{position:relative;z-index:2;border:0;background:transparent;cursor:pointer;font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12.5px;color:var(--muted);padding:6px 13px;border-radius:999px;transition:color .35s;}
+.cur-toggle .knob{position:absolute;z-index:1;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);background:var(--accent);border-radius:999px;transition:transform .42s cubic-bezier(.22,.68,0,1),background .42s;}
+html[data-cur="usd"] .cur-toggle .knob{transform:translateX(100%);}html[data-cur="inr"] .cur-toggle button[data-c="inr"],html[data-cur="usd"] .cur-toggle button[data-c="usd"]{color:var(--accent-ink);}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;padding:10px 17px;border-radius:12px;border:1px solid transparent;cursor:pointer;transition:all .22s cubic-bezier(.22,.68,0,1);}
+.btn-primary{background:var(--accent);color:var(--accent-ink);box-shadow:0 6px 16px -8px color-mix(in oklab,var(--accent) 60%,transparent);}.btn-primary:hover{background:var(--accent-2);transform:translateY(-2px);}
+.av-top{width:38px;height:38px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:15px;}
+.content{padding:30px 34px 60px;}@media (max-width:640px){.content{padding:22px 18px 48px;}}
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .7s cubic-bezier(.22,.68,0,1),transform .7s cubic-bezier(.22,.68,0,1);}.reveal.in{opacity:1;transform:none;}@media (prefers-reduced-motion:reduce){.reveal{opacity:1!important;transform:none!important;}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(20,28,60,.04);}
+.p-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);gap:12px;}
+.p-head h2{font-size:19px;}.p-head .sub{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.ticker{display:flex;overflow-x:auto;border:1px solid var(--border);border-radius:14px;background:var(--surface);box-shadow:0 1px 2px rgba(20,28,60,.04);}
+.tk{flex:1;min-width:130px;padding:15px 18px;border-right:1px solid var(--border);}
+.tk:last-child{border-right:0;}
+.tk .tl{font-size:11px;color:var(--muted);font-weight:600;font-family:'JetBrains Mono',monospace;letter-spacing:.05em;}
+.tk .tv{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:17px;margin-top:5px;display:flex;align-items:baseline;gap:3px;}
+.tk .tv .u{font-size:10px;color:var(--muted);}
+.tk .tc{font-size:11.5px;font-weight:600;margin-top:3px;font-family:'JetBrains Mono',monospace;}
+.tk .tc.up{color:var(--pos);}.tk .tc.down{color:var(--neg);}
+.tick-cap{font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:10px;display:flex;align-items:center;gap:7px;}
+.tick-cap b{color:var(--accent);cursor:pointer;}.tick-cap b:hover{text-decoration:underline;}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--pos);box-shadow:0 0 0 0 color-mix(in oklab,var(--pos) 60%,transparent);animation:pulse 2.4s infinite;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in oklab,var(--pos) 55%,transparent);}70%{box-shadow:0 0 0 8px transparent;}100%{box-shadow:0 0 0 0 transparent;}}
+@media (prefers-reduced-motion:reduce){.live-dot{animation:none;}}
+.cols{display:grid;grid-template-columns:1.45fr 1fr;gap:18px;margin-top:18px;}@media (max-width:980px){.cols{grid-template-columns:1fr;}}
+.hrow{display:grid;grid-template-columns:auto 1fr auto auto;gap:16px;align-items:center;padding:16px 22px;border-bottom:1px solid var(--border);}
+.hrow:last-child{border-bottom:0;}
+.hrow .ic{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;flex:none;}
+.hrow .nm{font-weight:600;font-size:15px;display:flex;align-items:center;gap:8px;}
+.hrow .qty{font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.hrow .val{text-align:right;}.hrow .val .n{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:15.5px;}.hrow .val .basis{font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.gain{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:600;padding:4px 9px;border-radius:7px;white-space:nowrap;}
+.gain.up{background:color-mix(in oklab,var(--pos) 13%,transparent);color:var(--pos);}.gain.flat{background:var(--surface-2);color:var(--muted);}
+.pledged{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--neg);background:color-mix(in oklab,var(--neg) 13%,transparent);padding:2px 7px;border-radius:5px;}
+.nw-net{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:40px;letter-spacing:-.03em;}
+.nw-bars{margin-top:18px;display:grid;gap:13px;}
+.nwb .l{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;}.nwb .l .n{font-family:'JetBrains Mono',monospace;font-weight:600;}
+.tr{height:8px;border-radius:5px;background:var(--surface-2);overflow:hidden;}
+.tr>span{display:block;height:100%;width:0;border-radius:5px;transition:width 1s cubic-bezier(.22,.68,0,1);}
+.in .tr>span{width:var(--pct);}@media (prefers-reduced-motion:reduce){.tr>span{transition:none;width:var(--pct)!important;}}
+.nw-eq{display:flex;align-items:center;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--fg-soft);flex-wrap:wrap;}.nw-eq b{color:var(--fg);}
+.decide{margin-top:18px;background:var(--surface);border:1px solid color-mix(in oklab,var(--accent) 30%,var(--border));border-radius:18px;overflow:hidden;box-shadow:0 18px 44px -30px rgba(20,28,60,.32);}
+.decide .dh{padding:22px 26px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;background:var(--accent-soft);}
+.decide .dh h2{font-size:27px;}.decide .dh p{color:var(--fg-soft);font-size:13.5px;margin-top:5px;max-width:48ch;}
+.verdict{display:inline-flex;align-items:center;gap:9px;background:var(--accent);color:var(--accent-ink);padding:11px 18px;border-radius:12px;font-weight:600;font-size:14px;white-space:nowrap;box-shadow:0 8px 20px -10px color-mix(in oklab,var(--accent) 70%,transparent);}
+.verdict .vd{width:9px;height:9px;border-radius:50%;background:var(--accent-ink);}
+.verdict b{font-family:'JetBrains Mono',monospace;}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;}@media (max-width:760px){.dgrid{grid-template-columns:1fr;}}
+.dcol{padding:24px 26px;}
+.dcol.held{background:color-mix(in oklab,var(--pos) 6%,transparent);border-right:1px solid var(--border);}
+@media (max-width:760px){.dcol.held{border-right:0;border-bottom:1px solid var(--border);}}
+.dcol .ch{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;margin-bottom:14px;}
+.dcol.held .ch{color:var(--pos);}.dcol.sold .ch{color:var(--muted);}
+.dline{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--border);font-size:13.5px;}
+.dline:last-child{border-bottom:0;}.dline .ll{color:var(--fg-soft);}.dline .lv{font-family:'JetBrains Mono',monospace;font-weight:600;}
+.dline .lv.pos{color:var(--pos);}.dline .lv.neg{color:var(--neg);}
+.dtot{margin-top:12px;padding-top:12px;border-top:2px solid var(--border-2);display:flex;justify-content:space-between;align-items:baseline;}
+.dtot .t{font-weight:700;font-size:13px;}.dtot .v{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:24px;}
+.chart-wrap{padding:8px 26px 26px;}
+.chart-leg{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--fg-soft);}
+.chart-leg span{display:inline-flex;align-items:center;gap:7px;}.chart-leg i{width:16px;height:3px;border-radius:2px;display:inline-block;}
+.cline{stroke-dasharray:1400;stroke-dashoffset:1400;transition:stroke-dashoffset 1.8s cubic-bezier(.22,.68,0,1);}
+.in .cline{stroke-dashoffset:0;}@media (prefers-reduced-motion:reduce){.cline{stroke-dashoffset:0!important;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <a href="index.html" class="s-brand"><span class="mark">k</span><span class="t">Khata</span></a>
+    <nav class="s-nav">
+      <a href="app.html"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="12" width="7" height="9" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="16" width="7" height="5" rx="1.5" stroke="currentColor" stroke-width="1.7"/></svg>Dashboard</a>
+      <a href="holdings.html" class="active"><svg viewBox="0 0 24 24" fill="none"><path d="M3 17l5-5 3 3 4-5 6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="8" r="2" stroke="currentColor" stroke-width="1.7"/></svg>Holdings</a>
+      <a href="asset-detail.html"><svg viewBox="0 0 24 24" fill="none"><path d="M4 10 12 4l8 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>Assets</a>
+      <a href="chit-detail.html"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.4" stroke="currentColor" stroke-width="1.7"/></svg>Chit funds</a>
+      <a href="loan-detail.html"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18" stroke="currentColor" stroke-width="1.7"/></svg>Loans</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2V4Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>Ledger</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v3m0 14v3m10-10h-3M5 12H2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Settings</a>
+    </nav>
+    <div class="s-foot"><div class="who"><span class="av">A</span><div><div class="nm">Arjun Nair</div><div class="inst">khata.local:8443</div></div></div></div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <div class="greet"><h1>Holdings &amp; net worth</h1><span class="dt">4 holdings · 1 pledged</span></div>
+      <div class="top-right">
+        <div class="cur-toggle" role="group" aria-label="Primary currency"><span class="knob" aria-hidden="true"></span><button data-c="inr" aria-pressed="true">₹ INR</button><button data-c="usd" aria-pressed="false">$ USD</button></div>
+        <a href="log-payment.html" class="btn btn-primary"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Log payment</a>
+        <span class="av-top">A</span>
+      </div>
+    </header>
+    <div class="content">
+      <div class="reveal">
+        <div class="ticker">
+          <div class="tk"><div class="tl">GOLD 24K</div><div class="tv"><span class="num fig" data-amount="7150" data-style="full">₹0</span><span class="u">/g</span></div><div class="tc up">▲ 0.8%</div></div>
+          <div class="tk"><div class="tl">GOLD 22K</div><div class="tv"><span class="num fig" data-amount="6555" data-style="full">₹0</span><span class="u">/g</span></div><div class="tc up">▲ 0.8%</div></div>
+          <div class="tk"><div class="tl">SILVER</div><div class="tv"><span class="num fig" data-amount="92" data-style="full">₹0</span><span class="u">/g</span></div><div class="tc down">▼ 0.3%</div></div>
+          <div class="tk"><div class="tl">NIFTY 50</div><div class="tv">24,818<span class="u">pts</span></div><div class="tc up">▲ 0.5%</div></div>
+          <div class="tk"><div class="tl">INFY</div><div class="tv"><span class="num fig" data-amount="1540" data-style="full">₹0</span></div><div class="tc down">▼ 1.1%</div></div>
+          <div class="tk"><div class="tl">USD / INR</div><div class="tv">83.00</div><div class="tc up">▲ 0.1%</div></div>
+        </div>
+        <div class="tick-cap"><span class="live-dot"></span>auto-fetched 5 min ago · <b>tap to set manually</b></div>
+      </div>
+      <div class="cols">
+        <div class="panel reveal">
+          <div class="p-head"><div><h2>Your holdings</h2><div class="sub">valued at live prices</div></div></div>
+          <div>
+            <div class="hrow"><span class="ic" style="background:var(--accent-soft);color:var(--accent)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M12 8v8M9 10h6M9 14h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><div><div class="nm">Gold <span class="pledged">pledged</span></div><div class="qty">64 g · 22K</div></div><div class="val"><div class="n num fig" data-amount="419520" data-style="full">₹0</div><div class="basis">cost <span class="fig" data-amount="350000" data-style="abbr">₹0</span></div></div><span class="gain up">+19.9%</span></div>
+            <div class="hrow"><span class="ic" style="background:var(--surface-2);color:var(--fg-soft)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/></svg></span><div><div class="nm">Silver</div><div class="qty">1.2 kg · bars</div></div><div class="val"><div class="n num fig" data-amount="110400" data-style="full">₹0</div><div class="basis">cost <span class="fig" data-amount="95000" data-style="abbr">₹0</span></div></div><span class="gain up">+16.2%</span></div>
+            <div class="hrow"><span class="ic" style="background:color-mix(in oklab,var(--pos) 13%,transparent);color:var(--pos)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 17l5-5 3 3 4-5 6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><div class="nm">Equity</div><div class="qty">INFY · TCS · index funds</div></div><div class="val"><div class="n num fig" data-amount="480000" data-style="full">₹0</div><div class="basis">cost <span class="fig" data-amount="390000" data-style="abbr">₹0</span></div></div><span class="gain up">+23.1%</span></div>
+            <div class="hrow"><span class="ic" style="background:color-mix(in oklab,var(--neg) 12%,transparent);color:var(--neg)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.4" stroke="currentColor" stroke-width="1.7"/></svg></span><div><div class="nm">Cash</div><div class="qty">savings · liquid</div></div><div class="val"><div class="n num fig" data-amount="210000" data-style="full">₹0</div><div class="basis">—</div></div><span class="gain flat">—</span></div>
+          </div>
+        </div>
+        <div class="panel reveal">
+          <div class="p-head"><div><h2>Net worth</h2><div class="sub">own − owe</div></div></div>
+          <div style="padding:20px 22px;">
+            <div class="eyebrow">Net worth</div>
+            <div class="nw-net num fig countup" data-amount="2079920" data-style="full">₹0</div>
+            <div class="nw-bars">
+              <div class="nwb"><div class="l"><span>Own</span><span class="n fig" data-amount="2419920" data-style="abbr">₹0</span></div><div class="tr"><span style="--pct:100%;background:var(--pos)"></span></div></div>
+              <div class="nwb"><div class="l"><span>Owe</span><span class="n fig" data-amount="340000" data-style="abbr">₹0</span></div><div class="tr"><span style="--pct:14%;background:var(--neg)"></span></div></div>
+            </div>
+            <div class="nw-eq"><b class="fig" data-amount="2419920" data-style="abbr">₹0</b> own <span style="color:var(--neg)">−</span> <b class="fig" data-amount="340000" data-style="abbr">₹0</b> owe <span>=</span> <b class="fig" data-amount="2079920" data-style="abbr" style="color:var(--pos)">₹0</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="decide reveal" id="decideCard">
+        <div class="dh">
+          <div><div class="eyebrow" style="color:var(--accent);margin-bottom:8px;">The hold-vs-sell question</div><h2>Keep the gold &amp; borrow, or <span class="ital">sell it?</span></h2><p>You pledged 64g against a ₹3.4L bullet loan at 9%. Over the next year, does the gold's appreciation out-earn the interest you'll pay?</p></div>
+          <span class="verdict"><span class="vd"></span>Holding wins by <b class="fig" data-amount="15490" data-style="full">₹0</b>/yr</span>
+        </div>
+        <div class="dgrid">
+          <div class="dcol held">
+            <div class="ch">◆ Held &amp; borrowed</div>
+            <div class="dline"><span class="ll">Gold appreciation @ 11%</span><span class="lv pos">+<span class="fig" data-amount="46090" data-style="full">₹0</span></span></div>
+            <div class="dline"><span class="ll">Loan interest @ 9%</span><span class="lv neg">−<span class="fig" data-amount="30600" data-style="full">₹0</span></span></div>
+            <div class="dline"><span class="ll">Liquidity kept</span><span class="lv">✓ ₹3.4L in hand</span></div>
+            <div class="dtot"><span class="t">Net 1-yr gain</span><span class="v" style="color:var(--pos)">+<span class="fig num" data-amount="15490" data-style="full">₹0</span></span></div>
+          </div>
+          <div class="dcol sold">
+            <div class="ch">○ Sold instead</div>
+            <div class="dline"><span class="ll">Interest avoided</span><span class="lv pos">+<span class="fig" data-amount="30600" data-style="full">₹0</span></span></div>
+            <div class="dline"><span class="ll">Appreciation forgone</span><span class="lv neg">−<span class="fig" data-amount="46090" data-style="full">₹0</span></span></div>
+            <div class="dline"><span class="ll">Liquidity</span><span class="lv">cash now, gold gone</span></div>
+            <div class="dtot"><span class="t">Net 1-yr gain</span><span class="v" style="color:var(--neg)">−<span class="fig num" data-amount="15490" data-style="full">₹0</span></span></div>
+          </div>
+        </div>
+        <style>
+          .begauge{padding:22px 26px 26px;}
+          .be-q{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--muted);margin-bottom:26px;}
+          .be-q b{color:var(--fg);}
+          .be-head{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;margin-bottom:14px;}
+          .be-head .s{color:var(--neg);}.be-head .h{color:var(--accent);}
+          .be-track{position:relative;height:16px;border-radius:9px;display:flex;border:1px solid var(--border);overflow:visible;}
+          .be-track .z{height:100%;}
+          .z.sell{flex:0 0 60%;background:color-mix(in oklab,var(--neg) 26%,var(--surface));border-radius:8px 0 0 8px;}
+          .z.hold{flex:0 0 40%;background:color-mix(in oklab,var(--accent) 26%,var(--surface));border-radius:0 8px 8px 0;}
+          .be-line{position:absolute;top:-7px;bottom:-7px;left:60%;width:2px;background:var(--fg);border-radius:2px;}
+          .be-line .lab{position:absolute;top:-30px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--fg-soft);white-space:nowrap;text-align:center;line-height:1.3;}
+          .be-pin{position:absolute;left:73.3%;top:50%;transform:translate(-50%,-50%);z-index:2;}
+          .be-pin .dot{display:block;width:16px;height:16px;border-radius:50%;background:var(--accent);border:3px solid var(--surface);box-shadow:0 2px 7px -1px color-mix(in oklab,var(--accent) 60%,transparent);}
+          .be-pin .bub{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent);color:var(--accent-ink);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:4px 9px;border-radius:8px;white-space:nowrap;box-shadow:0 4px 12px -4px color-mix(in oklab,var(--accent) 60%,transparent);}
+          .be-pin .bub::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--accent);}
+          .be-scale{position:relative;height:18px;margin-top:18px;}
+          .be-scale span{position:absolute;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap;}
+          .be-cap{font-size:13px;color:var(--fg-soft);margin-top:24px;line-height:1.5;}
+          .be-cap b{color:var(--accent);font-weight:600;}
+        </style>
+        <div class="begauge">
+          <div class="be-q">DECISION DRIVER · <b>gold's annual growth vs the 9% loan rate</b></div>
+          <div class="be-head"><span class="s">← Sell wins</span><span class="h">Hold wins →</span></div>
+          <div class="be-track">
+            <div class="z sell"></div>
+            <div class="z hold"></div>
+            <div class="be-line"><span class="lab">9%<br>break-even</span></div>
+            <div class="be-pin"><span class="bub">gold 11% now</span><span class="dot"></span></div>
+          </div>
+          <div class="be-scale"><span style="left:0%">0%</span><span style="left:33.3%">5%</span><span style="left:60%">9%</span><span style="left:73.3%">11%</span><span style="left:100%">15%</span></div>
+          <p class="be-cap">Holding beats selling for as long as gold grows faster than the <b>9%</b> loan rate. Right now gold's running at <b>11%</b> — a comfortable <b>2-point cushion</b>. The verdict only flips if gold's growth slows below 9%.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var FX=83, REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches, html=document.documentElement;
+  function groupIndian(s){var neg=s[0]==='-';if(neg)s=s.slice(1);var r;if(s.length<=3)r=s;else{var l3=s.slice(-3),rest=s.slice(0,-3);r=rest.replace(/\B(?=(\d{2})+(?!\d))/g,',')+','+l3;}return (neg?'-':'')+r;}
+  function trimDec(x){return (Math.round(x*100)/100).toString();}
+  function fmt(base,cur,style){var neg=base<0,a=Math.abs(base),sign=neg?'-':'';if(cur==='usd'){var v=a/FX;if(style==='abbr'){if(v>=1e6)return sign+'$'+trimDec(v/1e6)+'M';if(v>=1e3)return sign+'$'+trimDec(v/1e3)+'k';}return sign+'$'+Math.round(v).toLocaleString('en-US');}if(style==='abbr'){if(a>=1e7)return sign+'₹'+trimDec(a/1e7)+'Cr';if(a>=1e5)return sign+'₹'+trimDec(a/1e5)+'L';}return sign+'₹'+groupIndian(String(Math.round(a)));}
+  var figs=[].slice.call(document.querySelectorAll('.fig'));
+  function cur(){return html.getAttribute('data-cur');}
+  function renderFig(el){if(el.__counting)return;if(el.classList.contains('countup')&&!el.__done)return;el.textContent=fmt(parseFloat(el.getAttribute('data-amount')),cur(),el.getAttribute('data-style')||'full');}
+  function renderAll(){figs.forEach(renderFig);}
+  var btns=document.querySelectorAll('.cur-toggle button');
+  btns.forEach(function(b){b.addEventListener('click',function(){html.setAttribute('data-cur',b.getAttribute('data-c'));btns.forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});renderAll();});});
+  function countUp(el){var base=parseFloat(el.getAttribute('data-amount')),style=el.getAttribute('data-style')||'full';if(REDUCED){el.textContent=fmt(base,cur(),style);return;}var dur=1400,t0=null;el.__counting=true;function e(p){return 1-Math.pow(1-p,3);}function s(ts){if(t0===null)t0=ts;var p=Math.min(1,(ts-t0)/dur);el.textContent=fmt(base*e(p),cur(),style);if(p<1)requestAnimationFrame(s);else{el.__counting=false;el.textContent=fmt(base,cur(),style);}}requestAnimationFrame(s);}
+  renderAll();
+  if('IntersectionObserver' in window && !REDUCED){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add('in');e.target.querySelectorAll('.countup').forEach(function(c){if(!c.__done){c.__done=true;countUp(c);}});io.unobserve(e.target);});},{threshold:.12});
+    document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+  }else{document.querySelectorAll('.reveal').forEach(function(el){el.classList.add('in');});document.querySelectorAll('.countup').forEach(function(c){c.__done=true;renderFig(c);});}
+})();
+</script>
+</body>
+</html>

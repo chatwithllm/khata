@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "holdings.html",
+  "entry": "holdings.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-06-04T18:00:50.097Z",
+  "updatedAt": "2026-06-04T18:00:50.097Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}
