@@ -210,6 +210,19 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
 @media(prefers-reduced-motion:reduce){.fade{animation:none;opacity:1;transform:none}[data-rise]{opacity:1;transform:none}
   .bigbar i,.miniprog i,.sharebar .seg,.stackbar i,.fr .track i,.spark .ln{transition:none!important}}
 
+/* ── FX line (shared by all ledger pages) ── */
+.fx-line{display:block;font-family:"JetBrains Mono";font-weight:500;font-size:10.5px;color:var(--ink-faint);margin-top:3px;letter-spacing:.01em}
+
+/* ── plan header ⋯ more button (mobile action menu) ── */
+.plan-more{display:none;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink-soft);cursor:pointer;font-size:19px;line-height:1;flex:none;letter-spacing:.05em}
+.plan-more:hover{border-color:var(--ink);color:var(--ink)}
+.plan-more-drop{position:absolute;right:16px;top:56px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 8px 28px -8px rgba(20,16,12,.22);z-index:40;min-width:170px;display:flex;flex-direction:column;gap:2px}
+.pmd-item{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:8px;font-size:14px;font-weight:500;color:var(--ink-soft);cursor:pointer;user-select:none}
+.pmd-item svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.pmd-item:hover{background:var(--paper-2);color:var(--ink)}
+.pmd-item.del{color:var(--neg)}
+.pmd-item.del:hover{background:color-mix(in srgb,var(--neg) 7%,transparent)}
+
 /* ── desktop sidebar collapse (nav-closed toggled by nav.js hamburger) ── */
 @media(min-width:881px){
   .app{transition:grid-template-columns .32s var(--ease)}
@@ -247,10 +260,14 @@ html[data-cur="usd"] .curtog .slide{transform:translateX(62px)}
   .addbtn .lp-short{display:inline}
   .avatar{width:36px;height:36px;flex:none}
   .m-greet{display:block}
-  .kpis{grid-template-columns:1fr}
-  .kpi{border-right:none;border-bottom:1px solid var(--line)}
-  .kpi:last-child{border-bottom:none}
-  .kpi .n{font-size:24px}
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .kpi{padding:12px 10px}
+  .kpi .l{font-size:9px}
+  .kpi .n{font-size:17px}
+  .kpi .n .cur{font-size:11px}
+  .fx-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:44vw}
+  .planacts{display:none!important}
+  .plan-more{display:inline-flex}
   /* featured-asset 3-up amounts: spread evenly + smaller so long ₹ values breathe */
   .planhead{padding:16px 18px}
   .planhead .amts{gap:8px;justify-content:space-between}

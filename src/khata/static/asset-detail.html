@@ -506,12 +506,35 @@ function renderHeader(box, plan, st){
   const actBtn=(cls, label, dPath, fn)=>{ const b=el('span',cls); b.tabIndex=0; b.setAttribute('role','button'); b.append(icon(dPath), document.createTextNode(label));
     b.addEventListener('click', fn); b.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); fn(); } }); return b; };
   const acts=el('div','planacts');
-  acts.append(actBtn('planshare','Edit details','M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z', ()=>openMeta(st)));
-  acts.append(actBtn('planshare','Share','M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13', openShareMenu));
-  acts.append(actBtn('planprint','Print','M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z', printPlan));
-  acts.append(actBtn('plandel','Delete','M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6', deletePlan));
+  const _actDefs=[
+    {cls:'planshare',label:'Edit details',d:'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z',fn:()=>openMeta(st)},
+    {cls:'planshare',label:'Share',d:'M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13',fn:openShareMenu},
+    {cls:'planprint',label:'Print',d:'M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z',fn:printPlan},
+    {cls:'plandel', label:'Delete',d:'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6',fn:deletePlan},
+  ];
+  _actDefs.forEach(a=>acts.append(actBtn(a.cls,a.label,a.d,a.fn)));
+  // ⋯ mobile menu — same actions, shown only on narrow screens via CSS
+  const moreBtn=el('button','plan-more'); moreBtn.type='button'; moreBtn.title='More actions'; moreBtn.textContent='···';
+  moreBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    const existing=document.querySelector('.plan-more-drop');
+    if(existing){ existing.remove(); return; }
+    const drop=el('div','plan-more-drop');
+    _actDefs.forEach(a=>{
+      const item=el('div','pmd-item'+(a.cls==='plandel'?' del':''));
+      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 24 24');
+      const path=document.createElementNS('http://www.w3.org/2000/svg','path'); path.setAttribute('d',a.d); svg.append(path);
+      item.append(svg, document.createTextNode(a.label));
+      item.addEventListener('click', ()=>{ drop.remove(); a.fn(); });
+      drop.append(item);
+    });
+    document.body.append(drop);
+    const dismiss=ev=>{ if(!drop.contains(ev.target)){ drop.remove(); document.removeEventListener('click',dismiss,true); } };
+    setTimeout(()=>document.addEventListener('click',dismiss,true),0);
+  });
   const right=el('div','ph-right');
-  right.append(el('div','meta', insts.length+' installments'), acts);
+  right.style.position='relative';
+  right.append(el('div','meta', insts.length+' installments'), acts, moreBtn);
   ph.append(t, right);
   box.append(ph);
 

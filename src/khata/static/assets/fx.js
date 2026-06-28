@@ -17,9 +17,8 @@
     const r = lr.fx_rate_micro / 1e6;
     const rate = r >= 1 ? (cs + r.toFixed(2) + '/' + es) : (es + (1/r).toFixed(2) + '/' + cs);
     const line = document.createElement('span');
+    line.className = 'fx-line';
     line.textContent = val + ' @ ' + rate;
-    line.style.cssText = 'display:block;font-family:"JetBrains Mono";font-weight:500;'
-      + 'font-size:10.5px;color:var(--ink-faint);margin-top:3px;letter-spacing:.01em';
     return line;
   };
 
