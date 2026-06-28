@@ -1,0 +1,35 @@
+# Khata — production container for the Debian VM (192.168.50.14).
+# Day-to-day:
+#   docker compose up -d --build   # build + start (or pick up new code)
+#   docker ps                      # is it running?
+#   docker compose logs -f         # tail logs
+#   docker compose restart         # restart app only
+#   docker compose down            # stop
+#
+# DB persists in ./data on the host (bind mount). Container rebuilds never
+# touch it. Back it up by copying ./data/khata_app.db*.
+services:
+  khata:
+    build: .
+    image: khata:latest
+    container_name: khata
+    restart: always
+    ports:
+      - "5057:5057"
+    env_file:
+      - .env.prod
+    environment:
+      # DB on the mounted volume, not inside the container
+      KHATA_DATABASE_URL: "sqlite:////data/khata_app.db"
+      KHATA_ENV: "production"
+    labels:
+      # Local-built image, no registry to pull — keep watchtower off it
+      com.centurylinklabs.watchtower.enable: "false"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:5057/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

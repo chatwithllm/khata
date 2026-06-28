@@ -1,121 +1,65 @@
 {
-  "project": "khata",
-  "plan": "docs/superpowers/ROADMAP.md \u2014 Phases 3\u20135 (12 plans)",
-  "started_at": "2026-06-04T00:00:00Z",
-  "updated_at": "2026-06-05T12:00:00Z",
-  "total_tasks": 17,
-  "tasks_done": 17,
+  "project": "Khata \u2014 Google Sign-In",
+  "plan": "docs/superpowers/plans/2026-06-07-google-signin.md",
+  "started_at": "2026-06-07T19:48:57Z",
+  "updated_at": "2026-06-07T22:34:08Z",
+  "total_tasks": 3,
+  "tasks_done": 3,
   "current_task": {
-    "id": "done",
-    "title": "Phase 6 UI fidelity complete \u2014 whole app matches the mockups",
-    "phase": "Complete",
-    "status": "completed"
+    "id": "\u2014",
+    "title": "Merged to main + deployed (:5057)",
+    "phase": "Shipped",
+    "status": "done"
   },
   "phases": [
     {
-      "name": "Phase 3 \u2014 App UI build-out (DONE, PR #9)",
-      "task_range": "3.1\u20133.5",
+      "name": "Config flag",
+      "task_range": "T1",
       "status": "done"
     },
     {
-      "name": "Phase 4 \u2014 New domains (chit \u2713 / secured \u2713 / retirement \u2713)",
-      "task_range": "4.1\u20134.3",
+      "name": "ProxyFix + secure cookie",
+      "task_range": "T2",
       "status": "done"
     },
     {
-      "name": "Phase 5 \u2014 Settings \u00b7 hardening \u00b7 analysis \u00b7 feeds",
-      "task_range": "5.1\u20135.4",
-      "status": "done"
-    },
-    {
-      "name": "Phase 6 - UI fidelity (6.1-6.5 COMPLETE)",
-      "task_range": "13-17",
+      "name": "Runbook + AS-BUILT",
+      "task_range": "T3",
       "status": "done"
     }
   ],
-  "last_commit": "24b4197",
-  "last_gate_passed": true,
+  "last_commit": "f6c5899",
+  "last_gate_passed": "Final review: READY TO MERGE \u2705 (247 tests)",
   "open_issues": 0,
-  "incidents": 3,
-  "tests": "178 passed",
-  "python": "3.12",
+  "incidents": 0,
   "log": [
     {
-      "task": "4.2",
-      "title": "Secured loans / collateral (LTV)",
+      "task": "Task 1",
+      "title": "Config flag KHATA_SECURE_COOKIES",
+      "commit": "1a750ce",
       "gate": "passed",
-      "commit": "2512803",
-      "timestamp": "2026-06-05T08:46:26Z"
+      "timestamp": "2026-06-07T19:52:28Z"
     },
     {
-      "task": "4.3",
-      "title": "Retirement planner \u2014 Phase 4 done",
+      "task": "Task 2",
+      "title": "ProxyFix + secure cookie",
+      "commit": "50bde53",
       "gate": "passed",
-      "commit": "ec6365c",
-      "timestamp": "2026-06-05T09:06:36Z"
+      "timestamp": "2026-06-07T19:55:14Z"
     },
     {
-      "task": "5.1",
-      "title": "Account settings",
+      "task": "Task 3",
+      "title": "Runbook + AS-BUILT",
+      "commit": "99a6019",
       "gate": "passed",
-      "commit": "4373819",
-      "timestamp": "2026-06-05T09:22:57Z"
+      "timestamp": "2026-06-07T19:58:10Z"
     },
     {
-      "task": "5.2",
-      "title": "Hardening sweep (500\u2192400, holdings guards)",
+      "task": "merge",
+      "title": "PR #42 merged \u2192 main, deployed",
+      "commit": "f6c5899",
       "gate": "passed",
-      "commit": "ee2b234",
-      "timestamp": "2026-06-05T09:33:17Z"
-    },
-    {
-      "task": "5.3",
-      "title": "Analysis tools (hold-vs-sell)",
-      "gate": "passed",
-      "commit": "9bfee56",
-      "timestamp": "2026-06-05T09:40:57Z"
-    },
-    {
-      "task": "5.4",
-      "title": "Live feeds \u2014 ROADMAP COMPLETE (12/12)",
-      "gate": "passed",
-      "commit": "e36509d",
-      "timestamp": "2026-06-05T09:57:29Z"
-    },
-    {
-      "task": "6.1",
-      "title": "Dashboard fidelity (app.html)",
-      "gate": "pass",
-      "commit": "baf43e0",
-      "timestamp": "2026-06-05T09:00:00Z"
-    },
-    {
-      "task": "6.2",
-      "title": "Shared app-shell CSS (app.css)",
-      "gate": "pass",
-      "commit": "9cdee34",
-      "timestamp": "2026-06-05T10:10:00Z"
-    },
-    {
-      "task": "6.3",
-      "title": "Asset-detail fidelity",
-      "gate": "pass",
-      "commit": "bebb578",
-      "timestamp": "2026-06-05T10:25:00Z"
-    },
-    {
-      "task": "6.4",
-      "title": "Loan+Chit+Retirement detail fidelity",
-      "gate": "pass",
-      "commit": "87a3bd3",
-      "timestamp": "2026-06-05T11:10:00Z"
-    },
-    {
-      "task": "6.5",
-      "title": "Holdings/Create/Settings/Analysis fidelity + Phase 6 complete",
-      "gate": "pass",
-      "commit": "24b4197",
-      "timestamp": "2026-06-05T11:55:00Z"
+      "timestamp": "2026-06-07T22:34:08Z"
     }
   ]
 }
