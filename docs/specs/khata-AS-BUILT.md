@@ -325,6 +325,15 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   data in `khata_app.db`, secret persisted in `.env.app`, restart via `run-app.sh`. HTML is `no-store`
   (always fresh); static edits live on reload; Python edits need a restart. **Not yet** a reboot-surviving
   service (launchd) — add when wanted. Back up `khata_app.db` (only source of truth).
+- **Production (Debian VM 192.168.50.14)** — now **Docker**, replacing the old systemd+gunicorn unit
+  (systemd `khata` left `disabled`). Build source = **`main`** (owns the live DB's alembic head
+  `fxsnapshot01`; do NOT deploy a feature branch — migration mismatch crash-loops). Repo-root
+  `Dockerfile` (python:3.12-slim + gunicorn `-w 2 :5057`), `docker-entrypoint.sh` (`alembic upgrade
+  head` → gunicorn), `docker-compose.yml` (`restart: always`, healthcheck, watchtower-disabled label).
+  DB on a **bind mount** `~/khata/app/data/khata_app.db` (`KHATA_DATABASE_URL=sqlite:////data/...`) so
+  rebuilds never touch data; env from `~/khata/app/.env.prod`. Deploy = rsync a clean `main` worktree
+  (with the Docker files) → `~/khata/app`, then `docker compose up -d --build`. Ops: `docker ps`,
+  `docker compose {up -d,restart,logs -f,down}`. Pre-Docker DB fallback kept at `~/khata/khata_app.db`.
 
 ## 12. Process going forward
 **Every enhancement updates this doc** (§9 + the change log) in the same commit as the code — so a
@@ -334,6 +343,15 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-06-27 — Log-payment calculator + multi-currency input (`asset-detail.html`). Two additions to the Log payment slide-over: (1) **Calculator** — type any math expression (`50000+25000`, `2*85000`) in the amount field; live `=` preview appears as you type, blur evaluates and fills the result. Safe: only digits/operators/parens allowed, no `eval`. (2) **Multi-currency** — currency picker next to the amount field (defaults to plan currency). Switch to a foreign currency (e.g. USD on an INR plan) to see a live `≈ ₹X,XX,XXX` preview using the stored FX rate; on save, converts to plan currency and auto-prefixes the note with the original amount (e.g. `$1,000 USD — land payment Q2`). No rate set → clear error pointing to Settings → FX rates. No backend or schema changes.
+- 2026-06-19 — Production VM containerized. Replaced systemd+gunicorn on the Debian box
+  (192.168.50.14) with Docker: repo-root `Dockerfile` / `docker-entrypoint.sh` /
+  `docker-compose.yml` / `.dockerignore`. gunicorn `-w 2 :5057`, `restart: always`, healthcheck,
+  SQLite on a bind-mounted `data/` volume, env from `.env.prod`, watchtower opted out. systemd
+  `khata` stopped + `disabled`. **Deploy source must be `main`** — the live DB's alembic head is
+  `fxsnapshot01` (FX-snapshot, PR #52), which only `main` carries; deploying `feat/mobile-app`
+  (head `cc6fundlink01`) crash-loops on `alembic upgrade head`. Ops now: `docker ps` /
+  `docker compose up -d`. See §11.
 - 2026-06-09 — Mobile Phase 6 native features. Settings now has avatar pick→square-crop→
   256px JPEG (expo-image-picker + image-manipulator, kept <200KB for the `/api/auth/avatar`
   cap) with display + remove, and an operator-only Backup & restore card (export → share
