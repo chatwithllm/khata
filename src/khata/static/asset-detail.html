@@ -205,7 +205,11 @@
         <select id="pay-cur" title="Currency you paid in"></select>
       </div>
       <div class="amt-hint calc" id="calc-preview" style="display:none"></div>
-      <div class="amt-hint fx"   id="fx-preview"   style="display:none"></div>
+      <div class="amt-row" id="inline-rate-row" style="display:none;margin-top:4px">
+        <span style="font-size:12px;color:var(--ink-faint);font-family:'JetBrains Mono';display:flex;align-items:center;white-space:nowrap;padding:0 4px" id="inline-rate-label">1 USD = ₹</span>
+        <input id="inline-rate" placeholder="84.50" inputmode="decimal" style="flex:1;min-width:0">
+      </div>
+      <div class="amt-hint fx" id="fx-preview" style="display:none"></div>
     </div>
     <div class="fld"><label for="occurred">Date (when it happened)</label><input id="occurred" type="date"></div>
     <div class="fld"><label for="method">Method</label>
@@ -314,7 +318,22 @@ function fillPayCur(selectedCur) {
     if (c === (selectedCur || BASE)) o.selected = true;
     sel.append(o);
   }
+  showInlineRate();
   updateFxPreview();
+}
+function showInlineRate() {
+  const payCur = $('pay-cur') ? $('pay-cur').value : BASE;
+  const row = $('inline-rate-row');
+  const lbl = $('inline-rate-label');
+  if (payCur === BASE) { row.style.display = 'none'; return; }
+  // label: "1 USD = ₹" or "1 INR = $"
+  lbl.textContent = '1 ' + payCur + ' = ' + sym(BASE);
+  row.style.display = '';
+  // pre-fill from stored rate if available (convenience only, user can override)
+  const rateMicro = getFxRateMicro(payCur, BASE);
+  if (rateMicro && !$('inline-rate').value) {
+    $('inline-rate').value = (rateMicro / 1e6).toFixed(2);
+  }
 }
 function updateCalcPreview() {
   const raw = $('amount').value;
@@ -332,17 +351,10 @@ function updateFxPreview() {
   const payCur = $('pay-cur') ? $('pay-cur').value : BASE;
   const pre = $('fx-preview');
   if (payCur === BASE) { pre.style.display = 'none'; return; }
-  const raw = $('amount').value.replace(/,/g, '');
-  const amt = parseFloat(raw);
-  if (!amt || isNaN(amt)) { pre.style.display = 'none'; return; }
-  const rateMicro = getFxRateMicro(payCur, BASE);
-  if (!rateMicro) {
-    pre.className = 'amt-hint fx-warn';
-    pre.textContent = 'No ' + payCur + '→' + BASE + ' rate — set one in Settings → FX rates.';
-    pre.style.display = '';
-    return;
-  }
-  const convertedMinor = Math.round(amt * 100 * rateMicro / 1e6);
+  const amt = parseFloat($('amount').value.replace(/,/g, ''));
+  const rate = parseFloat($('inline-rate').value);
+  if (!amt || isNaN(amt) || !rate || isNaN(rate)) { pre.style.display = 'none'; return; }
+  const convertedMinor = Math.round(amt * rate * 100);
   pre.className = 'amt-hint fx';
   pre.textContent = '≈ ' + sym(BASE) + fmtNum(convertedMinor, BASE) + ' in ' + BASE;
   pre.style.display = '';
@@ -1003,6 +1015,7 @@ function openOver(){ // NEW payment
   $('proof-fld').style.display='none';   // proof attaches to a saved entry, not a draft
   $('fxrate-fld').style.display='none';
   $('calc-preview').style.display='none'; $('fx-preview').style.display='none';
+  $('inline-rate').value=''; $('inline-rate-row').style.display='none';
   fillPayCur(BASE);
   fillPaidBy(ME_ID);                      // default contributor = current user
   fillFundPlan(null);
@@ -1017,6 +1030,7 @@ function openEdit(lr){ // EDIT existing entry
   $('occurred').value=(lr.occurred_at||'').slice(0,10)||todayISO();
   $('del-entry').style.display='inline';  // delete available when editing
   $('calc-preview').style.display='none'; $('fx-preview').style.display='none';
+  $('inline-rate').value=''; $('inline-rate-row').style.display='none';
   fillPayCur(BASE); // edits show in plan currency
   fillPaidBy(lr.logged_by_user_id);       // preselect the entry's existing contributor
   fillFundPlan(lr.funding_plan_id);       // preselect the source loan (if any)
@@ -1283,7 +1297,8 @@ $('amount').addEventListener('blur', ()=>{
     updateFxPreview();
   }
 });
-$('pay-cur').addEventListener('change', updateFxPreview);
+$('pay-cur').addEventListener('change', ()=>{ $('inline-rate').value=''; showInlineRate(); updateFxPreview(); });
+$('inline-rate').addEventListener('input', updateFxPreview);
 $('fsource').addEventListener('change', ()=>fillFundPlan($('fundplan')?$('fundplan').value:null));
 $('cancel').addEventListener('click', closeOver);
 $('scrim').addEventListener('click', ()=>{ closeOver(); closeSched(); closeMeta(); });
@@ -1298,18 +1313,18 @@ $('save').addEventListener('click', async ()=>{
   const calcResult = calcEval(amountStr);
   if (calcResult !== null) amountStr = String(Math.round(calcResult * 100) / 100);
 
-  // convert foreign-currency amount → plan currency
+  // convert foreign-currency amount → plan currency using the inline rate the user typed
   let userNote = $('note').value.trim();
   if (payCur !== BASE) {
-    const rateMicro = getFxRateMicro(payCur, BASE);
-    if (!rateMicro) {
-      $('err').textContent = 'No ' + payCur + '→' + BASE + ' rate. Set one in Settings → FX rates.';
+    const rate = parseFloat($('inline-rate').value);
+    if (!rate || isNaN(rate) || rate <= 0) {
+      $('err').textContent = 'Enter the exchange rate (1 ' + payCur + ' = ? ' + BASE + ').';
       return;
     }
     const origAmt = parseFloat(amountStr);
     if (!origAmt || isNaN(origAmt)) { $('err').textContent = 'Enter a valid amount.'; return; }
-    const convertedMinor = Math.round(origAmt * 100 * rateMicro / 1e6);
-    const origLabel = sym(payCur) + fmtNum(Math.round(origAmt * 100), payCur) + ' ' + payCur;
+    const convertedMinor = Math.round(origAmt * rate * 100);
+    const origLabel = sym(payCur) + fmtNum(Math.round(origAmt * 100), payCur) + ' ' + payCur + ' @' + rate;
     userNote = origLabel + (userNote ? ' — ' + userNote : '');
     amountStr = String(convertedMinor / 100);
   }
