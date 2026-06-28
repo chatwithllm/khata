@@ -49,3 +49,26 @@ class LedgerEntry(Base):
     attachments: Mapped[list["Attachment"]] = relationship(
         back_populates="entry", cascade="all, delete-orphan",
         order_by="Attachment.created_at")
+    audit: Mapped[list["LedgerEntryAudit"]] = relationship(
+        back_populates="entry", cascade="all, delete-orphan",
+        order_by="LedgerEntryAudit.changed_at")
+
+
+class LedgerEntryAudit(Base):
+    """Immutable record of every create / edit / delete on a ledger entry.
+    entry_id goes NULL (SET NULL) when the parent entry is deleted so the
+    delete record survives while plan_id lets us query the full plan history."""
+    __tablename__ = "ledger_entry_audit"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    plan_id: Mapped[int] = mapped_column(
+        ForeignKey("plans.id", ondelete="CASCADE"), nullable=False, index=True)
+    entry_id: Mapped[int | None] = mapped_column(
+        ForeignKey("ledger_entries.id", ondelete="SET NULL"), nullable=True, index=True)
+    action: Mapped[str] = mapped_column(String(8), nullable=False)   # create | edit | delete
+    changed_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    snapshot: Mapped[str] = mapped_column(Text, nullable=False)       # JSON of entry state
+    diff: Mapped[str | None] = mapped_column(Text, nullable=True)     # JSON {field:{old,new}} for edits
+
+    entry: Mapped["LedgerEntry | None"] = relationship(back_populates="audit")

@@ -3,7 +3,7 @@ import json
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models import Plan, AssetPurchase, Installment, LedgerEntry, User
+from ..models import Plan, AssetPurchase, Installment, LedgerEntry, LedgerEntryAudit, User
 from ..money import SUPPORTED_CURRENCIES
 from . import fx
 
@@ -19,6 +19,29 @@ class PlanError(Exception):
 
 class ValidationError(PlanError):
     pass
+
+
+def _entry_snapshot(entry: LedgerEntry) -> str:
+    return json.dumps({
+        "amount_minor": entry.amount_minor,
+        "occurred_at": entry.occurred_at.isoformat(),
+        "method": entry.method,
+        "funding_source": entry.funding_source,
+        "note": entry.note,
+        "logged_by_user_id": entry.logged_by_user_id,
+    })
+
+
+def _write_audit(session: Session, entry: LedgerEntry, action: str,
+                 changed_by_user_id: int, diff: dict | None = None) -> None:
+    session.add(LedgerEntryAudit(
+        plan_id=entry.plan_id,
+        entry_id=entry.id,
+        action=action,
+        changed_by_user_id=changed_by_user_id,
+        snapshot=_entry_snapshot(entry),
+        diff=json.dumps(diff) if diff else None,
+    ))
 
 
 def _amount_status_for(attributed_uid, acting_uid) -> str:
@@ -144,6 +167,7 @@ def log_payment(session: Session, *, plan: Plan, user_id, amount_minor, occurred
     session.add(entry)
     session.flush()
     fx.snapshot_entry_rate(session, entry, explicit_rate_micro=fx_rate_micro)
+    _write_audit(session, entry, "create", acting_user_id or user_id)
     return entry
 
 
@@ -162,6 +186,15 @@ def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
     entry = session.get(LedgerEntry, entry_id)
     if entry is None or entry.plan_id != plan.id:
         raise ValidationError("entry not found")
+    # Capture before-state for audit diff
+    _before = {
+        "amount_minor": entry.amount_minor,
+        "occurred_at": entry.occurred_at.isoformat(),
+        "method": entry.method,
+        "funding_source": entry.funding_source,
+        "note": entry.note,
+        "logged_by_user_id": entry.logged_by_user_id,
+    }
     amount_changed = amount_minor is not None and amount_minor != entry.amount_minor
     attrib_changed = logged_by_user_id is not None and logged_by_user_id != entry.logged_by_user_id
     if amount_minor is not None:
@@ -193,6 +226,18 @@ def update_ledger_entry(session: Session, *, plan: Plan, entry_id,
         entry.amount_status = _amount_status_for(entry.logged_by_user_id, acting_user_id)
         entry.counter_amount_minor = None
     session.flush()
+    # Build diff: only fields that actually changed
+    _after = {
+        "amount_minor": entry.amount_minor,
+        "occurred_at": entry.occurred_at.isoformat(),
+        "method": entry.method,
+        "funding_source": entry.funding_source,
+        "note": entry.note,
+        "logged_by_user_id": entry.logged_by_user_id,
+    }
+    diff = {k: {"old": _before[k], "new": _after[k]} for k in _before if _before[k] != _after[k]}
+    if diff:
+        _write_audit(session, entry, "edit", acting_user_id or entry.logged_by_user_id, diff)
     return entry
 
 
@@ -286,12 +331,23 @@ def list_amount_confirmations(session: Session, user_id) -> list[dict]:
     return rows
 
 
-def delete_ledger_entry(session: Session, *, plan: Plan, entry_id) -> None:
+def delete_ledger_entry(session: Session, *, plan: Plan, entry_id,
+                        acting_user_id: int | None = None) -> None:
     """Delete a ledger entry (owner-only at the API layer). Derived balances recompute
     on the next *_state call."""
     entry = session.get(LedgerEntry, entry_id)
     if entry is None or entry.plan_id != plan.id:
         raise ValidationError("entry not found")
+    # Write delete audit before the row is gone; entry_id goes NULL via SET NULL FK.
+    audit = LedgerEntryAudit(
+        plan_id=entry.plan_id,
+        entry_id=entry.id,
+        action="delete",
+        changed_by_user_id=acting_user_id or entry.logged_by_user_id,
+        snapshot=_entry_snapshot(entry),
+        diff=None,
+    )
+    session.add(audit)
     session.delete(entry)
     session.flush()
 

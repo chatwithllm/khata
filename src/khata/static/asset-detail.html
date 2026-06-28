@@ -62,6 +62,13 @@
 .ledger .amt .amt-pct{display:block;font-weight:500;font-size:10.5px;color:var(--ink-faint);margin-top:3px;letter-spacing:.01em}
 .ledger .l2{font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"}
 .ledger .l2r{font-size:11px;color:var(--ink-faint);text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.edit-badge{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent-dk);border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);cursor:pointer}
+.edit-badge:hover{background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.hist-panel{grid-column:1/-1;padding:8px 22px 12px;background:color-mix(in srgb,var(--accent) 5%,transparent);border-top:1px solid color-mix(in srgb,var(--accent) 14%,transparent)}
+.hist-row{display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:12px;flex-wrap:wrap}
+.hist-row .hi-time{color:var(--ink-faint);font-family:"JetBrains Mono";font-size:10.5px;flex:none}
+.hist-row .hi-who{font-weight:600;color:var(--ink-soft)}
+.hist-row .hi-what{color:var(--ink)}
 
 /* log-payment slide-over (page-specific) */
 .scrim{position:fixed;inset:0;background:rgba(20,16,12,.45);opacity:0;visibility:hidden;transition:opacity .3s var(--ease),visibility .3s;z-index:40}
@@ -473,6 +480,18 @@ function srcLabel(code){
   if(!code) return 'Other';
   return code.charAt(0).toUpperCase()+code.slice(1);
 }
+function fmtAuditDiff(diffJson){
+  if(!diffJson) return 'entry deleted';
+  let d; try { d=JSON.parse(diffJson); } catch(e){ return 'updated'; }
+  const parts=[];
+  if(d.amount_minor) parts.push(sym(BASE)+fmtNum(Math.abs(d.amount_minor.old),BASE)+' → '+sym(BASE)+fmtNum(Math.abs(d.amount_minor.new),BASE));
+  if(d.method) parts.push('method: '+d.method.old+' → '+d.method.new);
+  if(d.funding_source) parts.push('source changed');
+  if(d.occurred_at) parts.push('date changed');
+  if(d.note) parts.push('note edited');
+  if(d.logged_by_user_id) parts.push('contributor reassigned');
+  return parts.join(' · ') || 'updated';
+}
 const FUND_COLORS=['var(--primary)','var(--pos)','var(--accent)','var(--neg)','var(--ink-faint)'];
 
 // ── header KPIs + progress ──
@@ -678,6 +697,36 @@ function renderLedger(box, st){
     }
     if(lr.has_proof) l2r.append(el('span','proof','▣ proof'));
     if(LEDGER_EDIT && editable) l2r.append(el('span','proof','✎'));
+    // audit: "edited" badge — shown to all members when the entry has edit history
+    const edits = (lr.audit||[]).filter(a=>a.action==='edit'||a.action==='delete');
+    if(edits.length){
+      const badge=el('span','edit-badge','edited ▾');
+      const nameByUid={};
+      (st.contributors||[]).forEach(c=>{ nameByUid[c.user_id]=c.name||('user '+c.user_id); });
+      (MEMBERS||[]).forEach(m=>{ nameByUid[m.user_id]=m.name||(m.email||('user '+m.user_id)); });
+      let histOpen=false;
+      let histEl=null;
+      badge.addEventListener('click', e=>{
+        e.stopPropagation();
+        histOpen=!histOpen;
+        badge.textContent=histOpen?'edited ▴':'edited ▾';
+        if(histOpen){
+          histEl=el('div','hist-panel');
+          edits.slice().reverse().forEach(a=>{
+            const hr=el('div','hist-row');
+            const d=new Date(a.changed_at);
+            const timeStr=fmtDay(d)+' '+fmtTime(d);
+            const who=nameByUid[a.changed_by_user_id]||('user '+a.changed_by_user_id);
+            hr.append(el('span','hi-time',timeStr),el('span','hi-who',who),el('span','hi-what',fmtAuditDiff(a.diff)));
+            histEl.append(hr);
+          });
+          row.append(histEl);
+        } else {
+          if(histEl){ histEl.remove(); histEl=null; }
+        }
+      });
+      l2r.append(badge);
+    }
     row.append(l2r);
 
     // edit-mode: the whole row is the edit affordance

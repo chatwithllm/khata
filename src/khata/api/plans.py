@@ -49,6 +49,9 @@ def _fx_rate_arg(data):
 
 
 def _entry_json(entry, plan):
+    audit = [{"action": a.action, "changed_by_user_id": a.changed_by_user_id,
+              "changed_at": a.changed_at.isoformat(), "diff": a.diff}
+             for a in (entry.audit or []) if a.action != "create"]
     return {"id": entry.id, "kind": entry.kind, "direction": entry.direction,
             "amount_minor": entry.amount_minor,
             "amount_display": format_minor(entry.amount_minor, plan.currency),
@@ -59,7 +62,8 @@ def _entry_json(entry, plan):
             "fx_rate_micro": entry.fx_rate_micro,
             "fx_counter_currency": entry.fx_counter_currency,
             "counter_value_minor": (fx.convert(entry.amount_minor, rate_micro=entry.fx_rate_micro)
-                                    if entry.fx_rate_micro else None)}
+                                    if entry.fx_rate_micro else None),
+            "audit": audit}
 
 
 def _summary(plan: Plan) -> dict:
@@ -431,7 +435,7 @@ def delete_entry(plan_id, entry_id):
     if err:
         return err
     try:
-        assets.delete_ledger_entry(g.db, plan=plan, entry_id=entry_id)
+        assets.delete_ledger_entry(g.db, plan=plan, entry_id=entry_id, acting_user_id=user.id)
         g.db.commit()
     except (PlanError, ValueError, TypeError) as e:
         g.db.rollback()
