@@ -181,10 +181,6 @@
           <div class="panel fade d1" id="ledger-panel"></div>
           <!-- repayment schedule (formerly "Release tracker") -->
           <div class="panel fade d2 fill" id="sched-panel"></div>
-          <!-- payoff projection (amortization + extra-payment what-ifs) -->
-          <div class="panel fade d2 fill" id="payoff-panel"></div>
-          <!-- shop-around lender comparison -->
-          <div class="panel fade d3 fill" id="compare-panel"></div>
         </div>
 
         <!-- RIGHT RAIL -->
@@ -425,6 +421,13 @@ function renderHeader(box, plan, st){
   ph.append(t, right);
   box.append(ph);
 
+  // gross = total of all disbursement entries (money received / sent out)
+  const grossMinor = (st.ledger||[]).filter(e=>e.kind==='disbursement')
+                       .reduce((s,e)=>s+Math.abs(e.amount_minor||0), 0);
+  // deployed = same-currency deployed total (already in state)
+  const deployedMinor = (st.deployed_totals||[]).find(x=>x.currency===BASE)?.total_minor || 0;
+  const availableMinor = Math.max(0, grossMinor - deployedMinor);
+
   const kpis=el('div','kpis');
   function kpi(cls,label,minor){
     const k=el('div','kpi'+(cls?' '+cls:''));
@@ -433,9 +436,9 @@ function renderHeader(box, plan, st){
     return k;
   }
   kpis.append(
-    kpi('rem','Principal outstanding',st.principal_outstanding_minor),
-    kpi('','Interest paid to date',st.interest_paid_minor),
-    kpi('','Next interest due',st.interest_due_minor));
+    kpi('rem','Loan amount', grossMinor),
+    kpi('','Disbursed', deployedMinor),
+    kpi('','Available', availableMinor));
   box.append(kpis);
 
   // ── progress bar ──
@@ -462,6 +465,25 @@ function renderHeader(box, plan, st){
   row.append(el('span', null, cap.join(' · ')));
   row.append(el('span', null, label));
   head.append(row);
+
+  // EMI + tenure summary row
+  const tenure=plan.tenure_months;
+  if(tenure && grossMinor){
+    const rateBps=plan.rate_bps, itype=plan.interest_type;
+    let emiMinor=null;
+    if(!rateBps || itype==='none'){
+      emiMinor=Math.ceil(grossMinor/tenure);
+    } else {
+      const mr=itype==='monthly' ? rateBps/10000 : rateBps/120000;
+      const f=Math.pow(1+mr, tenure);
+      emiMinor=Math.round(grossMinor*mr*f/(f-1));
+    }
+    const emiRow=el('div','row'); emiRow.style.marginTop='2px';
+    const emiStr=sym(DISP)+fmtNum(conv(emiMinor), DISP)+'/mo';
+    emiRow.append(el('span',null,emiStr+' · '+tenure+' installments'));
+    emiRow.append(el('span',null,st.principal_outstanding_minor>0?'outstanding: '+sym(DISP)+fmtNum(conv(st.principal_outstanding_minor),DISP):'fully repaid'));
+    head.append(emiRow);
+  }
   const bar=el('div','bigbar'); const i=el('i'); i.dataset.w=pct; bar.append(i);
   for(const tk of [25,50,75]){ const s=el('span','tick'); s.style.left=tk+'%'; bar.append(s); }
   head.append(bar);
@@ -1659,8 +1681,6 @@ async function boot(){
   renderHeader($('header-panel'), plan, st);
   renderLedger($('ledger-panel'), st);
   renderSchedule($('sched-panel'), st);
-  renderPayoff($('payoff-panel'), plan);
-  renderCompare($('compare-panel'), plan);
   renderGlance($('glance-panel'), plan, st);
   renderCollateral($('coll-panel'), st);
   renderTerms($('terms-panel'), plan, st);
