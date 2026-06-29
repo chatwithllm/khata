@@ -533,7 +533,9 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
                          "plan_type": tp.type if tp else None, "amount_minor": e.amount_minor,
                          "currency": e.currency, "occurred_at": e.occurred_at.isoformat(),
                          "note": e.note,
-                         "logged_by_name": _dep_users.get(e.logged_by_user_id)})
+                         "logged_by_name": _dep_users.get(e.logged_by_user_id),
+                         "fx_rate_micro": e.fx_rate_micro,
+                         "fx_counter_currency": e.fx_counter_currency})
         _dep_by_ccy[e.currency] = _dep_by_ccy.get(e.currency, 0) + e.amount_minor
         if e.currency == plan.currency:
             deployed_total += e.amount_minor      # same-currency total only (back-compat)

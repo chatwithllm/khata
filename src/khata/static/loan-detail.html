@@ -1189,6 +1189,22 @@ function renderTerms(box, plan, st){
 
 // format an amount in ITS OWN currency (deployed money may be a different currency than the loan)
 function fmtCcy(minor, ccy){ return sym(ccy)+fmtNum(Math.abs(minor||0), ccy); }
+
+// convert a deployed entry's amount to DISP using its FX snapshot or global RATES
+function deployedToDisp(d){
+  const eccy = d.currency || BASE;
+  if(eccy === DISP) return {minor: d.amount_minor, ccy: DISP, approx: false, hasRate: true};
+  // entry's own FX snapshot is most accurate
+  if(d.fx_rate_micro && d.fx_counter_currency === DISP)
+    return {minor: Math.round(d.amount_minor * d.fx_rate_micro / 1e6), ccy: DISP, approx: false, hasRate: true};
+  // fall back to stored global rates
+  const rDirect = RATES[eccy+'>'+DISP];
+  if(rDirect) return {minor: Math.round(d.amount_minor * rDirect / 1e6), ccy: DISP, approx: true, hasRate: true};
+  const rInv = RATES[DISP+'>'+eccy];
+  if(rInv) return {minor: Math.round(d.amount_minor * 1e6 / rInv), ccy: DISP, approx: true, hasRate: true};
+  return {minor: d.amount_minor, ccy: eccy, approx: false, hasRate: false};
+}
+
 // ── deployed into: where this borrowed money went (cross-plan funding link) ──
 function renderDeployed(box, st){
   box.textContent='';
@@ -1197,28 +1213,107 @@ function renderDeployed(box, st){
   box.style.display='';
   const ph=el('div','ph'); const t=el('div','t','Deployed into'); t.style.fontSize='16px';
   ph.append(t, el('div','meta','where it went')); box.append(ph);
+
+  // compute DISP total from converted amounts
+  let dispTotal=0, allConverted=true;
+  const converted=dep.map(d=>{const c=deployedToDisp(d); if(!c.hasRate||c.ccy!==DISP) allConverted=false; else dispTotal+=c.minor; return c;});
+
   const head=el('div'); head.style.cssText='display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:14px 22px;border-bottom:1px solid var(--line-2)';
   const hl=el('span',null,'Put to work'); hl.style.cssText='font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:700;flex:none';
-  // per-currency total (can't sum across currencies); render each, joined by " + "
-  const totals=(st.deployed_totals && st.deployed_totals.length) ? st.deployed_totals : [];
-  const hv=el('span',null, totals.length ? totals.map(x=>fmtCcy(x.total_minor, x.currency)).join('  +  ') : '—');
+  let totStr;
+  if(allConverted && dep.length){
+    totStr = sym(DISP)+fmtNum(dispTotal, DISP);
+  } else {
+    const totals=(st.deployed_totals && st.deployed_totals.length) ? st.deployed_totals : [];
+    totStr = totals.length ? totals.map(x=>fmtCcy(x.total_minor, x.currency)).join('  +  ') : '—';
+  }
+  const hv=el('span',null, totStr);
   hv.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:15px;text-align:right';
   head.append(hl,hv); box.append(head);
-  for(const d of dep){
+
+  dep.forEach((d,i)=>{
+    const cv=converted[i];
+    const wrap=el('div'); wrap.style.cssText='border-top:1px solid var(--line-2)';
+
     const r=document.createElement('a'); r.href='/'+(d.plan_type||'asset')+'/'+d.plan_id;
-    r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 22px;border-top:1px solid var(--line-2);text-decoration:none;color:inherit';
+    r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 22px;text-decoration:none;color:inherit';
     const lf=el('div'); lf.style.minWidth='0';
     const nm=el('div',null, d.note || d.plan_name||'payment'); nm.style.cssText='font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; lf.append(nm);
     let sub=(d.plan_name||'')+(d.plan_name?' · ':'')+fmtDate((d.occurred_at||'').slice(0,10));
     if(d.logged_by_name) sub+=' · '+d.logged_by_name;
-    if(d.currency && d.currency!==BASE) sub+=' · '+d.currency;
     const dt=el('div',null,sub); dt.style.cssText='font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; lf.append(dt);
+
     const rt=el('div'); rt.style.cssText='display:flex;align-items:center;gap:8px;flex:none';
-    const av=el('div',null, fmtCcy(d.amount_minor, d.currency||BASE)); av.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px';
+    // primary amount: show in DISP when converted, else native with label
+    const dispAmt=el('div'); dispAmt.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right';
+    if(cv.ccy === DISP){
+      dispAmt.textContent = sym(DISP)+fmtNum(cv.minor, DISP);
+      if(cv.approx) dispAmt.title='approximate (using global rate)';
+      // show original as muted secondary if currency differs
+      if((d.currency||BASE) !== DISP){
+        const orig=el('div',null, fmtCcy(d.amount_minor, d.currency||BASE));
+        orig.style.cssText='font-size:10px;color:var(--ink-faint);font-family:"JetBrains Mono";text-align:right';
+        dispAmt.append(document.createElement('br'), orig);
+      }
+    } else {
+      // no rate: show native with currency tag
+      dispAmt.textContent = fmtCcy(d.amount_minor, d.currency||BASE);
+    }
+    // pencil to set/edit rate for cross-currency entries
+    if((d.currency||BASE) !== DISP){
+      const pen=el('button'); pen.textContent='✎'; pen.title='Set exchange rate';
+      pen.style.cssText='background:none;border:none;cursor:pointer;color:var(--ink-faint);font-size:13px;padding:0 2px;line-height:1';
+      pen.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); toggleRateEdit(wrap,d); });
+      rt.append(pen);
+    }
     const arr=el('span',null,'→'); arr.style.color='var(--ink-faint)';
-    rt.append(av, arr);
-    r.append(lf, rt); box.append(r);
+    rt.append(dispAmt, arr);
+    r.append(lf, rt); wrap.append(r); box.append(wrap);
+  });
+}
+
+// inline FX rate editor for a deployed entry
+function toggleRateEdit(wrap, d){
+  const existing=wrap.querySelector('.dep-rate-edit');
+  if(existing){ existing.remove(); return; }
+  const eccy=d.currency||BASE;
+  const form=el('div','dep-rate-edit');
+  form.style.cssText='padding:8px 22px 12px;background:var(--bg-2);display:flex;align-items:center;gap:8px;flex-wrap:wrap';
+  const lbl=el('span',null,'1 '+DISP+' = '+sym(eccy));
+  lbl.style.cssText='font-size:12px;color:var(--ink-faint);white-space:nowrap';
+  const inp=document.createElement('input');
+  inp.type='text'; inp.inputMode='decimal'; inp.placeholder='e.g. 88';
+  inp.style.cssText='width:80px;font-family:"JetBrains Mono";font-size:13px;padding:4px 8px;border:1px solid var(--line-2);border-radius:6px;background:var(--bg);color:var(--ink)';
+  // pre-fill existing rate in natural display: 1 DISP = ? eccy
+  if(d.fx_rate_micro){
+    // fx_rate_micro = counter-per-entry ×1e6. For INR entry + USD counter:
+    //   micro = USD-per-INR ×1e6 (small), natural "1 USD = X INR" = 1e6/micro
+    const nat = (d.fx_counter_currency===DISP) ? (1e6/d.fx_rate_micro).toFixed(2)
+                                                : (d.fx_rate_micro/1e6).toFixed(2);
+    inp.value = nat;
   }
+  const saveBtn=el('button',null,'Save');
+  saveBtn.style.cssText='padding:4px 14px;border-radius:6px;background:var(--green);color:#fff;border:none;cursor:pointer;font-size:12px';
+  const errSpan=el('span'); errSpan.style.cssText='font-size:11px;color:var(--red)';
+
+  saveBtn.addEventListener('click', async ()=>{
+    const natVal=parseFloat(inp.value.replace(/,/g,''));
+    if(!isFinite(natVal)||natVal<=0){ errSpan.textContent='Enter a positive number'; return; }
+    // fxMicroFromNatural: 1 DISP = natVal eccy
+    // for an eccy entry, micro = eccy-per-DISP ×1e6 inverted = 1e6/natVal
+    // BUT fxMicroFromNatural expects entryCcy; for INR entry + DISP=USD: natVal = INR/USD → micro = 1e6/natVal
+    const micro = Math.round(1e6/natVal);
+    try{
+      const resp=await fetch('/api/plans/'+d.plan_id+'/entries/'+d.entry_id,{
+        method:'PATCH', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({fx_rate_micro: micro})});
+      if(!resp.ok){ const j=await resp.json().catch(()=>({})); errSpan.textContent=j.detail||'Error'; return; }
+      location.reload();
+    }catch(e){ errSpan.textContent='Network error'; }
+  });
+  form.append(lbl, inp, saveBtn, errSpan);
+  wrap.append(form);
+  inp.focus();
 }
 
 // ── members (sharing) ──
