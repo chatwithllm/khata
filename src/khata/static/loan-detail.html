@@ -425,7 +425,19 @@ function renderHeader(box, plan, st){
   const grossMinor = (st.ledger||[]).filter(e=>e.kind==='disbursement')
                        .reduce((s,e)=>s+Math.abs(e.amount_minor||0), 0);
   // deployed = same-currency deployed total (already in state)
-  const deployedMinor = (st.deployed_totals||[]).find(x=>x.currency===BASE)?.total_minor || 0;
+  // convert each deployed entry to BASE using its own fx snapshot, else global RATES
+  let deployedMinor = 0;
+  for(const d of (st.deployed||[])){
+    const eccy=d.currency||BASE;
+    if(eccy===BASE){
+      deployedMinor += d.amount_minor||0;
+    } else if(d.fx_rate_micro && d.fx_counter_currency===BASE){
+      deployedMinor += Math.round((d.amount_minor||0)*d.fx_rate_micro/1e6);
+    } else {
+      const r=RATES[eccy+'>'+BASE] || (RATES[BASE+'>'+eccy] ? Math.round(1e12/RATES[BASE+'>'+eccy]) : null);
+      if(r) deployedMinor += Math.round((d.amount_minor||0)*r/1e6);
+    }
+  }
   const availableMinor = Math.max(0, grossMinor - deployedMinor);
 
   const kpis=el('div','kpis');
