@@ -522,11 +522,18 @@ def loan_state(session: Session, loan: Loan, as_of: date) -> dict:
     deployed = []
     deployed_total = 0
     _dep_by_ccy = {}
+    _dep_users: dict[int, str | None] = {}
     for e in session.scalars(select(LedgerEntry).where(LedgerEntry.funding_plan_id == plan.id)):
         tp = session.get(Plan, e.plan_id)
-        deployed.append({"plan_id": e.plan_id, "plan_name": tp.name if tp else None,
+        if e.logged_by_user_id not in _dep_users:
+            _u = session.get(User, e.logged_by_user_id)
+            _dep_users[e.logged_by_user_id] = _u.display_name if _u else None
+        deployed.append({"entry_id": e.id, "plan_id": e.plan_id,
+                         "plan_name": tp.name if tp else None,
                          "plan_type": tp.type if tp else None, "amount_minor": e.amount_minor,
-                         "currency": e.currency, "occurred_at": e.occurred_at.isoformat()})
+                         "currency": e.currency, "occurred_at": e.occurred_at.isoformat(),
+                         "note": e.note,
+                         "logged_by_name": _dep_users.get(e.logged_by_user_id)})
         _dep_by_ccy[e.currency] = _dep_by_ccy.get(e.currency, 0) + e.amount_minor
         if e.currency == plan.currency:
             deployed_total += e.amount_minor      # same-currency total only (back-compat)

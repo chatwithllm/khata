@@ -465,6 +465,17 @@ function renderHeader(box, plan, st){
   const bar=el('div','bigbar'); const i=el('i'); i.dataset.w=pct; bar.append(i);
   for(const tk of [25,50,75]){ const s=el('span','tick'); s.style.left=tk+'%'; bar.append(s); }
   head.append(bar);
+  // deployed summary — quiet subline if any money was sent elsewhere
+  const dep=st.deployed||[];
+  if(dep.length){
+    const totals=(st.deployed_totals||[]);
+    const totStr=totals.map(x=>fmtCcy(x.total_minor,x.currency)).join(' + ');
+    const uniquePlans=new Set(dep.map(d=>d.plan_id)).size;
+    const sub=el('div','row'); sub.style.cssText='margin-top:2px;opacity:.75';
+    sub.append(el('span',null,'Disbursed'));
+    sub.append(el('span',null,totStr+' across '+uniquePlans+(uniquePlans===1?' plan':' plans')));
+    head.append(sub);
+  }
   box.append(head);
 }
 
@@ -1196,12 +1207,13 @@ function renderDeployed(box, st){
   for(const d of dep){
     const r=document.createElement('a'); r.href='/'+(d.plan_type||'asset')+'/'+d.plan_id;
     r.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 22px;border-top:1px solid var(--line-2);text-decoration:none;color:inherit';
-    const lf=el('div');
-    const nm=el('div',null,d.plan_name||'plan'); nm.style.cssText='font-weight:600;font-size:14px'; lf.append(nm);
-    let sub=(d.plan_type||'')+' · '+fmtDate((d.occurred_at||'').slice(0,10));
-    if(d.currency && d.currency!==BASE) sub+=' · '+d.currency;   // flag a different currency
-    const dt=el('div',null,sub); dt.style.cssText='font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono"'; lf.append(dt);
-    const rt=el('div'); rt.style.cssText='display:flex;align-items:center;gap:8px';
+    const lf=el('div'); lf.style.minWidth='0';
+    const nm=el('div',null, d.note || d.plan_name||'payment'); nm.style.cssText='font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; lf.append(nm);
+    let sub=(d.plan_name||'')+(d.plan_name?' · ':'')+fmtDate((d.occurred_at||'').slice(0,10));
+    if(d.logged_by_name) sub+=' · '+d.logged_by_name;
+    if(d.currency && d.currency!==BASE) sub+=' · '+d.currency;
+    const dt=el('div',null,sub); dt.style.cssText='font-size:11.5px;color:var(--ink-faint);font-family:"JetBrains Mono";white-space:nowrap;overflow:hidden;text-overflow:ellipsis'; lf.append(dt);
+    const rt=el('div'); rt.style.cssText='display:flex;align-items:center;gap:8px;flex:none';
     const av=el('div',null, fmtCcy(d.amount_minor, d.currency||BASE)); av.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px';
     const arr=el('span',null,'→'); arr.style.color='var(--ink-faint)';
     rt.append(av, arr);
