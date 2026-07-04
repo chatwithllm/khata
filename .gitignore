@@ -2,6 +2,15 @@
 khata.db
 khata.db-wal
 khata.db-shm
+khata_app.db
+khata_app.db-wal
+khata_app.db-shm
+khata_dev.db
+khata_dev.db-wal
+khata_dev.db-shm
+khata_live.db
+khata_live.db-wal
+khata_live.db-shm
 __pycache__/
 *.pyc
 .env
