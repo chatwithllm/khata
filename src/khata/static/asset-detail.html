@@ -1339,9 +1339,9 @@ async function boot(){
   }catch(_){}
   planName = plan.name;
   nextDueSeq = st.next_due_seq;
-  document.documentElement.dataset.cur = BASE.toLowerCase();
+  document.documentElement.dataset.cur = DISP.toLowerCase();   // theme follows display currency (matches dashboard)
   document.title = 'Khata — '+plan.name;
-  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));
+  document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===DISP));
 
   $('name').textContent = plan.name;
   // header meta (3.3): "created <date> · joint with <name> · INR" — only real parts.
