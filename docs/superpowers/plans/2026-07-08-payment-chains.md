@@ -1060,7 +1060,7 @@ git commit -m "feat(chains): hop receipt confirm/counter/accept + pending list"
 
 ---
 
-### Task 5: Edit/delete guards + remainder resolutions (return / fee)
+### Task 5: Edit/delete guards + remainder resolutions (return / fee) ✅
 
 **Files:**
 - Modify: `src/khata/services/transfers.py`
@@ -1073,7 +1073,7 @@ git commit -m "feat(chains): hop receipt confirm/counter/accept + pending list"
   - `delete_hop(session, *, plan, hop_id, acting_user_id) -> None` — blocked while any downstream hop consumes it; terminal hop delete also deletes its spawned `LedgerEntry` rows (via `assets.delete_ledger_entry` so entry audit records survive).
   - `resolve_remainder(session, *, plan, hop_id, acting_user_id, action, occurred_at, amount_minor=None, method="transfer", note=None) -> TransferHop` — `action` `'return'|'fee'`; default amount = full outstanding; creates a consuming hop with `resolution='returned'|'fee'`; `'fee'` additionally spawns a `LedgerEntry(kind='transfer_fee')` per ultimate contributor of the consumed money.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_transfers_guards.py
@@ -1171,12 +1171,12 @@ def test_fee_resolution_creates_flagged_entry_not_counted_in_paid(ctx):
     assert transfers.outstanding(s, h1) == 950000
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_transfers_guards.py -v`
 Expected: FAIL — `AttributeError: delete_hop`
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add to `src/khata/services/transfers.py`:
 
@@ -1312,12 +1312,12 @@ Then grep the other state functions and apply the same exclusion wherever entrie
 Run: `grep -n "direction == \"out\"\|direction=='out'\|amount_minor for e" src/khata/services/loans.py src/khata/services/chits.py src/khata/services/holdings.py src/khata/services/retirement.py`
 For each hit that sums toward a paid/progress total, add `and e.kind != "transfer_fee"`. (Loan/chit entries are all kind-tagged already — verify rather than assume; if their sums already filter on specific kinds, `transfer_fee` is naturally excluded and no change is needed.)
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `python -m pytest tests/test_transfers_guards.py tests/test_transfers_fanout.py tests/test_transfers_service.py tests/test_transfers_receipt.py -v && python -m pytest -q`
 Expected: all PASS, full suite green
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/khata/services/transfers.py src/khata/services/assets.py tests/test_transfers_guards.py

@@ -383,7 +383,10 @@ def _viewer_can_access(fp: Plan, viewer_id) -> bool:
 
 def asset_state(session: Session, plan: Plan, viewer_id: int | None = None) -> dict:
     total = plan.asset.total_price_minor if plan.asset is not None else 0
-    outs = [e for e in plan.ledger_entries if e.direction == "out"]
+    # transfer_fee entries are money spent on the plan (chain remainders kept by
+    # intermediaries) but never received by the seller — excluded from paid.
+    outs = [e for e in plan.ledger_entries
+            if e.direction == "out" and e.kind != "transfer_fee"]
     paid = sum(e.amount_minor for e in outs)
 
     pool = paid
@@ -469,6 +472,8 @@ def asset_state(session: Session, plan: Plan, viewer_id: int | None = None) -> d
         "paid_to_date_minor": paid,
         "remaining_minor": max(0, total - paid),
         "overpaid_minor": max(0, paid - total),
+        "fees_minor": sum(e.amount_minor for e in plan.ledger_entries
+                          if e.kind == "transfer_fee"),
         "next_due_seq": next_due_seq,
         "installments": rows,
         "funding_breakdown": funding_breakdown,

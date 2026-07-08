@@ -290,6 +290,116 @@ def resolve_contributions(session: Session, hop: TransferHop) -> list[tuple[int 
     return list(merged.items())
 
 
+def update_hop(session: Session, *, plan, hop_id, acting_user_id,
+               amount_minor=None, occurred_at=None, method=None,
+               proof_ref=None, note=None, fx_rate_micro=None) -> TransferHop:
+    hop = session.get(TransferHop, hop_id)
+    if hop is None or hop.plan_id != plan.id:
+        raise TransferValidationError("hop not found")
+    diff = {}
+    if amount_minor is not None and amount_minor != hop.amount_minor:
+        if amount_minor <= 0:
+            raise TransferValidationError("amount must be > 0")
+        if amount_minor < consumed(session, hop):
+            raise TransferValidationError("amount below what downstream hops already consumed")
+        if hop.is_terminal:
+            raise TransferValidationError(
+                "edit a terminal hop by deleting and re-logging it (entries were fanned out)")
+        diff["amount_minor"] = {"old": hop.amount_minor, "new": amount_minor}
+        hop.amount_minor = amount_minor
+        _rebase_own_source(session, hop)
+        if hop.to_user_id and hop.to_user_id != acting_user_id:
+            hop.receipt_status = "pending"          # re-opens receipt agreement
+            hop.counter_amount_minor = None
+    if occurred_at is not None:
+        diff["occurred_at"] = {"old": hop.occurred_at.isoformat(),
+                               "new": occurred_at.isoformat()}
+        hop.occurred_at = occurred_at
+    if method is not None:
+        if method not in METHODS:
+            raise TransferValidationError(f"unknown method: {method}")
+        diff["method"] = {"old": hop.method, "new": method}
+        hop.method = method
+    if proof_ref is not None:
+        hop.proof_ref = proof_ref
+    if note is not None:
+        hop.note = note
+    if fx_rate_micro is not None:
+        from . import fx
+        hop.fx_rate_micro = fx_rate_micro
+        hop.fx_counter_currency = fx.counter_currency_for(hop.currency)
+    session.flush()
+    if diff:
+        _write_audit(session, hop, "edit", acting_user_id, diff)
+    return hop
+
+
+def delete_hop(session: Session, *, plan, hop_id, acting_user_id) -> None:
+    hop = session.get(TransferHop, hop_id)
+    if hop is None or hop.plan_id != plan.id:
+        raise TransferValidationError("hop not found")
+    if consumed(session, hop) > 0:
+        raise TransferValidationError("downstream hops draw from this one — unwind them first")
+    if hop.is_terminal:
+        from .assets import delete_ledger_entry
+        from ..models import LedgerEntry
+        entries = session.scalars(select(LedgerEntry).where(
+            LedgerEntry.source_hop_id == hop.id)).all()
+        for e in entries:
+            delete_ledger_entry(session, plan=plan, entry_id=e.id,
+                                acting_user_id=acting_user_id)
+    _write_audit(session, hop, "delete", acting_user_id)
+    session.flush()
+    session.delete(hop)
+    session.flush()
+
+
+def resolve_remainder(session: Session, *, plan, hop_id, acting_user_id, action,
+                      occurred_at, amount_minor=None, method="transfer",
+                      note=None) -> TransferHop:
+    """Close (part of) a hop's outstanding remainder: send it back to the origin
+    party ('return') or write it off as a fee kept by the holder ('fee')."""
+    hop = session.get(TransferHop, hop_id)
+    if hop is None or hop.plan_id != plan.id:
+        raise TransferValidationError("hop not found")
+    if action not in ("return", "fee"):
+        raise TransferValidationError(f"unknown action: {action}")
+    out = outstanding(session, hop)
+    amt = amount_minor if amount_minor is not None else out
+    if amt <= 0 or amt > out:
+        raise TransferValidationError(f"amount must be within outstanding ({out})")
+
+    # Money flows FROM the current holder (hop's receiver) back/off.
+    holder = dict(from_user_id=hop.to_user_id, from_contact_id=hop.to_contact_id,
+                  from_name=hop.to_name)
+    if action == "return":
+        dest = dict(to_user_id=hop.from_user_id, to_contact_id=hop.from_contact_id,
+                    to_name=hop.from_name)
+        resolution = "returned"
+    else:
+        dest = dict(to_name=(note or "fee"))
+        resolution = "fee"
+
+    res_hop = create_hop(session, plan=plan, logged_by_user_id=acting_user_id,
+                         amount_minor=amt, occurred_at=occurred_at, method=method,
+                         sources=[{"source_hop_id": hop.id, "amount_minor": amt}],
+                         resolution=resolution, note=note, **holder, **dest)
+
+    if action == "fee":
+        from .assets import log_payment
+        for uid, part in resolve_contributions(session, res_hop):
+            entry = log_payment(
+                session, plan=plan,
+                user_id=uid if uid is not None else acting_user_id,
+                amount_minor=part, occurred_at=occurred_at, method=method,
+                funding_source="other", note=note or "transfer fee",
+                acting_user_id=acting_user_id)
+            entry.kind = "transfer_fee"
+            entry.source_hop_id = res_hop.id
+        session.flush()
+    return res_hop
+
+
 def fan_out_terminal(session: Session, *, plan, hop: TransferHop, acting_user_id,
                      funding_source="other"):
     """Spawn one LedgerEntry per ultimate contributor of a terminal hop.
