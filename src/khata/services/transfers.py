@@ -139,6 +139,103 @@ def create_hop(session: Session, *, plan, logged_by_user_id, amount_minor, occur
     return hop
 
 
+def respond_receipt(session: Session, *, plan, hop_id, actor_uid, action,
+                    amount_minor=None) -> TransferHop:
+    """Receipt agreement loop, mirroring assets.respond_amount:
+    receiver confirms/counters; the LOGGER (not plan owner) accepts/re-counters —
+    the hop is a two-party fact between sender-side logger and receiver."""
+    hop = session.get(TransferHop, hop_id)
+    if hop is None or hop.plan_id != plan.id:
+        raise TransferValidationError("hop not found")
+    is_receiver = actor_uid == hop.to_user_id
+    is_logger = actor_uid == hop.logged_by_user_id
+
+    if action == "confirm":
+        if hop.receipt_status != "pending" or not is_receiver:
+            raise TransferValidationError("nothing to confirm")
+        hop.receipt_status = "agreed"
+        hop.counter_amount_minor = None
+    elif action == "accept":
+        if hop.receipt_status != "countered" or not is_logger:
+            raise TransferValidationError("no counter to accept")
+        if hop.counter_amount_minor < consumed(session, hop):
+            raise TransferValidationError("counter is below the amount already forwarded")
+        hop.amount_minor = hop.counter_amount_minor
+        _rebase_own_source(session, hop)
+        hop.receipt_status = "agreed"
+        hop.counter_amount_minor = None
+    elif action == "counter":
+        if amount_minor is None or amount_minor <= 0:
+            raise TransferValidationError("counter amount must be > 0")
+        if hop.receipt_status == "pending" and is_receiver:
+            hop.counter_amount_minor = amount_minor
+            hop.receipt_status = "countered"
+        elif hop.receipt_status == "countered" and is_logger:
+            if amount_minor < consumed(session, hop):
+                raise TransferValidationError("amount is below the amount already forwarded")
+            hop.amount_minor = amount_minor
+            _rebase_own_source(session, hop)
+            hop.counter_amount_minor = None
+            hop.receipt_status = "pending"
+        else:
+            raise TransferValidationError("not your turn to counter")
+    else:
+        raise TransferValidationError(f"unknown action: {action}")
+    session.flush()
+    _write_audit(session, hop, "edit", actor_uid,
+                 diff={"receipt": {"action": action, "amount_minor": amount_minor}})
+    return hop
+
+
+def _rebase_own_source(session: Session, hop: TransferHop) -> None:
+    """After an amount change, resize the hop's own-funds source row so
+    sources still sum to amount_minor. Hops whose upstream sources exceed
+    the new amount reject the change."""
+    own = [s for s in hop.sources if s.source_hop_id is None]
+    upstream = [s for s in hop.sources if s.source_hop_id is not None]
+    up_total = sum(s.amount_minor for s in upstream)
+    if hop.amount_minor < up_total:
+        raise TransferValidationError("amount below the upstream money in this hop")
+    if own:
+        own[0].amount_minor = hop.amount_minor - up_total
+        for extra in own[1:]:
+            session.delete(extra)
+        if own[0].amount_minor == 0:
+            session.delete(own[0])
+    elif hop.amount_minor != up_total:
+        session.add(HopSource(hop_id=hop.id, source_hop_id=None,
+                              amount_minor=hop.amount_minor - up_total))
+    session.flush()
+
+
+def list_receipt_confirmations(session: Session, user_id) -> list[dict]:
+    """Hops waiting on THIS user: pending receipts where they're the receiver,
+    countered receipts where they're the logger."""
+    from ..models import Contact, Plan, User as _User
+    hops = session.scalars(select(TransferHop).where(
+        ((TransferHop.receipt_status == "pending") & (TransferHop.to_user_id == user_id)) |
+        ((TransferHop.receipt_status == "countered") & (TransferHop.logged_by_user_id == user_id))
+    )).all()
+    out = []
+    for h in hops:
+        plan = session.get(Plan, h.plan_id)
+        if h.from_user_id:
+            u = session.get(_User, h.from_user_id)
+            from_display = u.display_name if u else None
+        elif h.from_contact_id:
+            c = session.get(Contact, h.from_contact_id)
+            from_display = c.name if c else None
+        else:
+            from_display = h.from_name
+        out.append({"hop_id": h.id, "plan_id": h.plan_id,
+                    "plan_name": plan.name if plan else None,
+                    "amount_minor": h.amount_minor,
+                    "counter_amount_minor": h.counter_amount_minor,
+                    "status": h.receipt_status, "from_display": from_display,
+                    "logged_at": h.created_at.isoformat() if h.created_at else None})
+    return out
+
+
 def _own_party_user(hop: TransferHop) -> int | None:
     """The from-party as a user id, or None when the origin is a contact/name."""
     return hop.from_user_id

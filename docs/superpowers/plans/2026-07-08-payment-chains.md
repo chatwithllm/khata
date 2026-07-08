@@ -845,7 +845,7 @@ git commit -m "feat(chains): terminal hop fans out ledger entries per ultimate c
 
 ---
 
-### Task 4: Receipt confirmation (confirm / counter / accept)
+### Task 4: Receipt confirmation (confirm / counter / accept) ✅
 
 **Files:**
 - Modify: `src/khata/services/transfers.py`
@@ -859,7 +859,7 @@ git commit -m "feat(chains): terminal hop fans out ledger entries per ultimate c
   - `counter` by logger while `countered`: re-counter, back to `pending`.
   - `list_receipt_confirmations(session, user_id) -> list[dict]` — hops pending on this user (mirrors `assets.list_amount_confirmations` shape: keys `hop_id, plan_id, plan_name, amount_minor, counter_amount_minor, status, from_display, logged_at`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_transfers_receipt.py
@@ -940,12 +940,12 @@ def test_pending_receipt_listed_for_receiver(ctx):
     assert transfers.list_receipt_confirmations(s, b2.id) == []
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_transfers_receipt.py -v`
 Expected: FAIL — `AttributeError: respond_receipt`
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add to `src/khata/services/transfers.py`:
 
@@ -1046,12 +1046,12 @@ def list_receipt_confirmations(session: Session, user_id) -> list[dict]:
     return out
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `python -m pytest tests/test_transfers_receipt.py -v`
 Expected: 5 PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/khata/services/transfers.py tests/test_transfers_receipt.py
