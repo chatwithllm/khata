@@ -3,11 +3,60 @@
 //   KhataTransfers.mount(document.getElementById('transit-panel'), PID,
 //     {me: USER_ID, base: 'INR', fmt: fmtNum, sym: sym, onChange: boot, onEdit: openHopEdit})
 // fmt(minor, ccy) -> grouped number string; sym(ccy) -> currency symbol.
-// onEdit(hop) — optional; when given, an Edit action appears for the hop's
-// logger / plan owner and delegates to the page (slide-over with attachments).
-// Rendering follows the ledger idiom: .ph header, .lrow rows, .l1/.amt/.l2/.l2r, .pill chips.
+// onEdit(hop) — optional; shows an Edit action for the hop's logger / plan owner.
+//
+// Design: each chain renders as a literal rail — a vertical line with a node per
+// hop (hollow = money still moving, filled = delivered / resolved). Notes are
+// cleaned at display time: repeated "$X USD @rate — " prefixes collapse into one
+// mono fx token in the meta line; the human comment is what remains.
 window.KhataTransfers = (function(){
   let _el=null,_pid=null,_opts={},_data=null;
+
+  const CSS = `
+.trx-chain{border-top:1px solid var(--line);padding:4px 22px 10px}
+.trx-chain:first-of-type{border-top:0}
+.trx-eyebrow{display:flex;justify-content:space-between;align-items:baseline;
+  font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-faint);padding:14px 0 4px}
+.trx-hop{display:grid;grid-template-columns:18px 1fr auto;column-gap:12px;row-gap:2px;
+  padding:8px 0;position:relative}
+.trx-rail{grid-row:1 / span 5;position:relative}
+.trx-rail::before{content:'';position:absolute;left:8px;top:-10px;bottom:-10px;
+  width:2px;background:var(--line)}
+.trx-hop:first-of-type .trx-rail::before{top:8px}
+.trx-hop:last-of-type .trx-rail::before{bottom:auto;height:18px}
+.trx-node{position:relative;z-index:1;width:11px;height:11px;border-radius:50%;
+  margin:5px 0 0 3px;border:2px solid var(--ink-faint);background:var(--card)}
+.trx-node.hold{border-color:var(--accent-dk)}
+.trx-node.done{border-color:var(--pos);background:var(--pos)}
+.trx-node.dead{border-color:var(--ink-faint);background:var(--ink-faint)}
+.trx-route{font-weight:600;font-size:14px;color:var(--ink)}
+.trx-amt{grid-row:1;font-family:'JetBrains Mono',monospace;font-weight:600;font-size:14px;
+  text-align:right;white-space:nowrap}
+.trx-meta{grid-column:2;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  font-size:11.5px;color:var(--ink-faint)}
+.trx-fx{font-family:'JetBrains Mono',monospace;font-size:10.5px}
+.trx-chip{padding:1px 8px;border:1px solid var(--line);border-radius:999px;
+  font-size:10.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.trx-chip.hold{color:var(--accent-dk);border-color:var(--accent-dk)}
+.trx-chip.done{color:var(--pos);border-color:var(--pos)}
+.trx-chip.warn{color:var(--neg);border-color:var(--neg)}
+.trx-note{grid-column:2;font-size:12px;color:var(--ink-faint);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;max-width:58ch}
+.trx-comp{grid-column:2;font-size:11.5px;font-weight:600;color:var(--accent-dk);
+  font-family:'JetBrains Mono',monospace}
+.trx-acts{grid-column:2 / -1;display:flex;gap:14px;font-size:11.5px;font-weight:600;
+  padding-top:2px}
+.trx-acts span{color:var(--primary);cursor:pointer;user-select:none}
+.trx-acts span:hover{text-decoration:underline}
+.trx-acts span.quiet{color:var(--ink-faint)}
+@media(max-width:640px){.trx-note{max-width:100%}}
+`;
+  function _injectCss(){
+    if(document.getElementById('trx-css')) return;
+    const s=document.createElement('style'); s.id='trx-css'; s.textContent=CSS;
+    document.head.appendChild(s);
+  }
 
   function _fmt(minor){
     const f=_opts.fmt || function(m){ return (m/100).toLocaleString(); };
@@ -40,17 +89,32 @@ window.KhataTransfers = (function(){
     if(await _post(url, body)){ await refresh(); if(_opts.onChange) _opts.onChange(); }
   }
 
-  // status chip: text + tone class matching the ledger pill palette
-  function _statusChip(h){
-    if(h.is_terminal) return _e('span','pill f','delivered');
-    if(h.resolution==='returned') return _e('span','pill','returned');
-    if(h.resolution==='fee') return _e('span','pill m','fee');
-    if(h.outstanding_minor>0){
-      const c=_e('span','pill m','holding '+_fmt(h.outstanding_minor)+(h.days_held?' · '+h.days_held+'d':''));
-      c.style.color='var(--accent-dk)'; c.style.fontWeight='700';
-      return c;
+  // Collapse repeated "$1,500 USD @94.97 — " prefixes (accumulated by edits)
+  // into one fx token + the human comment that remains.
+  function _cleanNote(note){
+    let fx=null, rest=(note||'').trim();
+    const re=/^\$?([\d,\.]+)\s+([A-Z]{3})\s+@([\d\.]+)\s*(?:—\s*)?/;
+    let m, guard=0;
+    while((m=re.exec(rest)) && guard++<10){
+      if(!fx) fx='$'+m[1]+' @'+m[3];
+      rest=rest.slice(m[0].length).trim();
     }
-    return _e('span','pill','forwarded');
+    return {fx: fx, rest: rest};
+  }
+
+  function _nodeCls(h){
+    if(h.is_terminal) return 'done';
+    if(h.resolution==='returned'||h.resolution==='fee') return 'dead';
+    if(h.outstanding_minor>0) return 'hold';
+    return '';
+  }
+  function _statusChip(h){
+    if(h.is_terminal) return _e('span','trx-chip done','delivered');
+    if(h.resolution==='returned') return _e('span','trx-chip','returned');
+    if(h.resolution==='fee') return _e('span','trx-chip warn','fee');
+    if(h.outstanding_minor>0)
+      return _e('span','trx-chip hold','holding '+_fmt(h.outstanding_minor)+(h.days_held?' · '+h.days_held+'d':''));
+    return _e('span','trx-chip','forwarded');
   }
 
   function _dateTxt(iso){
@@ -60,9 +124,8 @@ window.KhataTransfers = (function(){
     return String(d.getDate()).padStart(2,'0')+' '+M[d.getMonth()]+' '+d.getFullYear();
   }
 
-  function _link(label, fn){
-    const b=_e('span','proof', label);
-    b.style.cssText='cursor:pointer;user-select:none';
+  function _link(label, fn, quiet){
+    const b=_e('span',quiet?'quiet':null,label);
     b.tabIndex=0; b.setAttribute('role','button');
     b.addEventListener('click', fn);
     b.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fn(); } });
@@ -70,27 +133,34 @@ window.KhataTransfers = (function(){
   }
 
   function _hopRow(h, hopById){
-    const row=_e('div','lrow');
-    // l1 — who → whom (title line)
-    row.append(_e('div','l1', (h.from.display||'?')+' → '+(h.to.display||'?')));
+    const row=_e('div','trx-hop');
 
-    // amt — mono, right aligned like ledger rows
-    const amt=_e('div','amt');
-    const s=_e('span','symword'); s.textContent=_opts.sym?_opts.sym(_opts.base||'INR'):'';
-    const f=_opts.fmt || function(m){ return (m/100).toLocaleString(); };
-    const n=_e('span'); n.textContent=f(h.amount_minor, _opts.base||'INR');
-    amt.append(s,n);
-    row.append(amt);
+    const rail=_e('div','trx-rail');
+    rail.append(_e('div','trx-node '+_nodeCls(h)));
+    row.append(rail);
 
-    // l2 — date · note
-    const l2=_e('div','l2'); l2.style.cssText='display:flex;align-items:center;gap:6px;flex-wrap:wrap';
-    l2.append(_e('span', null, _dateTxt(h.occurred_at)));
-    if(h.note){ l2.append(_e('span',null,'·')); l2.append(_e('span', null, h.note)); }
-    row.append(l2);
+    row.append(_e('div','trx-route',(h.from.display||'?')+' → '+(h.to.display||'?')));
+    row.append(_e('div','trx-amt',_fmt(h.amount_minor)));
 
-    // composition — a merged hop spells out whose money it carries:
-    // "= $1,500 from Chamu + $500 Narshima's own"
-    if((h.sources||[]).some(s=>s.source_hop_id!==null) && h.sources.length>=1){
+    const cleaned=_cleanNote(h.note);
+    const meta=_e('div','trx-meta');
+    meta.append(_e('span',null,_dateTxt(h.occurred_at)));
+    if(h.method) meta.append(_e('span',null,h.method));
+    if(cleaned.fx) meta.append(_e('span','trx-fx',cleaned.fx));
+    meta.append(_statusChip(h));
+    if(h.receipt_status==='pending') meta.append(_e('span','trx-chip','receipt pending'));
+    if(h.receipt_status==='countered') meta.append(_e('span','trx-chip hold','countered '+_fmt(h.counter_amount_minor||0)));
+    if(h.has_proof) meta.append(_e('span','trx-chip','proof'+(h.attachment_count>1?' ×'+h.attachment_count:'')));
+    row.append(meta);
+
+    if(cleaned.rest){
+      const note=_e('div','trx-note',cleaned.rest);
+      note.title=cleaned.rest;
+      row.append(note);
+    }
+
+    // merged hop: spell out whose money it carries
+    if((h.sources||[]).some(s=>s.source_hop_id!==null)){
       const parts=[];
       for(const s of h.sources){
         if(s.source_hop_id===null){
@@ -100,62 +170,49 @@ window.KhataTransfers = (function(){
           parts.push(_fmt(s.amount_minor)+' from '+((up&&up.from.display)||'chain'));
         }
       }
-      const comp=_e('div','l2','= '+parts.join(' + '));
-      comp.style.cssText='color:var(--accent-dk);font-weight:600';
-      row.append(comp);
+      row.append(_e('div','trx-comp','= '+parts.join('  +  ')));
     }
 
-    // l2r — chips + actions
-    const l2r=_e('div','l2r');
-    if(h.method) l2r.append(_e('span','pill m', h.method));
-    l2r.append(_statusChip(h));
-    if(h.receipt_status==='pending') l2r.append(_e('span','pill','receipt pending'));
-    if(h.receipt_status==='countered') l2r.append(_e('span','pill','countered '+_fmt(h.counter_amount_minor||0)));
-    if(h.has_proof) l2r.append(_e('span','pill f','proof'+(h.attachment_count>1?' ×'+h.attachment_count:'')));
-
-    // receipt actions — the receiving user acts
+    const acts=_e('div','trx-acts');
     if(h.receipt_status==='pending' && h.to.user_id===_opts.me){
-      l2r.append(_link('Confirm receipt', ()=>_act('/api/plans/'+_pid+'/hops/'+h.id+'/receipt', {action:'confirm'})));
-      l2r.append(_link('Counter…', ()=>{
+      acts.append(_link('Confirm receipt', ()=>_act('/api/plans/'+_pid+'/hops/'+h.id+'/receipt', {action:'confirm'})));
+      acts.append(_link('Counter…', ()=>{
         const v=prompt('Amount actually received:');
         if(v) _act('/api/plans/'+_pid+'/hops/'+h.id+'/receipt', {action:'counter', amount:v});
       }));
     }
-    // logger accepts a counter
     if(h.receipt_status==='countered' && h.logged_by_user_id===_opts.me){
-      l2r.append(_link('Accept counter', ()=>_act('/api/plans/'+_pid+'/hops/'+h.id+'/receipt', {action:'accept'})));
+      acts.append(_link('Accept counter', ()=>_act('/api/plans/'+_pid+'/hops/'+h.id+'/receipt', {action:'accept'})));
     }
-    // resolve actions on open remainders
     if(h.outstanding_minor>0 && !h.is_terminal){
-      l2r.append(_link('Return', ()=>{
+      acts.append(_link('Return', ()=>{
         if(confirm('Return the outstanding '+_fmt(h.outstanding_minor)+' to '+(h.from.display||'sender')+'?'))
           _act('/api/plans/'+_pid+'/hops/'+h.id+'/resolve', {action:'return'});
-      }));
-      l2r.append(_link('Mark fee…', ()=>{
+      }, true));
+      acts.append(_link('Mark fee…', ()=>{
         const v=prompt('Fee amount (blank = full outstanding '+_fmt(h.outstanding_minor)+'):');
         if(v===null) return;
         const note=prompt('Fee note (e.g. agent commission):')||undefined;
         const body={action:'fee', note:note};
         if(v.trim()) body.amount=v;
         _act('/api/plans/'+_pid+'/hops/'+h.id+'/resolve', body);
-      }));
+      }, true));
     }
-    // edit — hop logger or plan owner; delegates to the page slide-over
     if(_opts.onEdit && (h.logged_by_user_id===_opts.me || _opts.isOwner)){
-      l2r.append(_link('✎ edit', ()=>_opts.onEdit(h)));
+      acts.append(_link('Edit', ()=>_opts.onEdit(h), true));
     }
-    row.append(l2r);
+    if(acts.children.length) row.append(acts);
     return row;
   }
 
   async function refresh(){
     if(!_el) return;
+    _injectCss();
     _data = await _load();
     _el.textContent='';
     if(!_data.chains.length){ _el.style.display='none'; return; }
     _el.style.display='';
 
-    // panel header — ledger idiom: .ph with title + meta on the right
     const ph=_e('div','ph');
     const t=_e('div','t','Money in transit'); t.style.fontSize='16px';
     const right=_e('div'); right.style.cssText='display:flex;align-items:center;gap:12px';
@@ -163,18 +220,18 @@ window.KhataTransfers = (function(){
     ph.append(t, right);
     _el.append(ph);
 
-    // hop lookup across all chains — composition lines name upstream senders
     const hopById={};
     for(const ch of _data.chains) for(const h of ch.hops) hopById[h.id]=h;
 
-    const body=_e('div','ledger fillrows');
     for(const ch of _data.chains){
-      const lbl=_e('div',null,'Chain #'+ch.chain_id+(ch.closed?' · closed':''));
-      lbl.style.cssText='font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);padding:12px 22px 0';
-      body.append(lbl);
-      for(const h of ch.hops) body.append(_hopRow(h, hopById));
+      const block=_e('div','trx-chain');
+      const eyebrow=_e('div','trx-eyebrow');
+      eyebrow.append(_e('span',null,'Chain #'+ch.chain_id));
+      if(ch.closed) eyebrow.append(_e('span',null,'closed'));
+      block.append(eyebrow);
+      for(const h of ch.hops) block.append(_hopRow(h, hopById));
+      _el.append(block);
     }
-    _el.append(body);
   }
 
   function openHops(){
