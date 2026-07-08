@@ -69,7 +69,7 @@ window.KhataTransfers = (function(){
     return b;
   }
 
-  function _hopRow(h){
+  function _hopRow(h, hopById){
     const row=_e('div','lrow');
     // l1 — who → whom (title line)
     row.append(_e('div','l1', (h.from.display||'?')+' → '+(h.to.display||'?')));
@@ -87,6 +87,23 @@ window.KhataTransfers = (function(){
     l2.append(_e('span', null, _dateTxt(h.occurred_at)));
     if(h.note){ l2.append(_e('span',null,'·')); l2.append(_e('span', null, h.note)); }
     row.append(l2);
+
+    // composition — a merged hop spells out whose money it carries:
+    // "= $1,500 from Chamu + $500 Narshima's own"
+    if((h.sources||[]).some(s=>s.source_hop_id!==null) && h.sources.length>=1){
+      const parts=[];
+      for(const s of h.sources){
+        if(s.source_hop_id===null){
+          parts.push(_fmt(s.amount_minor)+' '+(h.from.display||'own')+"'s own");
+        }else{
+          const up=hopById[s.source_hop_id];
+          parts.push(_fmt(s.amount_minor)+' from '+((up&&up.from.display)||'chain'));
+        }
+      }
+      const comp=_e('div','l2','= '+parts.join(' + '));
+      comp.style.cssText='color:var(--accent-dk);font-weight:600';
+      row.append(comp);
+    }
 
     // l2r — chips + actions
     const l2r=_e('div','l2r');
@@ -146,12 +163,16 @@ window.KhataTransfers = (function(){
     ph.append(t, right);
     _el.append(ph);
 
+    // hop lookup across all chains — composition lines name upstream senders
+    const hopById={};
+    for(const ch of _data.chains) for(const h of ch.hops) hopById[h.id]=h;
+
     const body=_e('div','ledger fillrows');
     for(const ch of _data.chains){
       const lbl=_e('div',null,'Chain #'+ch.chain_id+(ch.closed?' · closed':''));
       lbl.style.cssText='font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);padding:12px 22px 0';
       body.append(lbl);
-      for(const h of ch.hops) body.append(_hopRow(h));
+      for(const h of ch.hops) body.append(_hopRow(h, hopById));
     }
     _el.append(body);
   }
