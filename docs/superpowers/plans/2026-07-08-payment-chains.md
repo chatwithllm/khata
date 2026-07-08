@@ -343,7 +343,7 @@ git commit -m "feat(chains): transfer hop models + migration"
 
 ---
 
-### Task 2: Transfers service — hop creation, validation, outstanding math
+### Task 2: Transfers service — hop creation, validation, outstanding math ✅
 
 **Files:**
 - Create: `src/khata/services/transfers.py`
@@ -357,7 +357,7 @@ git commit -m "feat(chains): transfer hop models + migration"
   - `outstanding(session, hop) -> int`
   - `TransferError(Exception)` base, `TransferValidationError(TransferError)`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_transfers_service.py
@@ -455,12 +455,12 @@ def test_sources_must_sum_to_amount(ctx):
              sources=[{"source_hop_id": h1.id, "amount_minor": 900000}])
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_transfers_service.py -v`
 Expected: FAIL — `ModuleNotFoundError: khata.services.transfers`
 
-- [ ] **Step 3: Implement the service**
+- [x] **Step 3: Implement the service**
 
 ```python
 # src/khata/services/transfers.py
@@ -603,12 +603,12 @@ def create_hop(session: Session, *, plan, logged_by_user_id, amount_minor, occur
 
 NOTE: this sets the FX snapshot directly (mirroring `update_ledger_entry` at `assets.py:220-224`) rather than reusing `fx.snapshot_entry_rate`, which was written for LedgerEntry. If you want auto-rate lookup when no explicit rate is given, read `src/khata/services/fx.py` first and only reuse `snapshot_entry_rate` if it touches nothing entry-specific.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python -m pytest tests/test_transfers_service.py -v`
 Expected: 6 PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/khata/services/transfers.py tests/test_transfers_service.py
