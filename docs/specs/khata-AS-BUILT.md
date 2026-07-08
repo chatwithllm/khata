@@ -486,6 +486,12 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-07-08 — **Asset detail respects display currency.** Asset page now converts all amounts
+  (KPIs, ledger, installment short, transit panel, counter tooltips) from plan currency into the
+  user's primary-currency preference via stored FX rates — same `DISP`/`FXR_MICRO` mechanism as
+  loan-detail; identity when no preference/rate. Also fixed `getFxRateMicro` reading wrong keys
+  (`base_currency`/`quote_currency` — the API returns `base`/`quote`), which silently disabled the
+  stored-rate pre-fill in the log-payment form. Frontend-only (asset-detail.html).
 - 2026-07-08 — **Payment chains (transfer routing).** Multi-hop money flow for shared purchases:
   buyer2 → buyer1 → seller with full per-hop detail (date/amount/method/proof), in-transit tracking
   (never counted in paid totals until money reaches the seller), split attribution on merged transfers

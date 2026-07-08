@@ -306,6 +306,15 @@ let nextDueSeq = null;
 let planName = "";
 let ME_ID = null;        // current user id (from /api/auth/me)
 let ST_SELLER = null;    // plan's seller party (payment-chain terminal hops)
+let DISP = "INR";        // DISPLAY currency (user's global primary-currency preference)
+let FXR_MICRO = 1000000; // BASE→DISP rate ×1e6 (1.0 = native, no conversion)
+
+// Convert a plan-currency (BASE) minor amount into the display (DISP) currency.
+// Identity when the user has no preference or no stored rate (mirrors loan-detail).
+function conv(minor){
+  if(minor===null||minor===undefined) return minor;
+  return Math.round(minor*FXR_MICRO/1000000);
+}
 let MEMBERS = [];        // plan members [{user_id, email, display_name, role}]
 let LOANS = [];          // the user's loan plans — for the "funded from which loan" picker
 let FX_RATES = [];       // [{base_currency, quote_currency, rate_micro}] from /api/fx-rates
@@ -326,9 +335,10 @@ function calcEval(raw) {
 // ── FX helpers for multi-currency payment input ──
 function getFxRateMicro(from, to) {
   if (from === to) return 1000000;
+  // /api/fx-rates rows carry keys `base`/`quote` (fx.list_rates); rate = base per 1 quote ×1e6
   for (const r of FX_RATES) {
-    if (r.base_currency === from && r.quote_currency === to) return r.rate_micro;
-    if (r.base_currency === to && r.quote_currency === from && r.rate_micro > 0)
+    if (r.base === to && r.quote === from) return r.rate_micro;
+    if (r.base === from && r.quote === to && r.rate_micro > 0)
       return Math.round(1e12 / r.rate_micro);
   }
   return null;
@@ -444,9 +454,10 @@ function amtSpan(minor, cls){
   const wrap=document.createElement('span');
   if(cls) wrap.className=cls;
   if(minor===null||minor===undefined){ wrap.textContent='—'; return wrap; }
-  const neg=minor<0;
-  const s=document.createElement('span'); s.className='symword'; s.textContent=(neg?'-':'')+sym(BASE);
-  const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(minor), BASE);
+  const m=conv(minor);
+  const neg=m<0;
+  const s=document.createElement('span'); s.className='symword'; s.textContent=(neg?'-':'')+sym(DISP);
+  const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(m), DISP);
   wrap.append(s,n);
   return wrap;
 }
@@ -612,8 +623,8 @@ function renderSchedule(box, st){
       const shortMinor = (it.planned_amount_minor||0) - (it.applied_minor||0);
       if(shortMinor>0){
         const badge=el('span','rollbadge'); badge.style.marginLeft='8px';
-        const bs=el('span','symword'); bs.textContent='short '+sym(BASE);
-        const bn=el('span'); bn.textContent=fmtNum(shortMinor, BASE);
+        const bs=el('span','symword'); bs.textContent='short '+sym(DISP);
+        const bn=el('span'); bn.textContent=fmtNum(conv(shortMinor), DISP);
         badge.append(bs,bn); nm.append(badge);
       }
     }
@@ -676,8 +687,8 @@ function renderLedger(box, st){
     row.append(el('div','l1', ttl));
     const out = lr.direction==='out';
     const amt=el('div','amt '+(out?'out':'in'));
-    const sgn=el('span','symword'); sgn.textContent=(out?'−':'+')+sym(BASE);
-    const num=el('span'); num.textContent=fmtNum(Math.abs(lr.amount_minor||0), BASE);
+    const sgn=el('span','symword'); sgn.textContent=(out?'−':'+')+sym(DISP);
+    const num=el('span'); num.textContent=fmtNum(conv(Math.abs(lr.amount_minor||0)), DISP);
     amt.append(sgn,num);
     // quiet "% of total" line beneath the amount (share of the plan total)
     const tot = st.total_price_minor||0;
@@ -731,7 +742,7 @@ function renderLedger(box, st){
       const chip=el('span','pill aconf', isC?'⇄ counter-proposed':'⚠ unconfirmed');
       chip.style.background='color-mix(in srgb,#d98a00 16%,transparent)';
       chip.style.color='#a96a00'; chip.style.borderColor='color-mix(in srgb,#d98a00 38%,transparent)';
-      if(isC && lr.counter_amount_minor!=null) chip.title='Proposed: '+sym(BASE)+fmtNum(lr.counter_amount_minor,BASE);
+      if(isC && lr.counter_amount_minor!=null) chip.title='Proposed: '+sym(DISP)+fmtNum(conv(lr.counter_amount_minor),DISP);
       else chip.title='Awaiting the contributor’s confirmation — act from the dashboard';
       l2r.append(chip);
     }
@@ -1309,6 +1320,23 @@ async function boot(){
   const plan=d.plan, st=d.state;
   BASE = plan.currency || 'INR';
   ST_SELLER = st.seller || null;
+  // display-currency preference: convert BASE amounts into the user's primary currency
+  // when a stored rate exists (same mechanism as loan-detail)
+  DISP = BASE; FXR_MICRO = 1000000;
+  try{
+    const nw = await fetch('/api/networth').then(r=>r.json());
+    const pref = nw && nw.base_currency;
+    if(pref && pref!==BASE){
+      // stored rate_micro = base units per 1 quote unit ×1e6 (fx.list_rates keys: base/quote).
+      // We need DISP-per-BASE: direct when stored as pref>BASE, else invert BASE>pref.
+      const RM = {};
+      FX_RATES.forEach(r=>{ RM[r.base+'>'+r.quote]=r.rate_micro; });
+      const dir=RM[pref+'>'+BASE];
+      const inv=RM[BASE+'>'+pref];
+      const rate = dir ? dir : (inv ? Math.round(1e12/inv) : null);
+      if(rate){ DISP=pref; FXR_MICRO=rate; }
+    }
+  }catch(_){}
   planName = plan.name;
   nextDueSeq = st.next_due_seq;
   document.documentElement.dataset.cur = BASE.toLowerCase();
@@ -1353,7 +1381,7 @@ async function boot(){
 
   // money-in-transit panel (payment chains)
   KhataTransfers.mount($('transit-panel'), pid,
-    {me: myUserId, base: BASE, fmt: fmtNum, sym: sym, onChange: boot});
+    {me: myUserId, base: DISP, fmt: (m,c)=>fmtNum(conv(m),c), sym: sym, onChange: boot});
 
   // seller-role members see the plan read-only — hide the log button (server enforces too)
   const myRole = (MEMBERS.find(m=>m.user_id===myUserId)||{}).role;
@@ -1423,7 +1451,7 @@ function refreshRecipUI(){
       cb.dataset.hop=h.id; cb.dataset.out=h.outstanding_minor;
       lab.appendChild(cb);
       lab.appendChild(document.createTextNode(
-        (h.to.display||'?')+' holds '+sym(BASE)+fmtNum(h.outstanding_minor,BASE)+' (from '+(h.from.display||'?')+')'));
+        (h.to.display||'?')+' holds '+sym(DISP)+fmtNum(conv(h.outstanding_minor),DISP)+' (from '+(h.from.display||'?')+')'));
       list.appendChild(lab);
     }
   }
