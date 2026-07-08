@@ -290,6 +290,60 @@ def resolve_contributions(session: Session, hop: TransferHop) -> list[tuple[int 
     return list(merged.items())
 
 
+def _party_dict(session, user_id, contact_id, name):
+    display = name
+    if user_id is not None:
+        from ..models import User as _User
+        u = session.get(_User, user_id)
+        display = u.display_name if u else None
+    elif contact_id is not None:
+        from ..models import Contact
+        c = session.get(Contact, contact_id)
+        display = c.name if c else None
+    return {"user_id": user_id, "contact_id": contact_id, "name": name,
+            "display": display}
+
+
+def plan_transfers(session: Session, plan) -> dict:
+    from datetime import date
+    hops = session.scalars(select(TransferHop)
+                           .where(TransferHop.plan_id == plan.id)
+                           .order_by(TransferHop.occurred_at, TransferHop.id)).all()
+    chains: dict[int, list] = {}
+    for h in hops:
+        chains.setdefault(h.chain_id, []).append(h)
+
+    in_transit = 0
+    out_chains = []
+    for cid, chain_hops in chains.items():
+        rows, closed = [], True
+        for i, h in enumerate(chain_hops):
+            out = outstanding(session, h)
+            if out > 0:
+                closed = False
+                in_transit += out
+            rows.append({
+                "id": h.id, "seq_in_chain": i + 1,
+                "from": _party_dict(session, h.from_user_id, h.from_contact_id, h.from_name),
+                "to": _party_dict(session, h.to_user_id, h.to_contact_id, h.to_name),
+                "amount_minor": h.amount_minor,
+                "outstanding_minor": out,
+                "consumed_minor": consumed(session, h),
+                "occurred_at": h.occurred_at.isoformat(),
+                "method": h.method, "note": h.note,
+                "has_proof": bool(h.proof_ref),
+                "is_terminal": h.is_terminal, "resolution": h.resolution,
+                "receipt_status": h.receipt_status,
+                "counter_amount_minor": h.counter_amount_minor,
+                "days_held": ((date.today() - h.occurred_at.date()).days if out > 0 else 0),
+                "logged_by_user_id": h.logged_by_user_id,
+                "sources": [{"source_hop_id": s_.source_hop_id,
+                             "amount_minor": s_.amount_minor} for s_ in h.sources]})
+        out_chains.append({"chain_id": cid, "closed": closed, "hops": rows})
+    out_chains.sort(key=lambda c: c["hops"][0]["occurred_at"], reverse=True)
+    return {"in_transit_minor": in_transit, "chains": out_chains}
+
+
 def update_hop(session: Session, *, plan, hop_id, acting_user_id,
                amount_minor=None, occurred_at=None, method=None,
                proof_ref=None, note=None, fx_rate_micro=None) -> TransferHop:

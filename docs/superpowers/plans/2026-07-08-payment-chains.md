@@ -1326,7 +1326,7 @@ git commit -m "feat(chains): hop edit/delete guards + return/fee remainder resol
 
 ---
 
-### Task 6: Chain listing + in-transit summary (service)
+### Task 6: Chain listing + in-transit summary (service) ✅
 
 **Files:**
 - Modify: `src/khata/services/transfers.py`
@@ -1358,7 +1358,7 @@ git commit -m "feat(chains): hop edit/delete guards + return/fee remainder resol
 ```
 - `display` resolution: user → display_name, contact → contact name, else raw name.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_transfers_state.py
@@ -1428,12 +1428,12 @@ def test_closed_chain_flag(ctx):
     assert st["chains"][0]["closed"] is True
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_transfers_state.py -v`
 Expected: FAIL — `AttributeError: plan_transfers`
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```python
 def _party_dict(session, user_id, contact_id, name):
@@ -1490,12 +1490,12 @@ def plan_transfers(session: Session, plan) -> dict:
     return {"in_transit_minor": in_transit, "chains": out_chains}
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `python -m pytest tests/test_transfers_state.py -v`
 Expected: 2 PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/khata/services/transfers.py tests/test_transfers_state.py
