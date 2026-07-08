@@ -552,7 +552,8 @@ function fmtAuditDiff(diffJson){
   if(d.logged_by_user_id) parts.push('contributor reassigned');
   return parts.join(' · ') || 'updated';
 }
-const FUND_COLORS=['var(--primary)','var(--pos)','var(--accent)','var(--neg)','var(--ink-faint)'];
+const FUND_COLORS=['#b06a32','#3d6b6e','#7a5ea8','#5a7a3a','#a8506a'];  // theme-independent, distinct per source
+const TRANSIT_COLOR='#b8791f';  // amber — money still moving
 
 // ── header KPIs + progress ──
 function renderHeader(box, plan, st, hops){
@@ -858,7 +859,7 @@ function renderFunding(box, st, hops){
     sub.style.cssText='display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-faint);margin:2px 0 10px';
     if(transit>0){
       const s1=el('span'); s1.append(el('b',null,sym(DISP)+fmtNum(conv(transit),DISP)));
-      s1.append(document.createTextNode(' in transit')); s1.style.color='var(--accent-dk)';
+      s1.append(document.createTextNode(' in transit')); s1.style.color=TRANSIT_COLOR;
       sub.append(s1);
     }
     if(pending>0){
@@ -884,7 +885,7 @@ function renderFunding(box, st, hops){
     stackbar.append(seg);
   });
   if(transit>0){
-    const seg=el('i'); seg.style.background='var(--ink-faint)'; seg.style.opacity='.45';
+    const seg=el('i'); seg.style.background=TRANSIT_COLOR; seg.style.opacity='.8';
     seg.dataset.w=whole?Math.round(transit*100/whole):0;
     seg.title='In transit — not yet with the seller';
     stackbar.append(seg);
