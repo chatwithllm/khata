@@ -251,6 +251,11 @@ window.KhataTransfers = (function(){
     const applyCollapse=()=>{
       body.style.display=collapsed?'none':'';
       chev.style.transform=collapsed?'':'rotate(90deg)';
+      // shrink the panel box itself — flex fill otherwise leaves a tall empty card
+      if(_el.dataset.hadFill===undefined) _el.dataset.hadFill=_el.classList.contains('fill')?'1':'0';
+      _el.classList.toggle('fill', !collapsed && _el.dataset.hadFill==='1');
+      _el.style.flex=collapsed?'0 0 auto':'';
+      _el.style.minHeight=collapsed?'0':'';
     };
     applyCollapse();
     ph.addEventListener('click', ()=>{

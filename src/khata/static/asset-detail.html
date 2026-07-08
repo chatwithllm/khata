@@ -800,6 +800,11 @@ function renderLedger(box, st){
   const applyCollapse=()=>{
     ledger.style.display=collapsed?'none':'';
     chev.style.transform=collapsed?'':'rotate(90deg)';
+    // shrink the panel box — .fill flex-grows an empty card otherwise
+    if(box.dataset.hadFill===undefined) box.dataset.hadFill=box.classList.contains('fill')?'1':'0';
+    box.classList.toggle('fill', !collapsed && box.dataset.hadFill==='1');
+    box.style.flex=collapsed?'0 0 auto':'';
+    box.style.minHeight=collapsed?'0':'';
   };
   ph.addEventListener('click', ()=>{
     collapsed=!collapsed;
