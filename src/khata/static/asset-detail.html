@@ -512,7 +512,9 @@ function attachProofPreview(chipEl, url){
       +'box-shadow:0 12px 32px rgba(0,0,0,.18);pointer-events:none';
     imgs.forEach(a=>{
       const im=el('img'); im.src='/api/attachments/'+a.id; im.alt=a.filename;
-      im.style.cssText='width:180px;height:180px;object-fit:cover;border-radius:8px;background:var(--paper-2)';
+      // contain, not cover — receipts/screenshots must stay readable, not cropped
+      im.style.cssText='max-width:'+(imgs.length>1?'30vw':'44vw')+';max-height:62vh;'
+        +'object-fit:contain;border-radius:8px;background:var(--paper-2)';
       pop.append(im);
     });
     const extra=_proofCache[url].length-imgs.length;
@@ -522,11 +524,17 @@ function attachProofPreview(chipEl, url){
       pop.append(more);
     }
     document.body.append(pop);
-    const r=chipEl.getBoundingClientRect();
-    const pw=pop.offsetWidth, ph=pop.offsetHeight;
-    let x=Math.min(r.left, window.innerWidth-pw-12);
-    let y=r.top-ph-10; if(y<8) y=r.bottom+10;
-    pop.style.left=Math.max(8,x)+'px'; pop.style.top=y+'px';
+    const place=()=>{
+      if(!pop) return;
+      const r=chipEl.getBoundingClientRect();
+      const pw=pop.offsetWidth, ph=pop.offsetHeight;
+      let x=Math.min(r.left, window.innerWidth-pw-12);
+      let y=r.top-ph-10; if(y<8) y=Math.min(r.bottom+10, window.innerHeight-ph-8);
+      pop.style.left=Math.max(8,x)+'px'; pop.style.top=Math.max(8,y)+'px';
+    };
+    place();
+    // images load async and grow the card — re-place as each arrives
+    pop.querySelectorAll('img').forEach(im=>im.addEventListener('load', place));
   }
   function hide(){ alive=false; if(pop){ pop.remove(); pop=null; } }
   chipEl.addEventListener('mouseenter', show);
