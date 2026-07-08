@@ -219,8 +219,15 @@ window.KhataTransfers = (function(){
     if(!_data.chains.length){ _el.style.display='none'; return; }
     _el.style.display='';
 
+    const collapseKey='khata:collapse:transit:'+_pid;
+    let collapsed=localStorage.getItem(collapseKey)==='1';
+
     const ph=_e('div','ph');
+    ph.style.cursor='pointer';
     const t=_e('div','t','Money in transit'); t.style.fontSize='16px';
+    const chev=_e('span',null,'▸');
+    chev.style.cssText='margin-left:8px;font-size:11px;color:var(--ink-faint);display:inline-block;transition:transform .2s';
+    t.append(chev);
     const right=_e('div'); right.style.cssText='display:flex;align-items:center;gap:12px';
     right.append(_e('div','meta', _fmt(_data.in_transit_minor)+' in transit'));
     ph.append(t, right);
@@ -229,6 +236,7 @@ window.KhataTransfers = (function(){
     const hopById={};
     for(const ch of _data.chains) for(const h of ch.hops) hopById[h.id]=h;
 
+    const body=_e('div');
     for(const ch of _data.chains){
       const block=_e('div','trx-chain');
       const eyebrow=_e('div','trx-eyebrow');
@@ -236,8 +244,20 @@ window.KhataTransfers = (function(){
       if(ch.closed) eyebrow.append(_e('span',null,'closed'));
       block.append(eyebrow);
       for(const h of ch.hops) block.append(_hopRow(h, hopById));
-      _el.append(block);
+      body.append(block);
     }
+    _el.append(body);
+
+    const applyCollapse=()=>{
+      body.style.display=collapsed?'none':'';
+      chev.style.transform=collapsed?'':'rotate(90deg)';
+    };
+    applyCollapse();
+    ph.addEventListener('click', ()=>{
+      collapsed=!collapsed;
+      localStorage.setItem(collapseKey, collapsed?'1':'0');
+      applyCollapse();
+    });
   }
 
   function openHops(){

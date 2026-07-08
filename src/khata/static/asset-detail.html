@@ -765,18 +765,26 @@ function renderLedger(box, st){
   (st.contributors||[]).forEach((c,i)=>{ colorByUid[c.user_id]=i; });
   const shared = (st.contributors||[]).length>1 || MEMBERS.length>1;
 
+  const collapseKey='khata:collapse:ledger:'+pid;
+  let collapsed=localStorage.getItem(collapseKey)==='1';
+
   const ph=el('div','ph');
+  ph.style.cursor='pointer';
   const t=el('div','t','Ledger'); t.style.fontSize='16px';
+  const chev=el('span',null,'▸');
+  chev.style.cssText='margin-left:8px;font-size:11px;color:var(--ink-faint);display:inline-block;transition:transform .2s';
+  t.append(chev);
   const right=el('div'); right.style.cssText='display:flex;align-items:center;gap:12px';
-  right.append(el('div','meta', rows.length+(rows.length===1?' entry':' entries')));
+  right.append(el('div','meta', rows.length+(rows.length===1?' entry':' entries')
+    +' · Σ '+sym(DISP)+fmtNum(conv(st.paid_to_date_minor),DISP)));
   // single Edit toggle in the headline (replaces the per-row ✎)
   if(rows.some(r=>r.id!=null)){
     const editBtn=el('span','proof', LEDGER_EDIT?'✓ done':'✎ edit');
     editBtn.style.cssText='cursor:pointer;user-select:none'; editBtn.tabIndex=0; editBtn.setAttribute('role','button');
     if(LEDGER_EDIT){ editBtn.style.color='var(--accent-dk)'; editBtn.style.fontWeight='700'; }
     const toggle=()=>{ LEDGER_EDIT=!LEDGER_EDIT; renderLedger(box, st); };
-    editBtn.addEventListener('click', toggle);
-    editBtn.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } });
+    editBtn.addEventListener('click', e=>{ e.stopPropagation(); toggle(); });
+    editBtn.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); toggle(); } });
     right.append(editBtn);
   }
   ph.append(t, right);
@@ -789,7 +797,16 @@ function renderLedger(box, st){
   }
 
   const ledger=el('div','ledger fillrows');
-  if(!rows.length){ ledger.append(el('div','emptypanel','No ledger entries yet.')); box.append(ledger); return; }
+  const applyCollapse=()=>{
+    ledger.style.display=collapsed?'none':'';
+    chev.style.transform=collapsed?'':'rotate(90deg)';
+  };
+  ph.addEventListener('click', ()=>{
+    collapsed=!collapsed;
+    localStorage.setItem(collapseKey, collapsed?'1':'0');
+    applyCollapse();
+  });
+  if(!rows.length){ ledger.append(el('div','emptypanel','No ledger entries yet.')); box.append(ledger); applyCollapse(); return; }
   const sorted = rows.slice().sort((a,b)=>{
     const da=parseISO(a.occurred_at), db=parseISO(b.occurred_at);
     if(da&&db) return db-da; if(db) return 1; if(da) return -1; return 0;
@@ -926,6 +943,7 @@ function renderLedger(box, st){
     ledger.append(row);
   }
   box.append(ledger);
+  applyCollapse();
 }
 
 // ── funding sources ──
