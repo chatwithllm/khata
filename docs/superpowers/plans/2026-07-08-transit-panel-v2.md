@@ -49,6 +49,6 @@ Steps: failing API test (upload as logger 201, list as member 200, outsider 403,
 
 Steps: read `attach.js` + ledger row markup/classes in asset-detail → implement restyle (panel header/eyebrow/KPI, ruled rows, chips, mono amounts, small-caps chain label, actions as links incl. Edit) → edit slide-over (amount/date/method/note + Delete + attachments mount) → headless verify → commit `feat(chains): transit panel v2 — edit slide-over, proof attachments, restyle`.
 
-### Task 4: Docs
+### Task 4: Docs ✅
 
 Update `docs/specs/khata-AS-BUILT.md` (attachments table gains hop parent; hops API section gains attachment routes; changelog entry). Full suite. Commit `docs: as-built — transit panel v2`.

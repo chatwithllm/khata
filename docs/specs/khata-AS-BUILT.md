@@ -115,6 +115,10 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   (greedy oldest-first walk by HopSource.id; non-user origins attributed to the hop logger).
 - **transfer_hop_audit**: mirror of ledger_entry_audit (create/edit/delete, JSON snapshot+diff,
   hop_id SET NULL on delete).
+- `attachments.hop_id?` → FK transfer_hops (CASCADE, `th2hopattach01`): proof files on hops — the
+  4th attachment parent (exactly one of entry/contact/asset_plan/hop). Upload/delete: hop logger or
+  plan owner; view: plan members. Routes: `GET/POST /api/plans/<pid>/hops/<hid>/attachments`;
+  existing `GET/DELETE /api/attachments/<id>` dispatch on the new parent.
 - `ledger_entries.source_hop_id?` → FK transfer_hops (SET NULL): set on entries spawned by a terminal hop.
   Fee write-offs spawn entries with `kind='transfer_fee'` — **excluded from asset paid totals**
   (surfaced as `fees_minor` in asset state).
@@ -486,6 +490,11 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-07-08 — **Transit panel v2.** Hop editing (slide-over: amount/date/method/note + Delete;
+  terminal amounts locked to match server guard), real proof attachments on hops
+  (`attachments.hop_id`, migration `th2hopattach01`; attach.js gains a `hopId` mode), and the
+  money-in-transit panel restyled to the ledger idiom (.ph header, .lrow rows, .pill chips,
+  proof chip with count). Spec `2026-07-08-transit-panel-v2-design.md`.
 - 2026-07-08 — **Asset detail respects display currency.** Asset page now converts all amounts
   (KPIs, ledger, installment short, transit panel, counter tooltips) from plan currency into the
   user's primary-currency preference via stored FX rates — same `DISP`/`FXR_MICRO` mechanism as
