@@ -131,5 +131,82 @@ def create_hop(session: Session, *, plan, logged_by_user_id, amount_minor, occur
         hop.fx_rate_micro = fx_rate_micro
         hop.fx_counter_currency = fx.counter_currency_for(hop.currency)
         session.flush()
+    if hop.is_terminal and hop.resolution is None:
+        fan_out_terminal(session, plan=plan, hop=hop,
+                         acting_user_id=logged_by_user_id,
+                         funding_source=funding_source)
     _write_audit(session, hop, "create", logged_by_user_id)
     return hop
+
+
+def _own_party_user(hop: TransferHop) -> int | None:
+    """The from-party as a user id, or None when the origin is a contact/name."""
+    return hop.from_user_id
+
+
+def _prior_consumption(session: Session, hop: TransferHop, *, before_source_id: int) -> int:
+    """How much of `hop` was consumed by HopSource rows earlier than the given one."""
+    rows = session.scalars(
+        select(HopSource).where(HopSource.source_hop_id == hop.id,
+                                HopSource.id < before_source_id)).all()
+    return sum(r.amount_minor for r in rows)
+
+
+def resolve_contributions(session: Session, hop: TransferHop) -> list[tuple[int | None, int]]:
+    """(user_id, amount) pairs for a hop's money, walked to ultimate origins.
+    user_id None = non-user origin (contact / free-text). Greedy oldest-first:
+    each upstream hop's own-funds and lineage portions are consumed in
+    HopSource.id order, tracking how much earlier consumers already took."""
+    def _alloc(h: TransferHop, take: int, taken_before: int) -> list[tuple[int | None, int]]:
+        """Allocate `take` units of hop h's money, skipping the first
+        `taken_before` units (already claimed by earlier consumers)."""
+        out: list[tuple[int | None, int]] = []
+        pos = 0
+        for src in h.sources:                    # ordered by HopSource.id
+            if take <= 0:
+                break
+            seg = src.amount_minor
+            overlap_start = max(pos, taken_before)
+            overlap_end = min(pos + seg, taken_before + take)
+            grab = overlap_end - overlap_start
+            if grab > 0:
+                if src.source_hop_id is None:
+                    out.append((_own_party_user(h), grab))
+                else:
+                    up = session.get(TransferHop, src.source_hop_id)
+                    out.extend(_alloc(up, grab, overlap_start - pos))
+            pos += seg
+        return out
+
+    result: list[tuple[int | None, int]] = []
+    for src in hop.sources:
+        if src.source_hop_id is None:
+            result.append((_own_party_user(hop), src.amount_minor))
+        else:
+            up = session.get(TransferHop, src.source_hop_id)
+            prior = _prior_consumption(session, up, before_source_id=src.id)
+            result.extend(_alloc(up, src.amount_minor, prior))
+    # merge duplicates
+    merged: dict[int | None, int] = {}
+    for uid, amt in result:
+        merged[uid] = merged.get(uid, 0) + amt
+    return list(merged.items())
+
+
+def fan_out_terminal(session: Session, *, plan, hop: TransferHop, acting_user_id,
+                     funding_source="other"):
+    """Spawn one LedgerEntry per ultimate contributor of a terminal hop.
+    Non-user origins are attributed to the hop logger (spec §Attribution)."""
+    from .assets import log_payment
+    entries = []
+    for uid, amt in resolve_contributions(session, hop):
+        entry = log_payment(
+            session, plan=plan, user_id=uid if uid is not None else hop.logged_by_user_id,
+            amount_minor=amt, occurred_at=hop.occurred_at,
+            method=hop.method, funding_source=funding_source,
+            proof_ref=hop.proof_ref, note=hop.note,
+            acting_user_id=acting_user_id)
+        entry.source_hop_id = hop.id
+        entries.append(entry)
+    session.flush()
+    return entries

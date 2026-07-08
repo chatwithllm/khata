@@ -617,7 +617,7 @@ git commit -m "feat(chains): hop creation, chain linking, outstanding math"
 
 ---
 
-### Task 3: Terminal fan-out — ultimate contributors → ledger entries
+### Task 3: Terminal fan-out — ultimate contributors → ledger entries ✅
 
 **Files:**
 - Modify: `src/khata/services/transfers.py`
@@ -629,7 +629,7 @@ git commit -m "feat(chains): hop creation, chain linking, outstanding math"
   - `resolve_contributions(session, hop) -> list[tuple[int | None, int]]` — `(user_id, amount)` pairs; `user_id=None` = non-user origin (contact/free-text), attributed to hop logger at entry time. Greedy oldest-first by `HopSource.id`, tracking prior consumption of each upstream hop.
   - `fan_out_terminal(session, *, plan, hop, acting_user_id, funding_source="other") -> list[LedgerEntry]` — called by `create_hop` when `is_terminal=True` and `resolution is None`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_transfers_fanout.py
@@ -739,12 +739,12 @@ def test_contact_origin_attributed_to_logger(ctx):
     assert entries[0].amount_minor == 500
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_transfers_fanout.py -v`
 Expected: FAIL — no entries created (`by_user == {}`)
 
-- [ ] **Step 3: Implement fan-out**
+- [x] **Step 3: Implement fan-out**
 
 Add to `src/khata/services/transfers.py`:
 
@@ -831,12 +831,12 @@ And at the end of `create_hop`, just before `_write_audit(...)`:
                          funding_source=funding_source)
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `python -m pytest tests/test_transfers_fanout.py tests/test_transfers_service.py -v`
 Expected: all PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/khata/services/transfers.py tests/test_transfers_fanout.py
