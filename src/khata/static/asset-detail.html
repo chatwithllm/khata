@@ -966,12 +966,21 @@ function renderContributors(box, st, myUserId, hops){
     rt.append(amtSpan(c.agreed_minor!=null?c.agreed_minor:c.paid_minor,'a'));
     rt.append(el('div','l',(c.pct||0)+'% share'));
     // sub-line: this person's money still moving / awaiting confirmation
-    const bits=[];
-    if(transitBy[c.user_id]) bits.push(sym(DISP)+fmtNum(conv(transitBy[c.user_id]),DISP)+' in transit');
-    if(c.pending_minor) bits.push(sym(DISP)+fmtNum(conv(c.pending_minor),DISP)+' pending');
-    if(bits.length){
-      const l2=el('div','l', bits.join(' · '));
-      l2.style.color='var(--accent-dk)';
+    if(transitBy[c.user_id] || c.pending_minor){
+      const l2=el('div','l');
+      l2.style.cssText='display:flex;justify-content:flex-end;gap:6px;margin-top:3px';
+      const chip=(txt)=>{
+        const s=el('span',null,txt);
+        s.style.cssText='font-size:10.5px;font-weight:700;color:#fff;background:'+TRANSIT_COLOR
+          +';padding:1px 8px;border-radius:999px;letter-spacing:.02em;white-space:nowrap';
+        return s;
+      };
+      if(transitBy[c.user_id]) l2.append(chip(sym(DISP)+fmtNum(conv(transitBy[c.user_id]),DISP)+' in transit'));
+      if(c.pending_minor){
+        const s=chip(sym(DISP)+fmtNum(conv(c.pending_minor),DISP)+' pending');
+        s.style.background='var(--ink-faint)';
+        l2.append(s);
+      }
       rt.append(l2);
     }
     person.append(rt);
