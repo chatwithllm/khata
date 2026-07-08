@@ -555,8 +555,9 @@ function fmtAuditDiff(diffJson){
 const FUND_COLORS=['var(--primary)','var(--pos)','var(--accent)','var(--neg)','var(--ink-faint)'];
 
 // ── header KPIs + progress ──
-function renderHeader(box, plan, st){
+function renderHeader(box, plan, st, hops){
   box.textContent='';
+  const _transit=(hops&&hops.in_transit_minor)||0;
   const insts = st.installments || [];
   const ph=el('div','ph');
   const t=el('div','t'); t.append(el('span','tag asset','Asset'), document.createTextNode(' '));
@@ -599,13 +600,24 @@ function renderHeader(box, plan, st){
   box.append(ph);
 
   const kpis=el('div','kpis');
-  function kpi(cls,label,minor){
+  function kpi(cls,label,minor,projMinor){
     const k=el('div','kpi'+(cls?' '+cls:''));
     k.append(el('div','l',label));
     const n=el('div','n'); n.append(amtSpan(minor)); k.append(n);
+    // projection: what this number becomes once in-transit money reaches the seller
+    if(projMinor!=null){
+      const pr=el('div',null,'→ '+sym(DISP)+fmtNum(conv(projMinor),DISP)+' when transit lands');
+      pr.style.cssText='font-size:10.5px;color:var(--ink-faint);font-family:\'JetBrains Mono\',monospace;margin-top:2px';
+      k.append(pr);
+    }
     return k;
   }
-  kpis.append(kpi('paid','Paid',st.paid_to_date_minor), kpi('rem','Remaining',st.remaining_minor), kpi('','Total',st.total_price_minor));
+  kpis.append(
+    kpi('paid','Paid',st.paid_to_date_minor,
+        _transit>0 ? (st.paid_to_date_minor||0)+_transit : null),
+    kpi('rem','Remaining',st.remaining_minor,
+        _transit>0 ? Math.max(0,(st.remaining_minor||0)-_transit) : null),
+    kpi('','Total',st.total_price_minor));
   box.append(kpis);
 
   const total=st.total_price_minor||0, paid=st.paid_to_date_minor||0;
@@ -1542,15 +1554,15 @@ async function boot(){
   if(nextDueSeq) subText += ' · #'+nextDueSeq+' due';
   $('osub').textContent = subText;
 
-  renderHeader($('header-panel'), plan, st);
+  let HOPS = {in_transit_minor:0, in_transit_by_contributor:[]};
+  try{ HOPS = await fetch('/api/plans/'+pid+'/hops').then(r=>r.json()); }catch(_){}
+  renderHeader($('header-panel'), plan, st, HOPS);
   renderSchedule($('sched-panel'), st);
   renderLedger($('ledger-panel'), st);
   renderParties($('parties-panel'), st);
   renderDetails($('details-panel'), st);
   renderLinks($('links-panel'), st);
   renderDocs($('docs-panel'), st.attachments || []);
-  let HOPS = {in_transit_minor:0, in_transit_by_contributor:[]};
-  try{ HOPS = await fetch('/api/plans/'+pid+'/hops').then(r=>r.json()); }catch(_){}
   renderFunding($('fund-panel'), st, HOPS);
   renderContributors($('contrib-panel'), st, myUserId, HOPS);
   renderMembers($('members-panel'));
