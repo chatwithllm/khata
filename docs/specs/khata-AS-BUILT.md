@@ -490,6 +490,12 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-07-08 — **Funding & Contributors 3-state breakdown.** Asset panels now split money into
+  delivered (agreed entries) / in transit (open hops, neutral bar segment) / pending confirmation
+  (unagreed entries). `asset_state` gains `paid_agreed_minor`/`paid_pending_minor` + per-contributor
+  `agreed_minor`/`pending_minor`; `plan_transfers` gains `in_transit_by_contributor` (outstanding
+  walked to ultimate origins — unconsumed tail after greedy consumers). Spec
+  `2026-07-08-funding-3state-design.md`.
 - 2026-07-08 — **Transit panel v2.** Hop editing (slide-over: amount/date/method/note + Delete;
   terminal amounts locked to match server guard), real proof attachments on hops
   (`attachments.hop_id`, migration `th2hopattach01`; attach.js gains a `hopId` mode), and the

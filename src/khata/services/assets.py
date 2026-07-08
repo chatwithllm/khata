@@ -419,18 +419,25 @@ def asset_state(session: Session, plan: Plan, viewer_id: int | None = None) -> d
     ]
 
     by_user: dict[int, int] = {}
+    agreed_by_user: dict[int, int] = {}
     unconfirmed_uids: set[int] = set()
     for e in outs:
         by_user[e.logged_by_user_id] = by_user.get(e.logged_by_user_id, 0) + e.amount_minor
-        if e.amount_status != "agreed":
+        if e.amount_status == "agreed":
+            agreed_by_user[e.logged_by_user_id] = (
+                agreed_by_user.get(e.logged_by_user_id, 0) + e.amount_minor)
+        else:
             unconfirmed_uids.add(e.logged_by_user_id)
     contributors = []
     for uid, amt in sorted(by_user.items(), key=lambda kv: kv[1], reverse=True):
         user = session.get(User, uid)
+        agreed = agreed_by_user.get(uid, 0)
         contributors.append({"user_id": uid,
                              "display_name": user.display_name if user else None,
                              "avatar": user.avatar if user else None,
                              "paid_minor": amt,
+                             "agreed_minor": agreed,
+                             "pending_minor": amt - agreed,
                              "pct": round(amt * 100 / paid) if paid else 0,
                              "unconfirmed": uid in unconfirmed_uids})
 
@@ -474,6 +481,8 @@ def asset_state(session: Session, plan: Plan, viewer_id: int | None = None) -> d
         "overpaid_minor": max(0, paid - total),
         "fees_minor": sum(e.amount_minor for e in plan.ledger_entries
                           if e.kind == "transfer_fee"),
+        "paid_agreed_minor": sum(e.amount_minor for e in outs if e.amount_status == "agreed"),
+        "paid_pending_minor": sum(e.amount_minor for e in outs if e.amount_status != "agreed"),
         "next_due_seq": next_due_seq,
         "installments": rows,
         "funding_breakdown": funding_breakdown,

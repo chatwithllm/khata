@@ -825,18 +825,37 @@ function renderLedger(box, st){
 }
 
 // ── funding sources ──
-function renderFunding(box, st){
+function renderFunding(box, st, hops){
   box.textContent='';
   const fb = st.funding_breakdown || [];
+  const transit=(hops&&hops.in_transit_minor)||0;
+  const pending=st.paid_pending_minor||0;
+  const delivered=st.paid_agreed_minor!=null?st.paid_agreed_minor:st.paid_to_date_minor;
   const ph=el('div','ph');
   const t=el('div','t','Funding sources'); t.style.fontSize='16px';
   ph.append(t, el('div','meta','paid to date'));
   box.append(ph);
   const fund=el('div','fund');
   const fhead=el('div','fund-head');
-  const amt=el('div','fund-amt'); amt.append(amtSpan(st.paid_to_date_minor)); fhead.append(amt);
-  fhead.append(el('div','fund-cap','funded to date · '+fb.length+(fb.length===1?' source':' sources')));
+  const amt=el('div','fund-amt'); amt.append(amtSpan(delivered)); fhead.append(amt);
+  fhead.append(el('div','fund-cap','delivered · '+fb.length+(fb.length===1?' source':' sources')));
   fund.append(fhead);
+  // 3-state sub-line: delivered vs in transit vs pending confirmation
+  if(transit>0 || pending>0){
+    const sub=el('div');
+    sub.style.cssText='display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-faint);margin:2px 0 10px';
+    if(transit>0){
+      const s1=el('span'); s1.append(el('b',null,sym(DISP)+fmtNum(conv(transit),DISP)));
+      s1.append(document.createTextNode(' in transit')); s1.style.color='var(--accent-dk)';
+      sub.append(s1);
+    }
+    if(pending>0){
+      const s2=el('span'); s2.append(el('b',null,sym(DISP)+fmtNum(conv(pending),DISP)));
+      s2.append(document.createTextNode(' pending confirmation'));
+      sub.append(s2);
+    }
+    fund.append(sub);
+  }
 
   if(!fb.length){
     fund.append(el('div','emptypanel','No payments yet.'));
@@ -844,11 +863,20 @@ function renderFunding(box, st){
   }
 
   const stackbar=el('div','stackbar');
+  // scale source segments + a neutral in-transit segment against (paid + transit)
+  const whole=(st.paid_to_date_minor||0)+transit;
   fb.forEach((f,idx)=>{
     const seg=el('i'); seg.style.background=FUND_COLORS[idx%FUND_COLORS.length];
-    seg.dataset.w=(f.pct||0); seg.title=srcLabel(f.source);
+    seg.dataset.w=whole?Math.round(f.amount_minor*100/whole):(f.pct||0);
+    seg.title=srcLabel(f.source);
     stackbar.append(seg);
   });
+  if(transit>0){
+    const seg=el('i'); seg.style.background='var(--ink-faint)'; seg.style.opacity='.45';
+    seg.dataset.w=whole?Math.round(transit*100/whole):0;
+    seg.title='In transit — not yet with the seller';
+    stackbar.append(seg);
+  }
   fund.append(stackbar);
 
   const frows=el('div','frows');
@@ -877,7 +905,9 @@ function renderFunding(box, st){
 }
 
 // ── contributors ──
-function renderContributors(box, st, myUserId){
+function renderContributors(box, st, myUserId, hops){
+  const transitBy={};
+  ((hops&&hops.in_transit_by_contributor)||[]).forEach(r=>{ transitBy[r.user_id]=r.amount_minor; });
   box.textContent='';
   const cs = st.contributors || [];
   const ph=el('div','ph');
@@ -920,8 +950,17 @@ function renderContributors(box, st, myUserId){
     mid.append(nm);
     person.append(mid);
     const rt=el('div','rt');
-    rt.append(amtSpan(c.paid_minor,'a'));
+    rt.append(amtSpan(c.agreed_minor!=null?c.agreed_minor:c.paid_minor,'a'));
     rt.append(el('div','l',(c.pct||0)+'% share'));
+    // sub-line: this person's money still moving / awaiting confirmation
+    const bits=[];
+    if(transitBy[c.user_id]) bits.push(sym(DISP)+fmtNum(conv(transitBy[c.user_id]),DISP)+' in transit');
+    if(c.pending_minor) bits.push(sym(DISP)+fmtNum(conv(c.pending_minor),DISP)+' pending');
+    if(bits.length){
+      const l2=el('div','l', bits.join(' · '));
+      l2.style.color='var(--accent-dk)';
+      rt.append(l2);
+    }
     person.append(rt);
     contrib.append(person);
   });
@@ -1510,8 +1549,10 @@ async function boot(){
   renderDetails($('details-panel'), st);
   renderLinks($('links-panel'), st);
   renderDocs($('docs-panel'), st.attachments || []);
-  renderFunding($('fund-panel'), st);
-  renderContributors($('contrib-panel'), st, myUserId);
+  let HOPS = {in_transit_minor:0, in_transit_by_contributor:[]};
+  try{ HOPS = await fetch('/api/plans/'+pid+'/hops').then(r=>r.json()); }catch(_){}
+  renderFunding($('fund-panel'), st, HOPS);
+  renderContributors($('contrib-panel'), st, myUserId, HOPS);
   renderMembers($('members-panel'));
   renderSharePanel($('share-panel'));
   loadShareList();

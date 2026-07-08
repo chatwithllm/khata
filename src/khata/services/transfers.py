@@ -249,32 +249,34 @@ def _prior_consumption(session: Session, hop: TransferHop, *, before_source_id: 
     return sum(r.amount_minor for r in rows)
 
 
+def _alloc(session: Session, h: TransferHop, take: int, taken_before: int) -> list[tuple[int | None, int]]:
+    """Allocate `take` units of hop h's money to ultimate origins, skipping the
+    first `taken_before` units (already claimed by earlier consumers). Greedy
+    oldest-first over the hop's sources (HopSource.id order)."""
+    out: list[tuple[int | None, int]] = []
+    pos = 0
+    for src in h.sources:                    # ordered by HopSource.id
+        if take <= 0:
+            break
+        seg = src.amount_minor
+        overlap_start = max(pos, taken_before)
+        overlap_end = min(pos + seg, taken_before + take)
+        grab = overlap_end - overlap_start
+        if grab > 0:
+            if src.source_hop_id is None:
+                out.append((_own_party_user(h), grab))
+            else:
+                up = session.get(TransferHop, src.source_hop_id)
+                out.extend(_alloc(session, up, grab, overlap_start - pos))
+        pos += seg
+    return out
+
+
 def resolve_contributions(session: Session, hop: TransferHop) -> list[tuple[int | None, int]]:
     """(user_id, amount) pairs for a hop's money, walked to ultimate origins.
     user_id None = non-user origin (contact / free-text). Greedy oldest-first:
     each upstream hop's own-funds and lineage portions are consumed in
     HopSource.id order, tracking how much earlier consumers already took."""
-    def _alloc(h: TransferHop, take: int, taken_before: int) -> list[tuple[int | None, int]]:
-        """Allocate `take` units of hop h's money, skipping the first
-        `taken_before` units (already claimed by earlier consumers)."""
-        out: list[tuple[int | None, int]] = []
-        pos = 0
-        for src in h.sources:                    # ordered by HopSource.id
-            if take <= 0:
-                break
-            seg = src.amount_minor
-            overlap_start = max(pos, taken_before)
-            overlap_end = min(pos + seg, taken_before + take)
-            grab = overlap_end - overlap_start
-            if grab > 0:
-                if src.source_hop_id is None:
-                    out.append((_own_party_user(h), grab))
-                else:
-                    up = session.get(TransferHop, src.source_hop_id)
-                    out.extend(_alloc(up, grab, overlap_start - pos))
-            pos += seg
-        return out
-
     result: list[tuple[int | None, int]] = []
     for src in hop.sources:
         if src.source_hop_id is None:
@@ -282,7 +284,7 @@ def resolve_contributions(session: Session, hop: TransferHop) -> list[tuple[int 
         else:
             up = session.get(TransferHop, src.source_hop_id)
             prior = _prior_consumption(session, up, before_source_id=src.id)
-            result.extend(_alloc(up, src.amount_minor, prior))
+            result.extend(_alloc(session, up, src.amount_minor, prior))
     # merge duplicates
     merged: dict[int | None, int] = {}
     for uid, amt in result:
@@ -350,7 +352,29 @@ def plan_transfers(session: Session, plan) -> dict:
                              "amount_minor": s_.amount_minor} for s_ in h.sources]})
         out_chains.append({"chain_id": cid, "closed": closed, "hops": rows})
     out_chains.sort(key=lambda c: c["hops"][0]["occurred_at"], reverse=True)
-    return {"in_transit_minor": in_transit, "chains": out_chains}
+
+    # in-transit money attributed to its ultimate origin: each open hop's
+    # outstanding is the unconsumed TAIL of its money (greedy consumers take the
+    # head), so allocate starting after the consumed prefix. Non-user origins
+    # fall back to the hop logger (same rule as terminal fan-out).
+    transit_by: dict[int, int] = {}
+    for h in hops:
+        out = outstanding(session, h)
+        if out <= 0:
+            continue
+        for uid, amt in _alloc(session, h, out, consumed(session, h)):
+            uid = uid if uid is not None else h.logged_by_user_id
+            transit_by[uid] = transit_by.get(uid, 0) + amt
+    from ..models import User as _User
+    in_transit_by_contributor = []
+    for uid, amt in sorted(transit_by.items(), key=lambda kv: kv[1], reverse=True):
+        u = session.get(_User, uid)
+        in_transit_by_contributor.append({
+            "user_id": uid, "display": u.display_name if u else None,
+            "amount_minor": amt})
+
+    return {"in_transit_minor": in_transit, "chains": out_chains,
+            "in_transit_by_contributor": in_transit_by_contributor}
 
 
 def update_hop(session: Session, *, plan, hop_id, acting_user_id,
