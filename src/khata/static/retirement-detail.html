@@ -146,6 +146,8 @@
           <div class="panel fade" id="header-panel"></div>
           <!-- projection (nominal vs real + growth curve) -->
           <div class="panel fade d1 fill" id="proj-panel"></div>
+          <!-- money in transit (payment chains) -->
+          <div class="panel fade d1" id="transit-panel" style="display:none"></div>
         </div>
 
         <!-- RIGHT RAIL -->
@@ -192,6 +194,7 @@
 </aside>
 
 <script src="/static/assets/sharing.js"></script>
+<script src="/static/assets/transfers.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const pid = parseInt(location.pathname.split("/").pop(), 10);
@@ -572,6 +575,7 @@ async function boot(){
   const plan=d.plan, st=d.state;
   CUR = st;
   BASE = plan.currency || 'INR';
+  KhataTransfers.mount($('transit-panel'), pid, {me: user.id, base: BASE, fmt: fmtNum, sym: sym, onChange: boot});
   document.documentElement.dataset.cur = BASE.toLowerCase();
   document.title = 'Khata — '+plan.name;
   document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));

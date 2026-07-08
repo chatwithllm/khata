@@ -177,6 +177,8 @@
         <div class="stack fillcol">
           <!-- header KPIs + progress -->
           <div class="panel fade" id="header-panel"></div>
+          <!-- money in transit (payment chains) -->
+          <div class="panel fade d1" id="transit-panel" style="display:none"></div>
           <!-- ledger (transactions) -->
           <div class="panel fade d1" id="ledger-panel"></div>
           <!-- repayment schedule (formerly "Release tracker") -->
@@ -321,6 +323,7 @@
 <script src="/static/assets/sharing.js"></script>
 <script src="/static/assets/attach.js"></script>
 <script src="/static/assets/fx.js"></script>
+<script src="/static/assets/transfers.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const pid = parseInt(location.pathname.split("/").pop(), 10);
@@ -1660,6 +1663,7 @@ async function boot(){
 
   const plan=d.plan, st=d.state;
   BASE = plan.currency || 'INR';
+  KhataTransfers.mount($('transit-panel'), pid, {me: user.id, base: BASE, fmt: fmtNum, sym: sym, onChange: boot});
   // DISP = the user's global primary-currency preference. Convert the loan's native (BASE)
   // amounts into DISP when a fx rate exists; otherwise show native. The payoff projection
   // panel always stays native (its inputs feed native-currency server math).

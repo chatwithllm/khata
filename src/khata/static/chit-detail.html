@@ -234,6 +234,8 @@
           <div class="panel fade d1" id="rounds-panel"></div>
           <!-- contribution schedule (month-by-month, derived) -->
           <div class="panel fade d1" id="schedule-panel"></div>
+          <!-- money in transit (payment chains) -->
+          <div class="panel fade d2" id="transit-panel" style="display:none"></div>
           <!-- ledger -->
           <div class="panel fade d2 fill" id="ledger-panel"></div>
         </div>
@@ -303,6 +305,7 @@
 <script src="/static/assets/sharing.js"></script>
 <script src="/static/assets/attach.js"></script>
 <script src="/static/assets/fx.js"></script>
+<script src="/static/assets/transfers.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const pid = parseInt(location.pathname.split("/").pop(), 10);
@@ -936,6 +939,7 @@ async function boot(){
     }
   }catch(e){}
   BASE = plan.currency || 'INR';
+  KhataTransfers.mount($('transit-panel'), pid, {me: user.id, base: BASE, fmt: fmtNum, sym: sym, onChange: boot});
   document.documentElement.dataset.cur = BASE.toLowerCase();
   document.title = 'Khata — '+plan.name;
   document.querySelectorAll('#curtog button').forEach(b=>b.classList.toggle('on', b.dataset.set===BASE));

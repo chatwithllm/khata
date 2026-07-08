@@ -1984,7 +1984,7 @@ git commit -m "feat(chains): in-transit panel, chain timeline, hop logging UI on
 
 ---
 
-### Task 10: Wire panel into other plan-detail pages
+### Task 10: Wire panel into other plan-detail pages ✅
 
 **Files:**
 - Modify: `src/khata/static/loan-detail.html`, `src/khata/static/chit-detail.html`, `src/khata/static/holding-detail.html`, `src/khata/static/retirement-detail.html`
@@ -1992,15 +1992,15 @@ git commit -m "feat(chains): in-transit panel, chain timeline, hop logging UI on
 **Interfaces:**
 - Consumes: `KhataTransfers.mount` (Task 9).
 
-- [ ] **Step 1: Add panel to each page**
+- [x] **Step 1: Add panel to each page**
 
 For each file: add the script include, a `<div id="transit-panel"></div>` in the same relative position (above the ledger/entries section), and the `mount(...)` call in the page-load function with that page's formatter + user id. Read each page's load function first — they differ slightly.
 
-- [ ] **Step 2: Headless verify**
+- [x] **Step 2: Headless verify**
 
 Load each detail page for a plan of that type with zero hops — the panel must render nothing/an empty state and cause no JS console errors. Log one hop on a loan plan via API and confirm the panel appears.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/khata/static/loan-detail.html src/khata/static/chit-detail.html src/khata/static/holding-detail.html src/khata/static/retirement-detail.html
