@@ -168,6 +168,8 @@
           <div class="panel fade" id="header-panel"></div>
           <!-- installment schedule -->
           <div class="panel fade d1 fill" id="sched-panel"></div>
+          <!-- money in transit (payment chains) — hidden when no chains exist -->
+          <div class="panel fade d1" id="transit-panel" style="display:none"></div>
           <!-- ledger (3.1) -->
           <div class="panel fade d1 fill" id="ledger-panel"></div>
         </div>
@@ -205,6 +207,19 @@
     <div class="osub" id="osub"></div>
   </div>
   <div class="obody">
+    <div class="fld"><label for="recip-kind">Recipient</label>
+      <select id="recip-kind">
+        <option value="seller">Paid to seller (final)</option>
+        <option value="transit">Sent to someone (in transit)</option>
+      </select>
+    </div>
+    <div class="fld" id="transit-to-fld" style="display:none"><label for="transit-to">Sent to</label>
+      <select id="transit-to"></select>
+      <input id="transit-to-name" placeholder="Name" style="display:none;margin-top:6px">
+    </div>
+    <div class="fld" id="drawhops-fld" style="display:none"><label>Use money in transit</label>
+      <div id="drawhops-list" style="display:flex;flex-direction:column;gap:6px;font-size:13px"></div>
+    </div>
     <div class="fld">
       <label for="amount">Amount <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-faint);font-size:10px;margin-left:4px">· type math to calculate</span></label>
       <div class="amt-row">
@@ -282,6 +297,7 @@
 <script src="/static/assets/sharing.js"></script>
 <script src="/static/assets/attach.js"></script>
 <script src="/static/assets/fx.js"></script>
+<script src="/static/assets/transfers.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const pid = parseInt(location.pathname.split("/").pop(), 10);
@@ -289,6 +305,7 @@ let BASE = "INR";
 let nextDueSeq = null;
 let planName = "";
 let ME_ID = null;        // current user id (from /api/auth/me)
+let ST_SELLER = null;    // plan's seller party (payment-chain terminal hops)
 let MEMBERS = [];        // plan members [{user_id, email, display_name, role}]
 let LOANS = [];          // the user's loan plans — for the "funded from which loan" picker
 let FX_RATES = [];       // [{base_currency, quote_currency, rate_micro}] from /api/fx-rates
@@ -1091,6 +1108,8 @@ function openOver(){ // NEW payment
   fillPayCur(BASE);
   fillPaidBy(ME_ID);                      // default contributor = current user
   fillFundPlan(null);
+  $('recip-kind').value='seller';
+  refreshRecipUI();
   showOver(); $('amount').focus();
 }
 function openEdit(lr){ // EDIT existing entry
@@ -1113,6 +1132,7 @@ function openEdit(lr){ // EDIT existing entry
   $('fxrate').dataset.initial = $('fxrate').value;
   mountAttachments($('proof-mount'), { planId: pid, entryId: lr.id,
     canModify: (ME_ID!=null), onChange: ()=>{ boot(); } });
+  refreshRecipUI();                       // hides the recipient step while editing
   showOver(); $('amount').focus();
 }
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
@@ -1288,6 +1308,7 @@ async function boot(){
 
   const plan=d.plan, st=d.state;
   BASE = plan.currency || 'INR';
+  ST_SELLER = st.seller || null;
   planName = plan.name;
   nextDueSeq = st.next_due_seq;
   document.documentElement.dataset.cur = BASE.toLowerCase();
@@ -1329,6 +1350,10 @@ async function boot(){
   renderMembers($('members-panel'));
   renderSharePanel($('share-panel'));
   loadShareList();
+
+  // money-in-transit panel (payment chains)
+  KhataTransfers.mount($('transit-panel'), pid,
+    {me: myUserId, base: BASE, fmt: fmtNum, sym: sym, onChange: boot});
 
   // contacts for the seller/buyer typeahead (owner's contacts; safe if it fails)
   try{ CONTACTS=(await fetch('/api/contacts').then(r=>r.json())).contacts||[]; }catch(e){ CONTACTS=[]; }
@@ -1375,6 +1400,91 @@ $('fsource').addEventListener('change', ()=>fillFundPlan($('fundplan')?$('fundpl
 $('cancel').addEventListener('click', closeOver);
 $('scrim').addEventListener('click', ()=>{ closeOver(); closeSched(); closeMeta(); });
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeSched(); closeMeta(); } });
+// ── payment-chain recipient step ──
+function refreshRecipUI(){
+  const kind = $('recip-kind').value;
+  const editing = !!editId;
+  $('recip-kind').parentElement.style.display = editing ? 'none' : '';
+  $('transit-to-fld').style.display = (!editing && kind==='transit') ? '' : 'none';
+  // draw-from-transit only for new final payments when open hops exist
+  const open = KhataTransfers.openHops();
+  const showDraw = !editing && kind==='seller' && open.length>0;
+  $('drawhops-fld').style.display = showDraw ? '' : 'none';
+  if(showDraw){
+    const list=$('drawhops-list'); list.textContent='';
+    for(const h of open){
+      const lab=document.createElement('label');
+      lab.style.cssText='display:flex;align-items:center;gap:8px;font-weight:400;text-transform:none;letter-spacing:0';
+      const cb=document.createElement('input'); cb.type='checkbox';
+      cb.dataset.hop=h.id; cb.dataset.out=h.outstanding_minor;
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(
+        (h.to.display||'?')+' holds '+sym(BASE)+fmtNum(h.outstanding_minor,BASE)+' (from '+(h.from.display||'?')+')'));
+      list.appendChild(lab);
+    }
+  }
+  if(!editing && kind==='transit'){
+    const sel=$('transit-to'); sel.textContent='';
+    for(const m of MEMBERS){
+      if(m.user_id===ME_ID) continue;
+      const o=document.createElement('option'); o.value='u:'+m.user_id;
+      o.textContent=(m.display_name||m.email)+(m.role==='seller'?' · seller':'');
+      sel.appendChild(o);
+    }
+    for(const c of CONTACTS){
+      const o=document.createElement('option'); o.value='c:'+c.id;
+      o.textContent=c.name+' · contact';
+      sel.appendChild(o);
+    }
+    const o=document.createElement('option'); o.value='name'; o.textContent='Someone else…';
+    sel.appendChild(o);
+    $('transit-to-name').style.display = sel.value==='name' ? '' : 'none';
+  }
+}
+$('recip-kind').addEventListener('change', refreshRecipUI);
+$('transit-to').addEventListener('change', ()=>{
+  $('transit-to-name').style.display = $('transit-to').value==='name' ? '' : 'none';
+});
+
+async function saveHop(amountStr, occ, userNote){
+  // in-transit hop, or terminal hop drawing from picked transit money
+  const kind=$('recip-kind').value;
+  const body={amount: amountStr, method: $('method').value, note: userNote || null,
+              occurred_at: occ, funding_source: $('fsource').value};
+  if(kind==='transit'){
+    const v=$('transit-to').value;
+    if(v==='name'){
+      const nm=$('transit-to-name').value.trim();
+      if(!nm){ $('err').textContent='Enter the recipient name.'; return false; }
+      body.to_name=nm;
+    }else if(v.startsWith('u:')) body.to_user_id=parseInt(v.slice(2),10);
+    else if(v.startsWith('c:')) body.to_contact_id=parseInt(v.slice(2),10);
+    else { $('err').textContent='Pick a recipient.'; return false; }
+  }else{
+    // final payment drawing from transit hops
+    body.is_terminal=true;
+    const seller=(ST_SELLER && (ST_SELLER.contact_name||ST_SELLER.name)) || 'Seller';
+    body.to_name=seller;
+    const picked=[...document.querySelectorAll('#drawhops-list input:checked')];
+    let need=Math.round(parseFloat(amountStr)*100), sources=[];
+    for(const cb of picked){
+      if(need<=0) break;
+      const take=Math.min(parseInt(cb.dataset.out,10), need);
+      sources.push({source_hop_id: parseInt(cb.dataset.hop,10), amount: String(take/100)});
+      need-=take;
+    }
+    if(need>0 && sources.length) sources.push({source_hop_id: null, amount: String(need/100)});
+    if(!sources.length){ $('err').textContent='Pick at least one transit hop (or log a normal payment).'; return false; }
+    body.sources=sources;
+  }
+  const r=await fetch('/api/plans/'+pid+'/hops',{method:'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if(r.ok){ closeOver(); boot(); return true; }
+  const e=await r.json().catch(()=>({}));
+  $('err').textContent=e.detail||e.error||'Could not log transfer.';
+  return false;
+}
+
 $('save').addEventListener('click', async ()=>{
   $('err').textContent='';
   const occ = $('occurred').value ? $('occurred').value+'T12:00:00' : null;  // noon → no TZ day-shift
@@ -1399,6 +1509,13 @@ $('save').addEventListener('click', async ()=>{
     const origLabel = sym(payCur) + fmtNum(Math.round(origAmt * 100), payCur) + ' ' + payCur + ' @' + rate;
     userNote = origLabel + (userNote ? ' — ' + userNote : '');
     amountStr = String(convertedMinor / 100);
+  }
+
+  // payment-chain paths: in-transit hop, or final payment drawing from transit money
+  if(!editId && ($('recip-kind').value==='transit' ||
+     document.querySelector('#drawhops-list input:checked'))){
+    await saveHop(amountStr, occ, userNote);
+    return;
   }
 
   const body = { amount: amountStr, method: $('method').value,

@@ -1897,7 +1897,7 @@ git commit -m "feat(chains): hops REST API + receipt confirmations feed"
 
 ---
 
-### Task 9: UI — shared transfers.js (panel + chain timeline + log-hop form)
+### Task 9: UI — shared transfers.js (panel + chain timeline + log-hop form) ✅
 
 **Files:**
 - Create: `src/khata/static/assets/transfers.js`
@@ -1908,11 +1908,11 @@ git commit -m "feat(chains): hops REST API + receipt confirmations feed"
 - Consumes: `GET/POST /api/plans/<pid>/hops`, `POST .../receipt`, `POST .../resolve` (Task 8); global patterns from `asset-detail.html` (`pid`, `fetch` style, `fmtMinor`-style helpers — read the file's existing money-format helper and reuse it, do not invent a new one).
 - Produces: `window.KhataTransfers = { mount(el, pid, opts), refresh() }`.
 
-- [ ] **Step 1: Read the integration points**
+- [x] **Step 1: Read the integration points**
 
 Read `src/khata/static/asset-detail.html` in full. Identify: (a) the ledger/payments section markup + its money formatting helper, (b) the payment modal/form + its submit handler (`~line 1419`), (c) where `sharing.js`/`attach.js` are included. Also read `src/khata/static/assets/sharing.js` top 40 lines for the module pattern used.
 
-- [ ] **Step 2: Build `transfers.js`**
+- [x] **Step 2: Build `transfers.js`**
 
 Requirements (follow the file's existing vanilla-JS idiom — no framework):
 
@@ -1955,7 +1955,7 @@ window.KhataTransfers = (function(){
 
 Fill in the `...` DOM construction completely — every control listed in the comments must exist and call its endpoint, then `refresh()` and (if the page exposes it) re-fetch plan state so paid KPIs update. Style with existing classes from `app.css`/`ledger.css` (inspect them; reuse `card`, badge and button classes rather than adding new CSS).
 
-- [ ] **Step 3: Wire into asset-detail.html**
+- [x] **Step 3: Wire into asset-detail.html**
 
 1. `<script src="/assets/transfers.js"></script>` next to the sharing.js include.
 2. Add `<div id="transit-panel"></div>` section above the ledger list.
@@ -1965,7 +1965,7 @@ Fill in the `...` DOM construction completely — every control listed in the co
    - "Sent to someone (in transit)" → recipient picker (plan members from `MEMBERS`, contacts from `CONTACTS`, or free-text) → submit to `POST /hops`.
    Reuse the form's existing amount/date/method/proof/note inputs for both paths.
 
-- [ ] **Step 4: Headless verify (per repo protocol)**
+- [x] **Step 4: Headless verify (per repo protocol)**
 
 Follow `.claude/commands/build-screen.md` protocol. Minimum:
 
@@ -1975,7 +1975,7 @@ Follow `.claude/commands/build-screen.md` protocol. Minimum:
 
 Then with browser tools or curl: register 2 users, create plan, log in-transit hop as user2, confirm receipt as user1, log terminal hop drawing the transit money, verify: in-transit panel shows correct amounts before/after, paid KPI updates, chain timeline renders hops in order, resolve-return zeroes the panel. Screenshot the panel + timeline states.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/khata/static/assets/transfers.js src/khata/static/asset-detail.html
