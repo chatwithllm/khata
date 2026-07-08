@@ -1617,9 +1617,10 @@ function refreshRecipUI(){
   const editing = !!editId;
   $('recip-kind').parentElement.style.display = editing ? 'none' : '';
   $('transit-to-fld').style.display = (!editing && kind==='transit') ? '' : 'none';
-  // draw-from-transit only for new final payments when open hops exist
+  // draw-from-transit for any NEW hop — a final payment to the seller, or a
+  // relay (e.g. buyer1 forwards buyer2's money + his own to a middleman)
   const open = KhataTransfers.openHops();
-  const showDraw = !editing && kind==='seller' && open.length>0;
+  const showDraw = !editing && open.length>0;
   $('drawhops-fld').style.display = showDraw ? '' : 'none';
   if(showDraw){
     const list=$('drawhops-list'); list.textContent='';
@@ -1662,6 +1663,17 @@ async function saveHop(amountStr, occ, userNote){
   const kind=$('recip-kind').value;
   const body={amount: amountStr, method: $('method').value, note: userNote || null,
               occurred_at: occ, funding_source: $('fsource').value};
+  // sources shared by both paths: picked transit hops (greedy) + own-funds remainder
+  const picked=[...document.querySelectorAll('#drawhops-list input:checked')];
+  let need=Math.round(parseFloat(amountStr)*100), sources=[];
+  for(const cb of picked){
+    if(need<=0) break;
+    const take=Math.min(parseInt(cb.dataset.out,10), need);
+    sources.push({source_hop_id: parseInt(cb.dataset.hop,10), amount: String(take/100)});
+    need-=take;
+  }
+  if(need>0 && sources.length) sources.push({source_hop_id: null, amount: String(need/100)});
+
   if(kind==='transit'){
     const v=$('transit-to').value;
     if(v==='name'){
@@ -1671,22 +1683,30 @@ async function saveHop(amountStr, occ, userNote){
     }else if(v.startsWith('u:')) body.to_user_id=parseInt(v.slice(2),10);
     else if(v.startsWith('c:')) body.to_contact_id=parseInt(v.slice(2),10);
     else { $('err').textContent='Pick a recipient.'; return false; }
+    if(sources.length) body.sources=sources;   // relay: buyer1 forwards upstream money (+ own top-up)
   }else{
     // final payment drawing from transit hops
     body.is_terminal=true;
     const seller=(ST_SELLER && (ST_SELLER.contact_name||ST_SELLER.name)) || 'Seller';
     body.to_name=seller;
-    const picked=[...document.querySelectorAll('#drawhops-list input:checked')];
-    let need=Math.round(parseFloat(amountStr)*100), sources=[];
-    for(const cb of picked){
-      if(need<=0) break;
-      const take=Math.min(parseInt(cb.dataset.out,10), need);
-      sources.push({source_hop_id: parseInt(cb.dataset.hop,10), amount: String(take/100)});
-      need-=take;
-    }
-    if(need>0 && sources.length) sources.push({source_hop_id: null, amount: String(need/100)});
     if(!sources.length){ $('err').textContent='Pick at least one transit hop (or log a normal payment).'; return false; }
     body.sources=sources;
+    // route truth: if every drawn hop sits with the same holder (e.g. the middleman),
+    // the final leg physically comes FROM that holder, not from the logger
+    const openAll=KhataTransfers.openHops();
+    const holders=picked.map(cb=>{
+      const h=openAll.find(o=>o.id===parseInt(cb.dataset.hop,10));
+      return h?JSON.stringify([h.to.user_id,h.to.contact_id,h.to.name]):null;
+    });
+    if(holders.length && holders.every(x=>x && x===holders[0])){
+      const [fu,fc,fn]=JSON.parse(holders[0]);
+      // skip when the logger holds the money AND tops up with own funds (from = logger anyway)
+      if(!(fu===ME_ID && sources.some(s=>s.source_hop_id===null))){
+        if(fu!=null) body.from_user_id=fu;
+        else if(fc!=null) body.from_contact_id=fc;
+        else if(fn) body.from_name=fn;
+      }
+    }
   }
   const r=await fetch('/api/plans/'+pid+'/hops',{method:'POST',
     headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
