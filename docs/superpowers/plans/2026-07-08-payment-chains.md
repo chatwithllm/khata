@@ -1645,7 +1645,7 @@ git commit -m "feat(chains): seller plan role — assignable, read-only"
 
 ---
 
-### Task 8: Hops API
+### Task 8: Hops API ✅
 
 **Files:**
 - Create: `src/khata/api/transfers.py`
@@ -1664,7 +1664,7 @@ git commit -m "feat(chains): seller plan role — assignable, read-only"
 - Terminal-auto-detection at the API layer: if `to_contact_id` equals the plan's `asset.seller_contact_id`, or `to_user_id` has role 'seller', force `is_terminal=True`.
 - `GET /api/confirmations` response gains `"receipts": transfers.list_receipt_confirmations(...)` alongside its existing list.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Follow the client-fixture auth pattern used in `tests/test_plans_api.py` (read its top 60 lines first for register/login helpers — reuse them verbatim).
 
@@ -1693,12 +1693,12 @@ def test_seller_role_read_only(client):
 
 Write these as real tests (no `...`) using the repo's existing API-test helpers; assert the exact status codes and JSON keys shown in the comments.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_transfers_api.py -v`
 Expected: FAIL — 404 (routes don't exist)
 
-- [ ] **Step 3: Implement the blueprint**
+- [x] **Step 3: Implement the blueprint**
 
 ```python
 # src/khata/api/transfers.py
@@ -1883,12 +1883,12 @@ In `src/khata/api/confirmations.py`: read the file; the endpoint that returns `l
 
 added to its JSON response as `"receipts": receipts` (import `transfers` from `..services`).
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `python -m pytest tests/test_transfers_api.py -v && python -m pytest -q`
 Expected: all PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/khata/api/transfers.py src/khata/__init__.py src/khata/api/confirmations.py tests/test_transfers_api.py

@@ -1,7 +1,7 @@
 from flask import Blueprint, g, jsonify
 
 from ..models import Plan
-from ..services import assets, sharing
+from ..services import assets, sharing, transfers
 from .auth import current_user
 
 bp = Blueprint("confirmations", __name__, url_prefix="/api/confirmations")
@@ -22,4 +22,5 @@ def index():
         if plan is None or not sharing.accessible(g.db, plan=plan, user_id=user.id):
             continue
         out.append(r)
-    return jsonify(confirmations=out), 200
+    receipts = transfers.list_receipt_confirmations(g.db, user.id)
+    return jsonify(confirmations=out, receipts=receipts), 200
