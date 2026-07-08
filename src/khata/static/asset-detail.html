@@ -219,6 +219,7 @@
     </div>
     <div class="fld" id="drawhops-fld" style="display:none"><label>Use money in transit</label>
       <div id="drawhops-list" style="display:flex;flex-direction:column;gap:6px;font-size:13px"></div>
+      <div id="drawhops-total" style="display:none;margin-top:8px;font-size:12.5px;font-weight:600;font-family:'JetBrains Mono',monospace"></div>
     </div>
     <div class="fld">
       <label for="amount">Amount <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-faint);font-size:10px;margin-left:4px">· type math to calculate</span></label>
@@ -1750,16 +1751,39 @@ function refreshRecipUI(){
   $('drawhops-fld').style.display = showDraw ? '' : 'none';
   if(showDraw){
     const list=$('drawhops-list'); list.textContent='';
+    const totalEl=$('drawhops-total');
+    const updateTotal=()=>{
+      let t=0;
+      document.querySelectorAll('#drawhops-list input:checked').forEach(cb=>{ t+=parseInt(cb.dataset.out,10); });
+      if(t<=0){ totalEl.style.display='none'; totalEl.textContent=''; return; }
+      // both currencies when a rate exists: plan currency + display preference
+      let txt='Selected: '+sym(BASE)+fmtNum(t,BASE);
+      if(DISP!==BASE) txt+=' · '+sym(DISP)+fmtNum(conv(t),DISP);
+      totalEl.textContent=txt+'  — click to use as amount';
+      totalEl.style.cssText+=';display:block;color:var(--primary);cursor:pointer';
+      totalEl.onclick=()=>{
+        // amount field is in the picked pay currency; fill matching value
+        const cur=$('pay-cur').value;
+        if(cur===BASE){ $('amount').value=String(t/100); }
+        else {
+          const rate=parseFloat($('inline-rate').value);
+          $('amount').value = rate>0 ? String(Math.round(t/rate)/100) : String(conv(t)/100);
+        }
+        $('amount').dispatchEvent(new Event('input'));
+      };
+    };
     for(const h of open){
       const lab=document.createElement('label');
       lab.style.cssText='display:flex;align-items:center;gap:8px;font-weight:400;text-transform:none;letter-spacing:0';
       const cb=document.createElement('input'); cb.type='checkbox';
       cb.dataset.hop=h.id; cb.dataset.out=h.outstanding_minor;
+      cb.addEventListener('change', updateTotal);
       lab.appendChild(cb);
       lab.appendChild(document.createTextNode(
         (h.to.display||'?')+' holds '+sym(DISP)+fmtNum(conv(h.outstanding_minor),DISP)+' (from '+(h.from.display||'?')+')'));
       list.appendChild(lab);
     }
+    updateTotal();
   }
   if(!editing && kind==='transit'){
     const sel=$('transit-to'); sel.textContent='';
