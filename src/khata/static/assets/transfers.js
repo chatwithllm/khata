@@ -150,7 +150,12 @@ window.KhataTransfers = (function(){
     meta.append(_statusChip(h));
     if(h.receipt_status==='pending') meta.append(_e('span','trx-chip','receipt pending'));
     if(h.receipt_status==='countered') meta.append(_e('span','trx-chip hold','countered '+_fmt(h.counter_amount_minor||0)));
-    if(h.has_proof) meta.append(_e('span','trx-chip','proof'+(h.attachment_count>1?' ×'+h.attachment_count:'')));
+    if(h.has_proof){
+      const pf=_e('span','trx-chip','proof'+(h.attachment_count>1?' ×'+h.attachment_count:''));
+      // hover preview helper lives on pages that define it (asset-detail)
+      if(window.attachProofPreview) window.attachProofPreview(pf, '/api/plans/'+_pid+'/hops/'+h.id+'/attachments');
+      meta.append(pf);
+    }
     row.append(meta);
 
     if(cleaned.rest){

@@ -494,6 +494,47 @@ function amtSpan(minor, cls){
   return wrap;
 }
 
+// ── proof hover preview: fetch an entry/hop's attachments once, float image thumbs ──
+const _proofCache = {};
+function attachProofPreview(chipEl, url){
+  let pop=null, alive=false;
+  async function show(){
+    alive=true;
+    if(!(url in _proofCache)){
+      try{ _proofCache[url]=((await fetch(url).then(r=>r.json())).attachments)||[]; }
+      catch(_){ _proofCache[url]=[]; }
+    }
+    const imgs=_proofCache[url].filter(a=>a.is_image).slice(0,3);
+    if(!alive || !imgs.length) return;
+    pop=el('div');
+    pop.style.cssText='position:fixed;z-index:90;display:flex;gap:6px;padding:8px;'
+      +'background:var(--card);border:1px solid var(--line);border-radius:12px;'
+      +'box-shadow:0 12px 32px rgba(0,0,0,.18);pointer-events:none';
+    imgs.forEach(a=>{
+      const im=el('img'); im.src='/api/attachments/'+a.id; im.alt=a.filename;
+      im.style.cssText='width:180px;height:180px;object-fit:cover;border-radius:8px;background:var(--paper-2)';
+      pop.append(im);
+    });
+    const extra=_proofCache[url].length-imgs.length;
+    if(extra>0){
+      const more=el('div','+'+extra);
+      more.style.cssText='display:grid;place-items:center;width:44px;color:var(--ink-faint);font-weight:700';
+      pop.append(more);
+    }
+    document.body.append(pop);
+    const r=chipEl.getBoundingClientRect();
+    const pw=pop.offsetWidth, ph=pop.offsetHeight;
+    let x=Math.min(r.left, window.innerWidth-pw-12);
+    let y=r.top-ph-10; if(y<8) y=r.bottom+10;
+    pop.style.left=Math.max(8,x)+'px'; pop.style.top=y+'px';
+  }
+  function hide(){ alive=false; if(pop){ pop.remove(); pop=null; } }
+  chipEl.addEventListener('mouseenter', show);
+  chipEl.addEventListener('mouseleave', hide);
+  chipEl.addEventListener('focus', show);
+  chipEl.addEventListener('blur', hide);
+}
+
 // ── avatars: a circular chip showing the contributor's photo, or a coloured initial ──
 const AV_COLORS=['#b06a32','#3d6b6e','#7a5ea8','#5a7a3a','#a8506a','#3a6a9a'];
 function avatarEl(url, name, size, idx){
@@ -791,7 +832,11 @@ function renderLedger(box, st){
       else chip.title='Awaiting the contributor’s confirmation — act from the dashboard';
       l2r.append(chip);
     }
-    if(lr.has_proof) l2r.append(el('span','proof','▣ proof'));
+    if(lr.has_proof){
+      const pf=el('span','proof','▣ proof');
+      attachProofPreview(pf, '/api/plans/'+pid+'/entries/'+lr.id+'/attachments');
+      l2r.append(pf);
+    }
     if(LEDGER_EDIT && editable) l2r.append(el('span','proof','✎'));
     // audit: "edited" badge — shown to all members when the entry has edit history
     const edits = (lr.audit||[]).filter(a=>a.action==='edit'||a.action==='delete');
