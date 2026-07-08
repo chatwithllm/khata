@@ -35,7 +35,7 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   on user/API data. Pages: `ledger.css` (landing/marketing, `.landing`-scoped animations) + `app.css`
   (app shell + detail panels); `sharing.js` (`mountSharing`). HTML served `Cache-Control: no-store`.
 
-## 4. Data model (14 tables)
+## 4. Data model (17 tables)
 - **users**: id, email, display_name, password_hash?, google_sub?, base_currency, **avatar?** (cropped
   square profile photo as a `data:image/...` URL, set via the crop tool; stored server-side so every member
   sees each contributor's photo and it travels with backups), **is_admin**, **disabled**, created_at.
@@ -101,6 +101,25 @@ ledger** with proof, multi-currency (INR/USD), and multi-user contribution shari
   retention (keep last N), last_run_at, last_status. Drives the in-app automatic-backup scheduler
   (migration `df9backup01`; NOT included in backup exports — it's instance-local). `last_run_at` doubles
   as the cross-worker claim token (`backup_store.claim_due`) so two gunicorn workers never double-back-up.
+
+- **transfer_hops** (payment chains, `th1hopchain01`): id, plan_id, **chain_id** (groups a chain;
+  = first hop's id), from_user_id?/from_contact_id?/from_name? (exactly one), to_* (same), amount_minor,
+  currency (= plan currency), fx_rate_micro?/fx_counter_currency?, occurred_at, method?, proof_ref?, note?,
+  **is_terminal** (money reached the seller), **receipt_status** (agreed|pending|countered — pending only
+  when the receiver is a registered user other than the logger), counter_amount_minor?, **resolution**
+  (NULL=transfer | returned | fee — the nature of THIS hop), logged_by_user_id, created_at.
+  `outstanding(hop) = amount − Σ consumed by downstream hop_sources`; terminal/returned/fee hops are
+  endpoints (outstanding 0). Non-terminal hops are **in-transit** and never touch plan totals.
+- **hop_sources**: id, hop_id (CASCADE), source_hop_id? (NULL = from-party's own funds), amount_minor.
+  Σ sources == the hop's amount. A terminal hop **fans out** one LedgerEntry per ultimate contributor
+  (greedy oldest-first walk by HopSource.id; non-user origins attributed to the hop logger).
+- **transfer_hop_audit**: mirror of ledger_entry_audit (create/edit/delete, JSON snapshot+diff,
+  hop_id SET NULL on delete).
+- `ledger_entries.source_hop_id?` → FK transfer_hops (SET NULL): set on entries spawned by a terminal hop.
+  Fee write-offs spawn entries with `kind='transfer_fee'` — **excluded from asset paid totals**
+  (surfaced as `fees_minor` in asset state).
+- `plan_memberships.role` gains **seller** (assignable at invite; sellers are read-only — payments,
+  entry edits and hop mutations 403; receipt confirmation still allowed).
 
 ## 5. Enums (authoritative)
 - currencies `{INR, USD}` · payment methods `{cash, upi, transfer, cheque}` · funding sources
@@ -191,6 +210,20 @@ can't view the plan until they accept). `paid_by` tagging uses the looser `shari
 any non-declined membership) so an invited-but-not-yet-accepted contributor can still be attributed on
 entries. Unauthenticated → 401; not found → 404; not yours → 403. Pattern: validate → mutate →
 `commit` on success / `rollback` on error.
+
+**Transfer hops** (`/api/plans/<id>/hops*`, payment chains): POST `""` (log a hop — amount/method/
+occurred_at + exactly one to-party (`to_user_id|to_contact_id|to_name`), optional from-party (default:
+logger), optional `sources:[{source_hop_id|null, amount}]` consuming upstream outstanding, `is_terminal`
+(auto-forced when the recipient is the asset's seller contact or a seller-role member; terminal → ledger
+fan-out)) · GET `""` (chains + `in_transit_minor`) · PATCH/DELETE `/<hop_id>` (guards: cannot shrink below
+consumed, cannot delete while consumed; deleting a terminal hop deletes its spawned entries) ·
+POST `/<hop_id>/receipt` (`{action: confirm|counter|accept, amount?}` — receiver confirms/counters, the
+LOGGER accepts/re-counters) · POST `/<hop_id>/resolve` (`{action: return|fee, amount?, note?}` — closes
+(part of) the outstanding remainder: return hop back to origin, or fee hop + `transfer_fee` entries).
+All hop mutations require non-seller membership; GET `/api/confirmations` now also returns
+`receipts` (hops pending on the caller). Service: `src/khata/services/transfers.py`; UI:
+`static/assets/transfers.js` (transit panel + chain timeline on all 5 detail pages) + recipient step in the
+asset log-payment slide-over. Spec: `docs/specs/2026-07-08-payment-chains-design.md`.
 
 ## 8. Pages / routes (static, client-rendered; auth guard `/api/auth/me` 401→`/`)
 `/` landing (marketing + embedded sign-in modal) · `/features` · `/app` dashboard (sidebar, stat cards,
@@ -453,6 +486,16 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-07-08 — **Payment chains (transfer routing).** Multi-hop money flow for shared purchases:
+  buyer2 → buyer1 → seller with full per-hop detail (date/amount/method/proof), in-transit tracking
+  (never counted in paid totals until money reaches the seller), split attribution on merged transfers
+  (terminal hop fans out one ledger entry per ultimate contributor, greedy oldest-first), remainder
+  resolution (forward/return/fee — fees excluded from paid, shown as `fees_minor`), hop receipt
+  confirmation (receiver confirm/counter, logger accept), and a read-only **seller** plan role.
+  3 new tables + `ledger_entries.source_hop_id` (migration `th1hopchain01`, chains from `audit01`).
+  UI: money-in-transit panel + chain timeline on all detail pages, recipient step in log-payment,
+  receipts in the dashboard confirmations inbox. Spec `2026-07-08-payment-chains-design.md`,
+  plan `docs/superpowers/plans/2026-07-08-payment-chains.md`.
 - 2026-06-27 — Log-payment calculator + multi-currency input. Two additions to the Log payment slide-over (asset-detail.html, no backend changes): (1) **Calculator** — type any math expression (`50000+25000`, `2*85000`) in the amount field; live `= ₹X` preview as you type, blur evaluates and fills the result (safe: only digits/operators/parens pass). (2) **Multi-currency** — currency picker next to the amount (defaults to plan currency). Switch to a foreign currency (e.g. USD on an INR plan) for a live `≈ ₹X` FX preview using stored rates; on save, converts to plan currency and auto-prefixes the note with the original (`$1,000 USD — land payment Q2`). No rate → error pointing to Settings → FX rates.
 - 2026-06-19 — Asset details. Assets gain seller & buyer (free text + optional Contact link),
   custom info rows + external links (JSON columns on `asset_purchases`), and document attachments

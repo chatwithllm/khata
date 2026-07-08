@@ -2039,23 +2039,23 @@ git commit -m "feat(chains): seller role UI + receipt confirmations inbox"
 
 ---
 
-### Task 12: Docs + full verification
+### Task 12: Docs + full verification ✅
 
 **Files:**
 - Modify: `docs/specs/khata-AS-BUILT.md`
 
-- [ ] **Step 1: Update AS-BUILT doc**
+- [x] **Step 1: Update AS-BUILT doc**
 
 Add a "Payment chains" section: tables (`transfer_hops`, `hop_sources`, `transfer_hop_audit`, `ledger_entries.source_hop_id`), the outstanding rule, terminal fan-out behavior, fee-exclusion from paid totals, seller role, API routes, UI panels. Cross-link `docs/specs/2026-07-08-payment-chains-design.md`.
 
-- [ ] **Step 2: Full suite + headless end-to-end**
+- [x] **Step 2: Full suite + headless end-to-end**
 
 ```bash
 python -m pytest -q
 ```
 Expected: all green. Then run the full `/build-screen` verification protocol from `.claude/commands/build-screen.md` on the asset-detail screen (the repo rule: verify UI headless before "done").
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs/specs/khata-AS-BUILT.md
