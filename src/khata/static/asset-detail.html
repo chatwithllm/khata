@@ -658,13 +658,25 @@ function renderHeader(box, plan, st, hops){
   box.append(ph);
 
   const kpis=el('div','kpis');
+  const _tot=st.total_price_minor||0;
+  const _pctOf=(m)=>_tot>0?Math.round((m||0)*100/_tot):null;
   function kpi(cls,label,minor,projMinor){
     const k=el('div','kpi'+(cls?' '+cls:''));
     k.append(el('div','l',label));
-    const n=el('div','n'); n.append(amtSpan(minor)); k.append(n);
+    const n=el('div','n'); n.append(amtSpan(minor));
+    // subtle share of total beside the number (Paid / Remaining only)
+    const pct=_pctOf(minor);
+    if(cls && pct!=null){
+      const ps=el('span',null,pct+'%');
+      ps.style.cssText='font-size:11px;font-weight:600;color:var(--ink-faint);margin-left:6px;font-family:\'JetBrains Mono\',monospace';
+      n.append(ps);
+    }
+    k.append(n);
     // projection: what this number becomes once in-transit money reaches the seller
     if(projMinor!=null){
-      const pr=el('div',null,'→ '+sym(DISP)+fmtNum(conv(projMinor),DISP)+' when transit lands');
+      const ppct=_pctOf(projMinor);
+      const pr=el('div',null,'→ '+sym(DISP)+fmtNum(conv(projMinor),DISP)
+        +(ppct!=null?' · '+ppct+'%':'')+' when transit lands');
       pr.style.cssText='font-size:10.5px;color:var(--ink-faint);font-family:\'JetBrains Mono\',monospace;margin-top:2px';
       k.append(pr);
     }
