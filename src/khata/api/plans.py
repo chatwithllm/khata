@@ -131,6 +131,16 @@ def _accessible_plan(user, plan_id):
     return plan, None
 
 
+def _writable_plan(user, plan_id):
+    """Accessible plan where the user may log/edit money (sellers are read-only)."""
+    plan, err = _accessible_plan(user, plan_id)
+    if err:
+        return None, err
+    if sharing.role_of(g.db, plan=plan, user_id=user.id) == "seller":
+        return None, (jsonify(error="forbidden", detail="sellers are read-only"), 403)
+    return plan, None
+
+
 def _payer_uid(plan, data, default_uid):
     """Resolve who actually paid/contributed an entry: an optional `paid_by` user id
     that must be attached to the plan; defaults to the caller. Lets joint plans attribute
@@ -164,7 +174,7 @@ def _editable_entry(user, plan_id, entry_id):
     """Resolve a ledger entry the user may edit/delete: the plan must be accessible, and
     the user must be the plan OWNER or the entry's own contributor (logged_by_user_id) —
     so a contributor can manage their own contribution. Returns (plan, entry, is_owner, err)."""
-    plan, err = _accessible_plan(user, plan_id)
+    plan, err = _writable_plan(user, plan_id)   # sellers are read-only
     if err:
         return None, None, False, err
     entry = g.db.get(LedgerEntry, entry_id)
@@ -363,7 +373,7 @@ def payment(plan_id):
     user = current_user()
     if user is None:
         return jsonify(error="unauthenticated"), 401
-    plan, err = _accessible_plan(user, plan_id)
+    plan, err = _writable_plan(user, plan_id)
     if err:
         return err
     data = request.get_json(silent=True) or {}
@@ -777,7 +787,8 @@ def add_member(plan_id):
         return err
     data = request.get_json(silent=True) or {}
     try:
-        m = sharing.add_member(g.db, plan=plan, email=data.get("email", ""))
+        m = sharing.add_member(g.db, plan=plan, email=data.get("email", ""),
+                               role=(data.get("role") or "contributor"))
         g.db.commit()
     except sharing.UserNotFound:
         g.db.rollback()
@@ -785,7 +796,7 @@ def add_member(plan_id):
     except sharing.AlreadyMember:
         g.db.rollback()
         return jsonify(error="already_member"), 409
-    except sharing.MemberError as e:
+    except (sharing.MemberError, ValueError) as e:
         g.db.rollback()
         return jsonify(error="invalid", detail=str(e)), 400
     u = g.db.get(User, m.user_id)

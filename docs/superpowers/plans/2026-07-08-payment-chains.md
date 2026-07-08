@@ -1504,7 +1504,7 @@ git commit -m "feat(chains): plan_transfers chain listing + in-transit summary"
 
 ---
 
-### Task 7: Seller role
+### Task 7: Seller role ✅
 
 **Files:**
 - Modify: `src/khata/services/sharing.py` (role param + `role_of` helper)
@@ -1518,7 +1518,7 @@ git commit -m "feat(chains): plan_transfers chain listing + in-transit summary"
   - `sharing.role_of(session, *, plan, user_id) -> str | None` — 'owner' for the owner, membership role for members, None otherwise.
   - API guard: role 'seller' gets 403 from `POST /payments`, `POST/PATCH/DELETE /entries`, and (Task 8) all hop-mutating endpoints. Seller CAN read plan detail + transfers.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_seller_role.py
@@ -1567,12 +1567,12 @@ def test_invalid_role_rejected(ctx):
         sharing.add_member(s, plan=plan, email="s@x.com", role="superadmin")
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_seller_role.py -v`
 Expected: FAIL — `add_member() got an unexpected keyword argument 'role'`
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `src/khata/services/sharing.py`, change `add_member` signature and the membership construction (currently `sharing.py:52-72`):
 
@@ -1631,12 +1631,12 @@ def _writable_plan(user, plan_id):
 - Switch `payment()` (`plans.py:362`) and `respond_amount()` write path to `_writable_plan`; in `_editable_entry` add the same seller check right after `_accessible_plan`.
 - `get_members` (`plans.py:798`): confirm role is already included in the member dicts (`sharing.list_members`) — if not, add `"role": m.role`.
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `python -m pytest tests/test_seller_role.py tests/test_share_owner_api.py tests/test_invites.py -v`
 Expected: PASS (existing membership tests unaffected — default role unchanged)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/khata/services/sharing.py src/khata/api/plans.py tests/test_seller_role.py

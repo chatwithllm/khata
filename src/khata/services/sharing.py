@@ -49,7 +49,13 @@ def user_plans(session: Session, user_id: int) -> tuple[list[Plan], list[Plan]]:
     return owned, member
 
 
-def add_member(session: Session, *, plan: Plan, email: str) -> PlanMembership:
+ROLES = {"contributor", "seller"}
+
+
+def add_member(session: Session, *, plan: Plan, email: str,
+               role: str = "contributor") -> PlanMembership:
+    if role not in ROLES:
+        raise ValueError(f"unknown role: {role}")
     email = (email or "").strip().lower()
     user = session.scalar(select(User).where(User.email == email))
     if user is None:
@@ -62,14 +68,25 @@ def add_member(session: Session, *, plan: Plan, email: str) -> PlanMembership:
         # an already-invited or active member is a no-op error.
         if existing.status == "declined":
             existing.status = "invited"
+            existing.role = role
             session.flush()
             return existing
         raise AlreadyMember(email)
-    membership = PlanMembership(plan_id=plan.id, user_id=user.id, role="contributor",
+    membership = PlanMembership(plan_id=plan.id, user_id=user.id, role=role,
                                status="invited")
     plan.memberships.append(membership)
     session.flush()
     return membership
+
+
+def role_of(session: Session, *, plan: Plan, user_id: int) -> str | None:
+    """'owner' for the plan owner, the membership role for active members,
+    None for everyone else (invited/declined members included)."""
+    if user_id == plan.owner_user_id:
+        return "owner"
+    m = next((m for m in plan.memberships
+              if m.user_id == user_id and m.status == "active"), None)
+    return m.role if m else None
 
 
 def remove_member(session: Session, *, plan: Plan, user_id: int) -> None:
