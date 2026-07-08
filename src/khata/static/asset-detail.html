@@ -260,7 +260,17 @@
     <div class="osub" id="hop-osub"></div>
   </div>
   <div class="obody">
-    <div class="fld"><label for="hop-amount">Amount <span id="hop-amount-ccy" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-faint);font-size:10px;margin-left:4px"></span></label><input id="hop-amount" inputmode="decimal"></div>
+    <div class="fld"><label for="hop-amount">Amount <span id="hop-amount-ccy" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-faint);font-size:10px;margin-left:4px"></span></label>
+      <div class="amt-row">
+        <input id="hop-amount" inputmode="decimal">
+        <select id="hop-cur" title="Currency you sent"></select>
+      </div>
+      <div class="amt-row" id="hop-rate-row" style="display:none;margin-top:4px">
+        <span style="font-size:12px;color:var(--ink-faint);font-family:'JetBrains Mono';display:flex;align-items:center;white-space:nowrap;padding:0 4px" id="hop-rate-label">1 USD = ₹</span>
+        <input id="hop-rate" placeholder="94.97" inputmode="decimal" style="flex:1;min-width:0">
+      </div>
+      <div class="amt-hint fx" id="hop-fx-preview" style="display:none"></div>
+    </div>
     <div class="fld"><label for="hop-occurred">Date</label><input id="hop-occurred" type="date"></div>
     <div class="fld"><label for="hop-method">Method</label>
       <select id="hop-method"><option value="transfer">Transfer</option><option value="upi">UPI</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select>
@@ -1172,19 +1182,58 @@ function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.rem
 
 // ── hop editor slide-over (payment chains) ──
 let hopEditId=null;
+// "$1,900 USD @94.97 — rest" → {amt:'1900', ccy:'USD', rate:'94.97', rest:'rest'} or null
+function parseFxNote(note){
+  const m=/^\$?([\d,\.]+)\s+([A-Z]{3})\s+@([\d\.]+)\s*(?:—\s*(.*))?$/.exec((note||'').trim());
+  if(!m) return null;
+  return {amt:m[1].replace(/,/g,''), ccy:m[2], rate:m[3], rest:m[4]||''};
+}
+function refreshHopFxUI(){
+  const cur=$('hop-cur').value;
+  $('hop-rate-row').style.display = cur===BASE ? 'none' : '';
+  $('hop-rate-label').textContent='1 '+cur+' = '+sym(BASE);
+  updateHopFxPreview();
+}
+function updateHopFxPreview(){
+  const pre=$('hop-fx-preview');
+  const cur=$('hop-cur').value;
+  if(cur===BASE){ pre.style.display='none'; return; }
+  const amt=parseFloat($('hop-amount').value.replace(/,/g,''));
+  const rate=parseFloat($('hop-rate').value);
+  if(!amt||isNaN(amt)||!rate||isNaN(rate)){ pre.style.display='none'; return; }
+  pre.textContent='≈ '+sym(BASE)+fmtNum(Math.round(amt*rate*100), BASE)+' in '+BASE;
+  pre.style.display='';
+}
 function openHopEdit(h){
   hopEditId=h.id;
   $('hop-osub').textContent=(h.from.display||'?')+' → '+(h.to.display||'?');
-  // amount stays in plan currency (BASE) — edits feed server-side plan-currency math
-  $('hop-amount').value=(Math.abs(h.amount_minor||0)/100);
-  $('hop-amount-ccy').textContent='· in '+BASE+' (plan currency)';
+  // currency picker: plan currency + the FX pair (same pair the log form offers)
+  const sel=$('hop-cur'); sel.textContent='';
+  const other=BASE==='INR'?'USD':'INR';
+  [BASE, other].forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.append(o); });
+  // best-effort prefill: a note like "$1,900 USD @94.97 — …" means the transfer was
+  // really made in USD — reopen in USD with the original rate; else plan currency.
+  const fx=parseFxNote(h.note);
+  if(fx && fx.ccy===other){
+    sel.value=other;
+    $('hop-amount').value=fx.amt;
+    $('hop-rate').value=fx.rate;
+    $('hop-note').value=fx.rest;
+  }else{
+    sel.value=BASE;
+    $('hop-amount').value=(Math.abs(h.amount_minor||0)/100);
+    $('hop-rate').value='';
+    $('hop-note').value=h.note||'';
+  }
+  $('hop-amount-ccy').textContent='· '+BASE+' derived from rate when paying in '+other;
+  refreshHopFxUI();
   $('hop-occurred').value=(h.occurred_at||'').slice(0,10);
   if(h.method) $('hop-method').value=h.method;
-  $('hop-note').value=h.note||'';
   $('hop-err').textContent='';
   // terminal hop amounts are locked server-side (entries already fanned out)
-  $('hop-amount').disabled=!!h.is_terminal;
-  $('hop-amount').title=h.is_terminal?'Delivered amounts are locked — delete and re-log to change':'';
+  const locked=!!h.is_terminal;
+  $('hop-amount').disabled=locked; $('hop-cur').disabled=locked; $('hop-rate').disabled=locked;
+  $('hop-amount').title=locked?'Delivered amounts are locked — delete and re-log to change':'';
   mountAttachments($('hop-proof-mount'), { planId: pid, hopId: h.id,
     canModify: true, onChange: ()=>KhataTransfers.refresh() });
   $('scrim').classList.add('on'); $('hop-over').classList.add('on');
@@ -1192,14 +1241,35 @@ function openHopEdit(h){
 }
 function closeHopEdit(){ $('scrim').classList.remove('on'); $('hop-over').classList.remove('on'); $('hop-over').setAttribute('aria-hidden','true'); hopEditId=null; }
 $('hop-cancel').addEventListener('click', closeHopEdit);
+$('hop-cur').addEventListener('change', refreshHopFxUI);
+$('hop-amount').addEventListener('input', updateHopFxPreview);
+$('hop-rate').addEventListener('input', updateHopFxPreview);
 $('hop-save').addEventListener('click', async ()=>{
   if(!hopEditId) return;
   $('hop-err').textContent='';
   const body={};
-  if(!$('hop-amount').disabled) body.amount=$('hop-amount').value.replace(/,/g,'');
+  let note=$('hop-note').value.trim();
+  if(!$('hop-amount').disabled){
+    let amountStr=$('hop-amount').value.replace(/,/g,'');
+    const cur=$('hop-cur').value;
+    if(cur!==BASE){
+      // real transfer currency ≠ plan currency: convert with the typed rate,
+      // keep the original amount+rate in the note prefix (same as the log form)
+      const rate=parseFloat($('hop-rate').value);
+      if(!rate||isNaN(rate)||rate<=0){
+        $('hop-err').textContent='Enter the exchange rate (1 '+cur+' = ? '+BASE+').';
+        return;
+      }
+      const orig=parseFloat(amountStr);
+      if(!orig||isNaN(orig)){ $('hop-err').textContent='Enter a valid amount.'; return; }
+      amountStr=String(Math.round(orig*rate*100)/100);
+      note=sym(cur)+fmtNum(Math.round(orig*100),cur)+' '+cur+' @'+rate+(note?' — '+note:'');
+    }
+    body.amount=amountStr;
+  }
   if($('hop-occurred').value) body.occurred_at=$('hop-occurred').value+'T12:00:00';
   body.method=$('hop-method').value;
-  body.note=$('hop-note').value;
+  body.note=note;
   const r=await fetch('/api/plans/'+pid+'/hops/'+hopEditId,{method:'PATCH',
     headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
   if(r.ok){ closeHopEdit(); boot(); return; }
