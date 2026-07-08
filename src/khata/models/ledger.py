@@ -43,6 +43,9 @@ class LedgerEntry(Base):
     # DERIVED (services/fx.convert) — never stored. See docs/specs/2026-06-11-fx-snapshot-design.md.
     fx_rate_micro: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     fx_counter_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    # Set when this entry was spawned by a terminal transfer hop (payment chains).
+    source_hop_id: Mapped[int | None] = mapped_column(
+        ForeignKey("transfer_hops.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     plan: Mapped["Plan"] = relationship(back_populates="ledger_entries", foreign_keys=[plan_id])

@@ -21,7 +21,7 @@
 
 ---
 
-### Task 1: Models + migration
+### Task 1: Models + migration ✅
 
 **Files:**
 - Create: `src/khata/models/transfer.py`
@@ -34,7 +34,7 @@
 - Produces: `TransferHop`, `HopSource`, `TransferHopAudit` models; `LedgerEntry.source_hop_id: int | None`.
 - Party fields: exactly one of `{from,to}_user_id / _contact_id / _name` non-null per side.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_transfer_models.py
@@ -112,12 +112,12 @@ def test_ledger_entry_source_hop(ctx):
     assert s.get(LedgerEntry, e.id).source_hop_id == h.id
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_transfer_models.py -v`
 Expected: FAIL — `ImportError: cannot import name 'TransferHop'`
 
-- [ ] **Step 3: Write the models**
+- [x] **Step 3: Write the models**
 
 ```python
 # src/khata/models/transfer.py
@@ -233,12 +233,12 @@ In `src/khata/models/ledger.py`, after the `fx_counter_currency` column of `Ledg
         ForeignKey("transfer_hops.id", ondelete="SET NULL"), nullable=True)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python -m pytest tests/test_transfer_models.py -v`
 Expected: 3 PASS
 
-- [ ] **Step 5: Write the migration**
+- [x] **Step 5: Write the migration**
 
 ```python
 # alembic/versions/th1hopchain01_transfer_hops.py
@@ -324,17 +324,17 @@ def downgrade() -> None:
     op.drop_table('transfer_hops')
 ```
 
-- [ ] **Step 6: Verify migration runs**
+- [x] **Step 6: Verify migration runs**
 
 Run: `cp khata_dev.db /tmp/khata_mig_test.db && DATABASE_URL=sqlite:////tmp/khata_mig_test.db alembic upgrade head && DATABASE_URL=sqlite:////tmp/khata_mig_test.db alembic downgrade -1 && rm /tmp/khata_mig_test.db`
 Expected: upgrade + downgrade both succeed. (If `alembic.ini` uses a different env var, check `alembic/env.py` and match its mechanism.)
 
-- [ ] **Step 7: Run full test suite**
+- [x] **Step 7: Run full test suite**
 
 Run: `python -m pytest -q`
 Expected: all pass (existing suite unaffected)
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/khata/models/transfer.py src/khata/models/__init__.py src/khata/models/ledger.py alembic/versions/th1hopchain01_transfer_hops.py tests/test_transfer_models.py
