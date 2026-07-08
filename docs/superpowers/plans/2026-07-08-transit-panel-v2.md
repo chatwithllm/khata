@@ -32,7 +32,7 @@
 
 Steps (TDD): failing test (attach to hop roundtrip, exactly-one-parent guard rejects hop+entry, plan_transfers has_proof/attachment_count) → run fail → implement (column + relationship + service branch + migration mirroring `dd7attach01` batch add-column style) → run pass → migration up/down check on scratch DB copy → full suite → commit `feat(chains): hop proof attachments — model, migration, service`.
 
-### Task 2: hop attachments API
+### Task 2: hop attachments API ✅
 
 **Files:**
 - Modify: `src/khata/api/attachments.py` — add `GET/POST /plans/<pid>/hops/<hid>/attachments` (mirror entry routes; `_can_modify` analog: hop logger or plan owner), extend download/delete parent dispatch with `att.hop_id` branch (view = plan member via `sharing.accessible`; delete = logger/owner).

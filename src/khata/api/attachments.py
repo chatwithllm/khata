@@ -11,7 +11,7 @@ from urllib.parse import quote
 
 from flask import Blueprint, Response, g, jsonify, request
 
-from ..models import Contact, LedgerEntry, Plan
+from ..models import Contact, LedgerEntry, Plan, TransferHop
 from ..services import attachments, sharing
 from ..services.attachments import AttachmentError
 from .auth import current_user
@@ -76,6 +76,58 @@ def upload_attachment(plan_id, entry_id):
     return jsonify(attachment=attachments.meta(att)), 201
 
 
+def _hop_for_view(user, plan_id, hop_id):
+    """Plan accessible to the viewer + hop belongs to it. Returns (plan, hop, err)."""
+    plan = g.db.get(Plan, plan_id)
+    if plan is None:
+        return None, None, (jsonify(error="not_found"), 404)
+    if not sharing.accessible(g.db, plan=plan, user_id=user.id):
+        return None, None, (jsonify(error="forbidden"), 403)
+    hop = g.db.get(TransferHop, hop_id)
+    if hop is None or hop.plan_id != plan.id:
+        return None, None, (jsonify(error="not_found"), 404)
+    return plan, hop, None
+
+
+@bp.get("/plans/<int:plan_id>/hops/<int:hop_id>/attachments")
+def list_hop_attachments(plan_id, hop_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, hop, err = _hop_for_view(user, plan_id, hop_id)
+    if err:
+        return err
+    items = [attachments.meta(a) for a in attachments.list_for_hop(g.db, hop.id)]
+    return jsonify(attachments=items), 200
+
+
+@bp.post("/plans/<int:plan_id>/hops/<int:hop_id>/attachments")
+def upload_hop_attachment(plan_id, hop_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, hop, err = _hop_for_view(user, plan_id, hop_id)
+    if err:
+        return err
+    if not (user.id == plan.owner_user_id or user.id == hop.logged_by_user_id):
+        return jsonify(error="forbidden",
+                       detail="only the owner or this hop's logger can attach proof"), 403
+    f = request.files.get("file")
+    if f is None:
+        return jsonify(error="invalid", detail="no file uploaded"), 400
+    raw = f.read()
+    try:
+        att = attachments.add_attachment(
+            g.db, hop=hop, uploaded_by=user.id,
+            filename=f.filename or "file", raw=raw)
+        g.db.commit()
+    except AttachmentError as e:
+        g.db.rollback()
+        code = 413 if "too large" in str(e) else 400
+        return jsonify(error="invalid", detail=str(e)), code
+    return jsonify(attachment=attachments.meta(att)), 201
+
+
 @bp.get("/attachments/<int:att_id>")
 def download_attachment(att_id):
     user = current_user()
@@ -98,6 +150,12 @@ def download_attachment(att_id):
     elif att.asset_plan_id is not None:
         # Asset document: any plan member may view (shared evidence).
         plan = g.db.get(Plan, att.asset_plan_id)
+        if plan is None or not sharing.accessible(g.db, plan=plan, user_id=user.id):
+            return jsonify(error="forbidden"), 403
+    elif att.hop_id is not None:
+        # Hop proof: any plan member may view (shared evidence).
+        hop = g.db.get(TransferHop, att.hop_id)
+        plan = g.db.get(Plan, hop.plan_id) if hop else None
         if plan is None or not sharing.accessible(g.db, plan=plan, user_id=user.id):
             return jsonify(error="forbidden"), 403
     else:
@@ -139,6 +197,14 @@ def delete_attachment(att_id):
     elif att.asset_plan_id is not None:
         # Asset document: owner or uploader may delete.
         plan = g.db.get(Plan, att.asset_plan_id)
+        if plan is None:
+            return jsonify(error="not_found"), 404
+        if not (user.id == plan.owner_user_id or user.id == att.uploaded_by_user_id):
+            return jsonify(error="forbidden"), 403
+    elif att.hop_id is not None:
+        # Hop proof: owner or uploader may delete.
+        hop = g.db.get(TransferHop, att.hop_id)
+        plan = g.db.get(Plan, hop.plan_id) if hop else None
         if plan is None:
             return jsonify(error="not_found"), 404
         if not (user.id == plan.owner_user_id or user.id == att.uploaded_by_user_id):
