@@ -260,12 +260,14 @@
     <div class="osub" id="hop-osub"></div>
   </div>
   <div class="obody">
-    <div class="fld"><label for="hop-amount">Amount</label><input id="hop-amount" inputmode="decimal"></div>
+    <div class="fld"><label for="hop-amount">Amount <span id="hop-amount-ccy" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-faint);font-size:10px;margin-left:4px"></span></label><input id="hop-amount" inputmode="decimal"></div>
     <div class="fld"><label for="hop-occurred">Date</label><input id="hop-occurred" type="date"></div>
     <div class="fld"><label for="hop-method">Method</label>
       <select id="hop-method"><option value="transfer">Transfer</option><option value="upi">UPI</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select>
     </div>
-    <div class="fld"><label for="hop-note">Note (optional)</label><input id="hop-note"></div>
+    <div class="fld"><label for="hop-note">Comment (optional)</label>
+      <textarea id="hop-note" rows="3" placeholder="What was this transfer for, context, follow-ups…" style="font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);resize:vertical"></textarea>
+    </div>
     <div class="fld"><label>Proof (optional)</label><div id="hop-proof-mount"></div></div>
     <div class="err" id="hop-err"></div>
     <div class="acts"><button class="save" id="hop-save">Save changes</button><span class="cancel" id="hop-cancel">Cancel</span><span class="del" id="hop-del" style="margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
@@ -1175,6 +1177,7 @@ function openHopEdit(h){
   $('hop-osub').textContent=(h.from.display||'?')+' → '+(h.to.display||'?');
   // amount stays in plan currency (BASE) — edits feed server-side plan-currency math
   $('hop-amount').value=(Math.abs(h.amount_minor||0)/100);
+  $('hop-amount-ccy').textContent='· in '+BASE+' (plan currency)';
   $('hop-occurred').value=(h.occurred_at||'').slice(0,10);
   if(h.method) $('hop-method').value=h.method;
   $('hop-note').value=h.note||'';
