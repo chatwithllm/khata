@@ -48,6 +48,10 @@
 
   function mountAttachments(container, opts) {
     const planId = opts.planId, entryId = opts.entryId, canModify = !!opts.canModify;
+    // parent endpoint: ledger entry by default; hopId switches to hop proof
+    const urlBase = opts.hopId
+      ? "/api/plans/" + planId + "/hops/" + opts.hopId + "/attachments"
+      : "/api/plans/" + planId + "/entries/" + entryId + "/attachments";
     container.textContent = "";
     const wrap = el("div", "att-wrap");
     const grid = el("div", "att-grid");
@@ -93,7 +97,7 @@
       grid.textContent = "";
       let items = [];
       try {
-        const r = await fetch("/api/plans/" + planId + "/entries/" + entryId + "/attachments");
+        const r = await fetch(urlBase);
         if (r.ok) items = (await r.json()).attachments || [];
       } catch (e) { /* offline / transient */ }
       if (!items.length && !canModify) {
@@ -129,8 +133,7 @@
         const fd = new FormData();
         fd.append("file", blob, f.name);
         try {
-          const r = await fetch("/api/plans/" + planId + "/entries/" + entryId + "/attachments",
-            { method: "POST", body: fd });
+          const r = await fetch(urlBase, { method: "POST", body: fd });
           if (!r.ok) {
             const d = await r.json().catch(() => ({}));
             status.textContent = (d.detail || "Upload failed") + ".";

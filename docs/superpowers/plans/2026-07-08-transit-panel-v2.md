@@ -40,7 +40,7 @@ Steps (TDD): failing test (attach to hop roundtrip, exactly-one-parent guard rej
 
 Steps: failing API test (upload as logger 201, list as member 200, outsider 403, delete by owner 200, bad hop 404 — reuse register/login helpers from `tests/test_transfers_api.py`) → implement → full suite → commit `feat(chains): hop attachments API`.
 
-### Task 3: UI — restyle panel + edit slide-over + proof
+### Task 3: UI — restyle panel + edit slide-over + proof ✅
 
 **Files:**
 - Modify: `src/khata/static/assets/transfers.js` (restyled rows, pencil action, `proof` chip)

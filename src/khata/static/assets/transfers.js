@@ -1,8 +1,11 @@
 // Money-in-transit panel + chain timeline for payment chains.
 // Mounts into a container on plan detail pages:
 //   KhataTransfers.mount(document.getElementById('transit-panel'), PID,
-//                        {me: USER_ID, base: 'INR', fmt: fmtNum, sym: sym, onChange: boot})
+//     {me: USER_ID, base: 'INR', fmt: fmtNum, sym: sym, onChange: boot, onEdit: openHopEdit})
 // fmt(minor, ccy) -> grouped number string; sym(ccy) -> currency symbol.
+// onEdit(hop) — optional; when given, an Edit action appears for the hop's
+// logger / plan owner and delegates to the page (slide-over with attachments).
+// Rendering follows the ledger idiom: .ph header, .lrow rows, .l1/.amt/.l2/.l2r, .pill chips.
 window.KhataTransfers = (function(){
   let _el=null,_pid=null,_opts={},_data=null;
 
@@ -37,76 +40,94 @@ window.KhataTransfers = (function(){
     if(await _post(url, body)){ await refresh(); if(_opts.onChange) _opts.onChange(); }
   }
 
-  function _badge(h){
-    if(h.is_terminal) return ['delivered','pos'];
-    if(h.resolution==='returned') return ['returned',''];
-    if(h.resolution==='fee') return ['fee','neg'];
-    if(h.outstanding_minor>0) return ['holding '+_fmt(h.outstanding_minor)+' · '+h.days_held+'d','warn'];
-    return ['forwarded',''];
+  // status chip: text + tone class matching the ledger pill palette
+  function _statusChip(h){
+    if(h.is_terminal) return _e('span','pill f','delivered');
+    if(h.resolution==='returned') return _e('span','pill','returned');
+    if(h.resolution==='fee') return _e('span','pill m','fee');
+    if(h.outstanding_minor>0){
+      const c=_e('span','pill m','holding '+_fmt(h.outstanding_minor)+(h.days_held?' · '+h.days_held+'d':''));
+      c.style.color='var(--accent-dk)'; c.style.fontWeight='700';
+      return c;
+    }
+    return _e('span','pill','forwarded');
+  }
+
+  function _dateTxt(iso){
+    const d=new Date(iso);
+    if(isNaN(d.getTime())) return '';
+    const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return String(d.getDate()).padStart(2,'0')+' '+M[d.getMonth()]+' '+d.getFullYear();
+  }
+
+  function _link(label, fn){
+    const b=_e('span','proof', label);
+    b.style.cssText='cursor:pointer;user-select:none';
+    b.tabIndex=0; b.setAttribute('role','button');
+    b.addEventListener('click', fn);
+    b.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); fn(); } });
+    return b;
   }
 
   function _hopRow(h){
-    const row=_e('div');
-    row.style.cssText='display:flex;flex-direction:column;gap:4px;padding:10px 0;border-bottom:1px solid var(--line)';
-    const top=_e('div');
-    top.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap';
-    top.appendChild(_e('span','', (h.from.display||'?')+' → '+(h.to.display||'?')));
-    const amt=_e('span','', _fmt(h.amount_minor));
-    amt.style.cssText='font-family:JetBrains Mono,monospace;font-weight:600;margin-left:auto';
-    top.appendChild(amt);
-    row.appendChild(top);
+    const row=_e('div','lrow');
+    // l1 — who → whom (title line)
+    row.append(_e('div','l1', (h.from.display||'?')+' → '+(h.to.display||'?')));
 
-    const meta=_e('div');
-    meta.style.cssText='display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-faint);flex-wrap:wrap';
-    const d=new Date(h.occurred_at);
-    meta.appendChild(_e('span','', isNaN(d.getTime())?'':d.toLocaleDateString()));
-    if(h.method) meta.appendChild(_e('span','', h.method));
-    const [btxt,btone]=_badge(h);
-    const badge=_e('span','', btxt);
-    badge.style.cssText='padding:1px 8px;border-radius:999px;border:1px solid var(--line);font-weight:600'+
-      (btone==='pos'?';color:var(--pos)':btone==='neg'?';color:var(--neg)':btone==='warn'?';color:var(--primary)':'');
-    meta.appendChild(badge);
-    if(h.receipt_status==='pending') meta.appendChild(_e('span','', 'receipt pending'));
-    if(h.receipt_status==='countered') meta.appendChild(_e('span','', 'countered '+_fmt(h.counter_amount_minor||0)));
-    if(h.note) meta.appendChild(_e('span','', h.note));
-    row.appendChild(meta);
+    // amt — mono, right aligned like ledger rows
+    const amt=_e('div','amt');
+    const s=_e('span','symword'); s.textContent=_opts.sym?_opts.sym(_opts.base||'INR'):'';
+    const f=_opts.fmt || function(m){ return (m/100).toLocaleString(); };
+    const n=_e('span'); n.textContent=f(h.amount_minor, _opts.base||'INR');
+    amt.append(s,n);
+    row.append(amt);
 
-    const acts=_e('div');
-    acts.style.cssText='display:flex;gap:10px;font-size:12px';
-    const mkBtn=(label, fn)=>{
-      const b=_e('span','', label);
-      b.style.cssText='color:var(--primary);font-weight:600;cursor:pointer';
-      b.addEventListener('click', fn);
-      acts.appendChild(b);
-    };
-    // receipt controls: only the receiving user acts
+    // l2 — date · note
+    const l2=_e('div','l2'); l2.style.cssText='display:flex;align-items:center;gap:6px;flex-wrap:wrap';
+    l2.append(_e('span', null, _dateTxt(h.occurred_at)));
+    if(h.note){ l2.append(_e('span',null,'·')); l2.append(_e('span', null, h.note)); }
+    row.append(l2);
+
+    // l2r — chips + actions
+    const l2r=_e('div','l2r');
+    if(h.method) l2r.append(_e('span','pill m', h.method));
+    l2r.append(_statusChip(h));
+    if(h.receipt_status==='pending') l2r.append(_e('span','pill','receipt pending'));
+    if(h.receipt_status==='countered') l2r.append(_e('span','pill','countered '+_fmt(h.counter_amount_minor||0)));
+    if(h.has_proof) l2r.append(_e('span','pill f','proof'+(h.attachment_count>1?' ×'+h.attachment_count:'')));
+
+    // receipt actions — the receiving user acts
     if(h.receipt_status==='pending' && h.to.user_id===_opts.me){
-      mkBtn('Confirm receipt', ()=>_act('/api/plans/'+_pid+'/hops/'+h.id+'/receipt', {action:'confirm'}));
-      mkBtn('Counter…', ()=>{
+      l2r.append(_link('Confirm receipt', ()=>_act('/api/plans/'+_pid+'/hops/'+h.id+'/receipt', {action:'confirm'})));
+      l2r.append(_link('Counter…', ()=>{
         const v=prompt('Amount actually received:');
         if(v) _act('/api/plans/'+_pid+'/hops/'+h.id+'/receipt', {action:'counter', amount:v});
-      });
+      }));
     }
     // logger accepts a counter
     if(h.receipt_status==='countered' && h.logged_by_user_id===_opts.me){
-      mkBtn('Accept counter', ()=>_act('/api/plans/'+_pid+'/hops/'+h.id+'/receipt', {action:'accept'}));
+      l2r.append(_link('Accept counter', ()=>_act('/api/plans/'+_pid+'/hops/'+h.id+'/receipt', {action:'accept'})));
     }
-    // resolve controls on open remainders
+    // resolve actions on open remainders
     if(h.outstanding_minor>0 && !h.is_terminal){
-      mkBtn('Return', ()=>{
+      l2r.append(_link('Return', ()=>{
         if(confirm('Return the outstanding '+_fmt(h.outstanding_minor)+' to '+(h.from.display||'sender')+'?'))
           _act('/api/plans/'+_pid+'/hops/'+h.id+'/resolve', {action:'return'});
-      });
-      mkBtn('Mark fee…', ()=>{
+      }));
+      l2r.append(_link('Mark fee…', ()=>{
         const v=prompt('Fee amount (blank = full outstanding '+_fmt(h.outstanding_minor)+'):');
         if(v===null) return;
         const note=prompt('Fee note (e.g. agent commission):')||undefined;
         const body={action:'fee', note:note};
         if(v.trim()) body.amount=v;
         _act('/api/plans/'+_pid+'/hops/'+h.id+'/resolve', body);
-      });
+      }));
     }
-    if(acts.children.length) row.appendChild(acts);
+    // edit — hop logger or plan owner; delegates to the page slide-over
+    if(_opts.onEdit && (h.logged_by_user_id===_opts.me || _opts.isOwner)){
+      l2r.append(_link('✎ edit', ()=>_opts.onEdit(h)));
+    }
+    row.append(l2r);
     return row;
   }
 
@@ -116,22 +137,23 @@ window.KhataTransfers = (function(){
     _el.textContent='';
     if(!_data.chains.length){ _el.style.display='none'; return; }
     _el.style.display='';
-    const head=_e('div');
-    head.style.cssText='display:flex;align-items:baseline;gap:10px;margin-bottom:4px';
-    head.appendChild(_e('div','eyebrow','Money in transit'));
-    const kpi=_e('span','', _fmt(_data.in_transit_minor));
-    kpi.style.cssText='font-family:JetBrains Mono,monospace;font-weight:700;margin-left:auto';
-    head.appendChild(kpi);
-    _el.appendChild(head);
+
+    // panel header — ledger idiom: .ph with title + meta on the right
+    const ph=_e('div','ph');
+    const t=_e('div','t','Money in transit'); t.style.fontSize='16px';
+    const right=_e('div'); right.style.cssText='display:flex;align-items:center;gap:12px';
+    right.append(_e('div','meta', _fmt(_data.in_transit_minor)+' in transit'));
+    ph.append(t, right);
+    _el.append(ph);
+
+    const body=_e('div','ledger fillrows');
     for(const ch of _data.chains){
-      const card=_e('div');
-      card.style.cssText='margin-top:6px';
-      const lbl=_e('div','', 'Chain #'+ch.chain_id+(ch.closed?' · closed':''));
-      lbl.style.cssText='font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.4px';
-      card.appendChild(lbl);
-      for(const h of ch.hops) card.appendChild(_hopRow(h));
-      _el.appendChild(card);
+      const lbl=_e('div',null,'Chain #'+ch.chain_id+(ch.closed?' · closed':''));
+      lbl.style.cssText='font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);padding:12px 22px 0';
+      body.append(lbl);
+      for(const h of ch.hops) body.append(_hopRow(h));
     }
+    _el.append(body);
   }
 
   function openHops(){

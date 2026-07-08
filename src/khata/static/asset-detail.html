@@ -252,6 +252,26 @@
   </div>
 </aside>
 
+<!-- hop editor slide-over (payment chains) -->
+<aside class="over" id="hop-over" aria-hidden="true">
+  <div class="oh">
+    <div class="eyebrow">Money in transit</div>
+    <h3>Edit <em>transfer</em></h3>
+    <div class="osub" id="hop-osub"></div>
+  </div>
+  <div class="obody">
+    <div class="fld"><label for="hop-amount">Amount</label><input id="hop-amount" inputmode="decimal"></div>
+    <div class="fld"><label for="hop-occurred">Date</label><input id="hop-occurred" type="date"></div>
+    <div class="fld"><label for="hop-method">Method</label>
+      <select id="hop-method"><option value="transfer">Transfer</option><option value="upi">UPI</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select>
+    </div>
+    <div class="fld"><label for="hop-note">Note (optional)</label><input id="hop-note"></div>
+    <div class="fld"><label>Proof (optional)</label><div id="hop-proof-mount"></div></div>
+    <div class="err" id="hop-err"></div>
+    <div class="acts"><button class="save" id="hop-save">Save changes</button><span class="cancel" id="hop-cancel">Cancel</span><span class="del" id="hop-del" style="margin-left:auto;color:var(--neg);cursor:pointer;font-weight:600">Delete</span></div>
+  </div>
+</aside>
+
 <!-- installment-schedule editor slide-over -->
 <aside class="over" id="sched-over" aria-hidden="true">
   <div class="oh">
@@ -1148,6 +1168,50 @@ function openEdit(lr){ // EDIT existing entry
 }
 function closeOver(){ $('scrim').classList.remove('on'); $('over').classList.remove('on'); $('over').setAttribute('aria-hidden','true'); }
 
+// ── hop editor slide-over (payment chains) ──
+let hopEditId=null;
+function openHopEdit(h){
+  hopEditId=h.id;
+  $('hop-osub').textContent=(h.from.display||'?')+' → '+(h.to.display||'?');
+  // amount stays in plan currency (BASE) — edits feed server-side plan-currency math
+  $('hop-amount').value=(Math.abs(h.amount_minor||0)/100);
+  $('hop-occurred').value=(h.occurred_at||'').slice(0,10);
+  if(h.method) $('hop-method').value=h.method;
+  $('hop-note').value=h.note||'';
+  $('hop-err').textContent='';
+  // terminal hop amounts are locked server-side (entries already fanned out)
+  $('hop-amount').disabled=!!h.is_terminal;
+  $('hop-amount').title=h.is_terminal?'Delivered amounts are locked — delete and re-log to change':'';
+  mountAttachments($('hop-proof-mount'), { planId: pid, hopId: h.id,
+    canModify: true, onChange: ()=>KhataTransfers.refresh() });
+  $('scrim').classList.add('on'); $('hop-over').classList.add('on');
+  $('hop-over').setAttribute('aria-hidden','false');
+}
+function closeHopEdit(){ $('scrim').classList.remove('on'); $('hop-over').classList.remove('on'); $('hop-over').setAttribute('aria-hidden','true'); hopEditId=null; }
+$('hop-cancel').addEventListener('click', closeHopEdit);
+$('hop-save').addEventListener('click', async ()=>{
+  if(!hopEditId) return;
+  $('hop-err').textContent='';
+  const body={};
+  if(!$('hop-amount').disabled) body.amount=$('hop-amount').value.replace(/,/g,'');
+  if($('hop-occurred').value) body.occurred_at=$('hop-occurred').value+'T12:00:00';
+  body.method=$('hop-method').value;
+  body.note=$('hop-note').value;
+  const r=await fetch('/api/plans/'+pid+'/hops/'+hopEditId,{method:'PATCH',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if(r.ok){ closeHopEdit(); boot(); return; }
+  const e=await r.json().catch(()=>({}));
+  $('hop-err').textContent=e.detail||e.error||'Could not save changes.';
+});
+$('hop-del').addEventListener('click', async ()=>{
+  if(!hopEditId) return;
+  if(!confirm('Delete this transfer? Downstream hops drawing from it must be removed first.')) return;
+  const r=await fetch('/api/plans/'+pid+'/hops/'+hopEditId,{method:'DELETE'});
+  if(r.ok){ closeHopEdit(); boot(); return; }
+  const e=await r.json().catch(()=>({}));
+  $('hop-err').textContent=e.detail||e.error||'Could not delete.';
+});
+
 // ── installment-schedule editor (POST /installments replaces the schedule) ──
 function schedRow(amount, dateISO){
   const row=el('div'); row.className='sched-erow'; row.style.cssText='display:grid;grid-template-columns:1fr 150px 26px;gap:8px;align-items:center';
@@ -1381,7 +1445,8 @@ async function boot(){
 
   // money-in-transit panel (payment chains)
   KhataTransfers.mount($('transit-panel'), pid,
-    {me: myUserId, base: DISP, fmt: (m,c)=>fmtNum(conv(m),c), sym: sym, onChange: boot});
+    {me: myUserId, base: DISP, fmt: (m,c)=>fmtNum(conv(m),c), sym: sym,
+     isOwner: plan.owner_user_id===myUserId, onChange: boot, onEdit: openHopEdit});
 
   // seller-role members see the plan read-only — hide the log button (server enforces too)
   const myRole = (MEMBERS.find(m=>m.user_id===myUserId)||{}).role;
@@ -1430,8 +1495,8 @@ $('pay-cur').addEventListener('change', ()=>{ $('inline-rate').value=''; showInl
 $('inline-rate').addEventListener('input', updateFxPreview);
 $('fsource').addEventListener('change', ()=>fillFundPlan($('fundplan')?$('fundplan').value:null));
 $('cancel').addEventListener('click', closeOver);
-$('scrim').addEventListener('click', ()=>{ closeOver(); closeSched(); closeMeta(); });
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeSched(); closeMeta(); } });
+$('scrim').addEventListener('click', ()=>{ closeOver(); closeSched(); closeMeta(); closeHopEdit(); });
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeOver(); closeSched(); closeMeta(); closeHopEdit(); } });
 // ── payment-chain recipient step ──
 function refreshRecipUI(){
   const kind = $('recip-kind').value;
