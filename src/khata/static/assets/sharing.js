@@ -79,6 +79,13 @@
       input.style.fontFamily = "inherit"; input.style.fontSize = "14px"; input.style.padding = "8px 11px";
       input.style.border = "1px solid var(--line)"; input.style.borderRadius = "9px";
       input.style.background = "var(--card)"; input.style.color = "var(--ink)";
+      const roleSel = el("select");
+      roleSel.style.cssText = "flex:none;font-family:inherit;font-size:13px;padding:8px 6px;"
+        + "border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)";
+      [["contributor", "contributor"], ["seller", "seller"]].forEach(([v, t]) => {
+        const o = el("option", null, t); o.value = v; roleSel.appendChild(o);
+      });
+      roleSel.title = "Role — sellers see the plan read-only";
       const btn = el("button", "btn", "Add");
       // detail pages have no .btn stylesheet rule — style inline (flex:none so the
       // row can't squeeze it below tap size)
@@ -91,13 +98,13 @@
         err.textContent = "";
         const res = await fetch("/api/plans/" + planId + "/members", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: input.value }) });
+          body: JSON.stringify({ email: input.value, role: roleSel.value }) });
         if (res.ok) { input.value = ""; mountSharing(planId, box); return; }
         const e = await res.json().catch(() => ({}));
         err.textContent = ({ user_not_found: "No account with that email.",
                              already_member: "Already shared with them." })[e.error] || e.detail || "Could not add.";
       });
-      form.append(input, btn); box.appendChild(form); box.appendChild(err);
+      form.append(input, roleSel, btn); box.appendChild(form); box.appendChild(err);
     }
   }
   window.mountSharing = mountSharing;

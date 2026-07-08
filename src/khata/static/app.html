@@ -647,9 +647,51 @@ function svgIcon(paths){
 }
 async function renderConfirms(){
   const box=$('confirms'); if(!box) return;
-  let cs=[];
-  try{ cs=(await fetch('/api/confirmations').then(r=>r.json())).confirmations||[]; }catch(_){ return; }
+  let cs=[], rcpts=[];
+  try{
+    const resp=await fetch('/api/confirmations').then(r=>r.json());
+    cs=resp.confirmations||[]; rcpts=resp.receipts||[];
+  }catch(_){ return; }
   box.textContent='';
+  // transfer-receipt confirmations (payment chains): receiver confirms money arrived
+  rcpts.forEach(c=>{
+    const card=el('div','invite confirm');
+    const ic=el('div','ic'); ic.appendChild(svgIcon(['M17 1l4 4-4 4','M3 11V9a4 4 0 0 1 4-4h14','M7 23l-4-4 4-4','M21 13v2a4 4 0 0 1-4 4H3']));
+    const txt=el('div','itxt');
+    const t1=el('div','it1');
+    if(c.status==='pending'){
+      t1.append(el('b',null,c.from_display||'Someone'),
+        document.createTextNode(' sent you '+fmt(c.amount_minor,BASE)+' — did it arrive?'));
+    }else{
+      t1.append(el('b',null,'Receiver'),
+        document.createTextNode(' says '+fmt(c.counter_amount_minor,BASE)+
+          ' arrived (you recorded '+fmt(c.amount_minor,BASE)+')'));
+    }
+    const t2=el('div','it2','“'+c.plan_name+'” · money in transit · needs your confirmation');
+    txt.append(t1,t2);
+    const acts=el('div','iacts');
+    const primary=el('button','acc', c.status==='pending'?'Confirm receipt':('Accept '+fmt(c.counter_amount_minor,BASE)));
+    const counter=el('button','dec', c.status==='pending'?'Different amount':'');
+    acts.append(primary);
+    if(c.status==='pending') acts.append(counter);
+    const amtBox=el('div','iamt'); amtBox.style.display='none'; amtBox.style.flexBasis='100%';
+    const inp=el('input'); inp.placeholder='amount received';
+    const send=el('button',null,'Send'); amtBox.append(inp,send);
+    const post=async(body,btns)=>{
+      btns.forEach(b=>b.disabled=true);
+      try{
+        const r=await fetch('/api/plans/'+c.plan_id+'/hops/'+c.hop_id+'/receipt',{
+          method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        if(r.ok){ card.remove(); location.reload(); }
+        else { btns.forEach(b=>b.disabled=false); }
+      }catch(_){ btns.forEach(b=>b.disabled=false); }
+    };
+    primary.addEventListener('click',()=>post({action: c.status==='pending'?'confirm':'accept'},[primary,counter]));
+    counter.addEventListener('click',()=>{ amtBox.style.display=amtBox.style.display==='none'?'flex':'none'; inp.focus(); });
+    send.addEventListener('click',()=>{ if(inp.value.trim()) post({action:'counter',amount:inp.value.trim()},[send]); });
+    card.append(ic,txt,acts,amtBox);
+    box.appendChild(card);
+  });
   cs.forEach(c=>{
     const card=el('div','invite confirm');
     const ic=el('div','ic'); ic.appendChild(svgIcon(['M12 1v22','M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6']));

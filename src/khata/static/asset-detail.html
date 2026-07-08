@@ -1355,6 +1355,10 @@ async function boot(){
   KhataTransfers.mount($('transit-panel'), pid,
     {me: myUserId, base: BASE, fmt: fmtNum, sym: sym, onChange: boot});
 
+  // seller-role members see the plan read-only — hide the log button (server enforces too)
+  const myRole = (MEMBERS.find(m=>m.user_id===myUserId)||{}).role;
+  if(myRole==='seller') $('logbtn').style.display='none';
+
   // contacts for the seller/buyer typeahead (owner's contacts; safe if it fails)
   try{ CONTACTS=(await fetch('/api/contacts').then(r=>r.json())).contacts||[]; }catch(e){ CONTACTS=[]; }
 

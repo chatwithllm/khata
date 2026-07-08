@@ -2009,7 +2009,7 @@ git commit -m "feat(chains): transit panel on loan/chit/holding/retirement detai
 
 ---
 
-### Task 11: Seller assignment UI + confirmations inbox
+### Task 11: Seller assignment UI + confirmations inbox ✅
 
 **Files:**
 - Modify: `src/khata/static/asset-detail.html` (member-add form gets role select)
@@ -2018,19 +2018,19 @@ git commit -m "feat(chains): transit panel on loan/chit/holding/retirement detai
 **Interfaces:**
 - Consumes: Task 7 role param on `POST /api/plans/<pid>/members`; Task 8 `receipts` key on `GET /api/confirmations`.
 
-- [ ] **Step 1: Member form role select**
+- [x] **Step 1: Member form role select**
 
 In asset-detail's add-member form add `<select>` with options `contributor` (default) / `seller`; include `role` in the POST body. Render existing members' role badge (data already in `/members` response per Task 7).
 
-- [ ] **Step 2: Confirmations inbox renders receipts**
+- [x] **Step 2: Confirmations inbox renders receipts**
 
 Find the confirmations rendering code, append a "Transfers to confirm" group rendering each receipt row: `from_display`, amount, plan name, [Confirm] [Counter…] buttons → `POST /api/plans/<plan_id>/hops/<hop_id>/receipt`, refresh list on success.
 
-- [ ] **Step 3: Headless verify**
+- [x] **Step 3: Headless verify**
 
 Owner adds seller-role member → member list shows "seller" badge. Seller logs in → plan opens read-only (log-payment UI hidden or 403 handled gracefully — hide the button when `role_of` via members list says seller). Receiver user sees pending receipt in confirmations inbox, confirms, badge clears.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/khata/static/asset-detail.html src/khata/static/<confirmations-page>
