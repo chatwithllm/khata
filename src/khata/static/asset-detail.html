@@ -974,7 +974,51 @@ function renderContributors(box, st, myUserId, hops){
       rt.append(l2);
     }
     person.append(rt);
-    contrib.append(person);
+
+    // collapsed breakdown: the entries that add up to this person's number.
+    const theirs=(st.ledger||[]).filter(e=>e.logged_by_user_id===c.user_id &&
+      e.direction==='out' && e.kind!=='transfer_fee');
+    if(theirs.length){
+      person.style.cursor='pointer';
+      person.title='Show payments';
+      const chev=el('span',null,'▸');
+      chev.style.cssText='margin-left:6px;font-size:10px;color:var(--ink-faint);transition:transform .2s;display:inline-block';
+      person.querySelector('.nm').append(chev);
+
+      const detail=el('div');
+      detail.style.cssText='display:none;padding:2px 0 10px 48px';
+      theirs.sort((a,b)=>new Date(b.occurred_at)-new Date(a.occurred_at)).forEach(e2=>{
+        const r=el('div');
+        r.style.cssText='display:flex;align-items:baseline;gap:10px;padding:3px 0;font-size:12px;border-bottom:1px dashed var(--line)';
+        const d=parseISO(e2.occurred_at);
+        const dt=el('span',null,d?fmtDay(d):'—');
+        dt.style.cssText="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-faint);white-space:nowrap";
+        r.append(dt);
+        const note=el('span',null,e2.note||'Payment');
+        note.style.cssText='flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-faint)';
+        note.title=e2.note||'';
+        r.append(note);
+        if(e2.amount_status!=='agreed'){
+          const pnd=el('span',null,'pending');
+          pnd.style.cssText='font-size:10px;font-weight:700;color:var(--accent-dk);text-transform:uppercase;letter-spacing:.04em';
+          r.append(pnd);
+        }
+        const am=el('span',null,sym(DISP)+fmtNum(conv(e2.amount_minor),DISP));
+        am.style.cssText="font-family:'JetBrains Mono',monospace;font-weight:600;white-space:nowrap";
+        r.append(am);
+        detail.append(r);
+      });
+      person.addEventListener('click', ()=>{
+        const open=detail.style.display!=='none';
+        detail.style.display=open?'none':'';
+        chev.style.transform=open?'':'rotate(90deg)';
+        person.title=open?'Show payments':'Hide payments';
+      });
+      contrib.append(person);
+      contrib.append(detail);
+    }else{
+      contrib.append(person);
+    }
   });
   box.append(contrib);
 }
