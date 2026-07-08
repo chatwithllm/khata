@@ -204,6 +204,7 @@ window.KhataTransfers = (function(){
       }, true));
     }
     if(_opts.onEdit && (h.logged_by_user_id===_opts.me || _opts.isOwner)){
+      acts.append(_link('Attach proof', ()=>_opts.onEdit(h)));
       acts.append(_link('Edit', ()=>_opts.onEdit(h), true));
     }
     if(acts.children.length) row.append(acts);
