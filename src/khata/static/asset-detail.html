@@ -507,14 +507,21 @@ function attachProofPreview(chipEl, url){
     const imgs=_proofCache[url].filter(a=>a.is_image).slice(0,3);
     if(!alive || !imgs.length) return;
     pop=el('div');
+    // reserve real space immediately — a zero-size card while the image streams
+    // reads as "nothing popped up"
     pop.style.cssText='position:fixed;z-index:90;display:flex;gap:6px;padding:8px;'
       +'background:var(--card);border:1px solid var(--line);border-radius:12px;'
-      +'box-shadow:0 12px 32px rgba(0,0,0,.18);pointer-events:none';
+      +'box-shadow:0 12px 32px rgba(0,0,0,.18);pointer-events:none;'
+      +'min-width:260px;min-height:220px;align-items:center;justify-content:center';
+    const loading=el('div',null,'loading proof…');
+    loading.style.cssText='position:absolute;font-size:12px;color:var(--ink-faint)';
+    pop.append(loading);
     imgs.forEach(a=>{
       const im=el('img'); im.src='/api/attachments/'+a.id; im.alt=a.filename;
       // contain, not cover — receipts/screenshots must stay readable, not cropped
       im.style.cssText='max-width:'+(imgs.length>1?'30vw':'44vw')+';max-height:62vh;'
-        +'object-fit:contain;border-radius:8px;background:var(--paper-2)';
+        +'min-width:120px;object-fit:contain;border-radius:8px;background:var(--paper-2)';
+      im.addEventListener('load', ()=>loading.remove());
       pop.append(im);
     });
     const extra=_proofCache[url].length-imgs.length;
