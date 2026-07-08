@@ -815,7 +815,8 @@ function renderLedger(box, st){
     if(fxl) amt.append(fxl);
     // running total after this entry settled
     if(lr.id!=null && runningById[lr.id]!=null){
-      const rt2=el('span','amt-pct','Σ '+sym(DISP)+fmtNum(conv(runningById[lr.id]),DISP)+' paid');
+      const runPct = (st.total_price_minor>0) ? Math.round(runningById[lr.id]*100/st.total_price_minor) : null;
+      const rt2=el('span','amt-pct','Σ '+sym(DISP)+fmtNum(conv(runningById[lr.id]),DISP)+' paid'+(runPct!=null?' · '+runPct+'%':''));
       amt.append(rt2);
     }
     row.append(amt);
