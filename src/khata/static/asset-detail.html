@@ -446,8 +446,8 @@ function fillFundPlan(selectedId){
 // ── "Paid by · contributor" field: hide for solo plans, else rebuild + select uid ──
 function fillPaidBy(uid){
   const fld=$('paidby-fld'), sel=$('paid-by');
-  if(MEMBERS.length < 2){ fld.style.display='none'; return; }   // solo plan — no contributor choice
-  fld.style.display='flex';
+  if(MEMBERS.length < 2){ fld.style.display='none'; fld.dataset.avail='0'; return; }   // solo plan — no contributor choice
+  fld.style.display='flex'; fld.dataset.avail='1';
   sel.textContent='';
   for(const m of MEMBERS){
     const opt=document.createElement('option');
@@ -1755,6 +1755,16 @@ function refreshRecipUI(){
     const updateTotal=()=>{
       let t=0;
       document.querySelectorAll('#drawhops-list input:checked').forEach(cb=>{ t+=parseInt(cb.dataset.out,10); });
+      // chain path: contributors come from the chain walk, not the paid-by field
+      const chainMode=t>0;
+      $('paidby-fld').style.display = chainMode ? 'none' : ($('paidby-fld').dataset.avail==='1'?'flex':'none');
+      let hint=document.getElementById('drawhops-hint');
+      if(chainMode && !hint){
+        hint=document.createElement('div'); hint.id='drawhops-hint';
+        hint.style.cssText='font-size:11px;color:var(--ink-faint);margin-top:4px';
+        hint.textContent='Contributors are credited automatically from the chain — the drawn money keeps its original owners.';
+        $('drawhops-fld').append(hint);
+      }else if(!chainMode && hint) hint.remove();
       if(t<=0){ totalEl.style.display='none'; totalEl.textContent=''; return; }
       // both currencies when a rate exists: plan currency + display preference
       let txt='Selected: '+sym(BASE)+fmtNum(t,BASE);
