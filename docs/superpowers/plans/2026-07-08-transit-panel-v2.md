@@ -18,7 +18,7 @@
 
 ---
 
-### Task 1: `attachments.hop_id` — model, migration, service
+### Task 1: `attachments.hop_id` — model, migration, service ✅
 
 **Files:**
 - Modify: `src/khata/models/attachment.py`, `src/khata/models/transfer.py`

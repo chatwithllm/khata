@@ -60,6 +60,9 @@ class TransferHop(Base):
     audit: Mapped[list["TransferHopAudit"]] = relationship(
         back_populates="hop", cascade="all, delete-orphan",
         order_by="TransferHopAudit.changed_at")
+    attachments: Mapped[list["Attachment"]] = relationship(
+        back_populates="hop", cascade="all, delete-orphan",
+        order_by="Attachment.created_at")
 
 
 class HopSource(Base):

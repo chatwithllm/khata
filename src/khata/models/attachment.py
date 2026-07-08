@@ -25,6 +25,8 @@ class Attachment(Base):
         ForeignKey("contacts.id", ondelete="CASCADE"), nullable=True, index=True)
     asset_plan_id: Mapped[int | None] = mapped_column(
         ForeignKey("plans.id", ondelete="CASCADE"), nullable=True, index=True)
+    hop_id: Mapped[int | None] = mapped_column(
+        ForeignKey("transfer_hops.id", ondelete="CASCADE"), nullable=True, index=True)
     uploaded_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     mime: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -39,3 +41,5 @@ class Attachment(Base):
         back_populates="attachments", foreign_keys=[contact_id])
     asset_plan: Mapped["Plan | None"] = relationship(
         back_populates="attachments", foreign_keys=[asset_plan_id])
+    hop: Mapped["TransferHop | None"] = relationship(
+        back_populates="attachments", foreign_keys=[hop_id])

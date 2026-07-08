@@ -304,6 +304,14 @@ def _party_dict(session, user_id, contact_id, name):
             "display": display}
 
 
+def _att_count(session: Session, hop_id: int) -> int:
+    """Fresh count query — the relationship collection may be stale within a request."""
+    from sqlalchemy import func
+    from ..models import Attachment
+    return session.scalar(
+        select(func.count()).select_from(Attachment).where(Attachment.hop_id == hop_id)) or 0
+
+
 def plan_transfers(session: Session, plan) -> dict:
     from datetime import date
     hops = session.scalars(select(TransferHop)
@@ -331,7 +339,8 @@ def plan_transfers(session: Session, plan) -> dict:
                 "consumed_minor": consumed(session, h),
                 "occurred_at": h.occurred_at.isoformat(),
                 "method": h.method, "note": h.note,
-                "has_proof": bool(h.proof_ref),
+                "has_proof": bool(h.proof_ref) or _att_count(session, h.id) > 0,
+                "attachment_count": _att_count(session, h.id),
                 "is_terminal": h.is_terminal, "resolution": h.resolution,
                 "receipt_status": h.receipt_status,
                 "counter_amount_minor": h.counter_amount_minor,

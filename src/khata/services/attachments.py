@@ -58,12 +58,12 @@ def _sniff(raw: bytes) -> str | None:
 
 def add_attachment(session: Session, *, uploaded_by: int, filename: str, raw: bytes,
                    entry: LedgerEntry | None = None,
-                   contact=None, asset_plan=None) -> Attachment:
-    """Attach a file to exactly one parent: a ledger entry, a contact, OR an asset plan
-    (exactly one of the three, not several, not none)."""
-    parents = [entry, contact, asset_plan]
+                   contact=None, asset_plan=None, hop=None) -> Attachment:
+    """Attach a file to exactly one parent: a ledger entry, a contact, an asset plan,
+    OR a transfer hop (exactly one of the four, not several, not none)."""
+    parents = [entry, contact, asset_plan, hop]
     if sum(p is not None for p in parents) != 1:
-        raise AttachmentError("attachment needs exactly one parent (entry, contact, or asset)")
+        raise AttachmentError("attachment needs exactly one parent (entry, contact, asset, or hop)")
     if not raw:
         raise AttachmentError("empty file")
     if len(raw) > MAX_SIZE:
@@ -76,6 +76,7 @@ def add_attachment(session: Session, *, uploaded_by: int, filename: str, raw: by
         ledger_entry_id=entry.id if entry is not None else None,
         contact_id=contact.id if contact is not None else None,
         asset_plan_id=asset_plan.id if asset_plan is not None else None,
+        hop_id=hop.id if hop is not None else None,
         uploaded_by_user_id=uploaded_by,
         filename=name, mime=mime, size=len(raw),
         sha256=hashlib.sha256(raw).hexdigest(), data=raw)
@@ -99,6 +100,12 @@ def list_for_contact(session: Session, contact_id: int) -> list[Attachment]:
 def list_for_asset(session: Session, plan_id: int) -> list[Attachment]:
     return list(session.scalars(
         select(Attachment).where(Attachment.asset_plan_id == plan_id)
+        .order_by(Attachment.created_at, Attachment.id)))
+
+
+def list_for_hop(session: Session, hop_id: int) -> list[Attachment]:
+    return list(session.scalars(
+        select(Attachment).where(Attachment.hop_id == hop_id)
         .order_by(Attachment.created_at, Attachment.id)))
 
 
