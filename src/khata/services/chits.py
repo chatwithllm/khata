@@ -50,6 +50,17 @@ def create_chit_plan(session: Session, *, owner_id, name, currency, chit_value_m
     return plan
 
 
+def duplicate_chit_plan(session: Session, *, source_plan: Plan, owner_id, name) -> Plan:
+    """Clone a chit's terms into a new empty chit. Ledger and shares are NOT copied."""
+    if source_plan.type != "chit" or source_plan.chit is None:
+        raise ValidationError("source plan is not a chit")
+    chit = source_plan.chit
+    return create_chit_plan(
+        session, owner_id=owner_id, name=name, currency=source_plan.currency,
+        chit_value_minor=chit.chit_value_minor, n_members=chit.n_members,
+        commission_bps=chit.commission_bps, start_date=chit.start_date)
+
+
 def log_chit_entry(session: Session, *, plan: Plan, user_id, kind, amount_minor, occurred_at, note=None, fx_rate_micro=None) -> LedgerEntry:
     if kind not in CHIT_KINDS:
         raise ValidationError(f"unknown chit kind: {kind}")
