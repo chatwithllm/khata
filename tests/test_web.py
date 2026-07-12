@@ -163,7 +163,8 @@ def test_chit_detail_served(client):
     assert r.status_code == 200
     body = r.data.decode()
     for needle in ["/api/plans/", "app.css", "curtog", "/chit/entries",
-                   "/chit/dividend", "position", "/api/auth/me", "sharing.js"]:
+                   "/chit/dividend", "position", "/api/auth/me", "sharing.js",
+                   "chit/duplicate"]:
         assert needle in body
 
 
