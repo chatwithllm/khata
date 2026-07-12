@@ -4,8 +4,8 @@ import pytest
 
 from khata.db import Base, make_engine, make_session_factory
 from khata.models import User
-from khata.services.chits import (create_chit_plan, log_chit_entry, chit_state,
-                                  auction_dividend, ChitError, ValidationError)
+from khata.services.chits import (create_chit_plan, duplicate_chit_plan, log_chit_entry,
+                                  chit_state, auction_dividend, ChitError, ValidationError)
 
 
 @pytest.fixture
@@ -101,6 +101,27 @@ def test_schedule_fully_paid(ctx):
     assert [r["status"] for r in st["schedule"]] == ["paid", "paid", "paid"]
     assert st["next_due_month"] is None and st["next_due_date"] is None
     assert st["months_behind"] == 0
+
+
+def test_duplicate_copies_terms_empty_ledger(ctx):
+    s, u = ctx
+    src = _chit(s, u)  # value 100000000 minor, 20 members, 500 bps, 2026-01-01
+    log_chit_entry(s, plan=src, user_id=u.id, kind="chit_contribution", amount_minor=5000000, occurred_at=_dt(1))
+    s.commit()
+    dup = duplicate_chit_plan(s, source_plan=src, owner_id=u.id, name="C -2")
+    s.commit()
+    assert dup.id != src.id
+    assert dup.name == "C -2"
+    assert dup.type == "chit"
+    assert dup.currency == src.currency
+    assert dup.chit.chit_value_minor == src.chit.chit_value_minor
+    assert dup.chit.n_members == src.chit.n_members
+    assert dup.chit.commission_bps == src.chit.commission_bps
+    assert dup.chit.start_date == src.chit.start_date
+    assert list(dup.ledger_entries) == []
+    st = chit_state(s, dup.chit)
+    assert st["months_recorded"] == 0
+    assert st["total_contributed_minor"] == 0
 
 
 def test_validation(ctx):

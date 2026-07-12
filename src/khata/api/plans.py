@@ -938,6 +938,27 @@ def chit_dividend(plan_id):
         n_members=plan.chit.n_members, winning_bid_minor=bid)), 200
 
 
+@bp.post("/<int:plan_id>/chit/duplicate")
+def chit_duplicate(plan_id):
+    user = current_user()
+    if user is None:
+        return jsonify(error="unauthenticated"), 401
+    plan, err = _owned_plan(user, plan_id)
+    if err:
+        return err
+    if plan.type != "chit":
+        return jsonify(error="not_a_chit"), 400
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip() or f"{plan.name} -copy"
+    try:
+        new_plan = chits.duplicate_chit_plan(g.db, source_plan=plan, owner_id=user.id, name=name)
+        g.db.commit()
+    except (ChitError, ValueError, TypeError) as e:
+        g.db.rollback()
+        return jsonify(error="invalid", detail=str(e)), 400
+    return jsonify(_detail(new_plan)), 201
+
+
 @bp.post("/<int:plan_id>/shares")
 def create_share(plan_id):
     user = current_user()

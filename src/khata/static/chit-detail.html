@@ -364,6 +364,7 @@ function renderHeader(box, plan, st, isOwner){
   const acts=el('div','planacts');
   acts.append(actBtn('planshare','Share','M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13', openShareMenu));
   acts.append(actBtn('planprint','Print','M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z', printPlan));
+  acts.append(actBtn('planduplicate','Duplicate','M8 8h11a1 1 0 011 1v11a1 1 0 01-1 1H8a1 1 0 01-1-1V9a1 1 0 011-1zM4 16V4a1 1 0 011-1h11', duplicatePlan));
   acts.append(actBtn('plandel','Delete','M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6', deletePlan));
   const right=el('div','ph-right');
   right.append(el('div','meta', 'auction · monthly'), acts);
@@ -900,6 +901,25 @@ function renderSharePanel(box){
   const list=el('div'); list.id='share-list';
   body.append(list);
   box.append(body);
+}
+
+// ── duplicate the chit (terms only, empty ledger) ──
+function nextChitName(name){
+  const m = String(name||'').match(/^(.*?)(\d+)(\D*)$/);   // increment last digit run
+  return m ? m[1] + (parseInt(m[2],10)+1) + m[3] : ((name||'Chit') + ' 2');
+}
+async function duplicatePlan(){
+  const suggested = nextChitName(plan.name);
+  const name = prompt('Name for the duplicated chit', suggested);
+  if(name === null) return;                 // cancelled
+  const trimmed = name.trim();
+  if(!trimmed) return;                       // blank aborts
+  const r = await fetch('/api/plans/'+pid+'/chit/duplicate', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ name: trimmed }) });
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok){ alert(j.detail || j.error || 'Could not duplicate.'); return; }
+  location.href = '/chit/' + j.plan.id;      // land on the new empty chit
 }
 
 // ── delete the whole chit plan ──

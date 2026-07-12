@@ -35,5 +35,38 @@ def test_chit_entry_and_dividend(client):
     assert st["total_contributed_minor"] == 5000000
 
 
+def test_chit_duplicate(client):
+    _reg(client); src = _mk(client).get_json()["plan"]
+    pid = src["id"]
+    client.post(f"/api/plans/{pid}/chit/entries", json={"kind": "chit_contribution", "amount": "50,000"})
+    r = client.post(f"/api/plans/{pid}/chit/duplicate", json={"name": "C -2"})
+    assert r.status_code == 201
+    b = r.get_json()
+    new_id = b["plan"]["id"]
+    assert new_id != pid
+    assert b["plan"]["name"] == "C -2"
+    assert b["state"]["chit_value_minor"] == 100000000
+    assert b["state"]["n_members"] == 20
+    assert b["state"]["months_recorded"] == 0
+    assert b["state"]["total_contributed_minor"] == 0
+
+
+def test_chit_duplicate_blank_name_falls_back(client):
+    _reg(client); pid = _mk(client).get_json()["plan"]["id"]
+    b = client.post(f"/api/plans/{pid}/chit/duplicate", json={"name": "  "}).get_json()
+    assert b["plan"]["name"] == "C -copy"
+
+
+def test_chit_duplicate_rejects_non_chit(client):
+    _reg(client)
+    aid = client.post("/api/plans", json={"type": "asset", "name": "A", "currency": "INR",
+                                          "total_price": "1,000"}).get_json()["plan"]["id"]
+    assert client.post(f"/api/plans/{aid}/chit/duplicate", json={"name": "x"}).status_code == 400
+
+
+def test_chit_duplicate_auth(client):
+    assert client.post("/api/plans/1/chit/duplicate", json={"name": "x"}).status_code == 401
+
+
 def test_chit_auth(client):
     assert client.post("/api/plans/1/chit/entries", json={}).status_code == 401

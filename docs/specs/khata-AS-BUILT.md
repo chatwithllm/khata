@@ -182,7 +182,8 @@ input or non-http(s) URL; blank seller/buyer names stripped; extra_fields/links 
 · **GET `/<id>/asset/attachments`** (list asset document attachments — plan-member accessible) · **POST
 `/<id>/asset/attachments`** (upload asset document — owner-only; 413 if over size cap)
 · POST `/<id>/holding/buys|sells|quote|refresh-quote` · POST
-`/<id>/chit/entries` · GET `/<id>/chit/dividend?bid=` · POST `/<id>/retirement/update` · GET/POST
+`/<id>/chit/entries` · GET `/<id>/chit/dividend?bid=` · POST `/<id>/chit/duplicate` (owner-only;
+clones a chit's terms into a new empty chit, returns `_detail`) · POST `/<id>/retirement/update` · GET/POST
 `/<id>/members` (POST returns `{member:{…, status}}` — invited members start `invited`) ·
 DELETE `/<id>/members/<user_id>`.
 **Invitations** (`/api/invitations*`): GET `""` (`{invitations:[{plan_id, plan_name, plan_type,
@@ -238,6 +239,12 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-07-11 — Duplicate chit.** A chit-detail header action (between Print and Delete) clones a
+  chit's terms — `chit_value_minor`, `n_members`, `commission_bps`, currency, `start_date` — into a
+  new empty chit via `POST /api/plans/<id>/chit/duplicate` (owner-only). Ledger and shares are NOT
+  copied; the copy is private to the owner. Name defaults to the source's trailing number incremented
+  (`1 Lakh -1` → `1 Lakh -2`, editable via prompt); on success redirects to the new chit at `/chit/<id>`.
+  Service: `chits.duplicate_chit_plan` (thin wrapper over `create_chit_plan`).
 - **2026-06-19 — Asset details: parties, custom fields, links, and document attachments.**
   Assets gain seller & buyer (free text + optional Contact link via `seller_contact_id`/`buyer_contact_id`,
   FK contacts SET NULL), custom info rows (`extra_fields` JSON `[{label,value}]`) and external links
