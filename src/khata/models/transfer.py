@@ -53,7 +53,7 @@ class TransferHop(Base):
     # HopSource row): where the sender's own money came from. NULL = untagged.
     funding_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
     funding_plan_id: Mapped[int | None] = mapped_column(
-        ForeignKey("plans.id"), nullable=True)
+        ForeignKey("plans.id"), nullable=True, index=True)
     logged_by_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
