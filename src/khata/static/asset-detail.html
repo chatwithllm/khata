@@ -276,6 +276,12 @@
     <div class="fld"><label for="hop-method">Method</label>
       <select id="hop-method"><option value="transfer">Transfer</option><option value="upi">UPI</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select>
     </div>
+    <div class="fld"><label for="hop-fsource">Funding source</label>
+      <select id="hop-fsource"><option value="">— untagged —</option><option value="savings">Savings</option><option value="loan">Loan</option><option value="borrowed">Borrowed</option><option value="sold_asset">Sold asset</option><option value="chit_payout">Chit payout</option><option value="other">Other</option></select>
+    </div>
+    <div class="fld" id="hop-fundplan-fld" style="display:none"><label for="hop-fundplan">From which loan</label><select id="hop-fundplan"></select>
+      <div class="hint" style="font-size:11.5px;color:var(--ink-faint)">Links this transfer to the loan it came from — traces to the seller when the chain lands.</div>
+    </div>
     <div class="fld"><label for="hop-note">Comment (optional)</label>
       <textarea id="hop-note" rows="3" placeholder="What was this transfer for, context, follow-ups…" style="font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);resize:vertical"></textarea>
     </div>
@@ -453,6 +459,18 @@ function fillFundPlan(selectedId){
     sel.append(o);
   }
   sel.value = (selectedId!=null) ? String(selectedId) : '';
+}
+
+// ── hop editor: same "from which loan" behaviour, mirrored for #hop-fsource ──
+function hopFundSrcIsLoan(){ const v=$('hop-fsource').value; return v==='loan'||v==='borrowed'; }
+function fillHopFundPlan(selectedId){
+  const fld=$('hop-fundplan-fld'), sel=$('hop-fundplan');
+  if(!hopFundSrcIsLoan() || !LOANS.length){ fld.style.display='none'; return; }
+  fld.style.display='flex'; sel.textContent='';
+  const none=document.createElement('option'); none.value=''; none.textContent='— not linked —'; sel.append(none);
+  for(const lp of LOANS){ const o=document.createElement('option'); o.value=String(lp.id);
+    o.textContent=lp.name+(lp.counterparty?(' · '+lp.counterparty):''); sel.append(o); }
+  sel.value=(selectedId!=null)?String(selectedId):'';
 }
 
 // ── "Paid by · contributor" field: hide for solo plans, else rebuild + select uid ──
@@ -1467,6 +1485,8 @@ function openHopEdit(h){
   $('hop-amount').title=locked?'Delivered amounts are locked — delete and re-log to change':'';
   mountAttachments($('hop-proof-mount'), { planId: pid, hopId: h.id,
     canModify: true, onChange: ()=>KhataTransfers.refresh() });
+  $('hop-fsource').value = h.funding_source || '';
+  fillHopFundPlan(h.funding_plan_id);
   $('scrim').classList.add('on'); $('hop-over').classList.add('on');
   $('hop-over').setAttribute('aria-hidden','false');
 }
@@ -1475,6 +1495,7 @@ $('hop-cancel').addEventListener('click', closeHopEdit);
 $('hop-cur').addEventListener('change', refreshHopFxUI);
 $('hop-amount').addEventListener('input', updateHopFxPreview);
 $('hop-rate').addEventListener('input', updateHopFxPreview);
+$('hop-fsource').addEventListener('change', ()=>fillHopFundPlan($('hop-fundplan')?$('hop-fundplan').value:null));
 $('hop-save').addEventListener('click', async ()=>{
   if(!hopEditId) return;
   $('hop-err').textContent='';
@@ -1501,6 +1522,9 @@ $('hop-save').addEventListener('click', async ()=>{
   if($('hop-occurred').value) body.occurred_at=$('hop-occurred').value+'T12:00:00';
   body.method=$('hop-method').value;
   body.note=note;
+  body.funding_source = $('hop-fsource').value || null;
+  body.funding_plan_id = ($('hop-fundplan-fld').style.display!=='none' && $('hop-fundplan').value)
+    ? $('hop-fundplan').value : null;
   const r=await fetch('/api/plans/'+pid+'/hops/'+hopEditId,{method:'PATCH',
     headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
   if(r.ok){ closeHopEdit(); boot(); return; }
@@ -1754,7 +1778,8 @@ async function boot(){
     {me: myUserId, base: DISP, fmt: (m,c)=>fmtNum(conv(m),c), sym: sym,
      isOwner: plan.owner_user_id===myUserId, onChange: boot, onEdit: openHopEdit,
      fmtHopAmt: (h)=> fmtDisp(nativeMinor(h.amount_minor, h)),
-     fmtSrcAmt: (minor, hop)=> fmtDisp(nativeMinor(minor, hop))});
+     fmtSrcAmt: (minor, hop)=> fmtDisp(nativeMinor(minor, hop)),
+     srcLabel: (code)=> srcLabel(code)});
 
   // seller-role members see the plan read-only — hide the log button (server enforces too)
   const myRole = (MEMBERS.find(m=>m.user_id===myUserId)||{}).role;
@@ -1879,6 +1904,7 @@ function refreshRecipUI(){
     sel.appendChild(o);
     $('transit-to-name').style.display = sel.value==='name' ? '' : 'none';
   }
+  fillFundPlan($('fundplan') ? $('fundplan').value : null);
 }
 $('recip-kind').addEventListener('change', refreshRecipUI);
 $('transit-to').addEventListener('change', ()=>{
@@ -1910,6 +1936,8 @@ async function saveHop(amountStr, occ, userNote){
     }else if(v.startsWith('u:')) body.to_user_id=parseInt(v.slice(2),10);
     else if(v.startsWith('c:')) body.to_contact_id=parseInt(v.slice(2),10);
     else { $('err').textContent='Pick a recipient.'; return false; }
+    if($('fundplan-fld').style.display!=='none')
+      body.funding_plan_id = $('fundplan').value || null;
     if(sources.length) body.sources=sources;   // relay: buyer1 forwards upstream money (+ own top-up)
   }else{
     // final payment drawing from transit hops

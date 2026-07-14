@@ -146,6 +146,8 @@ window.KhataTransfers = (function(){
     const meta=_e('div','trx-meta');
     meta.append(_e('span',null,_dateTxt(h.occurred_at)));
     if(h.method) meta.append(_e('span',null,h.method));
+    if(h.funding_source && _opts.srcLabel)
+      meta.append(_e('span','trx-chip',_opts.srcLabel(h.funding_source)));
     if(cleaned.fx) meta.append(_e('span','trx-fx',cleaned.fx));
     meta.append(_statusChip(h));
     if(h.receipt_status==='pending') meta.append(_e('span','trx-chip','receipt pending'));
