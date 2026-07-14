@@ -143,7 +143,7 @@ The `in_transit_by_contributor` attribution (`plan_transfers`, using `_alloc`) k
 When `update_hop` changes `funding_source` or `funding_plan_id` on a hop whose money has already fanned out downstream:
 
 1. Find the affected terminal hop(s): terminal hops reachable downstream from the edited hop (follow `HopSource` consumers transitively to `is_terminal` hops). In practice the edited origin hop belongs to exactly one chain.
-2. For each affected terminal hop `T`, recompute `resolve_contributions(T)` under the new provenance and **reconcile** only its fan-out-generated ledger entries — those with `kind='payment'`, `source_hop_id == T.id`:
+2. For each affected terminal hop `T`, recompute `resolve_contributions(T)` under the new provenance and **reconcile** only its fan-out-generated ledger entries — those with `source_hop_id == T.id` and `kind IS NULL` (fan-out entries carry no `kind`; `transfer_fee` entries are excluded):
    - match recomputed group `(uid, fsrc, fplan)` to an existing entry by `(user_id, source_hop_id)` and, where possible, the prior grouping; update `funding_source` / `funding_plan_id` in place;
    - if the new grouping splits one contributor into multiple `(fsrc, fplan)` groups (or merges), delete/insert entries to match the recomputed set, preserving amounts;
    - preserve `proof_ref` / receipt state on entries whose identity is unchanged.
