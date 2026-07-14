@@ -140,7 +140,7 @@ window.KhataTransfers = (function(){
     row.append(rail);
 
     row.append(_e('div','trx-route',(h.from.display||'?')+' → '+(h.to.display||'?')));
-    row.append(_e('div','trx-amt',_fmt(h.amount_minor)));
+    row.append(_e('div','trx-amt', _opts.fmtHopAmt ? _opts.fmtHopAmt(h) : _fmt(h.amount_minor)));
 
     const cleaned=_cleanNote(h.note);
     const meta=_e('div','trx-meta');
@@ -169,10 +169,12 @@ window.KhataTransfers = (function(){
       const parts=[];
       for(const s of h.sources){
         if(s.source_hop_id===null){
-          parts.push(_fmt(s.amount_minor)+' '+(h.from.display||'own')+"'s own");
+          const amt=_opts.fmtSrcAmt ? _opts.fmtSrcAmt(s.amount_minor, h) : _fmt(s.amount_minor);
+          parts.push(amt+' '+(h.from.display||'own')+"'s own");
         }else{
           const up=hopById[s.source_hop_id];
-          parts.push(_fmt(s.amount_minor)+' from '+((up&&up.from.display)||'chain'));
+          const amt=_opts.fmtSrcAmt ? _opts.fmtSrcAmt(s.amount_minor, up||h) : _fmt(s.amount_minor);
+          parts.push(amt+' from '+((up&&up.from.display)||'chain'));
         }
       }
       row.append(_e('div','trx-comp','= '+parts.join('  +  ')));

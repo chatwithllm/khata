@@ -348,6 +348,18 @@ function conv(minor){
   if(minor===null||minor===undefined) return minor;
   return Math.round(minor*FXR_MICRO/1000000);
 }
+
+// Display a SINGLE transaction's amount at the rate it was actually sent.
+// row must carry fx_rate_micro + fx_counter_currency (hop or ledger row).
+// Falls back to the global snapshot rate when there is no per-txn rate or the
+// display currency differs from the transaction's counter currency.
+function nativeMinor(amountMinor, row){
+  if(amountMinor===null||amountMinor===undefined) return amountMinor;
+  if(row && DISP===row.fx_counter_currency && row.fx_rate_micro)
+    return Math.round(amountMinor*row.fx_rate_micro/1e6);
+  return conv(amountMinor);
+}
+function fmtDisp(minor){ return sym(DISP)+fmtNum(minor, DISP); }
 let MEMBERS = [];        // plan members [{user_id, email, display_name, role}]
 let LOANS = [];          // the user's loan plans — for the "funded from which loan" picker
 let FX_RATES = [];       // [{base_currency, quote_currency, rate_micro}] from /api/fx-rates
@@ -836,7 +848,7 @@ function renderLedger(box, st){
     const out = lr.direction==='out';
     const amt=el('div','amt '+(out?'out':'in'));
     const sgn=el('span','symword'); sgn.textContent=(out?'−':'+')+sym(DISP);
-    const num=el('span'); num.textContent=fmtNum(conv(Math.abs(lr.amount_minor||0)), DISP);
+    const num=el('span'); num.textContent=fmtNum(nativeMinor(Math.abs(lr.amount_minor||0), lr), DISP);
     amt.append(sgn,num);
     // quiet "% of total" line beneath the amount (share of the plan total)
     const tot = st.total_price_minor||0;
@@ -1740,7 +1752,9 @@ async function boot(){
   // money-in-transit panel (payment chains)
   KhataTransfers.mount($('transit-panel'), pid,
     {me: myUserId, base: DISP, fmt: (m,c)=>fmtNum(conv(m),c), sym: sym,
-     isOwner: plan.owner_user_id===myUserId, onChange: boot, onEdit: openHopEdit});
+     isOwner: plan.owner_user_id===myUserId, onChange: boot, onEdit: openHopEdit,
+     fmtHopAmt: (h)=> fmtDisp(nativeMinor(h.amount_minor, h)),
+     fmtSrcAmt: (minor, hop)=> fmtDisp(nativeMinor(minor, hop))});
 
   // seller-role members see the plan read-only — hide the log button (server enforces too)
   const myRole = (MEMBERS.find(m=>m.user_id===myUserId)||{}).role;
