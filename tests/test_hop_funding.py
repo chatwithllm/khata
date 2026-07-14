@@ -111,3 +111,20 @@ def test_fanout_splits_per_funding_source(ctx):
     assert by[("loan", loan.id)] == 200000
     assert by[("savings", None)] == 100000
     assert len(entries) == 2
+
+
+def test_plan_transfers_emits_hop_fx(ctx):
+    s, u, plan, loan = ctx
+    # $1000 sent at ₹94.47/$ → stored 9,447,000 INR paise; rate_micro = counter-per-entry
+    rate_micro = round(1e6 / 94.47)  # USD-per-INR ×1e6
+    transfers.create_hop(
+        s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id, to_name="Mid",
+        amount_minor=9447000, occurred_at=_dt(), method="transfer",
+        fx_rate_micro=rate_micro)
+    s.commit()
+    data = transfers.plan_transfers(s, plan)
+    hop = data["chains"][0]["hops"][0]
+    assert hop["fx_rate_micro"] == rate_micro
+    assert hop["fx_counter_currency"] == "USD"
+    # round-trips back to ~$1000.00 (100000 cents), not $988
+    assert abs(hop["counter_value_minor"] - 100000) <= 5

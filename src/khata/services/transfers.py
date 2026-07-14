@@ -320,6 +320,7 @@ def _att_count(session: Session, hop_id: int) -> int:
 
 def plan_transfers(session: Session, plan) -> dict:
     from datetime import date
+    from . import fx
     hops = session.scalars(select(TransferHop)
                            .where(TransferHop.plan_id == plan.id)
                            .order_by(TransferHop.occurred_at, TransferHop.id)).all()
@@ -341,6 +342,10 @@ def plan_transfers(session: Session, plan) -> dict:
                 "from": _party_dict(session, h.from_user_id, h.from_contact_id, h.from_name),
                 "to": _party_dict(session, h.to_user_id, h.to_contact_id, h.to_name),
                 "amount_minor": h.amount_minor,
+                "fx_rate_micro": h.fx_rate_micro,
+                "fx_counter_currency": h.fx_counter_currency,
+                "counter_value_minor": (fx.convert(h.amount_minor, rate_micro=h.fx_rate_micro)
+                                        if h.fx_rate_micro else None),
                 "outstanding_minor": out,
                 "consumed_minor": consumed(session, h),
                 "occurred_at": h.occurred_at.isoformat(),
