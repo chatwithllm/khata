@@ -296,6 +296,91 @@ def resolve_contributions(session: Session, hop: TransferHop) -> list[tuple]:
     return [(uid, fsrc, fplan, amt) for (uid, fsrc, fplan), amt in merged.items()]
 
 
+def _downstream_terminals(session: Session, hop: TransferHop) -> list[TransferHop]:
+    """Every terminal hop reachable by following consumers of `hop` (and `hop`
+    itself if it is terminal). A consumer of hop H is any hop with a HopSource
+    row whose source_hop_id == H.id."""
+    seen: set[int] = set()
+    stack = [hop.id]
+    terminals: list[TransferHop] = []
+    while stack:
+        hid = stack.pop()
+        rows = session.scalars(select(HopSource).where(HopSource.source_hop_id == hid)).all()
+        for r in rows:
+            if r.hop_id in seen:
+                continue
+            seen.add(r.hop_id)
+            consumer = session.get(TransferHop, r.hop_id)
+            if consumer is None:
+                continue
+            if consumer.is_terminal:
+                terminals.append(consumer)
+            stack.append(consumer.id)
+    if hop.is_terminal and hop.id not in {t.id for t in terminals}:
+        terminals.append(hop)
+    return terminals
+
+
+def _fanout_entries(session: Session, terminal_id: int) -> list:
+    """The auto-generated ledger entries for a terminal hop: source_hop_id points
+    at it and kind is unset (fee write-offs carry kind='transfer_fee')."""
+    from ..models import LedgerEntry
+    rows = session.scalars(select(LedgerEntry).where(
+        LedgerEntry.source_hop_id == terminal_id)).all()
+    return [e for e in rows if e.kind is None]
+
+
+def _reconcile_terminal_entries(session: Session, *, plan, terminal: TransferHop,
+                                acting_user_id) -> None:
+    """Make the terminal hop's fan-out ledger entries match resolve_contributions
+    under current funding provenance. Per-contributor amounts are unchanged (chain
+    structure is unchanged); only the (funding_source, funding_plan_id) split moves.
+    Update in place when a contributor still maps to one entry; rebuild that
+    contributor's entries when the group count changed (split or merge)."""
+    from collections import defaultdict
+    from .assets import log_payment, delete_ledger_entry
+
+    want_by: dict[int, list] = defaultdict(list)
+    for uid, fsrc, fplan, amt in resolve_contributions(session, terminal):
+        key = uid if uid is not None else terminal.logged_by_user_id
+        want_by[key].append((fsrc, fplan, amt))
+
+    exist_by: dict[int, list] = defaultdict(list)
+    for e in _fanout_entries(session, terminal.id):
+        exist_by[e.logged_by_user_id].append(e)
+
+    for uid in set(want_by) | set(exist_by):
+        w = want_by.get(uid, [])
+        ex = exist_by.get(uid, [])
+        if len(w) == 1 and len(ex) == 1:
+            fsrc, fplan, amt = w[0]
+            e = ex[0]
+            e.funding_source = fsrc or "other"
+            e.funding_plan_id = fplan
+            e.amount_minor = amt
+        else:
+            for e in ex:
+                delete_ledger_entry(session, plan=plan, entry_id=e.id,
+                                    acting_user_id=acting_user_id)
+            for fsrc, fplan, amt in w:
+                entry = log_payment(
+                    session, plan=plan, user_id=uid, amount_minor=amt,
+                    occurred_at=terminal.occurred_at, method=terminal.method,
+                    funding_source=fsrc or "other", funding_plan_id=fplan,
+                    proof_ref=terminal.proof_ref, note=terminal.note,
+                    acting_user_id=acting_user_id)
+                entry.source_hop_id = terminal.id
+    session.flush()
+
+
+def restamp_downstream(session: Session, *, plan, hop: TransferHop, acting_user_id) -> None:
+    """After a hop's funding provenance changes, re-derive the fan-out ledger
+    entries of every terminal hop that its money reaches."""
+    for terminal in _downstream_terminals(session, hop):
+        _reconcile_terminal_entries(session, plan=plan, terminal=terminal,
+                                    acting_user_id=acting_user_id)
+
+
 def _party_dict(session, user_id, contact_id, name):
     display = name
     if user_id is not None:
@@ -425,15 +510,20 @@ def update_hop(session: Session, *, plan, hop_id, acting_user_id,
         from . import fx
         hop.fx_rate_micro = fx_rate_micro
         hop.fx_counter_currency = fx.counter_currency_for(hop.currency)
+    fund_changed = False
     if funding_source is not _UNSET and funding_source != hop.funding_source:
         if funding_source is not None and funding_source not in SOURCES:
             raise TransferValidationError(f"unknown funding_source: {funding_source}")
         diff["funding_source"] = {"old": hop.funding_source, "new": funding_source}
         hop.funding_source = funding_source
+        fund_changed = True
     if funding_plan_id is not _UNSET and funding_plan_id != hop.funding_plan_id:
         diff["funding_plan_id"] = {"old": hop.funding_plan_id, "new": funding_plan_id}
         hop.funding_plan_id = funding_plan_id
+        fund_changed = True
     session.flush()
+    if fund_changed:
+        restamp_downstream(session, plan=plan, hop=hop, acting_user_id=acting_user_id)
     if diff:
         _write_audit(session, hop, "edit", acting_user_id, diff)
     return hop

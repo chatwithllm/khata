@@ -128,3 +128,75 @@ def test_plan_transfers_emits_hop_fx(ctx):
     assert hop["fx_counter_currency"] == "USD"
     # round-trips back to ~$1000.00 (100000 cents), not $988
     assert abs(hop["counter_value_minor"] - 100000) <= 5
+
+
+def _chain_through_middleman(s, u, plan, amount, source, plan_id=None):
+    """origin hop (u→Mid) with own funds, then terminal (Mid→Seller) drawing it all."""
+    origin = transfers.create_hop(
+        s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id, to_name="Mid",
+        amount_minor=amount, occurred_at=_dt(1), method="transfer",
+        funding_source=source, funding_plan_id=plan_id)
+    transfers.create_hop(
+        s, plan=plan, logged_by_user_id=u.id, from_name="Mid", to_name="Seller",
+        amount_minor=amount, occurred_at=_dt(2), method="transfer", is_terminal=True,
+        sources=[{"source_hop_id": origin.id, "amount_minor": amount}])
+    return origin
+
+
+def test_edit_origin_restamps_downstream_entry(ctx):
+    s, u, plan, loan = ctx
+    from khata.models import LedgerEntry
+    from sqlalchemy import select
+    origin = _chain_through_middleman(s, u, plan, 200000, None)
+    s.commit()
+    entry = s.scalars(select(LedgerEntry).where(LedgerEntry.plan_id == plan.id)).one()
+    assert entry.funding_source == "other"    # origin was untagged → fan-out default
+    assert entry.funding_plan_id is None
+    # now tag the origin as loan-funded
+    transfers.update_hop(s, plan=plan, hop_id=origin.id, acting_user_id=u.id,
+                         funding_source="loan", funding_plan_id=loan.id)
+    s.commit()
+    entry = s.scalars(select(LedgerEntry).where(LedgerEntry.plan_id == plan.id)).one()
+    assert entry.funding_source == "loan"      # re-stamped in place
+    assert entry.funding_plan_id == loan.id
+
+
+def test_edit_origin_split_creates_two_entries(ctx):
+    s, u, plan, loan = ctx
+    from khata.models import LedgerEntry
+    from sqlalchemy import select
+    # one origin hop of 300000, all forwarded to seller as one terminal → one entry
+    origin = transfers.create_hop(
+        s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id, to_name="Mid",
+        amount_minor=300000, occurred_at=_dt(1), method="transfer")
+    transfers.create_hop(
+        s, plan=plan, logged_by_user_id=u.id, from_name="Mid", to_name="Seller",
+        amount_minor=300000, occurred_at=_dt(2), method="transfer", is_terminal=True,
+        sources=[{"source_hop_id": origin.id, "amount_minor": 300000}])
+    s.commit()
+    assert len(s.scalars(select(LedgerEntry).where(LedgerEntry.plan_id == plan.id)).all()) == 1
+    # tagging the single origin loan-funded keeps it one entry (merge stays 1)
+    transfers.update_hop(s, plan=plan, hop_id=origin.id, acting_user_id=u.id,
+                         funding_source="loan", funding_plan_id=loan.id)
+    s.commit()
+    entries = s.scalars(select(LedgerEntry).where(LedgerEntry.plan_id == plan.id)).all()
+    assert len(entries) == 1
+    assert entries[0].funding_source == "loan"
+    assert entries[0].amount_minor == 300000
+
+
+def test_restamp_ignores_manual_entries(ctx):
+    s, u, plan, loan = ctx
+    from khata.services.assets import log_payment
+    from khata.models import LedgerEntry
+    from sqlalchemy import select
+    manual = log_payment(s, plan=plan, user_id=u.id, amount_minor=5000,
+                         occurred_at=_dt(), method="cash", funding_source="savings",
+                         acting_user_id=u.id)
+    origin = _chain_through_middleman(s, u, plan, 200000, None)
+    s.commit()
+    transfers.update_hop(s, plan=plan, hop_id=origin.id, acting_user_id=u.id,
+                         funding_source="loan", funding_plan_id=loan.id)
+    s.commit()
+    fresh = s.get(LedgerEntry, manual.id)
+    assert fresh is not None and fresh.funding_source == "savings"   # untouched
