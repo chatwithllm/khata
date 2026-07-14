@@ -49,7 +49,8 @@ def create_hop(plan_id):
             from_name=d.get("from_name"),
             sources=sources or None,
             is_terminal=bool(d.get("is_terminal")) or _auto_terminal(plan, to_uid, to_cid),
-            funding_source=d.get("funding_source") or "other",
+            funding_source=d.get("funding_source"),
+            funding_plan_id=(int(d["funding_plan_id"]) if d.get("funding_plan_id") else None),
             proof_ref=d.get("proof_ref"), note=d.get("note"),
             fx_rate_micro=_fx_rate_arg(d))
         g.db.commit()
@@ -91,6 +92,11 @@ def patch_hop(plan_id, hop_id):
         for k in ("method", "proof_ref", "note"):
             if k in d:
                 fields[k] = d.get(k)
+        if "funding_source" in d:
+            fields["funding_source"] = d.get("funding_source") or None
+        if "funding_plan_id" in d:
+            fields["funding_plan_id"] = (int(d["funding_plan_id"])
+                                         if d.get("funding_plan_id") else None)
         if "fx_rate_micro" in d:
             fields["fx_rate_micro"] = _fx_rate_arg(d)
         transfers.update_hop(g.db, plan=plan, hop_id=hop_id,

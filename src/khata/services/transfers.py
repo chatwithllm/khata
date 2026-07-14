@@ -442,6 +442,8 @@ def plan_transfers(session: Session, plan) -> dict:
                 "counter_amount_minor": h.counter_amount_minor,
                 "days_held": ((date.today() - h.occurred_at.date()).days if out > 0 else 0),
                 "logged_by_user_id": h.logged_by_user_id,
+                "funding_source": h.funding_source,
+                "funding_plan_id": h.funding_plan_id,
                 "sources": [{"source_hop_id": s_.source_hop_id,
                              "amount_minor": s_.amount_minor} for s_ in h.sources]})
         out_chains.append({"chain_id": cid, "closed": closed, "hops": rows})
