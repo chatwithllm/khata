@@ -1,14 +1,21 @@
 """Payment chains: multi-hop money routing toward a plan's seller.
 See docs/specs/2026-07-08-payment-chains-design.md."""
 import json
+import re
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import HopSource, TransferHop, TransferHopAudit
+from ..money import SUPPORTED_CURRENCIES
 from .assets import METHODS, SOURCES
 
 _UNSET = object()
+
+# Machine-written note prefix from the log/edit forms: "$1,000 USD @94.47 — …"
+# (rate = plan-currency units per 1 sent-currency unit). Used to recover the FX
+# snapshot for hops created before the UI persisted fx_rate_micro.
+_FX_NOTE_RE = re.compile(r"^\s*[₹$]?\s*[\d,]+(?:\.\d+)?\s+([A-Za-z]{3})\s+@\s*([\d.]+)")
 
 
 class TransferError(Exception):
@@ -613,3 +620,29 @@ def fan_out_terminal(session: Session, *, plan, hop: TransferHop, acting_user_id
         entries.append(entry)
     session.flush()
     return entries
+
+
+def backfill_hop_fx_from_notes(session: Session) -> int:
+    """One-off recovery: for hops missing fx_rate_micro, parse the machine-written
+    "$X CCY @rate" note prefix and store the structured FX snapshot, so the transit
+    panel shows each hop at the rate it was actually sent (not the global rate).
+    Idempotent — only touches hops with a NULL rate and a parseable foreign prefix.
+    Returns the number of hops updated."""
+    n = 0
+    for hop in session.scalars(select(TransferHop).where(TransferHop.fx_rate_micro.is_(None))):
+        m = _FX_NOTE_RE.match(hop.note or "")
+        if not m:
+            continue
+        ccy = m.group(1).upper()
+        try:
+            rate = float(m.group(2))
+        except ValueError:
+            continue
+        # rate = plan-currency per 1 sent-currency; fx_rate_micro is counter(sent)-per-entry.
+        if rate <= 0 or ccy not in SUPPORTED_CURRENCIES or ccy == (hop.currency or "").upper():
+            continue
+        hop.fx_rate_micro = round(1_000_000 / rate)
+        hop.fx_counter_currency = ccy
+        n += 1
+    session.flush()
+    return n

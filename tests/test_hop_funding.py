@@ -200,3 +200,35 @@ def test_restamp_ignores_manual_entries(ctx):
     s.commit()
     fresh = s.get(LedgerEntry, manual.id)
     assert fresh is not None and fresh.funding_source == "savings"   # untouched
+
+
+def test_backfill_hop_fx_from_notes(ctx):
+    s, u, plan, loan = ctx   # plan currency is INR
+    from khata.models import TransferHop
+    # foreign-currency hop, rate only in the note prefix, no structured fx
+    h1 = transfers.create_hop(s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id,
+        to_name="Mid", amount_minor=9447000, occurred_at=_dt(1), method="transfer",
+        note="$1,000 USD @94.47 — sent to mid")
+    # already has a rate -> must be left untouched
+    h2 = transfers.create_hop(s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id,
+        to_name="Mid2", amount_minor=1000, occurred_at=_dt(2), method="transfer",
+        note="$10 USD @95.00", fx_rate_micro=12345)
+    # no parseable FX prefix -> left null
+    h3 = transfers.create_hop(s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id,
+        to_name="Mid3", amount_minor=5000, occurred_at=_dt(3), method="transfer",
+        note="cash handoff")
+    s.commit()
+
+    n = transfers.backfill_hop_fx_from_notes(s)
+    s.commit()
+    assert n == 1
+    assert s.get(TransferHop, h1.id).fx_rate_micro == round(1e6 / 94.47)
+    assert s.get(TransferHop, h1.id).fx_counter_currency == "USD"
+    # round-trips back to ~$1000 (100000 cents)
+    from khata.services import fx
+    cv = fx.convert(9447000, rate_micro=s.get(TransferHop, h1.id).fx_rate_micro)
+    assert abs(cv - 100000) <= 5
+    assert s.get(TransferHop, h2.id).fx_rate_micro == 12345   # untouched
+    assert s.get(TransferHop, h3.id).fx_rate_micro is None    # no prefix
+    # idempotent: a second run changes nothing
+    assert transfers.backfill_hop_fx_from_notes(s) == 0
