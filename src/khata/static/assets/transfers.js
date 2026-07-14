@@ -233,7 +233,9 @@ window.KhataTransfers = (function(){
     chev.style.cssText='margin-left:8px;font-size:11px;color:var(--ink-faint);display:inline-block;transition:transform .2s';
     t.append(chev);
     const right=_e('div'); right.style.cssText='display:flex;align-items:center;gap:12px';
-    right.append(_e('div','meta', _fmt(_data.in_transit_minor)+' in transit'));
+    const meta=_e('div','meta', _fmt(_data.in_transit_minor)+' in transit');
+    if(_opts.rateNote){ const rn=_e('span',null,' · at current rate'); rn.style.cssText='font-size:10px;color:var(--ink-faint)'; meta.append(rn); }
+    right.append(meta);
     ph.append(t, right);
     _el.append(ph);
 

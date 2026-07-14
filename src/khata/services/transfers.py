@@ -357,7 +357,7 @@ def _reconcile_terminal_entries(session: Session, *, plan, terminal: TransferHop
             e = ex[0]
             e.funding_source = fsrc or "other"
             e.funding_plan_id = fplan
-            e.amount_minor = amt
+            # amount unchanged: funding edits never alter per-contributor amounts
         else:
             for e in ex:
                 delete_ledger_entry(session, plan=plan, entry_id=e.id,

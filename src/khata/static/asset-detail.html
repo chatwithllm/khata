@@ -1779,7 +1779,8 @@ async function boot(){
      isOwner: plan.owner_user_id===myUserId, onChange: boot, onEdit: openHopEdit,
      fmtHopAmt: (h)=> fmtDisp(nativeMinor(h.amount_minor, h)),
      fmtSrcAmt: (minor, hop)=> fmtDisp(nativeMinor(minor, hop)),
-     srcLabel: (code)=> srcLabel(code)});
+     srcLabel: (code)=> srcLabel(code),
+     rateNote: (DISP !== BASE)});
 
   // seller-role members see the plan read-only — hide the log button (server enforces too)
   const myRole = (MEMBERS.find(m=>m.user_id===myUserId)||{}).role;
