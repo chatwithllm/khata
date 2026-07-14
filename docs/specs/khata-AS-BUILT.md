@@ -256,6 +256,14 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   origin hop re-stamps its already-fanned-out ledger entries (`restamp_downstream`). Transit + ledger
   single-transaction rows display at each transaction's own stored send-rate (`nativeMinor`) — `$1000`
   not `$988`; aggregates stay on the global snapshot rate with an "at current rate" note.
+- **2026-07-14 (follow-up) — Persist the hop FX rate the money was sent at.** The native-display fix
+  above needs each hop's `fx_rate_micro`, but the log/edit forms only wrote the rate into the note text
+  (`"$1,000 USD @94.47 —"`) — so foreign-currency hops still showed the global rate (`$988`). Fixed:
+  the compose form (`saveHop`) and the hop editor now send `fx_rate_micro` (from the typed inline rate,
+  `fxMicroFromNatural`) whenever the hop currency ≠ plan currency. Existing hops are repaired by
+  `transfers.backfill_hop_fx_from_notes(session)` (parses the machine-written `$X CCY @rate` prefix →
+  `fx_rate_micro`/`fx_counter_currency`; idempotent; skips hops that already have a rate) — a **one-off
+  prod DB write, run once with explicit authorization** (`docker exec khata python -c "…backfill…"`).
 - **2026-07-11 — Duplicate chit.** A chit-detail header action (between Print and Delete) clones a
   chit's terms — `chit_value_minor`, `n_members`, `commission_bps`, currency, `start_date` — into a
   new empty chit via `POST /api/plans/<id>/chit/duplicate` (owner-only). Ledger and shares are NOT

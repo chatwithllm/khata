@@ -1516,6 +1516,7 @@ $('hop-save').addEventListener('click', async ()=>{
       if(!orig||isNaN(orig)){ $('hop-err').textContent='Enter a valid amount.'; return; }
       amountStr=String(Math.round(orig*rate*100)/100);
       note=sym(cur)+fmtNum(Math.round(orig*100),cur)+' '+cur+' @'+rate+(note?' — '+note:'');
+      const micro=fxMicroFromNatural(String(rate), BASE); if(micro) body.fx_rate_micro=micro;
     }
     body.amount=amountStr;
   }
@@ -1912,11 +1913,12 @@ $('transit-to').addEventListener('change', ()=>{
   $('transit-to-name').style.display = $('transit-to').value==='name' ? '' : 'none';
 });
 
-async function saveHop(amountStr, occ, userNote){
+async function saveHop(amountStr, occ, userNote, fxMicro){
   // in-transit hop, or terminal hop drawing from picked transit money
   const kind=$('recip-kind').value;
   const body={amount: amountStr, method: $('method').value, note: userNote || null,
               occurred_at: occ, funding_source: $('fsource').value};
+  if(fxMicro) body.fx_rate_micro=fxMicro;   // preserve the rate the money was sent at
   // sources shared by both paths: picked transit hops (greedy) + own-funds remainder
   const picked=[...document.querySelectorAll('#drawhops-list input:checked')];
   let need=Math.round(parseFloat(amountStr)*100), sources=[];
@@ -1984,6 +1986,7 @@ $('save').addEventListener('click', async ()=>{
 
   // convert foreign-currency amount → plan currency using the inline rate the user typed
   let userNote = $('note').value.trim();
+  let hopFxMicro = null;   // structured FX snapshot so the hop shows at the rate it was sent
   if (payCur !== BASE) {
     const rate = parseFloat($('inline-rate').value);
     if (!rate || isNaN(rate) || rate <= 0) {
@@ -1996,12 +1999,13 @@ $('save').addEventListener('click', async ()=>{
     const origLabel = sym(payCur) + fmtNum(Math.round(origAmt * 100), payCur) + ' ' + payCur + ' @' + rate;
     userNote = origLabel + (userNote ? ' — ' + userNote : '');
     amountStr = String(convertedMinor / 100);
+    hopFxMicro = fxMicroFromNatural(String(rate), BASE);
   }
 
   // payment-chain paths: in-transit hop, or final payment drawing from transit money
   if(!editId && ($('recip-kind').value==='transit' ||
      document.querySelector('#drawhops-list input:checked'))){
-    await saveHop(amountStr, occ, userNote);
+    await saveHop(amountStr, occ, userNote, hopFxMicro);
     return;
   }
 
