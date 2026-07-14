@@ -84,3 +84,30 @@ def test_update_hop_without_funding_kwargs_leaves_it(ctx):
                          method="upi")
     s.commit()
     assert hop.funding_source == "savings"   # untouched when kwarg omitted
+
+
+def test_fanout_splits_per_funding_source(ctx):
+    s, u, plan, loan = ctx
+    from khata.models import LedgerEntry
+    from sqlalchemy import select
+    # u sends two origin hops to a middleman: one loan-funded, one savings-funded
+    h_loan = transfers.create_hop(
+        s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id, to_name="Mid",
+        amount_minor=200000, occurred_at=_dt(1), method="transfer",
+        funding_source="loan", funding_plan_id=loan.id)
+    h_sav = transfers.create_hop(
+        s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id, to_name="Mid",
+        amount_minor=100000, occurred_at=_dt(2), method="transfer",
+        funding_source="savings")
+    # middleman (still u for test simplicity) forwards all 300000 to the seller
+    transfers.create_hop(
+        s, plan=plan, logged_by_user_id=u.id, from_name="Mid", to_name="Seller",
+        amount_minor=300000, occurred_at=_dt(3), method="transfer", is_terminal=True,
+        sources=[{"source_hop_id": h_loan.id, "amount_minor": 200000},
+                 {"source_hop_id": h_sav.id, "amount_minor": 100000}])
+    s.commit()
+    entries = s.scalars(select(LedgerEntry).where(LedgerEntry.plan_id == plan.id)).all()
+    by = {(e.funding_source, e.funding_plan_id): e.amount_minor for e in entries}
+    assert by[("loan", loan.id)] == 200000
+    assert by[("savings", None)] == 100000
+    assert len(entries) == 2

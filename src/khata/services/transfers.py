@@ -253,11 +253,12 @@ def _prior_consumption(session: Session, hop: TransferHop, *, before_source_id: 
     return sum(r.amount_minor for r in rows)
 
 
-def _alloc(session: Session, h: TransferHop, take: int, taken_before: int) -> list[tuple[int | None, int]]:
+def _alloc(session: Session, h: TransferHop, take: int, taken_before: int) -> list[tuple]:
     """Allocate `take` units of hop h's money to ultimate origins, skipping the
     first `taken_before` units (already claimed by earlier consumers). Greedy
-    oldest-first over the hop's sources (HopSource.id order)."""
-    out: list[tuple[int | None, int]] = []
+    oldest-first over the hop's sources (HopSource.id order). Each tuple is
+    (uid, funding_source, funding_plan_id, amount)."""
+    out: list[tuple] = []
     pos = 0
     for src in h.sources:                    # ordered by HopSource.id
         if take <= 0:
@@ -268,7 +269,7 @@ def _alloc(session: Session, h: TransferHop, take: int, taken_before: int) -> li
         grab = overlap_end - overlap_start
         if grab > 0:
             if src.source_hop_id is None:
-                out.append((_own_party_user(h), grab))
+                out.append((_own_party_user(h), h.funding_source, h.funding_plan_id, grab))
             else:
                 up = session.get(TransferHop, src.source_hop_id)
                 out.extend(_alloc(session, up, grab, overlap_start - pos))
@@ -276,24 +277,23 @@ def _alloc(session: Session, h: TransferHop, take: int, taken_before: int) -> li
     return out
 
 
-def resolve_contributions(session: Session, hop: TransferHop) -> list[tuple[int | None, int]]:
-    """(user_id, amount) pairs for a hop's money, walked to ultimate origins.
-    user_id None = non-user origin (contact / free-text). Greedy oldest-first:
-    each upstream hop's own-funds and lineage portions are consumed in
-    HopSource.id order, tracking how much earlier consumers already took."""
-    result: list[tuple[int | None, int]] = []
+def resolve_contributions(session: Session, hop: TransferHop) -> list[tuple]:
+    """(uid, funding_source, funding_plan_id, amount) tuples for a hop's money,
+    walked to ultimate origins. uid None = non-user origin. Greedy oldest-first."""
+    result: list[tuple] = []
     for src in hop.sources:
         if src.source_hop_id is None:
-            result.append((_own_party_user(hop), src.amount_minor))
+            result.append((_own_party_user(hop), hop.funding_source,
+                           hop.funding_plan_id, src.amount_minor))
         else:
             up = session.get(TransferHop, src.source_hop_id)
             prior = _prior_consumption(session, up, before_source_id=src.id)
             result.extend(_alloc(session, up, src.amount_minor, prior))
-    # merge duplicates
-    merged: dict[int | None, int] = {}
-    for uid, amt in result:
-        merged[uid] = merged.get(uid, 0) + amt
-    return list(merged.items())
+    merged: dict[tuple, int] = {}
+    for uid, fsrc, fplan, amt in result:
+        key = (uid, fsrc, fplan)
+        merged[key] = merged.get(key, 0) + amt
+    return [(uid, fsrc, fplan, amt) for (uid, fsrc, fplan), amt in merged.items()]
 
 
 def _party_dict(session, user_id, contact_id, name):
@@ -366,7 +366,7 @@ def plan_transfers(session: Session, plan) -> dict:
         out = outstanding(session, h)
         if out <= 0:
             continue
-        for uid, amt in _alloc(session, h, out, consumed(session, h)):
+        for uid, _fsrc, _fplan, amt in _alloc(session, h, out, consumed(session, h)):
             uid = uid if uid is not None else h.logged_by_user_id
             transit_by[uid] = transit_by.get(uid, 0) + amt
     from ..models import User as _User
@@ -487,7 +487,7 @@ def resolve_remainder(session: Session, *, plan, hop_id, acting_user_id, action,
 
     if action == "fee":
         from .assets import log_payment
-        for uid, part in resolve_contributions(session, res_hop):
+        for uid, _fsrc, _fplan, part in resolve_contributions(session, res_hop):
             entry = log_payment(
                 session, plan=plan,
                 user_id=uid if uid is not None else acting_user_id,
@@ -500,17 +500,16 @@ def resolve_remainder(session: Session, *, plan, hop_id, acting_user_id, action,
     return res_hop
 
 
-def fan_out_terminal(session: Session, *, plan, hop: TransferHop, acting_user_id,
-                     funding_source="other"):
-    """Spawn one LedgerEntry per ultimate contributor of a terminal hop.
-    Non-user origins are attributed to the hop logger (spec §Attribution)."""
+def fan_out_terminal(session: Session, *, plan, hop: TransferHop, acting_user_id):
+    """Spawn one LedgerEntry per (contributor, funding_source, funding_plan_id) of a
+    terminal hop. Non-user origins are attributed to the hop logger with 'other'."""
     from .assets import log_payment
     entries = []
-    for uid, amt in resolve_contributions(session, hop):
+    for uid, fsrc, fplan, amt in resolve_contributions(session, hop):
         entry = log_payment(
             session, plan=plan, user_id=uid if uid is not None else hop.logged_by_user_id,
-            amount_minor=amt, occurred_at=hop.occurred_at,
-            method=hop.method, funding_source=funding_source,
+            amount_minor=amt, occurred_at=hop.occurred_at, method=hop.method,
+            funding_source=fsrc or "other", funding_plan_id=fplan,
             proof_ref=hop.proof_ref, note=hop.note,
             acting_user_id=acting_user_id)
         entry.source_hop_id = hop.id
