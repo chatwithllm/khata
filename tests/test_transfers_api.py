@@ -132,3 +132,28 @@ def test_hop_to_seller_member_is_auto_terminal(client):
 def test_hops_auth_required(client):
     assert client.get("/api/plans/1/hops").status_code == 401
     assert client.post("/api/plans/1/hops", json={}).status_code == 401
+
+
+def test_hop_funding_persists_via_api(client):
+    _register(client, "u1@x.com", "U1")
+    pid = client.post("/api/plans", json={
+        "name": "Plot", "currency": "INR", "total_price": "10,00,000"}).get_json()["plan"]["id"]
+    # create a transit hop tagged loan-funded (no linked loan)
+    r = client.post(f"/api/plans/{pid}/hops", json={
+        "amount": "2000", "method": "transfer", "to_name": "Middleman",
+        "funding_source": "loan"})
+    assert r.status_code == 201
+    hop_id = r.get_json()["hop"]["id"]
+    hop = client.get(f"/api/plans/{pid}/hops").get_json()["chains"][0]["hops"][0]
+    assert hop["funding_source"] == "loan"
+    # patch to savings
+    assert client.patch(f"/api/plans/{pid}/hops/{hop_id}",
+                        json={"funding_source": "savings"}).status_code == 200
+    hop = client.get(f"/api/plans/{pid}/hops").get_json()["chains"][0]["hops"][0]
+    assert hop["funding_source"] == "savings"
+    # omitting the key on a later patch leaves it untouched
+    assert client.patch(f"/api/plans/{pid}/hops/{hop_id}",
+                        json={"method": "upi"}).status_code == 200
+    hop = client.get(f"/api/plans/{pid}/hops").get_json()["chains"][0]["hops"][0]
+    assert hop["funding_source"] == "savings"
+    assert hop["method"] == "upi"

@@ -1,5 +1,7 @@
 # Funding & Contributors 3-state breakdown
 
+> Superseded/extended by [2026-07-14 transfer funding + FX display](2026-07-14-transfer-funding-fx-design.md).
+
 **Date:** 2026-07-08 · **Status:** Approved · Follows payment-chains + transit-panel-v2 specs.
 
 ## Problem

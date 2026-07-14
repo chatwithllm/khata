@@ -1,5 +1,7 @@
 # Payment Chains (Transfer Routing) — Design
 
+> Superseded/extended by [2026-07-14 transfer funding + FX display](2026-07-14-transfer-funding-fx-design.md).
+
 **Date:** 2026-07-08
 **Status:** Approved design, pre-implementation
 

@@ -140,12 +140,14 @@ window.KhataTransfers = (function(){
     row.append(rail);
 
     row.append(_e('div','trx-route',(h.from.display||'?')+' → '+(h.to.display||'?')));
-    row.append(_e('div','trx-amt',_fmt(h.amount_minor)));
+    row.append(_e('div','trx-amt', _opts.fmtHopAmt ? _opts.fmtHopAmt(h) : _fmt(h.amount_minor)));
 
     const cleaned=_cleanNote(h.note);
     const meta=_e('div','trx-meta');
     meta.append(_e('span',null,_dateTxt(h.occurred_at)));
     if(h.method) meta.append(_e('span',null,h.method));
+    if(h.funding_source && _opts.srcLabel)
+      meta.append(_e('span','trx-chip',_opts.srcLabel(h.funding_source)));
     if(cleaned.fx) meta.append(_e('span','trx-fx',cleaned.fx));
     meta.append(_statusChip(h));
     if(h.receipt_status==='pending') meta.append(_e('span','trx-chip','receipt pending'));
@@ -169,10 +171,12 @@ window.KhataTransfers = (function(){
       const parts=[];
       for(const s of h.sources){
         if(s.source_hop_id===null){
-          parts.push(_fmt(s.amount_minor)+' '+(h.from.display||'own')+"'s own");
+          const amt=_opts.fmtSrcAmt ? _opts.fmtSrcAmt(s.amount_minor, h) : _fmt(s.amount_minor);
+          parts.push(amt+' '+(h.from.display||'own')+"'s own");
         }else{
           const up=hopById[s.source_hop_id];
-          parts.push(_fmt(s.amount_minor)+' from '+((up&&up.from.display)||'chain'));
+          const amt=_opts.fmtSrcAmt ? _opts.fmtSrcAmt(s.amount_minor, up||h) : _fmt(s.amount_minor);
+          parts.push(amt+' from '+((up&&up.from.display)||'chain'));
         }
       }
       row.append(_e('div','trx-comp','= '+parts.join('  +  ')));
@@ -229,7 +233,9 @@ window.KhataTransfers = (function(){
     chev.style.cssText='margin-left:8px;font-size:11px;color:var(--ink-faint);display:inline-block;transition:transform .2s';
     t.append(chev);
     const right=_e('div'); right.style.cssText='display:flex;align-items:center;gap:12px';
-    right.append(_e('div','meta', _fmt(_data.in_transit_minor)+' in transit'));
+    const meta=_e('div','meta', _fmt(_data.in_transit_minor)+' in transit');
+    if(_opts.rateNote){ const rn=_e('span',null,' · at current rate'); rn.style.cssText='font-size:10px;color:var(--ink-faint)'; meta.append(rn); }
+    right.append(meta);
     ph.append(t, right);
     _el.append(ph);
 

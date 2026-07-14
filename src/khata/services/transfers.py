@@ -6,7 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import HopSource, TransferHop, TransferHopAudit
-from .assets import METHODS
+from .assets import METHODS, SOURCES
+
+_UNSET = object()
 
 
 class TransferError(Exception):
@@ -72,11 +74,13 @@ def create_hop(session: Session, *, plan, logged_by_user_id, amount_minor, occur
                from_user_id=None, from_contact_id=None, from_name=None,
                sources=None, is_terminal=False, resolution=None,
                proof_ref=None, note=None, fx_rate_micro=None,
-               funding_source="other") -> TransferHop:
+               funding_source=None, funding_plan_id=None) -> TransferHop:
     if amount_minor <= 0:
         raise TransferValidationError("amount must be > 0")
     if method not in METHODS:
         raise TransferValidationError(f"unknown method: {method}")
+    if funding_source is not None and funding_source not in SOURCES:
+        raise TransferValidationError(f"unknown funding_source: {funding_source}")
     if resolution not in (None, "returned", "fee"):
         raise TransferValidationError(f"unknown resolution: {resolution}")
     if from_user_id is None and from_contact_id is None and not (from_name or "").strip():
@@ -117,7 +121,8 @@ def create_hop(session: Session, *, plan, logged_by_user_id, amount_minor, occur
         occurred_at=occurred_at, method=method, proof_ref=proof_ref, note=note,
         is_terminal=bool(is_terminal), resolution=resolution,
         receipt_status=_receipt_status_for(to_user_id, logged_by_user_id),
-        logged_by_user_id=logged_by_user_id)
+        logged_by_user_id=logged_by_user_id,
+        funding_source=funding_source, funding_plan_id=funding_plan_id)
     session.add(hop)
     session.flush()
     if hop.chain_id is None:
@@ -133,8 +138,7 @@ def create_hop(session: Session, *, plan, logged_by_user_id, amount_minor, occur
         session.flush()
     if hop.is_terminal and hop.resolution is None:
         fan_out_terminal(session, plan=plan, hop=hop,
-                         acting_user_id=logged_by_user_id,
-                         funding_source=funding_source)
+                         acting_user_id=logged_by_user_id)
     _write_audit(session, hop, "create", logged_by_user_id)
     return hop
 
@@ -249,11 +253,12 @@ def _prior_consumption(session: Session, hop: TransferHop, *, before_source_id: 
     return sum(r.amount_minor for r in rows)
 
 
-def _alloc(session: Session, h: TransferHop, take: int, taken_before: int) -> list[tuple[int | None, int]]:
+def _alloc(session: Session, h: TransferHop, take: int, taken_before: int) -> list[tuple]:
     """Allocate `take` units of hop h's money to ultimate origins, skipping the
     first `taken_before` units (already claimed by earlier consumers). Greedy
-    oldest-first over the hop's sources (HopSource.id order)."""
-    out: list[tuple[int | None, int]] = []
+    oldest-first over the hop's sources (HopSource.id order). Each tuple is
+    (uid, funding_source, funding_plan_id, amount)."""
+    out: list[tuple] = []
     pos = 0
     for src in h.sources:                    # ordered by HopSource.id
         if take <= 0:
@@ -264,7 +269,7 @@ def _alloc(session: Session, h: TransferHop, take: int, taken_before: int) -> li
         grab = overlap_end - overlap_start
         if grab > 0:
             if src.source_hop_id is None:
-                out.append((_own_party_user(h), grab))
+                out.append((_own_party_user(h), h.funding_source, h.funding_plan_id, grab))
             else:
                 up = session.get(TransferHop, src.source_hop_id)
                 out.extend(_alloc(session, up, grab, overlap_start - pos))
@@ -272,24 +277,108 @@ def _alloc(session: Session, h: TransferHop, take: int, taken_before: int) -> li
     return out
 
 
-def resolve_contributions(session: Session, hop: TransferHop) -> list[tuple[int | None, int]]:
-    """(user_id, amount) pairs for a hop's money, walked to ultimate origins.
-    user_id None = non-user origin (contact / free-text). Greedy oldest-first:
-    each upstream hop's own-funds and lineage portions are consumed in
-    HopSource.id order, tracking how much earlier consumers already took."""
-    result: list[tuple[int | None, int]] = []
+def resolve_contributions(session: Session, hop: TransferHop) -> list[tuple]:
+    """(uid, funding_source, funding_plan_id, amount) tuples for a hop's money,
+    walked to ultimate origins. uid None = non-user origin. Greedy oldest-first."""
+    result: list[tuple] = []
     for src in hop.sources:
         if src.source_hop_id is None:
-            result.append((_own_party_user(hop), src.amount_minor))
+            result.append((_own_party_user(hop), hop.funding_source,
+                           hop.funding_plan_id, src.amount_minor))
         else:
             up = session.get(TransferHop, src.source_hop_id)
             prior = _prior_consumption(session, up, before_source_id=src.id)
             result.extend(_alloc(session, up, src.amount_minor, prior))
-    # merge duplicates
-    merged: dict[int | None, int] = {}
-    for uid, amt in result:
-        merged[uid] = merged.get(uid, 0) + amt
-    return list(merged.items())
+    merged: dict[tuple, int] = {}
+    for uid, fsrc, fplan, amt in result:
+        key = (uid, fsrc, fplan)
+        merged[key] = merged.get(key, 0) + amt
+    return [(uid, fsrc, fplan, amt) for (uid, fsrc, fplan), amt in merged.items()]
+
+
+def _downstream_terminals(session: Session, hop: TransferHop) -> list[TransferHop]:
+    """Every terminal hop reachable by following consumers of `hop` (and `hop`
+    itself if it is terminal). A consumer of hop H is any hop with a HopSource
+    row whose source_hop_id == H.id."""
+    seen: set[int] = set()
+    stack = [hop.id]
+    terminals: list[TransferHop] = []
+    while stack:
+        hid = stack.pop()
+        rows = session.scalars(select(HopSource).where(HopSource.source_hop_id == hid)).all()
+        for r in rows:
+            if r.hop_id in seen:
+                continue
+            seen.add(r.hop_id)
+            consumer = session.get(TransferHop, r.hop_id)
+            if consumer is None:
+                continue
+            if consumer.is_terminal:
+                terminals.append(consumer)
+            stack.append(consumer.id)
+    if hop.is_terminal and hop.id not in {t.id for t in terminals}:
+        terminals.append(hop)
+    return terminals
+
+
+def _fanout_entries(session: Session, terminal_id: int) -> list:
+    """The auto-generated ledger entries for a terminal hop: source_hop_id points
+    at it and kind is unset (fee write-offs carry kind='transfer_fee')."""
+    from ..models import LedgerEntry
+    rows = session.scalars(select(LedgerEntry).where(
+        LedgerEntry.source_hop_id == terminal_id)).all()
+    return [e for e in rows if e.kind is None]
+
+
+def _reconcile_terminal_entries(session: Session, *, plan, terminal: TransferHop,
+                                acting_user_id) -> None:
+    """Make the terminal hop's fan-out ledger entries match resolve_contributions
+    under current funding provenance. Per-contributor amounts are unchanged (chain
+    structure is unchanged); only the (funding_source, funding_plan_id) split moves.
+    Update in place when a contributor still maps to one entry; rebuild that
+    contributor's entries when the group count changed (split or merge)."""
+    from collections import defaultdict
+    from .assets import log_payment, delete_ledger_entry
+
+    want_by: dict[int, list] = defaultdict(list)
+    for uid, fsrc, fplan, amt in resolve_contributions(session, terminal):
+        key = uid if uid is not None else terminal.logged_by_user_id
+        want_by[key].append((fsrc, fplan, amt))
+
+    exist_by: dict[int, list] = defaultdict(list)
+    for e in _fanout_entries(session, terminal.id):
+        exist_by[e.logged_by_user_id].append(e)
+
+    for uid in set(want_by) | set(exist_by):
+        w = want_by.get(uid, [])
+        ex = exist_by.get(uid, [])
+        if len(w) == 1 and len(ex) == 1:
+            fsrc, fplan, amt = w[0]
+            e = ex[0]
+            e.funding_source = fsrc or "other"
+            e.funding_plan_id = fplan
+            # amount unchanged: funding edits never alter per-contributor amounts
+        else:
+            for e in ex:
+                delete_ledger_entry(session, plan=plan, entry_id=e.id,
+                                    acting_user_id=acting_user_id)
+            for fsrc, fplan, amt in w:
+                entry = log_payment(
+                    session, plan=plan, user_id=uid, amount_minor=amt,
+                    occurred_at=terminal.occurred_at, method=terminal.method,
+                    funding_source=fsrc or "other", funding_plan_id=fplan,
+                    proof_ref=terminal.proof_ref, note=terminal.note,
+                    acting_user_id=acting_user_id)
+                entry.source_hop_id = terminal.id
+    session.flush()
+
+
+def restamp_downstream(session: Session, *, plan, hop: TransferHop, acting_user_id) -> None:
+    """After a hop's funding provenance changes, re-derive the fan-out ledger
+    entries of every terminal hop that its money reaches."""
+    for terminal in _downstream_terminals(session, hop):
+        _reconcile_terminal_entries(session, plan=plan, terminal=terminal,
+                                    acting_user_id=acting_user_id)
 
 
 def _party_dict(session, user_id, contact_id, name):
@@ -316,6 +405,7 @@ def _att_count(session: Session, hop_id: int) -> int:
 
 def plan_transfers(session: Session, plan) -> dict:
     from datetime import date
+    from . import fx
     hops = session.scalars(select(TransferHop)
                            .where(TransferHop.plan_id == plan.id)
                            .order_by(TransferHop.occurred_at, TransferHop.id)).all()
@@ -337,6 +427,10 @@ def plan_transfers(session: Session, plan) -> dict:
                 "from": _party_dict(session, h.from_user_id, h.from_contact_id, h.from_name),
                 "to": _party_dict(session, h.to_user_id, h.to_contact_id, h.to_name),
                 "amount_minor": h.amount_minor,
+                "fx_rate_micro": h.fx_rate_micro,
+                "fx_counter_currency": h.fx_counter_currency,
+                "counter_value_minor": (fx.convert(h.amount_minor, rate_micro=h.fx_rate_micro)
+                                        if h.fx_rate_micro else None),
                 "outstanding_minor": out,
                 "consumed_minor": consumed(session, h),
                 "occurred_at": h.occurred_at.isoformat(),
@@ -348,6 +442,8 @@ def plan_transfers(session: Session, plan) -> dict:
                 "counter_amount_minor": h.counter_amount_minor,
                 "days_held": ((date.today() - h.occurred_at.date()).days if out > 0 else 0),
                 "logged_by_user_id": h.logged_by_user_id,
+                "funding_source": h.funding_source,
+                "funding_plan_id": h.funding_plan_id,
                 "sources": [{"source_hop_id": s_.source_hop_id,
                              "amount_minor": s_.amount_minor} for s_ in h.sources]})
         out_chains.append({"chain_id": cid, "closed": closed, "hops": rows})
@@ -362,7 +458,7 @@ def plan_transfers(session: Session, plan) -> dict:
         out = outstanding(session, h)
         if out <= 0:
             continue
-        for uid, amt in _alloc(session, h, out, consumed(session, h)):
+        for uid, _fsrc, _fplan, amt in _alloc(session, h, out, consumed(session, h)):
             uid = uid if uid is not None else h.logged_by_user_id
             transit_by[uid] = transit_by.get(uid, 0) + amt
     from ..models import User as _User
@@ -379,7 +475,8 @@ def plan_transfers(session: Session, plan) -> dict:
 
 def update_hop(session: Session, *, plan, hop_id, acting_user_id,
                amount_minor=None, occurred_at=None, method=None,
-               proof_ref=None, note=None, fx_rate_micro=None) -> TransferHop:
+               proof_ref=None, note=None, fx_rate_micro=None,
+               funding_source=_UNSET, funding_plan_id=_UNSET) -> TransferHop:
     hop = session.get(TransferHop, hop_id)
     if hop is None or hop.plan_id != plan.id:
         raise TransferValidationError("hop not found")
@@ -415,7 +512,20 @@ def update_hop(session: Session, *, plan, hop_id, acting_user_id,
         from . import fx
         hop.fx_rate_micro = fx_rate_micro
         hop.fx_counter_currency = fx.counter_currency_for(hop.currency)
+    fund_changed = False
+    if funding_source is not _UNSET and funding_source != hop.funding_source:
+        if funding_source is not None and funding_source not in SOURCES:
+            raise TransferValidationError(f"unknown funding_source: {funding_source}")
+        diff["funding_source"] = {"old": hop.funding_source, "new": funding_source}
+        hop.funding_source = funding_source
+        fund_changed = True
+    if funding_plan_id is not _UNSET and funding_plan_id != hop.funding_plan_id:
+        diff["funding_plan_id"] = {"old": hop.funding_plan_id, "new": funding_plan_id}
+        hop.funding_plan_id = funding_plan_id
+        fund_changed = True
     session.flush()
+    if fund_changed:
+        restamp_downstream(session, plan=plan, hop=hop, acting_user_id=acting_user_id)
     if diff:
         _write_audit(session, hop, "edit", acting_user_id, diff)
     return hop
@@ -474,7 +584,7 @@ def resolve_remainder(session: Session, *, plan, hop_id, acting_user_id, action,
 
     if action == "fee":
         from .assets import log_payment
-        for uid, part in resolve_contributions(session, res_hop):
+        for uid, _fsrc, _fplan, part in resolve_contributions(session, res_hop):
             entry = log_payment(
                 session, plan=plan,
                 user_id=uid if uid is not None else acting_user_id,
@@ -487,17 +597,16 @@ def resolve_remainder(session: Session, *, plan, hop_id, acting_user_id, action,
     return res_hop
 
 
-def fan_out_terminal(session: Session, *, plan, hop: TransferHop, acting_user_id,
-                     funding_source="other"):
-    """Spawn one LedgerEntry per ultimate contributor of a terminal hop.
-    Non-user origins are attributed to the hop logger (spec §Attribution)."""
+def fan_out_terminal(session: Session, *, plan, hop: TransferHop, acting_user_id):
+    """Spawn one LedgerEntry per (contributor, funding_source, funding_plan_id) of a
+    terminal hop. Non-user origins are attributed to the hop logger with 'other'."""
     from .assets import log_payment
     entries = []
-    for uid, amt in resolve_contributions(session, hop):
+    for uid, fsrc, fplan, amt in resolve_contributions(session, hop):
         entry = log_payment(
             session, plan=plan, user_id=uid if uid is not None else hop.logged_by_user_id,
-            amount_minor=amt, occurred_at=hop.occurred_at,
-            method=hop.method, funding_source=funding_source,
+            amount_minor=amt, occurred_at=hop.occurred_at, method=hop.method,
+            funding_source=fsrc or "other", funding_plan_id=fplan,
             proof_ref=hop.proof_ref, note=hop.note,
             acting_user_id=acting_user_id)
         entry.source_hop_id = hop.id
