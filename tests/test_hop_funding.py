@@ -42,3 +42,45 @@ def test_hop_stores_funding_columns(ctx):
     fresh = s.get(TransferHop, hop.id)
     assert fresh.funding_source == "loan"
     assert fresh.funding_plan_id == loan.id
+
+
+def test_create_hop_rejects_bad_funding_source(ctx):
+    s, u, plan, loan = ctx
+    with pytest.raises(transfers.TransferValidationError):
+        transfers.create_hop(
+            s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id,
+            to_name="M", amount_minor=1000, occurred_at=_dt(),
+            method="transfer", funding_source="not_a_source")
+
+
+def test_update_hop_sets_and_clears_funding(ctx):
+    s, u, plan, loan = ctx
+    hop = transfers.create_hop(
+        s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id,
+        to_name="M", amount_minor=1000, occurred_at=_dt(), method="transfer")
+    s.commit()
+    assert hop.funding_source is None
+    transfers.update_hop(s, plan=plan, hop_id=hop.id, acting_user_id=u.id,
+                         funding_source="loan", funding_plan_id=loan.id)
+    s.commit()
+    assert hop.funding_source == "loan"
+    assert hop.funding_plan_id == loan.id
+    # explicit clear
+    transfers.update_hop(s, plan=plan, hop_id=hop.id, acting_user_id=u.id,
+                         funding_source=None, funding_plan_id=None)
+    s.commit()
+    assert hop.funding_source is None
+    assert hop.funding_plan_id is None
+
+
+def test_update_hop_without_funding_kwargs_leaves_it(ctx):
+    s, u, plan, loan = ctx
+    hop = transfers.create_hop(
+        s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id,
+        to_name="M", amount_minor=1000, occurred_at=_dt(), method="transfer",
+        funding_source="savings")
+    s.commit()
+    transfers.update_hop(s, plan=plan, hop_id=hop.id, acting_user_id=u.id,
+                         method="upi")
+    s.commit()
+    assert hop.funding_source == "savings"   # untouched when kwarg omitted

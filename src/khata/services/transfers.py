@@ -6,7 +6,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import HopSource, TransferHop, TransferHopAudit
-from .assets import METHODS
+from .assets import METHODS, SOURCES
+
+_UNSET = object()
 
 
 class TransferError(Exception):
@@ -72,11 +74,13 @@ def create_hop(session: Session, *, plan, logged_by_user_id, amount_minor, occur
                from_user_id=None, from_contact_id=None, from_name=None,
                sources=None, is_terminal=False, resolution=None,
                proof_ref=None, note=None, fx_rate_micro=None,
-               funding_source="other") -> TransferHop:
+               funding_source=None, funding_plan_id=None) -> TransferHop:
     if amount_minor <= 0:
         raise TransferValidationError("amount must be > 0")
     if method not in METHODS:
         raise TransferValidationError(f"unknown method: {method}")
+    if funding_source is not None and funding_source not in SOURCES:
+        raise TransferValidationError(f"unknown funding_source: {funding_source}")
     if resolution not in (None, "returned", "fee"):
         raise TransferValidationError(f"unknown resolution: {resolution}")
     if from_user_id is None and from_contact_id is None and not (from_name or "").strip():
@@ -117,7 +121,8 @@ def create_hop(session: Session, *, plan, logged_by_user_id, amount_minor, occur
         occurred_at=occurred_at, method=method, proof_ref=proof_ref, note=note,
         is_terminal=bool(is_terminal), resolution=resolution,
         receipt_status=_receipt_status_for(to_user_id, logged_by_user_id),
-        logged_by_user_id=logged_by_user_id)
+        logged_by_user_id=logged_by_user_id,
+        funding_source=funding_source, funding_plan_id=funding_plan_id)
     session.add(hop)
     session.flush()
     if hop.chain_id is None:
@@ -133,8 +138,7 @@ def create_hop(session: Session, *, plan, logged_by_user_id, amount_minor, occur
         session.flush()
     if hop.is_terminal and hop.resolution is None:
         fan_out_terminal(session, plan=plan, hop=hop,
-                         acting_user_id=logged_by_user_id,
-                         funding_source=funding_source)
+                         acting_user_id=logged_by_user_id)
     _write_audit(session, hop, "create", logged_by_user_id)
     return hop
 
@@ -379,7 +383,8 @@ def plan_transfers(session: Session, plan) -> dict:
 
 def update_hop(session: Session, *, plan, hop_id, acting_user_id,
                amount_minor=None, occurred_at=None, method=None,
-               proof_ref=None, note=None, fx_rate_micro=None) -> TransferHop:
+               proof_ref=None, note=None, fx_rate_micro=None,
+               funding_source=_UNSET, funding_plan_id=_UNSET) -> TransferHop:
     hop = session.get(TransferHop, hop_id)
     if hop is None or hop.plan_id != plan.id:
         raise TransferValidationError("hop not found")
@@ -415,6 +420,14 @@ def update_hop(session: Session, *, plan, hop_id, acting_user_id,
         from . import fx
         hop.fx_rate_micro = fx_rate_micro
         hop.fx_counter_currency = fx.counter_currency_for(hop.currency)
+    if funding_source is not _UNSET and funding_source != hop.funding_source:
+        if funding_source is not None and funding_source not in SOURCES:
+            raise TransferValidationError(f"unknown funding_source: {funding_source}")
+        diff["funding_source"] = {"old": hop.funding_source, "new": funding_source}
+        hop.funding_source = funding_source
+    if funding_plan_id is not _UNSET and funding_plan_id != hop.funding_plan_id:
+        diff["funding_plan_id"] = {"old": hop.funding_plan_id, "new": funding_plan_id}
+        hop.funding_plan_id = funding_plan_id
     session.flush()
     if diff:
         _write_audit(session, hop, "edit", acting_user_id, diff)
