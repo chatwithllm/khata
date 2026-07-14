@@ -497,6 +497,27 @@ from-scratch build reads here, not the app. Verify UI changes with the headless 
 ---
 
 ## Change log
+- 2026-07-14 — **Transfer funding-source provenance + native FX display.** Two fixes to
+  payment-chain money-in-transit: `transfer_hops` gains `funding_source` (VARCHAR(20)) +
+  `funding_plan_id` (FK `plans.id`, indexed) — provenance of a hop's own-funds portion
+  (NULL = untagged); `create_hop`/`update_hop` persist both, the create/patch API relays them,
+  and the hop editor + compose form expose the funding-source/loan pickers that transit hops
+  used to silently discard. `fan_out_terminal` now emits one `LedgerEntry` per
+  `(contributor, funding_source, funding_plan_id)` group instead of per contributor, so a
+  contributor whose money came from two sources gets two ledger entries with the right loan
+  links. Editing an origin hop's funding fields re-stamps its already-fanned-out downstream
+  ledger entries in place (`restamp_downstream` → `_reconcile_terminal_entries`): a contributor
+  that still maps 1↔1 is updated in place, a split/merge deletes and recreates that
+  contributor's entries, manual (non-fan-out) entries are never touched. Separately, transit
+  and single-transaction ledger rows now display at each transaction's own stored send-rate
+  (`nativeMinor(amountMinor, row)` in `asset-detail.html`: uses the row's `fx_rate_micro`/
+  `fx_counter_currency` when it matches the display currency, else falls back to the global
+  snapshot `conv()`) — so `$1000 @ 94.47` round-trips to `$1,000` instead of drifting to the
+  snapshot rate. Aggregates (header totals, in-transit sums, contributor bars) intentionally
+  stay on the global snapshot rate, since they mix transactions at different rates.
+  `plan_transfers` emits `fx_rate_micro`/`fx_counter_currency`/`counter_value_minor` per hop to
+  support this. Migration `th3hopfund01`, no backfill (existing hops stay untagged until
+  edited). Spec `2026-07-14-transfer-funding-fx-design.md`.
 - 2026-07-08 — **Funding & Contributors 3-state breakdown.** Asset panels now split money into
   delivered (agreed entries) / in transit (open hops, neutral bar segment) / pending confirmation
   (unagreed entries). `asset_state` gains `paid_agreed_minor`/`paid_pending_minor` + per-contributor
