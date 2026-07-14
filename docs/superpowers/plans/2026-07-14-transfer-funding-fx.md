@@ -529,7 +529,7 @@ def test_plan_transfers_emits_hop_fx(ctx):
     assert hop["fx_rate_micro"] == rate_micro
     assert hop["fx_counter_currency"] == "USD"
     # round-trips back to ~$1000.00 (100000 cents), not $988
-    assert abs(hop["counter_value_minor"] - 100000) <= 2
+    assert abs(hop["counter_value_minor"] - 100000) <= 5  # rate_micro rounding ~4c
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
