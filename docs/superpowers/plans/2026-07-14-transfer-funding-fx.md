@@ -68,12 +68,14 @@ def ctx():
 
 def test_hop_stores_funding_columns(ctx):
     s, u, plan, loan = ctx
-    hop = transfers.create_hop(
-        s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id,
-        to_name="Middleman", amount_minor=200000, occurred_at=_dt(),
-        method="transfer", funding_source="loan", funding_plan_id=loan.id)
-    s.commit()
     from khata.models import TransferHop
+    # Pure model test — Task 1 is schema-only; create_hop wiring lands in Task 2.
+    hop = TransferHop(
+        plan_id=plan.id, from_user_id=u.id, to_name="Middleman",
+        amount_minor=200000, currency="INR", occurred_at=_dt(),
+        method="transfer", logged_by_user_id=u.id,
+        funding_source="loan", funding_plan_id=loan.id)
+    s.add(hop); s.flush()
     fresh = s.get(TransferHop, hop.id)
     assert fresh.funding_source == "loan"
     assert fresh.funding_plan_id == loan.id
@@ -82,7 +84,7 @@ def test_hop_stores_funding_columns(ctx):
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `python -m pytest tests/test_hop_funding.py::test_hop_stores_funding_columns -v`
-Expected: FAIL — `TypeError: create_hop() got an unexpected keyword argument 'funding_source'` is NOT yet the failure here; at this step it fails because the model has no `funding_source` column (`create_hop` already accepts a `funding_source` kwarg today, but does not persist it, and `funding_plan_id` is unknown). Expect FAIL (attribute/kwarg error).
+Expected: FAIL — `TypeError: 'funding_source' is an invalid keyword argument for TransferHop` (the model has no such column yet).
 
 - [ ] **Step 3: Add the columns to the model**
 
