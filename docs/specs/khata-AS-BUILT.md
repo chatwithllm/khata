@@ -239,6 +239,23 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-07-14 — Loan deployments listed in the Ledger ("Put to work").** The loan money consumed
+  into other plans (each `ledger_entries.funding_plan_id` link — now including money routed through
+  middlemen via payment-chain fan-out) is shown as a read-only outflow section **inside the loan
+  Ledger panel**, below the real entries: a "PUT TO WORK → $X deployed" divider then one row per
+  deployment (`-$amt →`, asset · date · contributor, per-entry FX secondary + rate-edit pencil,
+  links to the plan). These are **uses of the disbursed cash, not repayments — the owed balance is
+  unchanged**. The former right-rail "Deployed into" panel is removed (its content, incl. the FX-rate
+  editor, moved into the ledger). Display-only: reuses `st.deployed` / `deployedToDisp` /
+  `toggleRateEdit`; `loan-detail.html` only (`renderDeployed` → `appendDeployed`, appended by
+  `renderLedger`). No backend/schema/balance change.
+- **2026-07-14 — Funding source on in-transit money + native per-transaction FX display.** Transit
+  hops gain `transfer_hops.funding_source` + `funding_plan_id` (provenance of the hop's own-funds
+  portion; migration `th3hopfund01`), captured at the origin hop and threaded forward so terminal
+  fan-out emits one `LedgerEntry` per `(contributor, funding_source, funding_plan_id)`; editing an
+  origin hop re-stamps its already-fanned-out ledger entries (`restamp_downstream`). Transit + ledger
+  single-transaction rows display at each transaction's own stored send-rate (`nativeMinor`) — `$1000`
+  not `$988`; aggregates stay on the global snapshot rate with an "at current rate" note.
 - **2026-07-11 — Duplicate chit.** A chit-detail header action (between Print and Delete) clones a
   chit's terms — `chit_value_minor`, `n_members`, `commission_bps`, currency, `start_date` — into a
   new empty chit via `POST /api/plans/<id>/chit/duplicate` (owner-only). Ledger and shares are NOT
@@ -300,7 +317,7 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   gain an FX-rate field prefilled in natural direction (1 USD = ₹) that PATCHes only when edited
   non-empty; Settings FX hint documents the daily auto-refresh.
 - **2026-06-06 — Tablet & mobile responsive shell.** The fixed 240px sidebar became an **off-canvas drawer** at ≤880px: a hamburger (injected into every topbar by the shared `static/assets/nav.js`) toggles `.nav-open` on `.app`, sliding the sidebar in over a scrim (Esc / scrim / nav-tap closes). Topbar shrinks + the greeting truncates so the actions stay; content/panel padding reduces; `.kpis` and dashboard `.stats` stack to one column on phones; the loans list drops its secondary interest/mo column (`.pr-icol`) on phones. `nav.js` added to all app pages (guards on `.app`/`.top`/`.side`); responsive `@media` overrides kept at the END of app.css so they beat the base shell rules. (Landing page already had its own responsive.)
-- **2026-06-06 — Fund a contribution from a loan (cross-plan money chain).** Real flow: you borrow ₹10L → it becomes your asset contribution → you repay the loan. The asset payment now links to its source loan via `ledger_entries.funding_plan_id` (link-only — the loan disbursement and the asset payment stay separate real events; no double-count). Asset log-payment shows a **“from which loan”** picker when funding source is loan/borrowed; the asset ledger row shows a **“↗ <loan>”** link; loan-detail gains a **“Deployed into”** panel listing where the borrowed money went + total put to work. Payoff is the existing principal_repayment flow. `loan_state` gains `deployed[]`/`deployed_total_minor`; `asset_state.ledger` rows gain `funding_plan_id/name/type`. (Plan.ledger_entries relationship pinned to plan_id FK to disambiguate the new second FK.)
+- **2026-06-06 — Fund a contribution from a loan (cross-plan money chain).** Real flow: you borrow ₹10L → it becomes your asset contribution → you repay the loan. The asset payment now links to its source loan via `ledger_entries.funding_plan_id` (link-only — the loan disbursement and the asset payment stay separate real events; no double-count). Asset log-payment shows a **“from which loan”** picker when funding source is loan/borrowed; the asset ledger row shows a **“↗ <loan>”** link; loan-detail lists where the borrowed money went + total put to work (originally a right-rail “Deployed into” panel; **as of 2026-07-14 shown as a “Put to work” outflow section inside the loan Ledger**). Payoff is the existing principal_repayment flow. `loan_state` gains `deployed[]`/`deployed_total_minor`; `asset_state.ledger` rows gain `funding_plan_id/name/type`. (Plan.ledger_entries relationship pinned to plan_id FK to disambiguate the new second FK.)
 - **2026-06-06 — Differentiable plan rows in the list (esp. loans).** The dashboard "Your plans" / filtered
   list showed only "<Name> · INR · owner" — two same-named gold loans were indistinguishable before opening.
   Now each row has a `planMeta(p)` line built from the summary (loan → "Gold · from SBI · 7.5%/yr"; holding →

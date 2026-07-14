@@ -193,8 +193,6 @@
           <div class="panel fade d3" id="coll-panel" style="display:none"></div>
           <!-- loan terms -->
           <div class="panel fade d3" id="terms-panel"></div>
-          <!-- deployed into (where the borrowed money went) -->
-          <div class="panel fade d3" id="deployed-panel" style="display:none"></div>
           <!-- contact -->
           <div class="panel fade d3" id="contact-panel"></div>
           <!-- members (sharing) -->
@@ -633,7 +631,7 @@ function renderLedger(box, st){
   meta.append(document.createTextNode('balance '), amtSpan(st.total_minor));
   ph.append(t, meta);
   box.append(ph);
-  if(!rows.length){ box.append(el('div','emptypanel','No entries yet.')); return; }
+  if(!rows.length){ box.append(el('div','emptypanel','No entries yet.')); appendDeployed(box, st); return; }
   const led=el('div','ledger');
   for(const it of rows){
     const meta2=LEDGER_KIND[it.kind] || {label:(it.kind||'entry'), cls:'', pill:'', pillText:(it.kind||'entry')};
@@ -673,6 +671,7 @@ function renderLedger(box, st){
     led.append(lrow);
   }
   box.append(led);
+  appendDeployed(box, st);
 }
 
 // ── repayment schedule (interest schedule across the loan tenure) ──
@@ -1242,20 +1241,18 @@ function deployedToDisp(d){
   return {minor: d.amount_minor, ccy: eccy, approx: false, hasRate: false};
 }
 
-// ── deployed into: where this borrowed money went (cross-plan funding link) ──
-function renderDeployed(box, st){
-  box.textContent='';
+// ── put to work: where this borrowed money went (cross-plan funding link).
+// Appended INSIDE the Ledger panel as a read-only outflow section — these are
+// USES of the disbursed cash, not repayments, so the owed balance is untouched. ──
+function appendDeployed(box, st){
   const dep = st.deployed || [];
-  if(!dep.length){ box.style.display='none'; return; }
-  box.style.display='';
-  const ph=el('div','ph'); const t=el('div','t','Deployed into'); t.style.fontSize='16px';
-  ph.append(t, el('div','meta','where it went')); box.append(ph);
+  if(!dep.length) return;
 
   // compute DISP total from converted amounts
   let dispTotal=0, allConverted=true;
   const converted=dep.map(d=>{const c=deployedToDisp(d); if(!c.hasRate||c.ccy!==DISP) allConverted=false; else dispTotal+=c.minor; return c;});
 
-  const head=el('div'); head.style.cssText='display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:14px 22px;border-bottom:1px solid var(--line-2)';
+  const head=el('div'); head.style.cssText='display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:16px 22px 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line-2);margin-top:6px';
   const hl=el('span',null,'Put to work'); hl.style.cssText='font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:700;flex:none';
   let totStr;
   if(allConverted && dep.length){
@@ -1264,8 +1261,8 @@ function renderDeployed(box, st){
     const totals=(st.deployed_totals && st.deployed_totals.length) ? st.deployed_totals : [];
     totStr = totals.length ? totals.map(x=>fmtCcy(x.total_minor, x.currency)).join('  +  ') : '—';
   }
-  const hv=el('span',null, totStr);
-  hv.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:15px;text-align:right';
+  const hv=el('span',null, '→ '+totStr+' deployed');
+  hv.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right';
   head.append(hl,hv); box.append(head);
 
   dep.forEach((d,i)=>{
@@ -1284,7 +1281,7 @@ function renderDeployed(box, st){
     // primary amount: show in DISP when converted, else native with label
     const dispAmt=el('div'); dispAmt.style.cssText='font-family:"JetBrains Mono";font-weight:700;font-size:14px;text-align:right';
     if(cv.ccy === DISP){
-      dispAmt.textContent = sym(DISP)+fmtNum(cv.minor, DISP);
+      dispAmt.textContent = '-'+sym(DISP)+fmtNum(cv.minor, DISP);
       if(cv.approx) dispAmt.title='approximate (using global rate)';
       // show original as muted secondary if currency differs
       if((d.currency||BASE) !== DISP){
@@ -1294,7 +1291,7 @@ function renderDeployed(box, st){
       }
     } else {
       // no rate: show native with currency tag
-      dispAmt.textContent = fmtCcy(d.amount_minor, d.currency||BASE);
+      dispAmt.textContent = '-'+fmtCcy(d.amount_minor, d.currency||BASE);
     }
     // pencil to set/edit rate for cross-currency entries
     if((d.currency||BASE) !== DISP){
@@ -1700,7 +1697,6 @@ async function boot(){
   renderGlance($('glance-panel'), plan, st);
   renderCollateral($('coll-panel'), st);
   renderTerms($('terms-panel'), plan, st);
-  renderDeployed($('deployed-panel'), st);
   renderMembers($('members-panel'));
   renderSharePanel($('share-panel'));
   loadContactPicker($('contact-panel'));
