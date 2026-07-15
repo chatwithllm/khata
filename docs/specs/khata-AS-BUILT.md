@@ -264,6 +264,13 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   `transfers.backfill_hop_fx_from_notes(session)` (parses the machine-written `$X CCY @rate` prefix →
   `fx_rate_micro`/`fx_counter_currency`; idempotent; skips hops that already have a rate) — a **one-off
   prod DB write, run once with explicit authorization** (`docker exec khata python -c "…backfill…"`).
+- **2026-07-15 — Merged/terminal hop headline = sum of its native source amounts.** A hop drawn from
+  upstream sends (the ones with a `= $X from … + …` breakdown, incl. the terminal delivery hop) has no
+  single send-rate of its own — so `nativeMinor(amount_minor)` fell back to the global rate and the
+  headline disagreed with the breakdown (e.g. `$6,905` vs parts summing to `$7,000`). `fmtHopAmt(h,
+  hopById)` now sums each source at its origin hop's rate (own-funds portion at the hop's own rate),
+  so the headline always equals the breakdown total. Display-only (`asset-detail.html` +
+  `assets/transfers.js`, which passes `hopById` through).
 - **2026-07-11 — Duplicate chit.** A chit-detail header action (between Print and Delete) clones a
   chit's terms — `chit_value_minor`, `n_members`, `commission_bps`, currency, `start_date` — into a
   new empty chit via `POST /api/plans/<id>/chit/duplicate` (owner-only). Ledger and shares are NOT

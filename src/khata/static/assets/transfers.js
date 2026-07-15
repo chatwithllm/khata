@@ -140,7 +140,7 @@ window.KhataTransfers = (function(){
     row.append(rail);
 
     row.append(_e('div','trx-route',(h.from.display||'?')+' → '+(h.to.display||'?')));
-    row.append(_e('div','trx-amt', _opts.fmtHopAmt ? _opts.fmtHopAmt(h) : _fmt(h.amount_minor)));
+    row.append(_e('div','trx-amt', _opts.fmtHopAmt ? _opts.fmtHopAmt(h, hopById) : _fmt(h.amount_minor)));
 
     const cleaned=_cleanNote(h.note);
     const meta=_e('div','trx-meta');
