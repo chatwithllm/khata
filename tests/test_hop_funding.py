@@ -232,3 +232,44 @@ def test_backfill_hop_fx_from_notes(ctx):
     assert s.get(TransferHop, h3.id).fx_rate_micro is None    # no prefix
     # idempotent: a second run changes nothing
     assert transfers.backfill_hop_fx_from_notes(s) == 0
+
+
+def test_terminal_final_delivery_rate(ctx):
+    s, u, plan, loan = ctx   # plan currency INR
+    from khata.models import LedgerEntry
+    from sqlalchemy import select
+    from khata.services import fx
+    A = transfers.create_hop(s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id,
+        to_name="Mid", amount_minor=9500000, occurred_at=_dt(1), method="transfer",
+        note="$1,000 USD @95.00", fx_rate_micro=round(1e6/95))
+    transfers.create_hop(s, plan=plan, logged_by_user_id=u.id, from_name="Mid",
+        to_name="Seller", amount_minor=9500000, occurred_at=_dt(2), method="transfer",
+        is_terminal=True, sources=[{"source_hop_id": A.id, "amount_minor": 9500000}],
+        fx_rate_micro=round(1e6/94.47))        # final delivery rate
+    s.commit()
+    e = s.scalars(select(LedgerEntry).where(LedgerEntry.plan_id == plan.id)).one()
+    # $1,000 settled at 94.47 -> ~₹94,470 (9,447,000 paise), entry rate = final rate
+    assert abs(e.amount_minor - 9447000) <= 300
+    assert e.fx_rate_micro == round(1e6/94.47)
+    assert abs(fx.convert(e.amount_minor, rate_micro=e.fx_rate_micro) - 100000) <= 100  # ~$1000
+
+
+def test_terminal_rate_edit_refanout(ctx):
+    s, u, plan, loan = ctx
+    from khata.models import LedgerEntry
+    from sqlalchemy import select
+    A = transfers.create_hop(s, plan=plan, logged_by_user_id=u.id, from_user_id=u.id,
+        to_name="Mid", amount_minor=9500000, occurred_at=_dt(1), method="transfer",
+        note="$1,000 USD @95.00", fx_rate_micro=round(1e6/95))
+    T = transfers.create_hop(s, plan=plan, logged_by_user_id=u.id, from_name="Mid",
+        to_name="Seller", amount_minor=9500000, occurred_at=_dt(2), method="transfer",
+        is_terminal=True, sources=[{"source_hop_id": A.id, "amount_minor": 9500000}])
+    s.commit()
+    e = s.scalars(select(LedgerEntry).where(LedgerEntry.plan_id == plan.id)).one()
+    assert e.amount_minor == 9500000        # no final rate -> drawn INR at send rate
+    transfers.update_hop(s, plan=plan, hop_id=T.id, acting_user_id=u.id,
+                         fx_rate_micro=round(1e6/94.47))     # set final delivery rate
+    s.commit()
+    e = s.scalars(select(LedgerEntry).where(LedgerEntry.plan_id == plan.id)).one()
+    assert abs(e.amount_minor - 9447000) <= 300             # re-settled at 94.47
+    assert e.fx_rate_micro == round(1e6/94.47)

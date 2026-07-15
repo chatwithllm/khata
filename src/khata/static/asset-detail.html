@@ -272,6 +272,11 @@
       </div>
       <div class="amt-hint fx" id="hop-fx-preview" style="display:none"></div>
     </div>
+    <div class="fld" id="hop-delivery-fld" style="display:none">
+      <label for="hop-delivery-rate">Final delivery rate <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-faint);font-size:10px;margin-left:4px">· 1 USD = ₹ when the seller received it</span></label>
+      <input id="hop-delivery-rate" placeholder="94.47" inputmode="decimal">
+      <div class="hint" id="hop-delivery-hint" style="font-size:11.5px;color:var(--ink-faint)">Settles the whole delivered chain at this one rate (sends keep their own moment rates).</div>
+    </div>
     <div class="fld"><label for="hop-occurred">Date</label><input id="hop-occurred" type="date"></div>
     <div class="fld"><label for="hop-method">Method</label>
       <select id="hop-method"><option value="transfer">Transfer</option><option value="upi">UPI</option><option value="cash">Cash</option><option value="cheque">Cheque</option></select>
@@ -1517,6 +1522,15 @@ function openHopEdit(h){
   const locked=!!h.is_terminal;
   $('hop-amount').disabled=locked; $('hop-cur').disabled=locked; $('hop-rate').disabled=locked;
   $('hop-amount').title=locked?'Delivered amounts are locked — delete and re-log to change':'';
+  // terminal (delivered) hop: offer the final delivery rate — the one USD→INR rate the
+  // seller actually received at, which settles the whole chain.
+  $('hop-delivery-fld').style.display = locked ? '' : 'none';
+  if(locked){
+    $('hop-delivery-rate').value = h.fx_rate_micro ? fxNaturalFromMicro(h.fx_rate_micro, BASE) : '';
+    $('hop-delivery-hint').textContent = 'The one USD→₹ rate the seller received at. '
+      + 'Settles the whole delivered chain — paid-to-date and every contributor’s share — at this rate. '
+      + 'The individual sends keep their own moment rates.';
+  }
   mountAttachments($('hop-proof-mount'), { planId: pid, hopId: h.id,
     canModify: true, onChange: ()=>KhataTransfers.refresh() });
   $('hop-fsource').value = h.funding_source || '';
@@ -1560,6 +1574,12 @@ $('hop-save').addEventListener('click', async ()=>{
   body.funding_source = $('hop-fsource').value || null;
   body.funding_plan_id = ($('hop-fundplan-fld').style.display!=='none' && $('hop-fundplan').value)
     ? $('hop-fundplan').value : null;
+  // final delivery rate (terminal hops): settles the whole chain at this USD→₹ rate
+  if($('hop-delivery-fld').style.display!=='none'){
+    const dr=$('hop-delivery-rate').value.trim();
+    const micro=dr ? fxMicroFromNatural(dr, BASE) : null;
+    if(micro) body.fx_rate_micro=micro;
+  }
   const r=await fetch('/api/plans/'+pid+'/hops/'+hopEditId,{method:'PATCH',
     headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
   if(r.ok){ closeHopEdit(); boot(); return; }

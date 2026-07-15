@@ -264,6 +264,19 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   `transfers.backfill_hop_fx_from_notes(session)` (parses the machine-written `$X CCY @rate` prefix →
   `fx_rate_micro`/`fx_counter_currency`; idempotent; skips hops that already have a rate) — a **one-off
   prod DB write, run once with explicit authorization** (`docker exec khata python -c "…backfill…"`).
+- **2026-07-15 — Final delivery rate on a delivered (terminal) hop.** Money sent to a middleman in
+  several transfers at different moment-rates is delivered to the seller in one lump sum at a single
+  USD→INR rate. The delivered hop's editor now has a **"Final delivery rate"** field (only field
+  editable on a terminal hop besides method/funding/comment/proof; amount stays locked). Setting it
+  **settles the whole chain at that one rate**: each fanned-out `LedgerEntry` = its native USD (valued
+  at the origin send-rate) × the final rate, and the entry's `fx_rate_micro` = the final rate — so
+  paid-to-date + every contributor's share + funding-source amounts for that chain all use the
+  settlement rate (a chain whose sends were $7,000 delivered at 94.47 counts as $7,000 / ₹6,61,290,
+  not the drift-valued figure). The "Money in transit" send rows keep their own moment rates. Impl:
+  `_alloc`/`resolve_contributions` now carry per-portion native USD (5-tuples); `_delivery_amount(hop,
+  inr, usd)` settles at the hop's rate when set; `fan_out_terminal` + `_reconcile_terminal_entries`
+  use it; editing a terminal's rate (`update_hop`) triggers `_refanout_terminal` (delete + regenerate
+  entries at the new rate). UI: `#hop-delivery-rate` field on the hop editor, shown for terminal hops.
 - **2026-07-15 — Native FX everywhere on the asset (subtotals = sum of native per-txn values).**
   The asset page mixed conversion methods: per-transaction rows used each entry's own saved rate, but
   paid-to-date / funding-source / contributor totals re-converted the INR sum at the *current global*
