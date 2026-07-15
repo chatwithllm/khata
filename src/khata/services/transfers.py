@@ -260,11 +260,20 @@ def _prior_consumption(session: Session, hop: TransferHop, *, before_source_id: 
     return sum(r.amount_minor for r in rows)
 
 
+def _portion_usd(hop: TransferHop, inr_minor: int) -> int | None:
+    """USD-minor value of `inr_minor` at THIS hop's own saved send-rate, or None
+    when the hop has no USD rate (then the portion can't be valued in USD)."""
+    if hop.fx_rate_micro and (hop.fx_counter_currency or "").upper() == "USD":
+        return round(inr_minor * hop.fx_rate_micro / 1_000_000)
+    return None
+
+
 def _alloc(session: Session, h: TransferHop, take: int, taken_before: int) -> list[tuple]:
     """Allocate `take` units of hop h's money to ultimate origins, skipping the
     first `taken_before` units (already claimed by earlier consumers). Greedy
     oldest-first over the hop's sources (HopSource.id order). Each tuple is
-    (uid, funding_source, funding_plan_id, amount)."""
+    (uid, funding_source, funding_plan_id, inr_minor, usd_minor) — usd_minor is the
+    portion valued at its ORIGIN hop's own send-rate (None if that origin has no USD rate)."""
     out: list[tuple] = []
     pos = 0
     for src in h.sources:                    # ordered by HopSource.id
@@ -276,7 +285,8 @@ def _alloc(session: Session, h: TransferHop, take: int, taken_before: int) -> li
         grab = overlap_end - overlap_start
         if grab > 0:
             if src.source_hop_id is None:
-                out.append((_own_party_user(h), h.funding_source, h.funding_plan_id, grab))
+                out.append((_own_party_user(h), h.funding_source, h.funding_plan_id,
+                            grab, _portion_usd(h, grab)))
             else:
                 up = session.get(TransferHop, src.source_hop_id)
                 out.extend(_alloc(session, up, grab, overlap_start - pos))
@@ -285,22 +295,29 @@ def _alloc(session: Session, h: TransferHop, take: int, taken_before: int) -> li
 
 
 def resolve_contributions(session: Session, hop: TransferHop) -> list[tuple]:
-    """(uid, funding_source, funding_plan_id, amount) tuples for a hop's money,
-    walked to ultimate origins. uid None = non-user origin. Greedy oldest-first."""
+    """(uid, funding_source, funding_plan_id, inr_minor, usd_minor) tuples for a hop's
+    money, walked to ultimate origins. uid None = non-user origin. Greedy oldest-first.
+    usd_minor is valued at each origin's own send-rate (None if any part is unvaluable)."""
     result: list[tuple] = []
     for src in hop.sources:
         if src.source_hop_id is None:
             result.append((_own_party_user(hop), hop.funding_source,
-                           hop.funding_plan_id, src.amount_minor))
+                           hop.funding_plan_id, src.amount_minor,
+                           _portion_usd(hop, src.amount_minor)))
         else:
             up = session.get(TransferHop, src.source_hop_id)
             prior = _prior_consumption(session, up, before_source_id=src.id)
             result.extend(_alloc(session, up, src.amount_minor, prior))
-    merged: dict[tuple, int] = {}
-    for uid, fsrc, fplan, amt in result:
-        key = (uid, fsrc, fplan)
-        merged[key] = merged.get(key, 0) + amt
-    return [(uid, fsrc, fplan, amt) for (uid, fsrc, fplan), amt in merged.items()]
+    merged: dict[tuple, list] = {}
+    for uid, fsrc, fplan, inr, usd in result:
+        m = merged.setdefault((uid, fsrc, fplan), [0, 0, True])
+        m[0] += inr
+        if usd is None:
+            m[2] = False           # any unvaluable part → whole group has no USD total
+        else:
+            m[1] += usd
+    return [(uid, fsrc, fplan, m[0], (m[1] if m[2] else None))
+            for (uid, fsrc, fplan), m in merged.items()]
 
 
 def _downstream_terminals(session: Session, hop: TransferHop) -> list[TransferHop]:
@@ -348,9 +365,10 @@ def _reconcile_terminal_entries(session: Session, *, plan, terminal: TransferHop
     from .assets import log_payment, delete_ledger_entry
 
     want_by: dict[int, list] = defaultdict(list)
-    for uid, fsrc, fplan, amt in resolve_contributions(session, terminal):
+    for uid, fsrc, fplan, inr, usd in resolve_contributions(session, terminal):
         key = uid if uid is not None else terminal.logged_by_user_id
-        want_by[key].append((fsrc, fplan, amt))
+        amt, rate = _delivery_amount(terminal, inr, usd)
+        want_by[key].append((fsrc, fplan, amt, rate))
 
     exist_by: dict[int, list] = defaultdict(list)
     for e in _fanout_entries(session, terminal.id):
@@ -360,22 +378,22 @@ def _reconcile_terminal_entries(session: Session, *, plan, terminal: TransferHop
         w = want_by.get(uid, [])
         ex = exist_by.get(uid, [])
         if len(w) == 1 and len(ex) == 1:
-            fsrc, fplan, amt = w[0]
+            fsrc, fplan, amt, rate = w[0]
             e = ex[0]
             e.funding_source = fsrc or "other"
             e.funding_plan_id = fplan
-            # amount unchanged: funding edits never alter per-contributor amounts
+            # amount/rate unchanged: funding edits never alter per-contributor amounts
         else:
             for e in ex:
                 delete_ledger_entry(session, plan=plan, entry_id=e.id,
                                     acting_user_id=acting_user_id)
-            for fsrc, fplan, amt in w:
+            for fsrc, fplan, amt, rate in w:
                 entry = log_payment(
                     session, plan=plan, user_id=uid, amount_minor=amt,
                     occurred_at=terminal.occurred_at, method=terminal.method,
                     funding_source=fsrc or "other", funding_plan_id=fplan,
                     proof_ref=terminal.proof_ref, note=terminal.note,
-                    acting_user_id=acting_user_id)
+                    acting_user_id=acting_user_id, fx_rate_micro=rate)
                 entry.source_hop_id = terminal.id
     session.flush()
 
@@ -386,6 +404,15 @@ def restamp_downstream(session: Session, *, plan, hop: TransferHop, acting_user_
     for terminal in _downstream_terminals(session, hop):
         _reconcile_terminal_entries(session, plan=plan, terminal=terminal,
                                     acting_user_id=acting_user_id)
+
+
+def _refanout_terminal(session: Session, *, plan, hop: TransferHop, acting_user_id) -> None:
+    """Delete a terminal hop's fan-out ledger entries and regenerate them from scratch
+    — used when the final delivery rate changes so every contribution re-settles at it."""
+    from .assets import delete_ledger_entry
+    for e in _fanout_entries(session, hop.id):
+        delete_ledger_entry(session, plan=plan, entry_id=e.id, acting_user_id=acting_user_id)
+    fan_out_terminal(session, plan=plan, hop=hop, acting_user_id=acting_user_id)
 
 
 def _party_dict(session, user_id, contact_id, name):
@@ -465,7 +492,7 @@ def plan_transfers(session: Session, plan) -> dict:
         out = outstanding(session, h)
         if out <= 0:
             continue
-        for uid, _fsrc, _fplan, amt in _alloc(session, h, out, consumed(session, h)):
+        for uid, _fsrc, _fplan, amt, _usd in _alloc(session, h, out, consumed(session, h)):
             uid = uid if uid is not None else h.logged_by_user_id
             transit_by[uid] = transit_by.get(uid, 0) + amt
     from ..models import User as _User
@@ -515,10 +542,13 @@ def update_hop(session: Session, *, plan, hop_id, acting_user_id,
         hop.proof_ref = proof_ref
     if note is not None:
         hop.note = note
-    if fx_rate_micro is not None:
+    fx_changed = False
+    if fx_rate_micro is not None and fx_rate_micro != hop.fx_rate_micro:
         from . import fx
+        diff["fx_rate_micro"] = {"old": hop.fx_rate_micro, "new": fx_rate_micro}
         hop.fx_rate_micro = fx_rate_micro
         hop.fx_counter_currency = fx.counter_currency_for(hop.currency)
+        fx_changed = True
     fund_changed = False
     if funding_source is not _UNSET and funding_source != hop.funding_source:
         if funding_source is not None and funding_source not in SOURCES:
@@ -531,7 +561,11 @@ def update_hop(session: Session, *, plan, hop_id, acting_user_id,
         hop.funding_plan_id = funding_plan_id
         fund_changed = True
     session.flush()
-    if fund_changed:
+    # A terminal's final delivery rate changed → re-settle its whole fan-out at the
+    # new rate (covers any funding change too, since fan-out reads current funding).
+    if fx_changed and hop.is_terminal:
+        _refanout_terminal(session, plan=plan, hop=hop, acting_user_id=acting_user_id)
+    elif fund_changed:
         restamp_downstream(session, plan=plan, hop=hop, acting_user_id=acting_user_id)
     if diff:
         _write_audit(session, hop, "edit", acting_user_id, diff)
@@ -591,7 +625,7 @@ def resolve_remainder(session: Session, *, plan, hop_id, acting_user_id, action,
 
     if action == "fee":
         from .assets import log_payment
-        for uid, _fsrc, _fplan, part in resolve_contributions(session, res_hop):
+        for uid, _fsrc, _fplan, part, _usd in resolve_contributions(session, res_hop):
             entry = log_payment(
                 session, plan=plan,
                 user_id=uid if uid is not None else acting_user_id,
@@ -604,18 +638,34 @@ def resolve_remainder(session: Session, *, plan, hop_id, acting_user_id, action,
     return res_hop
 
 
+def _delivery_amount(hop: TransferHop, inr: int, usd: int | None) -> tuple:
+    """(amount_minor, fx_rate_micro) for ONE contribution of a terminal hop. If the
+    hop carries a final delivery rate (its own USD fx_rate_micro) and the contribution
+    is USD-valuable, settle it at that single rate; else keep the drawn INR (send rates)."""
+    if hop.fx_rate_micro and (hop.fx_counter_currency or "").upper() == "USD" and usd is not None:
+        return round(usd * 1_000_000 / hop.fx_rate_micro), hop.fx_rate_micro
+    return inr, None
+
+
 def fan_out_terminal(session: Session, *, plan, hop: TransferHop, acting_user_id):
     """Spawn one LedgerEntry per (contributor, funding_source, funding_plan_id) of a
-    terminal hop. Non-user origins are attributed to the hop logger with 'other'."""
+    terminal hop. Non-user origins are attributed to the hop logger with 'other'.
+
+    If the terminal carries a FINAL DELIVERY RATE (its own USD fx_rate_micro), the
+    whole chain settles at that one rate: each contribution's INR = its native USD ×
+    the final rate, and the entry's rate = the final rate. So a chain whose sends
+    happened at mixed moment-rates is delivered/counted at the single settlement rate
+    the seller actually received at. Otherwise entries keep the drawn INR (send rates)."""
     from .assets import log_payment
     entries = []
-    for uid, fsrc, fplan, amt in resolve_contributions(session, hop):
+    for uid, fsrc, fplan, inr, usd in resolve_contributions(session, hop):
+        amt, rate = _delivery_amount(hop, inr, usd)
         entry = log_payment(
             session, plan=plan, user_id=uid if uid is not None else hop.logged_by_user_id,
             amount_minor=amt, occurred_at=hop.occurred_at, method=hop.method,
             funding_source=fsrc or "other", funding_plan_id=fplan,
             proof_ref=hop.proof_ref, note=hop.note,
-            acting_user_id=acting_user_id)
+            acting_user_id=acting_user_id, fx_rate_micro=rate)
         entry.source_hop_id = hop.id
         entries.append(entry)
     session.flush()
