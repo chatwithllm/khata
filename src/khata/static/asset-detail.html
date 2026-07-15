@@ -1778,7 +1778,21 @@ async function boot(){
   KhataTransfers.mount($('transit-panel'), pid,
     {me: myUserId, base: DISP, fmt: (m,c)=>fmtNum(conv(m),c), sym: sym,
      isOwner: plan.owner_user_id===myUserId, onChange: boot, onEdit: openHopEdit,
-     fmtHopAmt: (h)=> fmtDisp(nativeMinor(h.amount_minor, h)),
+     fmtHopAmt: (h, hopById)=> {
+       // a hop drawn from upstream sends is worth the SUM of those sends at their
+       // own rates (== the breakdown line), not a single global re-conversion —
+       // otherwise a terminal hop shows e.g. $6,905 while its parts add to $7,000.
+       const srcs = h.sources || [];
+       if(srcs.some(s=>s.source_hop_id!=null)){
+         let sum=0;
+         for(const s of srcs){
+           const src = (s.source_hop_id==null) ? h : (hopById && hopById[s.source_hop_id]);
+           sum += nativeMinor(s.amount_minor, src || h);
+         }
+         return fmtDisp(sum);
+       }
+       return fmtDisp(nativeMinor(h.amount_minor, h));
+     },
      fmtSrcAmt: (minor, hop)=> fmtDisp(nativeMinor(minor, hop)),
      srcLabel: (code)=> srcLabel(code),
      rateNote: (DISP !== BASE)});
