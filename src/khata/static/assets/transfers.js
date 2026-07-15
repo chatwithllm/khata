@@ -166,16 +166,18 @@ window.KhataTransfers = (function(){
       row.append(note);
     }
 
-    // merged hop: spell out whose money it carries
+    // merged hop: spell out whose money it carries. A delivered hop with a final
+    // rate settles each part at it (so the parts add up to the settled headline).
     if((h.sources||[]).some(s=>s.source_hop_id!==null)){
+      const finalMicro = (h.delivered_minor!=null) ? h.fx_rate_micro : null;
       const parts=[];
       for(const s of h.sources){
         if(s.source_hop_id===null){
-          const amt=_opts.fmtSrcAmt ? _opts.fmtSrcAmt(s.amount_minor, h) : _fmt(s.amount_minor);
+          const amt=_opts.fmtSrcAmt ? _opts.fmtSrcAmt(s.amount_minor, h, finalMicro) : _fmt(s.amount_minor);
           parts.push(amt+' '+(h.from.display||'own')+"'s own");
         }else{
           const up=hopById[s.source_hop_id];
-          const amt=_opts.fmtSrcAmt ? _opts.fmtSrcAmt(s.amount_minor, up||h) : _fmt(s.amount_minor);
+          const amt=_opts.fmtSrcAmt ? _opts.fmtSrcAmt(s.amount_minor, up||h, finalMicro) : _fmt(s.amount_minor);
           parts.push(amt+' from '+((up&&up.from.display)||'chain'));
         }
       }

@@ -1833,9 +1833,11 @@ async function boot(){
     {me: myUserId, base: DISP, fmt: (m,c)=>fmtNum(conv(m),c), sym: sym,
      isOwner: plan.owner_user_id===myUserId, onChange: boot, onEdit: openHopEdit,
      fmtHopAmt: (h, hopById)=> {
-       // a hop drawn from upstream sends is worth the SUM of those sends at their
-       // own rates (== the breakdown line), not a single global re-conversion —
-       // otherwise a terminal hop shows e.g. $6,905 while its parts add to $7,000.
+       // a delivered hop with a FINAL DELIVERY RATE shows what the seller received:
+       // its whole chain settled at that one rate (delivered_minor, ₹).
+       if(h.delivered_minor!=null) return fmtDisp(nativeMinor(h.delivered_minor, h));
+       // otherwise a hop drawn from upstream sends is worth the SUM of those sends at
+       // their own rates (== the breakdown line), not a single global re-conversion.
        const srcs = h.sources || [];
        if(srcs.some(s=>s.source_hop_id!=null)){
          let sum=0;
@@ -1847,7 +1849,15 @@ async function boot(){
        }
        return fmtDisp(nativeMinor(h.amount_minor, h));
      },
-     fmtSrcAmt: (minor, hop)=> fmtDisp(nativeMinor(minor, hop)),
+     // finalMicro (set for a delivered hop with a final rate) settles each part at it
+     fmtSrcAmt: (minor, hop, finalMicro)=> {
+       if(finalMicro && hop && hop.fx_rate_micro && hop.fx_counter_currency==='USD'){
+         const usd = Math.round(minor * hop.fx_rate_micro/1e6);            // part's native USD
+         const settledInr = Math.round(usd * 1e6 / finalMicro);           // at the final rate
+         return fmtDisp(nativeMinor(settledInr, {fx_rate_micro: finalMicro, fx_counter_currency:'USD'}));
+       }
+       return fmtDisp(nativeMinor(minor, hop));
+     },
      srcLabel: (code)=> srcLabel(code),
      rateNote: (DISP !== BASE)});
 
