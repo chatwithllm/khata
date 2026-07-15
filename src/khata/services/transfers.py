@@ -456,8 +456,16 @@ def plan_transfers(session: Session, plan) -> dict:
             if out > 0:
                 closed = False
                 in_transit += out
+            # a delivered hop with a FINAL DELIVERY RATE settles the whole chain at it:
+            # the delivered value is (each contribution's native USD × final rate), not
+            # the drawn INR — so the panel shows what the seller actually received.
+            delivered_minor = None
+            if h.is_terminal and h.fx_rate_micro and (h.fx_counter_currency or "").upper() == "USD":
+                delivered_minor = sum(_delivery_amount(h, _inr, _usd)[0]
+                                      for _u, _f, _p, _inr, _usd in resolve_contributions(session, h))
             rows.append({
                 "id": h.id, "seq_in_chain": i + 1,
+                "delivered_minor": delivered_minor,
                 "from": _party_dict(session, h.from_user_id, h.from_contact_id, h.from_name),
                 "to": _party_dict(session, h.to_user_id, h.to_contact_id, h.to_name),
                 "amount_minor": h.amount_minor,

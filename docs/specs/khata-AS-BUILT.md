@@ -277,6 +277,10 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   inr, usd)` settles at the hop's rate when set; `fan_out_terminal` + `_reconcile_terminal_entries`
   use it; editing a terminal's rate (`update_hop`) triggers `_refanout_terminal` (delete + regenerate
   entries at the new rate). UI: `#hop-delivery-rate` field on the hop editor, shown for terminal hops.
+  The delivered hop's transit-panel display + its breakdown also settle at the rate: `plan_transfers`
+  emits `delivered_minor` (settled ₹ = Σ native-USD × final rate) for a terminal with a final rate, and
+  `fmtHopAmt`/`fmtSrcAmt` use it — so in ₹ view the delivered amount tracks the rate (draws stay the
+  hop's raw `amount_minor`), and headline = breakdown sum = paid in both ₹ and $ views.
 - **2026-07-15 — Native FX everywhere on the asset (subtotals = sum of native per-txn values).**
   The asset page mixed conversion methods: per-transaction rows used each entry's own saved rate, but
   paid-to-date / funding-source / contributor totals re-converted the INR sum at the *current global*
