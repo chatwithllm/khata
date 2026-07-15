@@ -524,6 +524,35 @@ function amtSpan(minor, cls){
   wrap.append(s,n);
   return wrap;
 }
+// amount span for a value ALREADY in the display currency (a native per-txn sum),
+// vs amtSpan() which conv()s from BASE at the global rate.
+function amtSpanD(dispMinor, cls){
+  const wrap=document.createElement('span');
+  if(cls) wrap.className=cls;
+  if(dispMinor===null||dispMinor===undefined){ wrap.textContent='—'; return wrap; }
+  const neg=dispMinor<0;
+  const s=document.createElement('span'); s.className='symword'; s.textContent=(neg?'-':'')+sym(DISP);
+  const n=document.createElement('span'); n.textContent=fmtNum(Math.abs(dispMinor), DISP);
+  wrap.append(s,n);
+  return wrap;
+}
+// Native (own-rate) sums over the plan's PAID ledger entries — mirrors the server
+// asset_state grouping exactly (out entries, excluding transfer_fee), converting each
+// entry at its own saved rate then summing. So every on-screen USD subtotal equals the
+// sum of its per-transaction USD values, and matches the ledger rows + loan "Deployed".
+function nativeAgg(st){
+  const outs=(st.ledger||[]).filter(e=>e.direction==='out' && e.kind!=='transfer_fee');
+  const A={paid:0, agreed:0, pending:0, bySource:{}, byUser:{}, agreedByUser:{}, pendingByUser:{}};
+  for(const e of outs){
+    const v=nativeMinor(e.amount_minor, e);
+    A.paid+=v;
+    A.bySource[e.funding_source]=(A.bySource[e.funding_source]||0)+v;
+    A.byUser[e.logged_by_user_id]=(A.byUser[e.logged_by_user_id]||0)+v;
+    if(e.amount_status==='agreed'){ A.agreed+=v; A.agreedByUser[e.logged_by_user_id]=(A.agreedByUser[e.logged_by_user_id]||0)+v; }
+    else { A.pending+=v; A.pendingByUser[e.logged_by_user_id]=(A.pendingByUser[e.logged_by_user_id]||0)+v; }
+  }
+  return A;
+}
 
 // ── proof hover preview: fetch an entry/hop's attachments once, float image thumbs ──
 const _proofCache = {};
@@ -690,12 +719,15 @@ function renderHeader(box, plan, st, hops){
   const kpis=el('div','kpis');
   const _tot=st.total_price_minor||0;
   const _pctOf=(m)=>_tot>0?Math.round((m||0)*100/_tot):null;
-  function kpi(cls,label,minor,projMinor){
+  const AGG=nativeAgg(st);
+  // kpi: dispMinor is ALREADY in DISP (native sum for Paid, conv() for INR targets);
+  // pctMinorINR is the BASE amount used only for the "% of total" chip (rate-independent).
+  function kpi(cls,label,dispMinor,pctMinorINR,projMinorINR){
     const k=el('div','kpi'+(cls?' '+cls:''));
     k.append(el('div','l',label));
-    const n=el('div','n'); n.append(amtSpan(minor));
+    const n=el('div','n'); n.append(amtSpanD(dispMinor));
     // subtle share of total beside the number (Paid / Remaining only)
-    const pct=_pctOf(minor);
+    const pct=_pctOf(pctMinorINR);
     if(cls && pct!=null){
       const ps=el('span',null,pct+'%');
       ps.style.cssText='font-size:11px;font-weight:600;color:var(--ink-faint);margin-left:6px;font-family:\'JetBrains Mono\',monospace';
@@ -703,9 +735,9 @@ function renderHeader(box, plan, st, hops){
     }
     k.append(n);
     // projection: what this number becomes once in-transit money reaches the seller
-    if(projMinor!=null){
-      const ppct=_pctOf(projMinor);
-      const pr=el('div',null,'→ '+sym(DISP)+fmtNum(conv(projMinor),DISP)
+    if(projMinorINR!=null){
+      const ppct=_pctOf(projMinorINR);
+      const pr=el('div',null,'→ '+sym(DISP)+fmtNum(conv(projMinorINR),DISP)
         +(ppct!=null?' · '+ppct+'%':'')+' when transit lands');
       pr.style.cssText='font-size:10.5px;color:var(--ink-faint);font-family:\'JetBrains Mono\',monospace;margin-top:2px';
       k.append(pr);
@@ -713,11 +745,11 @@ function renderHeader(box, plan, st, hops){
     return k;
   }
   kpis.append(
-    kpi('paid','Paid',st.paid_to_date_minor,
+    kpi('paid','Paid', AGG.paid, st.paid_to_date_minor,
         _transit>0 ? (st.paid_to_date_minor||0)+_transit : null),
-    kpi('rem','Remaining',st.remaining_minor,
+    kpi('rem','Remaining', conv(st.remaining_minor||0), st.remaining_minor,
         _transit>0 ? Math.max(0,(st.remaining_minor||0)-_transit) : null),
-    kpi('','Total',st.total_price_minor));
+    kpi('','Total', conv(st.total_price_minor||0), st.total_price_minor));
   box.append(kpis);
 
   const total=st.total_price_minor||0, paid=st.paid_to_date_minor||0;
@@ -984,17 +1016,18 @@ function renderLedger(box, st){
 // ── funding sources ──
 function renderFunding(box, st, hops){
   box.textContent='';
+  const AGG=nativeAgg(st);                 // native (own-rate) sums, mirror server grouping
   const fb = st.funding_breakdown || [];
-  const transit=(hops&&hops.in_transit_minor)||0;
-  const pending=st.paid_pending_minor||0;
-  const delivered=st.paid_agreed_minor!=null?st.paid_agreed_minor:st.paid_to_date_minor;
+  const transit=(hops&&hops.in_transit_minor)||0;   // hop money — stays on global rate
+  const pending=AGG.pending;
+  const delivered=AGG.agreed;
   const ph=el('div','ph');
   const t=el('div','t','Funding sources'); t.style.fontSize='16px';
   ph.append(t, el('div','meta','paid to date'));
   box.append(ph);
   const fund=el('div','fund');
   const fhead=el('div','fund-head');
-  const amt=el('div','fund-amt'); amt.append(amtSpan(delivered)); fhead.append(amt);
+  const amt=el('div','fund-amt'); amt.append(amtSpanD(delivered)); fhead.append(amt);
   fhead.append(el('div','fund-cap','delivered · '+fb.length+(fb.length===1?' source':' sources')));
   fund.append(fhead);
   // 3-state sub-line: delivered vs in transit vs pending confirmation
@@ -1007,7 +1040,7 @@ function renderFunding(box, st, hops){
       sub.append(s1);
     }
     if(pending>0){
-      const s2=el('span'); s2.append(el('b',null,sym(DISP)+fmtNum(conv(pending),DISP)));
+      const s2=el('span'); s2.append(el('b',null,sym(DISP)+fmtNum(pending,DISP)));
       s2.append(document.createTextNode(' pending confirmation'));
       sub.append(s2);
     }
@@ -1046,7 +1079,7 @@ function renderFunding(box, st, hops){
     const track=el('div','track'); const ti=el('i'); ti.style.background=color; ti.dataset.w=(f.pct||0); track.append(ti); mid.append(track);
     fr.append(mid);
     const rt=el('div','rt');
-    rt.append(amtSpan(f.amount_minor,'amt2'));
+    rt.append(amtSpanD(AGG.bySource[f.source]||0,'amt2'));
     rt.append(el('span','pct',(f.pct||0)+'%'));
     fr.append(rt);
     frows.append(fr);
@@ -1055,7 +1088,7 @@ function renderFunding(box, st, hops){
   const tr=el('div','fr total');
   tr.append(el('span'));
   const tmid=el('div','mid'); tmid.append(el('div','nm','Total paid')); tr.append(tmid);
-  const trt=el('div','rt'); trt.append(amtSpan(st.paid_to_date_minor,'amt2')); trt.append(el('span','pct','100%')); tr.append(trt);
+  const trt=el('div','rt'); trt.append(amtSpanD(AGG.paid,'amt2')); trt.append(el('span','pct','100%')); tr.append(trt);
   frows.append(tr);
   fund.append(frows);
   box.append(fund);
@@ -1063,6 +1096,7 @@ function renderFunding(box, st, hops){
 
 // ── contributors ──
 function renderContributors(box, st, myUserId, hops){
+  const AGG=nativeAgg(st);                 // native (own-rate) per-contributor sums
   const transitBy={};
   ((hops&&hops.in_transit_by_contributor)||[]).forEach(r=>{ transitBy[r.user_id]=r.amount_minor; });
   box.textContent='';
@@ -1107,7 +1141,7 @@ function renderContributors(box, st, myUserId, hops){
     mid.append(nm);
     person.append(mid);
     const rt=el('div','rt');
-    rt.append(amtSpan(c.agreed_minor!=null?c.agreed_minor:c.paid_minor,'a'));
+    rt.append(amtSpanD(AGG.agreedByUser[c.user_id]||0,'a'));
     rt.append(el('div','l',(c.pct||0)+'% share'));
     // sub-line: this person's money still moving / awaiting confirmation
     if(transitBy[c.user_id] || c.pending_minor){
@@ -1121,7 +1155,7 @@ function renderContributors(box, st, myUserId, hops){
       };
       if(transitBy[c.user_id]) l2.append(chip(sym(DISP)+fmtNum(conv(transitBy[c.user_id]),DISP)+' in transit'));
       if(c.pending_minor){
-        const s=chip(sym(DISP)+fmtNum(conv(c.pending_minor),DISP)+' pending');
+        const s=chip(sym(DISP)+fmtNum(AGG.pendingByUser[c.user_id]||0,DISP)+' pending');
         s.style.background='var(--ink-faint)';
         l2.append(s);
       }
@@ -1157,7 +1191,7 @@ function renderContributors(box, st, myUserId, hops){
           pnd.style.cssText='font-size:10px;font-weight:700;color:var(--accent-dk);text-transform:uppercase;letter-spacing:.04em';
           r.append(pnd);
         }
-        const am=el('span',null,sym(DISP)+fmtNum(conv(e2.amount_minor),DISP));
+        const am=el('span',null,sym(DISP)+fmtNum(nativeMinor(e2.amount_minor, e2),DISP));
         am.style.cssText="font-family:'JetBrains Mono',monospace;font-weight:600;white-space:nowrap";
         r.append(am);
         detail.append(r);

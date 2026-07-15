@@ -264,6 +264,18 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
   `transfers.backfill_hop_fx_from_notes(session)` (parses the machine-written `$X CCY @rate` prefix →
   `fx_rate_micro`/`fx_counter_currency`; idempotent; skips hops that already have a rate) — a **one-off
   prod DB write, run once with explicit authorization** (`docker exec khata python -c "…backfill…"`).
+- **2026-07-15 — Native FX everywhere on the asset (subtotals = sum of native per-txn values).**
+  The asset page mixed conversion methods: per-transaction rows used each entry's own saved rate, but
+  paid-to-date / funding-source / contributor totals re-converted the INR sum at the *current global*
+  rate — so the same entry read differently across screens (e.g. a contributor row `$10,395` vs the
+  loan "Deployed" `$10,500`) and drifted day-to-day. Now every PAID subtotal is the **sum of its
+  native per-transaction values** (`nativeAgg(st)` over `outs`, mirroring the server grouping exactly):
+  header Paid, Funding-sources delivered/per-source/total/pending, and per-contributor totals + their
+  expandable breakdown rows. So every subtotal equals what its rows add up to, and matches the ledger
+  rows + loan "Deployed". The INR **sticker price + Remaining** stay on the global rate (they're targets,
+  not sums of transactions); `%` shares stay INR-based (rate-independent); in-transit (hop money) stays
+  on the global "at current rate" aggregate. Display-only (`asset-detail.html`; helpers `nativeAgg` +
+  `amtSpanD`). Server `asset_state` already emits per-entry `counter_value_minor`.
 - **2026-07-15 — Merged/terminal hop headline = sum of its native source amounts.** A hop drawn from
   upstream sends (the ones with a `= $X from … + …` breakdown, incl. the terminal delivery hop) has no
   single send-rate of its own — so `nativeMinor(amount_minor)` fell back to the global rate and the
