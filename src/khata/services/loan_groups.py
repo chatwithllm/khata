@@ -10,7 +10,7 @@ from . import loans as _loans, fx as _fx
 
 def _side():
     return {"count": 0, "principal_minor": 0, "interest_monthly_minor": 0,
-            "next_due_minor": 0}
+            "next_due_minor": 0, "interest_due_minor": 0}
 
 
 def grouped_loans(session: Session, *, owner_id, base_currency: str, as_of=None) -> dict:
@@ -67,6 +67,7 @@ def grouped_loans(session: Session, *, owner_id, base_currency: str, as_of=None)
         side["principal_minor"] += ob
         side["interest_monthly_minor"] += conv(interest_monthly, ccy)
         side["next_due_minor"] += conv(next_due, ccy)
+        side["interest_due_minor"] += conv(ls["interest_due_minor"], ccy)   # accrued unpaid
         g["loans"].append({
             "plan_id": p.id, "name": p.name, "direction": loan.direction,
             "currency": ccy, "outstanding_minor": out,
@@ -84,7 +85,8 @@ def grouped_loans(session: Session, *, owner_id, base_currency: str, as_of=None)
 
     base_total = {"lent": _side(), "borrowed": _side()}
     for g in out_groups:
-        for k in ("count", "principal_minor", "interest_monthly_minor", "next_due_minor"):
+        for k in ("count", "principal_minor", "interest_monthly_minor", "next_due_minor",
+                  "interest_due_minor"):
             base_total["lent"][k] += g["given"][k]
             base_total["borrowed"][k] += g["taken"][k]
 

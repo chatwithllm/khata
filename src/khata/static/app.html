@@ -831,6 +831,14 @@ async function renderLoansByContact(card){
   intOut.append(el('span','int-lbl','interest out'));
   const intOutVal=el('span','int-val'); intOutVal.textContent='−'+MONEY(borInt,baseCcy)+'/mo'; intOut.append(intOutVal);
   intLine.append(intIn,intOut);
+  // pending receivable — interest owed to you that hasn't been received yet
+  const lentPend=(data.base_total&&data.base_total.lent&&data.base_total.lent.interest_due_minor)||0;
+  if(lentPend>0){
+    const pendItem=el('div','pos-int-item int-pos');
+    pendItem.append(el('span','int-lbl','receivable pending'));
+    const pv=el('span','int-val'); pv.textContent='+'+MONEY(lentPend,baseCcy); pendItem.append(pv);
+    intLine.append(pendItem);
+  }
   band.append(intLine);
 
   if(data.partial){
@@ -885,6 +893,17 @@ async function renderLoansByContact(card){
     fPrin.append(el('div','lfl','principal'));
     const fPrinV=el('div','lfv'); fPrinV.textContent=MONEY(principal,baseCcy); fPrin.append(fPrinV);
     right.append(fPrin);
+
+    // pending receivable — interest accrued on money you LENT this contact, not yet paid to you
+    const pend=(g.given&&g.given.interest_due_minor)||0;
+    if(pend>0){
+      const fPend=el('div','lfig');
+      fPend.append(el('div','lfl','pending'));
+      const fPendV=el('div','lfv'); fPendV.textContent=MONEY(pend,baseCcy); fPendV.style.color='var(--pos)';
+      fPendV.title='Interest owed to you that hasn’t been received yet';
+      fPend.append(fPendV);
+      right.append(fPend);
+    }
 
     const fInt=el('div','lfig');
     fInt.append(el('div','lfl','int/mo'));

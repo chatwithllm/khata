@@ -239,6 +239,7 @@ collateral when secured) · `/chit/<id>` (stats, rounds table, ledger) · `/hold
 (NPS projector) · `/settings` · `/analysis`.
 
 ## 9. Enhancements beyond the intent brief (record new ones here)
+- **2026-07-16 — Pending receivable on the Loans 'By contact' view.** Each contact row now shows a **pending** figure = interest accrued on money you LENT them that hasn't been paid to you yet (given-side `interest_due`), and the header interest sub-line gains a **receivable pending** total (Σ lent-side unpaid interest). `grouped_loans` aggregates `loan_state.interest_due_minor` per side + into `base_total`; shown only when > 0 (borrow-only contacts show nothing). Complements the existing outstanding-principal column. `loan_groups.py` + `app.html`.
 - **2026-07-14 — Loan deployments listed in the Ledger ("Put to work").** The loan money consumed
   into other plans (each `ledger_entries.funding_plan_id` link — now including money routed through
   middlemen via payment-chain fan-out) is shown as a read-only outflow section **inside the loan
